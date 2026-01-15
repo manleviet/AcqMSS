@@ -1,0 +1,3 @@
+toml~=0.10.2
+flamapy~=2.0.1
+parameterized~=0.9.0
