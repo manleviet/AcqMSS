@@ -18,14 +18,13 @@ class KBDiag:
 
     @measure_time('kbdiag_runtime')
     @count_calls('kbdiag_calls')
-    def find_diagnosis(self, set_c: List, set_b: List,
-                       set_tv: List, set_tc: List) -> Tuple[List, List]:
+    def find_diagnosis(self, set_c: List, set_b: List, set_tc: List, set_neg_tv: List = None) -> Tuple[List, List]:
         """
         Activate KBDiag algorithm if there exists at least one positive test case,
         which induces an inconsistency in C U B. Otherwise, it returns an empty set.
 
         // Func KBDiag(C, B, Tν, Tπ, λ) : ∆
-        // negTν ← /\ tv ∈ Tν {¬tν}
+        // negTν ← ∧{¬tν | tν ∈ Tν}
         // T′π ← TESTC(negTν, Tπ)
         // if T′π = ∅ then
         //     T′π ← TESTC(C ∪ B ∪ negTν, Tπ)
@@ -38,37 +37,41 @@ class KBDiag:
         :param set_c: a consideration set of constraints
         :param set_b: a background knowledge
         :param set_tc: a set of positive test cases
-        :param set_tv: a set of negative test cases
-        :return: a diagnosis or an empty set
+        :param set_neg_tv: a set of negated negative test cases (for B ∪ negTν)
+        :return: a tuple of (inconsistent test cases, diagnosis)
         """
-        logging.debug('kbDiag [C=%s, B=%s, TV=%s, TC=%s]', set_c, set_b, set_tv, set_tc)
-        # print(f'fastDiag [C={C}, B={B}]')
+        if set_neg_tv is None:
+            set_neg_tv = []
 
-        # negTν ← /\ tv ∈ Tν {¬tν}
+        logging.debug('kbDiag [C=%s, B=%s, TC=%s, neg_TV=%s]',
+                      set_c, set_b, set_tc, set_neg_tv)
 
-        # T′π ← TESTC(negTν, Tπ)
-        set_tcp = []
-        if len(set_tcp) != 0:
-            logging.debug('inconsistent test cases - return Φ')
-            # print('return Φ')
-            return [], []
+        # Build background with negated negative test cases
+        # B_with_neg_tv = B ∪ negTν
+        b_with_neg_tv = set_b + set_neg_tv
 
-        # T′π ← TESTC(C ∪ B ∪ negTν, Tπ)
-        # TODO - fix
-        set_tcp = self.checker.is_consistent_test_cases(set_b + set_c, set_tc, False)
+        # Step 1: T′π ← TESTC(negTν, Tπ)
+        # Check if positive test cases are consistent with negated negative test cases
+        if len(set_neg_tv) > 0:
+            set_tcp = self.checker.is_consistent_test_cases(set_neg_tv, set_tc, True)
+            if len(set_tcp) != 0:
+                # Some positive test cases are inconsistent with negated negative test cases
+                # This means these positive test cases require the original negative behaviors
+                logging.debug('positive test cases inconsistent with neg_tv - return Φ')
+                return [], []
+
+        # Step 2: T′π ← TESTC(C ∪ B ∪ negTν, Tπ)
+        # Find positive test cases that are inconsistent with the full KB
+        set_tcp = self.checker.is_consistent_test_cases(set_c + b_with_neg_tv, set_tc, False)
         if len(set_c) == 0 or len(set_tcp) == 0:
             logging.debug('all test cases satisfied - return Φ')
-            # print('return Φ')
             return [], []
 
-        # return C \ mssDirect(Φ, C, B, T'π)
-        # return(C \ mssDirect(∅, C, B ∪ negTν, T′π, λ))
-        # TODO - fix
-        mss = self._mssDirect([], set_c, set_b, set_tcp)
+        # Step 3: return C \ MSSDIRECT(∅, C, B ∪ negTν, T′π, λ)
+        mss = self._mssDirect([], set_c, b_with_neg_tv, set_tcp)
         diag = diff(set_c, mss)
 
-        logging.debug('return %s', diag)
-        # print(f'return {diag}')
+        logging.debug('return diagnosis=%s', diag)
         return set_tcp, diag
 
     @count_calls('mssDirect_calls')

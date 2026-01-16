@@ -9,16 +9,16 @@ from ...kbdiag import KBDiag
 @dataclass
 class KBDiagParameters(AbstractHSParameters):
     set_b: List
-    set_tv: List
     set_tc: List
+    set_neg_tv: List
 
     set_tcp: List = None
 
     def __str__(self) -> str:
         return (f"KBDiagParameters{{C={self.set_c}, "
                 f"B={self.set_b},"
-                f"TV={self.set_tv},"
                 f"TC={self.set_tc},"
+                f"TV={self.set_neg_tv},"
                 f"TCP={self.set_tcp}}}")
 
 
@@ -50,7 +50,7 @@ class KBDiagLabeler(KBDiag, IHSLabelable):
                 and (len(parameters.set_b) == 0
                      or len(self.checker.is_consistent_test_cases(parameters.set_b, parameters.set_tc, True)) == 0):
 
-            set_tcp, diag = self.find_diagnosis(parameters.set_c, parameters.set_b, parameters.set_tv, parameters.set_tc)
+            set_tcp, diag = self.find_diagnosis(parameters.set_c, parameters.set_b, parameters.set_tc, parameters.set_neg_tv)
 
             # update the parameters, which will be used by the children's nodes
             # set_tcp
@@ -78,7 +78,7 @@ class KBDiagLabeler(KBDiag, IHSLabelable):
         else:
             new_tc = param_parent_node.set_tcp.copy()
 
-        return KBDiagParameters(new_c, new_b, param_parent_node.set_tv, new_tc)
+        return KBDiagParameters(new_c, new_b, new_tc, param_parent_node.set_neg_tv)
 
     def get_instance(self, checker: ConsistencyChecker) -> IHSLabelable:
         return KBDiagLabeler(checker, self.m, self.initial_parameters)

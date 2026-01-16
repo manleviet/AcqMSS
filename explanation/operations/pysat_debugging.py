@@ -97,9 +97,9 @@ class PySATDebugging(PySATAbstractExplanation):
         set_c = model.get_c()
         set_b = model.get_b()
         set_tc = model.get_tc()
-        set_tv = model.get_tv()
+        set_neg_tv = model.get_neg_tv()
 
-        parameters = KBDiagParameters(set_c, set_b, set_tv, set_tc)
+        parameters = KBDiagParameters(set_c, set_b, set_tc, set_neg_tv)
         return KBDiagLabeler(checker, self.m, parameters)
 
     def prepare_hsdag(self, model: DiagnosisModel) -> Tuple[ConsistencyChecker, HSDAG]:

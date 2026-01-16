@@ -124,13 +124,13 @@ class ConsistencyChecker(ABC):
         pass
 
     @count_calls(key="is_consistent_test_cases_calls")
-    def is_consistent_test_cases(self, set_c: List, set_tc: List, only_one: bool) -> List:
+    def is_consistent_test_cases(self, set_c: List, set_tc: List, stop_at_first_violation: bool) -> List:
         """
         Check consistency with multiple test cases.
 
         :param set_c: constraints to check with
         :param set_tc: list of test case assumptions
-        :param only_one: if True, return after first inconsistent test case
+        :param stop_at_first_violation: if True, return after first inconsistent test case
         :return: list of inconsistent test cases
         """
         set_tcp = []
@@ -138,7 +138,7 @@ class ConsistencyChecker(ABC):
         for tc in set_tc:
             if not self.is_consistent(set_c + [tc]):
                 set_tcp.append(tc)
-            if only_one and len(set_tcp) > 0:
+            if stop_at_first_violation and len(set_tcp) > 0:
                 break
 
         return set_tcp

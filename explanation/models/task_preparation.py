@@ -71,10 +71,16 @@ class DebuggingTask(IncrementalDiagnosisTask):
 
     Extends IncrementalDiagnosisTask to support KBDiag algorithm with positive/negative test cases.
     """
-    # positive test cases
+    # positive test cases (original form)
     set_tc: List = field(default_factory=list)
-    # negative test cases
+    # negative test cases (original form)
     set_tv: List = field(default_factory=list)
+    # negated negative test cases (for KBDiag: B = B ∪ neg_Tν)
+    set_neg_tv: List = field(default_factory=list)
+    # negated positive test cases (for WipeOutR)
+    set_neg_tc: List = field(default_factory=list)  # TODO: check usage
+    # mapping: original assumption ID -> negated assumption ID
+    # neg_map: Dict[int, int] = field(default_factory=dict)
 
 
 # Backward compatibility alias
@@ -496,31 +502,32 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
         id_assumption = IncrementalKBPreparator.prepare_kb(
             result, provider, constraint_map, id_assumption)
 
-        # Prepare positive test cases
+        # Prepare positive test cases with negated forms
         start_id_tc = len(result.assumptions)
-        id_assumption = self._prepare_testsuite(result, provider, variables,
-                                                positive_test_cases, id_assumption)
+        id_assumption = self._prepare_testsuite_with_negation(
+            result, provider, variables, positive_test_cases, id_assumption, is_negative=False)
 
-        # Prepare negative test cases if provided
+        # Prepare negative test cases with negated forms if provided
         start_id_tv = len(result.assumptions)
         if negative_test_cases is not None:
-            self._prepare_testsuite(result, provider, variables,
-                                    negative_test_cases, id_assumption)
+            self._prepare_testsuite_with_negation(
+                result, provider, variables, negative_test_cases, id_assumption, is_negative=True)
 
         # Assign sets: B = root, C = FM constraints, TC = positive, TV = negative
-        self._assign_sets(result, start_id_tc, start_id_tv, negative_test_cases)
+        self._assign_sets(result, start_id_tc, start_id_tv, negative_test_cases is not None)
 
         return PreparationOutput(result, provider)
 
-    def _prepare_testsuite(self, result: DebuggingTask,
-                           provider: IncrementalDescriptionProvider,
-                           variables: Dict[str, int],
-                           testsuite: TestSuite,
-                           id_assumption: int) -> int:
-        """Prepare test cases with assumptions.
+    def _prepare_testsuite_with_negation(self, result: DebuggingTask,
+                                         provider: IncrementalDescriptionProvider,
+                                         variables: Dict[str, int],
+                                         testsuite: TestSuite,
+                                         id_assumption: int,
+                                         is_negative: bool) -> int:
+        """Prepare test cases with assumptions and their negated forms.
 
-        Similar to _prepare_configuration() but handles TestSuite structure.
-        Each test case gets one assumption ID.
+        Each test case gets two assumption IDs: original and negated.
+        The negated form is a single clause with all literals negated.
 
         Args:
             result: DebuggingTask to populate
@@ -528,34 +535,78 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
             variables: Variable name to ID mapping
             testsuite: TestSuite containing test cases
             id_assumption: Starting assumption ID
+            is_negative: Whether this is a negative test suite
 
         Returns:
             Next available assumption ID
         """
         for testcase in testsuite.testcases:
+            # --- Original form ---
+            original_id = id_assumption
             desc_parts = []
+            literals = []
+
             for assignment in testcase.assignments:
                 if assignment.feature not in variables:
                     raise KeyError(f'Feature {assignment.feature} is not in the model.')
 
                 desc_parts.append(f'{assignment.feature}={"true" if assignment.value else "false"}')
                 var = variables[assignment.feature] if assignment.value else -1 * variables[assignment.feature]
-                clause = [var, -1 * id_assumption]
+                literals.append(var)
+                clause = [var, -original_id]
                 result.set_kb.append(clause)
 
-            provider.add_description(id_assumption, ' & '.join(desc_parts))
-            result.assumptions.append(id_assumption)
+            result.assumptions.append(original_id)
+            provider.add_description(original_id, ' & '.join(desc_parts))
+            id_assumption += 1
+
+            # --- Negated form ---
+            negated_id = id_assumption
+            # Negated clause: (¬l1 ∨ ¬l2 ∨ ... ∨ ¬ln)
+            negated_clause = [-lit for lit in literals]
+            negated_clause.append(-negated_id)
+            result.set_kb.append(negated_clause)
+
+            result.assumptions.append(negated_id)
+            provider.add_description(negated_id, f"NOT({' & '.join(desc_parts)})")
+
+            # Store mapping
+            # result.neg_map[original_id] = negated_id
+
+            # Add to appropriate negated list
+            if is_negative:
+                result.set_neg_tv.append(negated_id)
+            else:
+                result.set_neg_tc.append(negated_id)
+
             id_assumption += 1
 
         return id_assumption
 
-    def _assign_sets(self, result: IncrementalDebuggingTask,
+    def _assign_sets(self, result: DebuggingTask,
                      start_id_tc: int, start_id_tv: int,
-                     negative_test_cases: Optional[TestSuite] = None) -> None:
+                     has_negative_test_cases: bool) -> None:
+        """Assign sets from assumptions.
+
+        Note: Each test case has two assumptions (original + negated),
+        so we need to extract only the original assumptions for set_tc and set_tv.
+        """
         result.set_b = [result.assumptions[0]]
         result.set_c = result.assumptions[1:start_id_tc]
         result.set_tc = result.assumptions[start_id_tc:start_id_tv]
         result.set_tv = result.assumptions[start_id_tv:] if negative_test_cases else []
+
+        # Extract only original test case assumptions (every other one starting from start_id_tc)
+        # Original assumptions are at even positions from start_id_tc
+        tc_tv_assumptions = result.assumptions[start_id_tc:]
+        original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), 2)]
+
+        # Calculate relative start of TV within original assumptions
+        num_tc_original = (start_id_tv - start_id_tc) // 2
+        result.set_tc = original_tc_tv[:num_tc_original]
+        result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
+
+
 
 # === FORMATTER ===
 

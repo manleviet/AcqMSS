@@ -124,6 +124,41 @@ class DiagnosisModel(PySATModel):
             return self._task.set_tv
         return []
 
+    def get_neg_tv(self) -> List:
+        """Get the negated negative test cases (debugging task only).
+
+        Used by KBDiag for B = B ∪ neg_Tν.
+
+        Returns:
+            List of negated negative test case assumptions, or empty list if not debugging task.
+        """
+        if isinstance(self._task, DebuggingTask):
+            return self._task.set_neg_tv
+        return []
+
+    def get_neg_tc(self) -> List:
+        """Get the negated positive test cases (debugging task only).
+
+        Used for WipeOutR algorithm.
+
+        Returns:
+            List of negated positive test case assumptions, or empty list if not debugging task.
+        """
+        if isinstance(self._task, DebuggingTask):
+            return self._task.set_neg_tc
+        return []
+
+    # def get_neg_map(self) -> dict:
+    #     """Get the mapping from original to negated assumption IDs.
+    #
+    #     Returns:
+    #         Dict mapping original assumption ID to negated assumption ID,
+    #         or empty dict if not debugging task.
+    #     """
+    #     if isinstance(self._task, DebuggingTask):
+    #         return self._task.neg_map
+    #     return {}
+
     def format_diagnoses(self, diagnoses: List[List]) -> str:
         """Format diagnoses for display.
 
