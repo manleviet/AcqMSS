@@ -10,6 +10,7 @@ from .task_preparation import (
     DiagnosisTask,
     IncrementalDiagnosisTask,
     DebuggingTask,
+    IncrementalDebuggingTask,
     DescriptionProvider,
     DiagnosisFormatter,
 )

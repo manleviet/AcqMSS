@@ -8,11 +8,12 @@ Strategy hierarchy:
   - NonIncrementalDiagnosisTaskPreparation
 - DebuggingTaskPreparationStrategy: For debugging operations with test cases
   - IncrementalDebuggingTaskPreparation
+  - NonIncrementalDebuggingTaskPreparation
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models.feature_model import Feature
@@ -66,10 +67,11 @@ class NonIncrementalDiagnosisTask(DiagnosisTask):
 
 
 @dataclass
-class DebuggingTask(IncrementalDiagnosisTask):
-    """Task data for debugging with test cases.
+class DebuggingTask(DiagnosisTask):
+    """Base class for debugging tasks with test cases.
 
-    Extends IncrementalDiagnosisTask to support KBDiag algorithm with positive/negative test cases.
+    Contains common fields for both incremental and non-incremental modes.
+    Used by KBDiag algorithm with positive/negative test cases.
     """
     # positive test cases (original form)
     set_tc: List = field(default_factory=list)
@@ -78,64 +80,91 @@ class DebuggingTask(IncrementalDiagnosisTask):
     # negated negative test cases (for KBDiag: B = B ∪ neg_Tν)
     set_neg_tv: List = field(default_factory=list)
     # negated positive test cases (for WipeOutR)
-    set_neg_tc: List = field(default_factory=list)  # TODO: check usage
+    set_neg_tc: List = field(default_factory=list)
     # mapping: original assumption ID -> negated assumption ID
     # neg_map: Dict[int, int] = field(default_factory=dict)
 
 
 # Backward compatibility alias
 IncrementalDebuggingTask = DebuggingTask
+@dataclass
+class IncrementalDebuggingTask(DebuggingTask):
+    """Debugging task for incremental mode.
+
+    Contains assumptions needed by IncrementalPySATChecker.
+    """
+    # list of assumptions
+    assumptions: List = field(default_factory=list)
+
+
+@dataclass
+class NonIncrementalDebuggingTask(DebuggingTask):
+    """Debugging task for non-incremental mode.
+
+    No assumptions needed - uses clause-based consistency checking.
+    """
+    pass
+
+
+# Type alias for tasks with assumptions (used by IncrementalKBPreparator)
+IncrementalTaskType = Union[IncrementalDiagnosisTask, IncrementalDebuggingTask]
+
+
 
 
 # === DESCRIPTION PROVIDERS (For formatting only) ===
 
-class DescriptionProvider(ABC):
-    """Abstract provider for constraint descriptions.
+class DescriptionProvider:
+    """Maps keys to descriptions, separated by category.
+
+    Automatically handles both key types:
+    - int keys (Incremental mode) → used directly
+    - list keys (NonIncremental mode) → hashed via get_hashcode()
 
     Used only for formatting diagnosis results, not for algorithm logic.
     """
 
-    @abstractmethod
-    def get_description(self, item) -> str:
-        """Get human-readable description for a diagnosis."""
-        pass
-
-    @abstractmethod
-    def add_description(self, key, description: str) -> None:
-        """Add a description mapping."""
-        pass
-
-
-class IncrementalDescriptionProvider(DescriptionProvider):
-    """Maps assumption IDs (int) to descriptions (str)."""
-
     def __init__(self):
-        # map id of assumptions to relationships/constraint
-        self.constraint_assumption_map: Dict[int, str] = {}
+        self.constraint_map: Dict = {}
+        self.configuration_map: Dict = {}
+        self.test_case_map: Dict = {}
 
-    def get_description(self, item: int) -> str:
-        return self.constraint_assumption_map.get(item, str(item))
-
-    def add_description(self, key: int, description: str) -> None:
-        self.constraint_assumption_map[key] = description
-
-    def reset(self) -> None:
-        """Reset the map (used when is_CF_in_C)."""
-        self.constraint_assumption_map = {}
-
-
-class NonIncrementalDescriptionProvider(DescriptionProvider):
-    """Maps clause hashcodes (str) to descriptions (str)."""
-
-    def __init__(self):
-        self.pretty_constraint_map: Dict[str, str] = {}
+    def _to_key(self, item):
+        """Auto-detect key type and transform accordingly."""
+        if isinstance(item, int):
+            return item
+        return get_hashcode(item)
 
     def get_description(self, item) -> str:
-        return self.pretty_constraint_map.get(get_hashcode(item), str(item))
+        """Get description, searching in order: constraint -> configuration -> test_case."""
+        key = self._to_key(item)
+        if key in self.constraint_map:
+            return self.constraint_map[key]
+        if key in self.configuration_map:
+            return self.configuration_map[key]
+        if key in self.test_case_map:
+            return self.test_case_map[key]
+        return str(item)
 
-    def add_description(self, key, description: str) -> None:
-        """Add description. Key is a clause (will be hashed automatically)."""
-        self.pretty_constraint_map[get_hashcode(key)] = description
+    def add_constraint_description(self, key, description: str) -> None:
+        """Add description for KB constraint."""
+        self.constraint_map[self._to_key(key)] = description
+
+    def add_configuration_description(self, key, description: str) -> None:
+        """Add description for configuration item."""
+        self.configuration_map[self._to_key(key)] = description
+
+    def add_test_case_description(self, key, description: str) -> None:
+        """Add description for test case."""
+        self.test_case_map[self._to_key(key)] = description
+
+    def reset_constraint(self) -> None:
+        """Reset constraint map."""
+        self.constraint_map = {}
+
+    def reset_configuration(self) -> None:
+        """Reset configuration map."""
+        self.configuration_map = {}
 
 
 # === PREPARATION OUTPUT ===
@@ -215,8 +244,8 @@ class IncrementalKBPreparator:
     """
 
     @staticmethod
-    def prepare_kb(result: IncrementalDiagnosisTask,
-                   provider: IncrementalDescriptionProvider,
+    def prepare_kb(result: IncrementalTaskType,
+                   provider: DescriptionProvider,
                    constraint_map: Dict[str, List[List]],
                    id_assumption: int) -> int:
         """Prepare KB with assumptions.
@@ -238,7 +267,7 @@ class IncrementalKBPreparator:
 
             result.assumptions.append(id_assumption)
             result.set_kb.extend(clauses)
-            provider.add_description(id_assumption, key)
+            provider.add_constraint_description(id_assumption, key)
 
             id_assumption += 1
 
@@ -246,7 +275,7 @@ class IncrementalKBPreparator:
 
     @staticmethod
     def prepare_configuration(result: IncrementalDiagnosisTask,
-                              provider: IncrementalDescriptionProvider,
+                              provider: DescriptionProvider,
                               variables: Dict[str, int],
                               configuration: Configuration,
                               id_assumption: int) -> int:
@@ -274,7 +303,7 @@ class IncrementalKBPreparator:
 
             result.assumptions.append(id_assumption)
             result.set_kb.append(clause)
-            provider.add_description(id_assumption, desc)
+            provider.add_configuration_description(id_assumption, desc)
 
             id_assumption += 1
 
@@ -312,7 +341,7 @@ class IncrementalDiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
                 is_CF_in_C: bool = False) -> PreparationOutput:
 
         result = IncrementalDiagnosisTask()
-        provider = IncrementalDescriptionProvider()
+        provider = DescriptionProvider()
 
         id_assumption = len(variables) + 1
 
@@ -323,7 +352,7 @@ class IncrementalDiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         start_id_config = len(result.assumptions)
         if configuration is not None:
             if not is_CF_in_C:
-                provider.reset()  # Reset provider, not result
+                provider.reset_constraint()  # Clear constraint descriptions when C = config only
             id_assumption = IncrementalKBPreparator.prepare_configuration(
                 result, provider, variables, configuration, id_assumption)
 
@@ -390,9 +419,12 @@ class NonIncrementalDiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
                 is_CF_in_C: bool = False) -> PreparationOutput:
 
         result = NonIncrementalDiagnosisTask()
-        provider = NonIncrementalDescriptionProvider()
+        provider = DescriptionProvider()
 
-        result.set_kb = [clauses for clauses in constraint_map.values()]
+        # Prepare KB from constraint_map (as clause lists)
+        for key, clauses in constraint_map.items():
+            result.set_kb.append(clauses)
+            provider.add_constraint_description(clauses, key)
 
         start_id_config = len(result.set_kb)
         if configuration is not None:
@@ -410,7 +442,7 @@ class NonIncrementalDiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         return PreparationOutput(result, provider)
 
     def _prepare_configuration(self, result: NonIncrementalDiagnosisTask,
-                               provider: NonIncrementalDescriptionProvider,
+                               provider: DescriptionProvider,
                                variables: Dict[str, int],
                                configuration: Configuration,
                                add_to_map: bool = True) -> None:
@@ -426,15 +458,15 @@ class NonIncrementalDiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
 
             result.set_kb.append(clause)
             if add_to_map:
-                provider.add_description(clause, desc)
+                provider.add_configuration_description(clause, desc)
 
-    def _prepare_kb_map(self, provider: NonIncrementalDescriptionProvider,
+    def _prepare_kb_map(self, provider: DescriptionProvider,
                         constraint_map: Dict[str, List[List]]) -> None:
         for key, clauses in constraint_map.items():
-            provider.add_description(clauses, key)
+            provider.add_constraint_description(clauses, key)
 
     def _assign_sets(self, result: NonIncrementalDiagnosisTask,
-                     provider: NonIncrementalDescriptionProvider,
+                     provider: DescriptionProvider,
                      constraint_map: Dict[str, List[List]],
                      configuration: Optional[Configuration],
                      test_case: Optional[Configuration],
@@ -494,7 +526,7 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
             PreparationOutput with DebuggingTask and description provider
         """
         result = IncrementalDebuggingTask()
-        provider = IncrementalDescriptionProvider()
+        provider = DescriptionProvider()
 
         id_assumption = len(variables) + 1
 
@@ -518,8 +550,8 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
 
         return PreparationOutput(result, provider)
 
-    def _prepare_testsuite_with_negation(self, result: DebuggingTask,
-                                         provider: IncrementalDescriptionProvider,
+    def _prepare_testsuite_with_negation(self, result: IncrementalDebuggingTask,
+                                         provider: DescriptionProvider,
                                          variables: Dict[str, int],
                                          testsuite: TestSuite,
                                          id_assumption: int,
@@ -557,7 +589,7 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
                 result.set_kb.append(clause)
 
             result.assumptions.append(original_id)
-            provider.add_description(original_id, ' & '.join(desc_parts))
+            provider.add_test_case_description(original_id, ' & '.join(desc_parts))
             id_assumption += 1
 
             # --- Negated form ---
@@ -568,10 +600,7 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
             result.set_kb.append(negated_clause)
 
             result.assumptions.append(negated_id)
-            provider.add_description(negated_id, f"NOT({' & '.join(desc_parts)})")
-
-            # Store mapping
-            # result.neg_map[original_id] = negated_id
+            provider.add_test_case_description(negated_id, f"NOT({' & '.join(desc_parts)})")
 
             # Add to appropriate negated list
             if is_negative:
@@ -583,7 +612,7 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
 
         return id_assumption
 
-    def _assign_sets(self, result: DebuggingTask,
+    def _assign_sets(self, result: IncrementalDebuggingTask,
                      start_id_tc: int, start_id_tv: int,
                      has_negative_test_cases: bool) -> None:
         """Assign sets from assumptions.
@@ -593,8 +622,6 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
         """
         result.set_b = [result.assumptions[0]]
         result.set_c = result.assumptions[1:start_id_tc]
-        result.set_tc = result.assumptions[start_id_tc:start_id_tv]
-        result.set_tv = result.assumptions[start_id_tv:] if negative_test_cases else []
 
         # Extract only original test case assumptions (every other one starting from start_id_tc)
         # Original assumptions are at even positions from start_id_tc
@@ -602,6 +629,136 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
         original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), 2)]
 
         # Calculate relative start of TV within original assumptions
+        num_tc_original = (start_id_tv - start_id_tc) // 2
+        result.set_tc = original_tc_tv[:num_tc_original]
+        result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
+
+
+# === NON-INCREMENTAL DEBUGGING STRATEGY ===
+
+class NonIncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
+    """Strategy for non-incremental debugging task with test cases.
+
+    Prepares model for KBDiag algorithm using clause-based consistency checking.
+    No assumptions - each constraint/test case is represented as a list of clauses.
+
+    Debugging task:
+        C = FM constraints (excluding root) as clause lists
+        B = root constraint as clause list
+        TC = positive test cases as clause lists
+        TV = negative test cases as clause lists
+    """
+
+    @property
+    def mode_name(self) -> str:
+        return "non-incremental-debugging"
+
+    def prepare(self,
+                variables: Dict[str, int],
+                constraint_map: Dict[str, List[List]],
+                positive_test_cases: TestSuite,
+                negative_test_cases: Optional[TestSuite] = None) -> PreparationOutput:
+        """Prepare debugging task with test cases.
+
+        Args:
+            variables: Variable name to ID mapping
+            constraint_map: Constraint name to clauses mapping
+            positive_test_cases: TestSuite of positive test cases
+            negative_test_cases: Optional TestSuite of negative test cases
+
+        Returns:
+            PreparationOutput with NonIncrementalDebuggingTask and description provider
+        """
+        result = NonIncrementalDebuggingTask()
+        provider = DescriptionProvider()
+
+        # Prepare KB from constraint_map (as clause lists)
+        for key, clauses in constraint_map.items():
+            result.set_kb.append(clauses)
+            provider.add_constraint_description(clauses, key)
+
+        start_id_tc = len(result.set_kb)
+
+        # Prepare positive test cases with negated forms
+        self._prepare_testsuite_with_negation(
+            result, provider, variables, positive_test_cases, is_negative=False)
+
+        start_id_tv = len(result.set_kb)
+
+        # Prepare negative test cases if provided
+        if negative_test_cases is not None:
+            self._prepare_testsuite_with_negation(
+                result, provider, variables, negative_test_cases, is_negative=True)
+
+        # Assign sets
+        self._assign_sets(result, start_id_tc, start_id_tv,
+                          negative_test_cases is not None)
+
+        return PreparationOutput(result, provider)
+
+    def _prepare_testsuite_with_negation(self,
+                                         result: NonIncrementalDebuggingTask,
+                                         provider: DescriptionProvider,
+                                         variables: Dict[str, int],
+                                         testsuite: TestSuite,
+                                         is_negative: bool) -> None:
+        """Prepare test cases as clause lists with negated forms.
+
+        Each test case produces two entries in set_kb:
+        1. Original: [[var1], [var2], ...] (conjunction as unit clauses)
+        2. Negated: [[-var1, -var2, ...]] (single disjunction clause)
+
+        Args:
+            result: NonIncrementalDebuggingTask to populate
+            provider: Description provider for formatting
+            variables: Variable name to ID mapping
+            testsuite: TestSuite containing test cases
+            is_negative: Whether this is a negative test suite
+        """
+        for testcase in testsuite.testcases:
+            desc_parts = []
+            literals = []
+
+            for assignment in testcase.assignments:
+                if assignment.feature not in variables:
+                    raise KeyError(f'Feature {assignment.feature} is not in the model.')
+
+                desc_parts.append(f'{assignment.feature}={"true" if assignment.value else "false"}')
+                var = variables[assignment.feature] if assignment.value else -1 * variables[assignment.feature]
+                literals.append(var)
+
+            # Original form: conjunction as list of unit clauses
+            original_clauses = [[lit] for lit in literals]
+            result.set_kb.append(original_clauses)
+            provider.add_test_case_description(original_clauses, ' & '.join(desc_parts))
+
+            # Negated form: ¬(l1 ∧ l2 ∧ ... ∧ ln) = (¬l1 ∨ ¬l2 ∨ ... ∨ ¬ln)
+            negated_clauses = [[-lit for lit in literals]]
+            result.set_kb.append(negated_clauses)
+            provider.add_test_case_description(negated_clauses, f"NOT({' & '.join(desc_parts)})")
+
+            # Add negated to appropriate list
+            if is_negative:
+                result.set_neg_tv.append(negated_clauses)
+            else:
+                result.set_neg_tc.append(negated_clauses)
+
+    def _assign_sets(self, result: NonIncrementalDebuggingTask,
+                     start_id_tc: int, start_id_tv: int,
+                     has_negative_test_cases: bool) -> None:
+        """Assign sets from set_kb.
+
+        Note: Each test case has two entries (original + negated),
+        so we need to extract only the original clauses for set_tc and set_tv.
+        """
+        result.set_b = [result.set_kb[0]]
+        result.set_c = result.set_kb[1:start_id_tc]
+
+        # Extract original test cases (every other one starting from start_id_tc)
+        tc_tv_clauses = result.set_kb[start_id_tc:]
+        original_tc_tv = [tc_tv_clauses[i] for i in range(0, len(tc_tv_clauses), 2)]
+
+        # Calculate relative start of TV within original clauses
         num_tc_original = (start_id_tv - start_id_tc) // 2
         result.set_tc = original_tc_tv[:num_tc_original]
         result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
@@ -636,6 +793,7 @@ class TaskPreparationFactory:
     _incremental_diagnosis: DiagnosisTaskPreparationStrategy = None
     _non_incremental_diagnosis: DiagnosisTaskPreparationStrategy = None
     _incremental_debugging: DebuggingTaskPreparationStrategy = None
+    _non_incremental_debugging: DebuggingTaskPreparationStrategy = None
 
     @classmethod
     def create_diagnosis(cls, is_incremental: bool) -> DiagnosisTaskPreparationStrategy:
@@ -665,9 +823,6 @@ class TaskPreparationFactory:
 
         Returns:
             DebuggingTaskPreparationStrategy instance
-
-        Raises:
-            NotImplementedError: If non-incremental mode is requested
         """
         if is_incremental:
             if cls._incremental_debugging is None:
@@ -675,3 +830,7 @@ class TaskPreparationFactory:
             return cls._incremental_debugging
         else:
             raise NotImplementedError("Non-incremental debugging task preparation is not implemented.")
+            if cls._non_incremental_debugging is None:
+                cls._non_incremental_debugging = NonIncrementalDebuggingTaskPreparation()
+            return cls._non_incremental_debugging
+

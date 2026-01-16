@@ -113,8 +113,8 @@ def _get_kbdiag_params():
     all_params = [
         ("incremental_with_profiling", True, 'glucose3', False, True),
         ("incremental_no_profiling", True, 'glucose3', False, False),
-        # ("nonincremental_with_profiling", False, 'glucose3', False, True),
-        # ("nonincremental_no_profiling", False, 'glucose3', False, False),
+        ("nonincremental_with_profiling", False, 'glucose3', False, True),
+        ("nonincremental_no_profiling", False, 'glucose3', False, False),
         # ("sat4j_with_profiling", False, None, True, True),
         # ("sat4j_no_profiling", False, None, True, False),
     ]
@@ -142,7 +142,6 @@ class Resources:
     FM_10_1_POSITIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_1.positive.testcases")
     FM_10_1_NEGATIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_1.negative.testcases")
     FM_10_2 = os.path.join(RESOURCES_DIR, "FM_10_2.uvl")
-    FM_10_2_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.testcases")
     FM_10_2_POSITIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.positive.testcases")
     FM_10_2_NEGATIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.negative.testcases")
 
