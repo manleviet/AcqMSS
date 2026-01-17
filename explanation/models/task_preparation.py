@@ -82,11 +82,9 @@ class DebuggingTask(DiagnosisTask):
     # negated positive test cases (for WipeOutR)
     set_neg_tc: List = field(default_factory=list)
     # mapping: original assumption ID -> negated assumption ID
-    # neg_map: Dict[int, int] = field(default_factory=dict)
+    neg_map: Dict = field(default_factory=dict)
 
 
-# Backward compatibility alias
-IncrementalDebuggingTask = DebuggingTask
 @dataclass
 class IncrementalDebuggingTask(DebuggingTask):
     """Debugging task for incremental mode.
@@ -608,6 +606,9 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
             else:
                 result.set_neg_tc.append(negated_id)
 
+            # Map original to negated
+            result.neg_map[original_id] = negated_id
+
             id_assumption += 1
 
         return id_assumption
@@ -743,6 +744,9 @@ class NonIncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
             else:
                 result.set_neg_tc.append(negated_clauses)
 
+            # Map original to negated
+            result.neg_map[get_hashcode(original_clauses)] = negated_clauses
+
     def _assign_sets(self, result: NonIncrementalDebuggingTask,
                      start_id_tc: int, start_id_tv: int,
                      has_negative_test_cases: bool) -> None:
@@ -829,7 +833,6 @@ class TaskPreparationFactory:
                 cls._incremental_debugging = IncrementalDebuggingTaskPreparation()
             return cls._incremental_debugging
         else:
-            raise NotImplementedError("Non-incremental debugging task preparation is not implemented.")
             if cls._non_incremental_debugging is None:
                 cls._non_incremental_debugging = NonIncrementalDebuggingTaskPreparation()
             return cls._non_incremental_debugging

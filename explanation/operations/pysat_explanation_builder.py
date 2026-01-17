@@ -20,6 +20,8 @@ from explanation.operations.pysat_conflict_sat4j import PySATConflictSAT4J
 from explanation.operations.pysat_debugging import PySATDebugging
 from explanation.operations.pysat_diagnosis import PySATDiagnosis
 from explanation.operations.pysat_diagnosis_sat4j import PySATDiagnosisSAT4J
+from explanation.operations.pysat_redundancy_testcases import PySATRedundancyTestCases
+from explanation.operations.algorithms.profiler import AbstractProfiler
 
 # Type variable for method chaining with correct return types
 T = TypeVar('T', bound='PySATExplanationBuilder')
@@ -303,5 +305,66 @@ class PySATDebuggingBuilder(PySATExplanationBuilder):
         Returns:
             Self for method chaining
         """
-        self._debugging_operation.set_m(m)
+        self._debugging_operation.m = m
+        return self
+
+
+class PySATRedundancyTestCasesBuilder:
+    """Builder for test case redundancy detection operations.
+
+    This builder is used for detecting redundant test cases in a test suite
+    using the WipeOutR_T algorithm.
+
+    A test case t_gamma is redundant w.r.t. t_alpha if t_alpha |= t_gamma,
+    meaning t_gamma logically follows from t_alpha.
+
+    Example:
+        >>> operation = (PySATRedundancyTestCasesBuilder.for_redundancy_test_cases()
+        ...     .with_test_cases(test_suite)
+        ...     .with_solver('glucose3')
+        ...     .build())
+        >>> result = operation.execute(model)
+        >>> redundant = result.get_redundant()
+    """
+
+    def __init__(self, operation: PySATRedundancyTestCases):
+        """Initialize builder with a PySATRedundancyTestCases operation.
+
+        Args:
+            operation: The PySATRedundancyTestCases instance to configure
+        """
+        self._operation = operation
+
+    @classmethod
+    def for_redundancy_test_cases(cls, profiler: AbstractProfiler = None) -> 'PySATRedundancyTestCasesBuilder':
+        """Create a builder for test case redundancy detection operations.
+
+        Uses WipeOutR_T algorithm to find redundant test cases.
+
+        Args:
+            profiler: Optional profiler for performance tracking
+
+        Returns:
+            PySATRedundancyTestCasesBuilder configured for PySATRedundancyTestCases
+
+        Example:
+            >>> operation = (PySATRedundancyTestCasesBuilder.for_redundancy_test_cases()
+            ...     .with_test_cases(test_suite)
+            ...     .build())
+        """
+        return cls(PySATRedundancyTestCases(profiler))
+
+    def with_test_cases(self, test_cases: TestSuite) -> 'PySATRedundancyTestCasesBuilder':
+        """Set test cases for redundancy detection.
+
+        The operation will find which test cases in this suite are redundant
+        (logically covered by other test cases).
+
+        Args:
+            test_cases: TestSuite of test cases to check for redundancy
+
+        Returns:
+            Self for method chaining
+        """
+        self._operation.set_positive_test_cases(test_cases)
         return self

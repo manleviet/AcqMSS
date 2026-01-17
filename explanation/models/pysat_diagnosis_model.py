@@ -101,7 +101,7 @@ class DiagnosisModel(PySATModel):
         """Get the list of assumption literals (incremental mode only)."""
         if isinstance(self._task, IncrementalDiagnosisTask):
             return self._task.assumptions
-        if isinstance(self._task, DebuggingTask):
+        if isinstance(self._task, IncrementalDebuggingTask):
             return self._task.assumptions
         return []
 
@@ -149,16 +149,16 @@ class DiagnosisModel(PySATModel):
             return self._task.set_neg_tc
         return []
 
-    # def get_neg_map(self) -> dict:
-    #     """Get the mapping from original to negated assumption IDs.
-    #
-    #     Returns:
-    #         Dict mapping original assumption ID to negated assumption ID,
-    #         or empty dict if not debugging task.
-    #     """
-    #     if isinstance(self._task, DebuggingTask):
-    #         return self._task.neg_map
-    #     return {}
+    def get_neg_map(self) -> dict:
+        """Get the mapping from original to negated assumption IDs.
+
+        Returns:
+            Dict mapping original assumption ID to negated assumption ID,
+            or empty dict if not debugging task.
+        """
+        if isinstance(self._task, DebuggingTask):
+            return self._task.neg_map
+        return {}
 
     def format_diagnoses(self, diagnoses: List[List]) -> str:
         """Format diagnoses for display.

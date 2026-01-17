@@ -23,8 +23,12 @@ from explanation.operations.algorithms.fastdiagp import FastDiagP
 from explanation.operations.algorithms.kbdiag import KBDiag
 from explanation.operations.algorithms.profiler import ProfilerMode, ProfilerPreset, use_global_profiler
 from explanation.operations.algorithms.quickxplain import QuickXPlain
+from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
 from explanation.operations.pysat_abstract_explanation import _format_results
-from explanation.operations.pysat_explanation_builder import PySATDiagnosisBuilder, PySATDebuggingBuilder
+from explanation.operations.pysat_redundancy_testcases import PySATRedundancyTestCases
+from explanation.operations.pysat_explanation_builder import (
+    PySATDiagnosisBuilder, PySATDebuggingBuilder, PySATRedundancyTestCasesBuilder
+)
 from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 from explanation.transformations.testsuite_reader import TestSuiteReader
 
@@ -68,6 +72,9 @@ ENABLED_TESTS = {
     'hsdag_kbdiag_1diag_2_neg': True,
     'hsdag_kbdiag_all_2': True,
     'hsdag_kbdiag_all_2_neg': True,
+
+    # WipeOutR_T tests
+    'wipeoutr_t_redundancy': True,
 }
 
 # =============================================================================
@@ -144,6 +151,10 @@ class Resources:
     FM_10_2 = os.path.join(RESOURCES_DIR, "FM_10_2.uvl")
     FM_10_2_POSITIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.positive.testcases")
     FM_10_2_NEGATIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.negative.testcases")
+    # For WipeOutR_FM tests
+    FM_REDUNDANT = os.path.join(RESOURCES_DIR, "redundant_fm.uvl")
+    # For WipeOutR_T tests
+    REDUNDANT_TESTSUITE = os.path.join(RESOURCES_DIR, "redundant_testsuite.testcases")
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -856,6 +867,53 @@ def test_hsdag_kbdiag_all_2_neg(name, is_incremental, solver_name, use_sat4j, en
         profiler.print_summary(include_raw_timers=True)
         print(result[0])
         assert result[0] == ('Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]')
+# =============================================================================
+# WIPEOUTR_T TESTS
+# =============================================================================
+
+@parameterized.expand(KBDIAG_PARAMS)
+@skip_if_disabled('wipeoutr_t_redundancy')
+def test_wipeoutr_t_redundancy(name, is_incremental, solver_name, use_sat4j, enable_profiling):
+    """Test PySATRedundancyTestCases operation using WipeOutR_T algorithm.
+
+    Uses the same test suite as test_wipeoutr_t_redundancy:
+    - t1: FeatureA = true (REDUNDANT - covered by t3)
+    - t2: FeatureC = false (NOT redundant)
+    - t3: FeatureA = true, FeatureB = true (more specific than t1)
+
+    This test verifies the PySATRedundancyTestCases operation wrapper.
+    """
+    print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
+
+    with profiler_context(enable_profiling) as profiler:
+        print_profiler_status(profiler)
+
+        model = load_model_from_uvl(Resources.FM_REDUNDANT, is_incremental)
+        testsuite = TestSuiteReader(Resources.REDUNDANT_TESTSUITE).transform()
+
+        print(f"Test suite has {len(testsuite.testcases)} test cases")
+        for i, tc in enumerate(testsuite.testcases):
+            print(f"  t{i + 1}: {tc}")
+
+        builder = None if use_sat4j else PySATRedundancyTestCasesBuilder.for_redundancy_test_cases(profiler)
+        if builder is None:
+            return
+
+        operation = (builder
+                     .with_test_cases(testsuite)
+                     .build())
+        operation.execute(model)
+
+        # Get results
+        result = operation.get_result()
+
+        print(result)
+        profiler.print_summary(include_raw_timers=True)
+
+        assert len(result) == 2, f"Expected 2 lists (redundant and non-redundant), got {len(result)}"
+        assert result[0] == 'Redundant test cases: [FeatureA=true]', "Expected 'FeatureA = true' to be redundant"
+        assert result[1] == 'Non-redundant test cases: [FeatureC=false, FeatureA=true & FeatureB=true]', \
+            "Expected 'FeatureC = false' and 'FeatureA = true & FeatureB = true' to be non-redundant"
 
 # =============================================================================
 # TEST RUNNER
@@ -894,6 +952,7 @@ def run_all_tests():
         ("HS-DAG KBDiag 1 Diagnosis 2 neg", 'hsdag_kbdiag_1diag_2_neg', test_hsdag_kbdiag_1diag_2_neg),
         ("HS-DAG KBDiag All Diagnoses 2", 'hsdag_kbdiag_all_2', test_hsdag_kbdiag_all_2),
         ("HS-DAG KBDiag All Diagnoses 2 neg", 'hsdag_kbdiag_all_2_neg', test_hsdag_kbdiag_all_2_neg),
+        ("WipeOutR_T Redundancy", 'wipeoutr_t_redundancy', test_wipeoutr_t_redundancy),
     ]
 
     passed = 0
