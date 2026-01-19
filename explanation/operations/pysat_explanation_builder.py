@@ -1,12 +1,12 @@
-"""Builder for configuring diagnosis/debugging operations.
+"""Builder for configuring diagnosis/test case operations.
 
 This module provides a fluent builder interface for creating and configuring
-diagnosis/debugging operations.
+diagnosis/test case operations.
 
 The builder hierarchy:
 - PySATExplanationBuilder: Abstract base class with common methods
 - PySATDiagnosisBuilder: For diagnosis/conflict operations (FastDiag, QuickXPlain)
-- PySATDebuggingBuilder: For debugging operations with test cases (KBDiag)
+- PySATTestcaseBuilder: For test case operations with test cases (KBDiag)
 """
 from abc import ABC
 from typing import Optional, TypeVar
@@ -17,10 +17,11 @@ from explanation.models.testsuite import TestSuite
 from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
 from explanation.operations.pysat_conflict import PySATConflict
 from explanation.operations.pysat_conflict_sat4j import PySATConflictSAT4J
-from explanation.operations.pysat_debugging import PySATDebugging
+from explanation.operations.pysat_testcase import PySATTestCase
 from explanation.operations.pysat_diagnosis import PySATDiagnosis
 from explanation.operations.pysat_diagnosis_sat4j import PySATDiagnosisSAT4J
 from explanation.operations.pysat_redundancy_testcases import PySATRedundancyTestCases
+from explanation.operations.pysat_redundancy_constraints import PySATRedundancyConstraints
 from explanation.operations.algorithms.profiler import AbstractProfiler
 
 # Type variable for method chaining with correct return types
@@ -36,12 +37,11 @@ class PySATExplanationBuilder(ABC):
 
     Subclasses:
         - PySATDiagnosisBuilder: For diagnosis/conflict operations
-        - PySATDebuggingBuilder: For debugging operations with test cases
+        - PySATTestcaseBuilder: For debugging operations with test cases
 
     Example:
         >>> builder = PySATDiagnosisBuilder.for_diagnosis()
         >>> operation = (builder
-        ...     .with_configuration(my_config)
         ...     .with_max_diagnoses(10)
         ...     .with_max_depth(5)
         ...     .build())
@@ -141,22 +141,20 @@ class PySATDiagnosisBuilder(PySATExplanationBuilder):
     """Builder for diagnosis and conflict detection operations.
 
     This builder is used for operations that work with:
-    - Feature model diagnosis (finding faulty constraints)
-    - Configuration diagnosis (finding conflicting selections)
+    - Feature model diagnosis/conflict (finding faulty constraints)
+    - Configuration diagnosis/conflict (finding conflicting selections)
     - Test case diagnosis (finding constraints violating test cases)
 
     Uses FastDiag (for diagnoses) or QuickXPlain (for conflicts) algorithms.
 
     Example:
         >>> operation = (PySATDiagnosisBuilder.for_diagnosis()
-        ...     .with_configuration(my_config)
         ...     .with_max_diagnoses(5)
         ...     .build())
         >>> result = operation.execute(model)
 
     Example with SAT4J solver:
         >>> operation = (PySATDiagnosisBuilder.for_diagnosis_sat4j()
-        ...     .with_test_case(test_case)
         ...     .build())
     """
 
@@ -196,104 +194,47 @@ class PySATDiagnosisBuilder(PySATExplanationBuilder):
         """
         return cls(PySATConflictSAT4J())
 
-    def with_configuration(self, configuration: Configuration) -> 'PySATDiagnosisBuilder':
-        """Set the configuration to be diagnosed.
 
-        Args:
-            configuration: Configuration instance to diagnose
-
-        Returns:
-            Self for method chaining
-        """
-        self._operation.set_configuration(configuration)
-        return self
-
-    def with_test_case(self, test_case: Configuration) -> 'PySATDiagnosisBuilder':
-        """Set the test case for diagnosis.
-
-        Args:
-            test_case: Test case configuration
-
-        Returns:
-            Self for method chaining
-        """
-        self._operation.set_test_case(test_case)
-        return self
-
-
-class PySATDebuggingBuilder(PySATExplanationBuilder):
+class PySATTestcaseBuilder(PySATExplanationBuilder):
     """Builder for debugging operations with test cases.
 
     This builder is used for operations that work with positive and negative
     test cases using the KBDiag algorithm.
 
     Example:
-        >>> operation = (PySATDebuggingBuilder.for_debugging()
-        ...     .with_positive_test_cases(positive_tests)
-        ...     .with_negative_test_cases(negative_tests)
+        >>> operation = (PySATTestCaseBuilder.for_debugging()
         ...     .with_max_diagnoses(5)
         ...     .with_m(2)
         ...     .build())
         >>> result = operation.execute(model)
     """
 
-    def __init__(self, operation: PySATDebugging):
-        """Initialize builder with a PySATDebugging operation.
+    def __init__(self, operation: PySATTestCase):
+        """Initialize builder with a PySATTestCase operation.
 
         Args:
-            operation: The PySATDebugging instance to configure
+            operation: The PySATTestCase instance to configure
         """
         super().__init__(operation)
-        self._debugging_operation = operation
+        self._testcase_operation = operation
 
     @classmethod
-    def for_debugging(cls) -> 'PySATDebuggingBuilder':
-        """Create a builder for debugging operations with test cases.
+    def for_debugging(cls) -> 'PySATTestCaseBuilder':
+        """Create a builder for test case operations with test cases.
 
         Uses KBDiag algorithm to find diagnoses based on positive/negative test cases.
 
         Returns:
-            PySATDebuggingBuilder configured for PySATDebugging
+            PySATTestCaseBuilder configured for PySATTestCase
 
         Example:
-            >>> operation = (PySATDebuggingBuilder.for_debugging()
-            ...     .with_positive_test_cases(test_suite)
+            >>> operation = (PySATTestCaseBuilder.for_debugging()
             ...     .with_max_diagnoses(1)
             ...     .build())
         """
-        return cls(PySATDebugging())
+        return cls(PySATTestCase())
 
-    def with_positive_test_cases(self, test_cases: TestSuite) -> 'PySATDebuggingBuilder':
-        """Set positive test cases for debugging operations.
-
-        Positive test cases represent configurations that SHOULD be valid
-        but are currently rejected by the feature model.
-
-        Args:
-            test_cases: TestSuite of positive test cases
-
-        Returns:
-            Self for method chaining
-        """
-        self._debugging_operation.set_positive_test_cases(test_cases)
-        return self
-
-    def with_negative_test_cases(self, test_cases: TestSuite) -> 'PySATDebuggingBuilder':
-        """Set negative test cases for debugging operations.
-
-        Negative test cases represent configurations that SHOULD be invalid
-        but are currently accepted by the feature model.
-
-        Args:
-            test_cases: TestSuite of negative test cases
-
-        Returns:
-            Self for method chaining
-        """
-        self._debugging_operation.set_negative_test_cases(test_cases)
-        return self
-
-    def with_m(self, m: int) -> 'PySATDebuggingBuilder':
+    def with_m(self, m: int) -> 'PySATTestCaseBuilder':
         """Set m parameter for KBDiag algorithm.
 
         The m parameter controls how many test cases are considered at once
@@ -305,7 +246,7 @@ class PySATDebuggingBuilder(PySATExplanationBuilder):
         Returns:
             Self for method chaining
         """
-        self._debugging_operation.m = m
+        self._testcase_operation.m = m
         return self
 
 
@@ -320,7 +261,6 @@ class PySATRedundancyTestCasesBuilder:
 
     Example:
         >>> operation = (PySATRedundancyTestCasesBuilder.for_redundancy_test_cases()
-        ...     .with_test_cases(test_suite)
         ...     .with_solver('glucose3')
         ...     .build())
         >>> result = operation.execute(model)
@@ -349,22 +289,90 @@ class PySATRedundancyTestCasesBuilder:
 
         Example:
             >>> operation = (PySATRedundancyTestCasesBuilder.for_redundancy_test_cases()
-            ...     .with_test_cases(test_suite)
             ...     .build())
         """
         return cls(PySATRedundancyTestCases(profiler))
 
-    def with_test_cases(self, test_cases: TestSuite) -> 'PySATRedundancyTestCasesBuilder':
-        """Set test cases for redundancy detection.
-
-        The operation will find which test cases in this suite are redundant
-        (logically covered by other test cases).
+    def with_solver(self, solver_name: str) -> 'PySATRedundancyTestCasesBuilder':
+        """Set the SAT solver to use.
 
         Args:
-            test_cases: TestSuite of test cases to check for redundancy
+            solver_name: Name of the SAT solver (e.g., 'glucose3')
 
         Returns:
             Self for method chaining
         """
-        self._operation.set_positive_test_cases(test_cases)
+        self._operation.solver_name = solver_name
         return self
+
+    def build(self) -> PySATRedundancyTestCases:
+        """Build and return the configured operation.
+
+        Returns:
+            Configured PySATRedundancyTestCases instance ready for execution
+        """
+        return self._operation
+
+
+class PySATRedundancyConstraintsBuilder:
+    """Builder for constraint redundancy detection operations.
+
+    This builder is used for detecting redundant constraints in a feature model
+    using the WipeOutR_FM algorithm.
+
+    A constraint c_i is redundant if KB \\ {c_i} |= c_i, meaning c_i
+    logically follows from the remaining constraints.
+
+    Example:
+        >>> operation = (PySATRedundancyConstraintsBuilder.for_redundancy_constraints()
+        ...     .with_solver('glucose3')
+        ...     .build())
+        >>> result = operation.execute(model)
+        >>> redundant = result.get_redundant()
+    """
+
+    def __init__(self, operation: PySATRedundancyConstraints):
+        """Initialize builder with a PySATRedundancyConstraints operation.
+
+        Args:
+            operation: The PySATRedundancyConstraints instance to configure
+        """
+        self._operation = operation
+
+    @classmethod
+    def for_redundancy_constraints(cls, profiler: AbstractProfiler = None) -> 'PySATRedundancyConstraintsBuilder':
+        """Create a builder for constraint redundancy detection operations.
+
+        Uses WipeOutR_FM algorithm to find redundant constraints.
+
+        Args:
+            profiler: Optional profiler for performance tracking
+
+        Returns:
+            PySATRedundancyConstraintsBuilder configured for PySATRedundancyConstraints
+
+        Example:
+            >>> operation = (PySATRedundancyConstraintsBuilder.for_redundancy_constraints()
+            ...     .build())
+        """
+        return cls(PySATRedundancyConstraints(profiler))
+
+    def with_solver(self, solver_name: str) -> 'PySATRedundancyConstraintsBuilder':
+        """Set the SAT solver to use.
+
+        Args:
+            solver_name: Name of the SAT solver (e.g., 'glucose3')
+
+        Returns:
+            Self for method chaining
+        """
+        self._operation.solver_name = solver_name
+        return self
+
+    def build(self) -> PySATRedundancyConstraints:
+        """Build and return the configured operation.
+
+        Returns:
+            Configured PySATRedundancyConstraints instance ready for execution
+        """
+        return self._operation

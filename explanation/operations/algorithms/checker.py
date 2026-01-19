@@ -40,7 +40,7 @@ Basic usage with context manager::
     # Create checker from model
     model = DiagnosisModel(...)
     model.is_incremental = True
-    model.prepare_diagnosis_task()
+    model.prepare()
 
     with CheckerFactory.create_from_model('glucose3', model) as checker:
         result = checker.is_consistent(model.get_c())
@@ -483,7 +483,7 @@ class CheckerFactory:
         :param profiler_instance: Optional profiler instance for metrics tracking
         :return: IncrementalPySATChecker if model.is_incremental=True, otherwise NonIncrementalPySATChecker
         """
-        if model.is_incremental:
+        if model.use_incremental:
             return IncrementalPySATChecker(
                 model.get_kb(),
                 model.get_assumptions(),

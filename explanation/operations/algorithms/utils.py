@@ -65,3 +65,63 @@ def contains_all(greater: List, smaller: List) -> bool:
     :return:
     """
     return all(i in greater for i in smaller)
+
+
+def negate_cnf_tseitin(clauses: List[List[int]],
+                       tseitin_start: int) -> Tuple[List[List[int]], int]:
+    """
+    Create negated form of CNF formula using Tseitin transformation.
+
+    Original: c1 ∧ c2 ∧ ... ∧ cm
+    Negated:  ¬c1 ∨ ¬c2 ∨ ... ∨ ¬cm (converted back to CNF)
+
+    For single clause (l1 ∨ l2 ∨ ... ∨ ln):
+        Negation = (¬l1) ∧ (¬l2) ∧ ... ∧ (¬ln)
+
+    For multiple clauses, Tseitin transformation is used:
+        - Create auxiliary variable ti for each ¬ci
+        - ti ↔ (¬l1 ∧ ¬l2 ∧ ... ∧ ¬ln)
+        - At least one ti must be true: (t1 ∨ t2 ∨ ... ∨ tm)
+
+    Args:
+        clauses: Original CNF clauses (list of lists of integers)
+        tseitin_start: Starting ID for Tseitin auxiliary variables
+
+    Returns:
+        Tuple of (negated CNF clauses, next available Tseitin variable ID)
+    """
+    if len(clauses) == 0:
+        # Empty formula - negation is unsatisfiable (represented as [[]])
+        return [[]], tseitin_start
+
+    if len(clauses) == 1:
+        # Single clause: ¬(l1 ∨ l2 ∨ ... ∨ ln) = (¬l1) ∧ (¬l2) ∧ ... ∧ (¬ln)
+        negated_clauses = [[-lit] for lit in clauses[0]]
+        return negated_clauses, tseitin_start
+
+    # Multi-clause: use Tseitin transformation
+    # ¬(c1 ∧ c2 ∧ ... ∧ cm) = ¬c1 ∨ ¬c2 ∨ ... ∨ ¬cm
+    result_clauses = []
+    tseitin_vars = []
+    tseitin_var = tseitin_start
+
+    for clause in clauses:
+        # Create Tseitin variable ti representing ¬ci
+        ti = tseitin_var
+        tseitin_vars.append(ti)
+        tseitin_var += 1
+
+        # ti → (¬l1 ∧ ¬l2 ∧ ... ∧ ¬ln)
+        # CNF: (¬ti ∨ ¬l1) ∧ (¬ti ∨ ¬l2) ∧ ... ∧ (¬ti ∨ ¬ln)
+        for lit in clause:
+            result_clauses.append([-ti, -lit])
+
+        # (¬l1 ∧ ¬l2 ∧ ... ∧ ¬ln) → ti
+        # CNF: (l1 ∨ l2 ∨ ... ∨ ln ∨ ti)
+        result_clauses.append(clause + [ti])
+
+    # ¬c ↔ (t1 ∨ t2 ∨ ... ∨ tm)
+    # At least one ti must be true
+    result_clauses.append(tseitin_vars)
+
+    return result_clauses, tseitin_var

@@ -6,20 +6,64 @@ Strategy hierarchy:
 - DiagnosisTaskPreparationStrategy: For diagnosis/conflict operations
   - IncrementalDiagnosisTaskPreparation
   - NonIncrementalDiagnosisTaskPreparation
-- DebuggingTaskPreparationStrategy: For debugging operations with test cases
-  - IncrementalDebuggingTaskPreparation
-  - NonIncrementalDebuggingTaskPreparation
+- TestCaseTaskPreparationStrategy: For operations with test cases (KBDiag, WipeOutR_T)
+  - IncrementalTestCaseTaskPreparation
+  - NonIncrementalTestCaseTaskPreparation
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, TYPE_CHECKING
 
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models.feature_model import Feature
 
 from explanation.models.testsuite import TestSuite
 from explanation.operations.algorithms.utils import get_hashcode
+
+if TYPE_CHECKING:
+    from .pysat_diagnosis_model import DiagnosisModel
+
+
+# === INPUT DATA CLASS ===
+
+@dataclass
+class TaskInput:
+    """Input parameters for task preparation.
+
+    Single source of truth for user inputs passed through:
+    DiagnosisModelBuilder → DiagnosisModel → TaskPreparation
+
+    Use Cases Mapping:
+    ==================
+    1. Configuration diagnosis: configuration is set
+    2. Config + FM diagnosis: configuration + with_cf_in_c=True
+    3. FM diagnosis: no inputs (defaults)
+    4. Error diagnosis: test_case is set
+    5. KBDiag: positive_test_cases (+ optional negative_test_cases)
+    6. WipeOutR_T: positive_test_cases + for_redundancy=True
+    7. WipeOutR_FM: for_redundancy=True
+    8. CXPlain (future): requirement + configuration + sub_configuration
+    """
+    # Diagnosis inputs
+    configuration: Optional[Configuration] = None
+    test_case: Optional[Configuration] = None
+    with_cf_in_c: bool = False
+
+    # Test case inputs
+    positive_test_cases: Optional[TestSuite] = None
+    negative_test_cases: Optional[TestSuite] = None
+
+    # Redundancy detection
+    for_redundancy: bool = False
+
+    # CXPlain inputs (future)
+    requirement: Optional[Configuration] = None
+    sub_configuration: Optional[Configuration] = None
+
+    def is_testcase_task(self) -> bool:
+        """Check if this input is for a test case task."""
+        return self.positive_test_cases is not None
 
 
 # === UTILITIES ===
@@ -45,6 +89,14 @@ class DiagnosisTask(ABC):
     set_b: List = field(default_factory=list)
     # set of all CNF with added assumptions
     set_kb: List = field(default_factory=list)
+    # mapping: (for redundancy detection)
+    # incremental: constraint ID -> negated constraint ID
+    # non-incremental: constraint clauses -> negated constraint clauses
+    neg_c_map: Dict = field(default_factory=dict)
+
+    def get_cf(self) -> List:
+        """Get all constraints (C ∪ B)."""
+        return self.set_b + self.set_c
 
 
 @dataclass
@@ -67,11 +119,12 @@ class NonIncrementalDiagnosisTask(DiagnosisTask):
 
 
 @dataclass
-class DebuggingTask(DiagnosisTask):
-    """Base class for debugging tasks with test cases.
+class TestCaseTask(DiagnosisTask):
+    """Base class for tasks with test cases.
 
     Contains common fields for both incremental and non-incremental modes.
-    Used by KBDiag algorithm with positive/negative test cases.
+    Used by KBDiag algorithm with positive/negative test cases,
+    and WipeOutR_T for test case redundancy detection.
     """
     # positive test cases (original form)
     set_tc: List = field(default_factory=list)
@@ -81,13 +134,15 @@ class DebuggingTask(DiagnosisTask):
     set_neg_tv: List = field(default_factory=list)
     # negated positive test cases (for WipeOutR)
     set_neg_tc: List = field(default_factory=list)
-    # mapping: original assumption ID -> negated assumption ID
-    neg_map: Dict = field(default_factory=dict)
+    # mapping: (for WipeOutR_T)
+    # incremental: test case ID -> negated test case ID
+    # non-incremental: test case clauses -> negated test case clauses
+    neg_tc_map: Dict = field(default_factory=dict)
 
 
 @dataclass
-class IncrementalDebuggingTask(DebuggingTask):
-    """Debugging task for incremental mode.
+class IncrementalTestCaseTask(TestCaseTask):
+    """Test case task for incremental mode.
 
     Contains assumptions needed by IncrementalPySATChecker.
     """
@@ -96,8 +151,8 @@ class IncrementalDebuggingTask(DebuggingTask):
 
 
 @dataclass
-class NonIncrementalDebuggingTask(DebuggingTask):
-    """Debugging task for non-incremental mode.
+class NonIncrementalTestCaseTask(TestCaseTask):
+    """Test case task for non-incremental mode.
 
     No assumptions needed - uses clause-based consistency checking.
     """
@@ -105,9 +160,7 @@ class NonIncrementalDebuggingTask(DebuggingTask):
 
 
 # Type alias for tasks with assumptions (used by IncrementalKBPreparator)
-IncrementalTaskType = Union[IncrementalDiagnosisTask, IncrementalDebuggingTask]
-
-
+IncrementalTaskType = Union[IncrementalDiagnosisTask, IncrementalTestCaseTask]
 
 
 # === DESCRIPTION PROVIDERS (For formatting only) ===
@@ -182,48 +235,20 @@ class DiagnosisTaskPreparationStrategy(ABC):
     Used for:
     - Configuration diagnosis
     - Feature model diagnosis
+    - Configuration + feature model diagnosis
     - Error diagnosis with test case
+    - Redundancy detection (with negated_constraint_map)
     """
 
     @abstractmethod
-    def prepare(self,
-                variables: Dict[str, int],
-                constraint_map: Dict[str, List[List]],
-                configuration: Optional[Configuration] = None,
-                test_case: Optional[Configuration] = None,
-                is_CF_in_C: bool = False) -> PreparationOutput:
-        """Prepare diagnosis task and return result with description provider."""
-        pass
-
-    @property
-    @abstractmethod
-    def mode_name(self) -> str:
-        """Return mode name for logging."""
-        pass
-
-
-class DebuggingTaskPreparationStrategy(ABC):
-    """Abstract strategy for preparing debugging tasks with test cases.
-
-    Used for KBDiag algorithm with positive/negative test cases.
-    """
-
-    @abstractmethod
-    def prepare(self,
-                variables: Dict[str, int],
-                constraint_map: Dict[str, List[List]],
-                positive_test_cases: TestSuite,
-                negative_test_cases: Optional[TestSuite] = None) -> PreparationOutput:
-        """Prepare debugging task and return result with description provider.
+    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+        """Prepare diagnosis task and return result with description provider.
 
         Args:
-            variables: Variable name to ID mapping
-            constraint_map: Constraint name to clauses mapping
-            positive_test_cases: TestSuite of positive test cases
-            negative_test_cases: Optional TestSuite of negative test cases
+            model: DiagnosisModel containing variables, constraint_map, etc.
 
         Returns:
-            PreparationOutput with DebuggingTask and description provider
+            PreparationOutput with DiagnosisTask and description provider
         """
         pass
 
@@ -232,42 +257,90 @@ class DebuggingTaskPreparationStrategy(ABC):
     def mode_name(self) -> str:
         """Return mode name for logging."""
         pass
+
+
+class TestCaseTaskPreparationStrategy(ABC):
+    """Abstract strategy for preparing tasks with test cases.
+
+    Used for KBDiag algorithm with positive/negative test cases,
+    and WipeOutR_T for test case redundancy detection.
+    """
+
+    @abstractmethod
+    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+        """Prepare test case task and return result with description provider.
+
+        Args:
+            model: DiagnosisModel containing variables, constraint_map, etc.
+
+        Returns:
+            PreparationOutput with TestCaseTask and description provider
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def mode_name(self) -> str:
+        """Return mode name for logging."""
+        pass
+
 
 # === SHARED UTILITIES ===
 
 class IncrementalKBPreparator:
     """Utility class for preparing knowledge base with assumptions.
 
-    Shared between IncrementalDiagnosisTaskPreparation and IncrementalDebuggingTaskPreparation.
+    Shared between IncrementalDiagnosisTaskPreparation and IncrementalTestCaseTaskPreparation.
     """
 
     @staticmethod
     def prepare_kb(result: IncrementalTaskType,
                    provider: DescriptionProvider,
                    constraint_map: Dict[str, List[List]],
-                   id_assumption: int) -> int:
-        """Prepare KB with assumptions.
+                   id_assumption: int,
+                   negated_constraint_map: Optional[Dict[str, List[List]]]) -> int:
+        """Prepare KB with assumptions and optionally negated forms.
 
         Args:
             result: Task to populate with KB data
             provider: Description provider for formatting
             constraint_map: Constraint name to clauses mapping
             id_assumption: Starting assumption ID
+            negated_constraint_map: Optional negated constraints for redundancy detection
 
         Returns:
             Next available assumption ID
         """
         for key, clauses in constraint_map.items():
+            # --- Original constraint with assumption ---
+            original_id = id_assumption
             for clause in clauses:
                 # assumption => clause
                 # i.e., -assumption v clause
-                clause.append(-1 * id_assumption)
+                # Copy clause to avoid modifying original constraint_map
+                new_clause = clause.copy()
+                new_clause.append(-original_id)
+                result.set_kb.append(new_clause)
 
-            result.assumptions.append(id_assumption)
-            result.set_kb.extend(clauses)
-            provider.add_constraint_description(id_assumption, key)
-
+            result.assumptions.append(original_id)
+            provider.add_constraint_description(original_id, key)
             id_assumption += 1
+
+            # --- Negated constraint (if provided) ---
+            if negated_constraint_map is not None:
+                negated_key = f"NOT({key})"
+                if negated_key in negated_constraint_map:
+                    negated_id = id_assumption
+                    for neg_clause in negated_constraint_map[negated_key]:
+                        new_neg_clause = neg_clause.copy()
+                        new_neg_clause.append(-negated_id)
+                        result.set_kb.append(new_neg_clause)
+
+                    result.assumptions.append(negated_id)
+                    result.neg_c_map[original_id] = negated_id
+                    provider.add_constraint_description(negated_id, negated_key)
+                    id_assumption += 1
+            # If negated_constraint_map is None, we skip adding negated forms
 
         return id_assumption
 
@@ -318,72 +391,92 @@ class IncrementalDiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         C = configuration, B = feature model (PySATModel) + root
     2. Configuration and feature model diagnosis (is_CF_in_C = True):
         C = configuration + feature model (PySATModel), B = root only
-    2. Feature model diagnosis (test_case is None):
+    3. Feature model diagnosis (test_case is None):
         C = FM constraints, B = root only
-    3. Error diagnosis (debugging):
+    4. Error diagnosis (debugging):
         C = FM constraints, B = root + test case
         where test_case is the following:
         + Dead feature: test_case = {fi = true}
         + False optional feature: test_case = {f_parent = true} & {f_child = false}
+    5. Redundancy Detection Task (need negative constraints)
+        C = CF (i.e., = PySATModel + {f0 = true})
+        B = {}
     """
 
     @property
     def mode_name(self) -> str:
         return "incremental"
 
-    def prepare(self,
-                variables: Dict[str, int],
-                constraint_map: Dict[str, List[List]],
-                configuration: Optional[Configuration] = None,
-                test_case: Optional[Configuration] = None,
-                is_CF_in_C: bool = False) -> PreparationOutput:
-
+    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
         result = IncrementalDiagnosisTask()
         provider = DescriptionProvider()
 
-        id_assumption = len(variables) + 1
+        task_input = model.task_input
 
-        # Prepare KB with assumptions
+        # Determine if negated forms should be used
+        negated_constraint_map = model.negated_constraint_map if task_input.for_redundancy else None
+
+        # Use next_tseitin_var to avoid conflicts with Tseitin variables
+        id_assumption = model.next_tseitin_var
+
+        # Prepare KB with assumptions and optionally negated forms
         id_assumption = IncrementalKBPreparator.prepare_kb(
-            result, provider, constraint_map, id_assumption)
+            result, provider, model.constraint_map, id_assumption, negated_constraint_map)
 
         start_id_config = len(result.assumptions)
-        if configuration is not None:
-            if not is_CF_in_C:
-                provider.reset_constraint()  # Clear constraint descriptions when C = config only
+        if task_input.configuration is not None:
             id_assumption = IncrementalKBPreparator.prepare_configuration(
-                result, provider, variables, configuration, id_assumption)
+                result, provider, model.variables, task_input.configuration, id_assumption)
 
         start_id_test_case = len(result.assumptions)
-        if test_case is not None:
+        if task_input.test_case is not None:
             IncrementalKBPreparator.prepare_configuration(
-                result, provider, variables, test_case, id_assumption)
+                result, provider, model.variables, task_input.test_case, id_assumption)
 
         # Assign set_c and set_b
-        self._assign_sets(result, configuration, test_case,
-                          start_id_config, start_id_test_case, is_CF_in_C)
+        has_negated_forms = negated_constraint_map is not None
+        self._assign_sets(result, task_input, start_id_config, start_id_test_case, has_negated_forms)
 
         return PreparationOutput(result, provider)
 
-    def _assign_sets(self, result: IncrementalDiagnosisTask,
-                     configuration: Optional[Configuration],
-                     test_case: Optional[Configuration],
+    def _assign_sets(self, result: IncrementalDiagnosisTask, task_input: TaskInput,
                      start_id_config: int, start_id_test: int,
-                     is_CF_in_C: bool) -> None:
-        if configuration is not None:
-            if not is_CF_in_C:
-                result.set_b = result.assumptions[:start_id_config]
+                     has_negated_forms: bool = True) -> None:
+        """Assign set_c and set_b based on use case.
+
+        Args:
+            task_input: TaskInput containing configuration, test_case, with_cf_in_c
+            has_negated_forms: If True, assumptions alternate between original and negated.
+                              If False, assumptions are all original constraints.
+        """
+        # Determine step size for extracting original constraints
+        # With negation: [root, neg_root, c1, neg_c1, ...] -> step=2
+        # Without negation: [root, c1, c2, ...] -> step=1
+        step = 2 if has_negated_forms else 1
+
+        if task_input.configuration is not None:
+            if not task_input.with_cf_in_c:
+                # Diagnosis for configuration only
+                # C = configuration, B = FM + root
+                result.set_b = [result.assumptions[i] for i in range(0, start_id_config, step)]
                 result.set_c = result.assumptions[start_id_config:]
             else:
+                # Diagnosis for configuration + feature model
+                # C = configuration + FM, B = root only
                 result.set_b = [result.assumptions[0]]
-                result.set_c = result.assumptions[1:]
+                result.set_c = [result.assumptions[i] for i in range(step, start_id_config, step)] + \
+                               result.assumptions[start_id_config:]
         else:
-            if test_case is not None:
+            if task_input.test_case is not None:
+                # Error diagnosis with a test case
+                # C = FM constraints, B = root + a test case
                 result.set_b = [result.assumptions[0]] + result.assumptions[start_id_test:]
-                result.set_c = result.assumptions[1:start_id_test]
+                result.set_c = [result.assumptions[i] for i in range(step, start_id_config, step)]
             else:
+                # Feature model diagnosis
+                # C = FM constraints, B = root only
                 result.set_b = [result.assumptions[0]]
-                result.set_c = result.assumptions[1:]
+                result.set_c = [result.assumptions[i] for i in range(step, len(result.assumptions), step)]
 
 
 # === NON-INCREMENTAL DIAGNOSIS STRATEGY ===
@@ -396,46 +489,58 @@ class NonIncrementalDiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         C = configuration, B = feature model (PySATModel) + root
     2. Configuration and feature model diagnosis (is_CF_in_C = True):
         C = configuration + feature model (PySATModel), B = root only
-    2. Feature model diagnosis (test_case is None):
+    3. Feature model diagnosis (test_case is None):
         C = FM constraints, B = root only
-    3. Error diagnosis (debugging):
+    4. Error diagnosis (debugging):
         C = FM constraints, B = root + test case
         where test_case is the following:
         + Dead feature: test_case = {fi = true}
         + False optional feature: test_case = {f_parent = true} & {f_child = false}
+    5. Redundancy Detection Task (need negative constraints)
+        C = CF (i.e., = PySATModel + {f0 = true})
+        B = {}
     """
 
     @property
     def mode_name(self) -> str:
         return "non-incremental"
 
-    def prepare(self,
-                variables: Dict[str, int],
-                constraint_map: Dict[str, List[List]],
-                configuration: Optional[Configuration] = None,
-                test_case: Optional[Configuration] = None,
-                is_CF_in_C: bool = False) -> PreparationOutput:
-
+    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
         result = NonIncrementalDiagnosisTask()
         provider = DescriptionProvider()
 
-        # Prepare KB from constraint_map (as clause lists)
-        for key, clauses in constraint_map.items():
+        task_input = model.task_input
+
+        # Determine if negated forms should be used
+        negated_constraint_map = model.negated_constraint_map if task_input.for_redundancy else None
+
+        # Prepare KB from constraint_map (as clause lists) with optional negated forms
+        for key, clauses in model.constraint_map.items():
             result.set_kb.append(clauses)
             provider.add_constraint_description(clauses, key)
 
+            # Add negated constraint if provided
+            if negated_constraint_map is not None:
+                negated_key = f"NOT({key})"
+                if negated_key in negated_constraint_map:
+                    neg_clauses = negated_constraint_map[negated_key]
+                    result.set_kb.append(neg_clauses)
+                    result.neg_c_map[get_hashcode(clauses)] = neg_clauses
+                    provider.add_constraint_description(neg_clauses, negated_key)
+
         start_id_config = len(result.set_kb)
-        if configuration is not None:
-            self._prepare_configuration(result, provider, variables, configuration)
+        if task_input.configuration is not None:
+            self._prepare_configuration(result, provider, model.variables, task_input.configuration)
 
         start_id_test_case = len(result.set_kb)
-        if test_case is not None:
-            self._prepare_configuration(result, provider, variables, test_case,
+        if task_input.test_case is not None:
+            self._prepare_configuration(result, provider, model.variables, task_input.test_case,
                                         add_to_map=False)
 
         # Assign set_c and set_b
-        self._assign_sets(result, provider, constraint_map, configuration, test_case,
-                          start_id_config, start_id_test_case, is_CF_in_C)
+        has_negated = negated_constraint_map is not None
+        self._assign_sets(result, provider, model.constraint_map, task_input,
+                          start_id_config, start_id_test_case, has_negated)
 
         return PreparationOutput(result, provider)
 
@@ -466,89 +571,100 @@ class NonIncrementalDiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
     def _assign_sets(self, result: NonIncrementalDiagnosisTask,
                      provider: DescriptionProvider,
                      constraint_map: Dict[str, List[List]],
-                     configuration: Optional[Configuration],
-                     test_case: Optional[Configuration],
+                     task_input: TaskInput,
                      start_id_config: int, start_id_test: int,
-                     is_CF_in_C: bool) -> None:
-        if configuration is not None:
-            if not is_CF_in_C:
-                result.set_b = result.set_kb[:start_id_config]
+                     has_negated_forms: bool = False) -> None:
+        """Assign set_c and set_b based on use case.
+
+        Args:
+            has_negated_forms: If True, set_kb alternates between original and negated.
+                              If False, set_kb contains only original constraints.
+        """
+        # Determine step size for extracting original constraints
+        # With negation: [root, neg_root, c1, neg_c1, ...] -> step=2
+        # Without negation: [root, c1, c2, ...] -> step=1
+        step = 2 if has_negated_forms else 1
+
+        if task_input.configuration is not None:
+            if not task_input.with_cf_in_c:
+                result.set_b = [result.set_kb[i] for i in range(0, start_id_config, step)]
                 result.set_c = result.set_kb[start_id_config:]
             else:
                 self._prepare_kb_map(provider, constraint_map)
                 result.set_b = [result.set_kb[0]]
-                result.set_c = result.set_kb[1:]
+                result.set_c = [result.set_kb[i] for i in range(step, start_id_config, step)] + \
+                               result.set_kb[start_id_config:]
         else:
             self._prepare_kb_map(provider, constraint_map)
-            if test_case is not None:
+            if task_input.test_case is not None:
                 result.set_b = [result.set_kb[0]] + result.set_kb[start_id_test:]
-                result.set_c = result.set_kb[1:start_id_test]
+                result.set_c = [result.set_kb[i] for i in range(step, start_id_config, step)]
             else:
                 result.set_b = [result.set_kb[0]]
-                result.set_c = result.set_kb[1:]
+                result.set_c = [result.set_kb[i] for i in range(step, len(result.set_kb), step)]
 
 
-# === INCREMENTAL DEBUGGING STRATEGY ===
+# === INCREMENTAL TEST CASE STRATEGY ===
 
-class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
-    """Strategy for debugging task with test cases.
+class IncrementalTestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
+    """Strategy for test case task with test cases.
 
     Uses IncrementalKBPreparator for shared KB preparation logic.
     Prepares model for KBDiag algorithm with positive/negative test cases.
+    Prepares model for WipeOutR_T for test case redundancy detection.
 
-    Debugging task:
+    Supported task types:
+    1. Debugging task - Diagnosis with positive and negative
         C = FM constraints (excluding root)
         B = root constraint
         TC = positive test cases
         TV = negative test cases
+    2. WipeOutR_T - Redundancy detection for test cases
+        TC = positive test cases
     """
 
     @property
     def mode_name(self) -> str:
-        return "incremental-debugging"
+        return "incremental-testcase"
 
-    def prepare(self,
-                variables: Dict[str, int],
-                constraint_map: Dict[str, List[List]],
-                positive_test_cases: TestSuite,
-                negative_test_cases: Optional[TestSuite] = None) -> PreparationOutput:
-        """Prepare debugging task with test cases.
+    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+        """Prepare test case task with test cases.
 
         Args:
-            variables: Variable name to ID mapping
-            constraint_map: Constraint name to clauses mapping
-            positive_test_cases: TestSuite of positive test cases
-            negative_test_cases: Optional TestSuite of negative test cases
+            model: DiagnosisModel containing variables, constraint_map, next_tseitin_var
+            task_input: TaskInput containing positive_test_cases, negative_test_cases
 
         Returns:
-            PreparationOutput with DebuggingTask and description provider
+            PreparationOutput with TestCaseTask and description provider
         """
-        result = IncrementalDebuggingTask()
+        result = IncrementalTestCaseTask()
         provider = DescriptionProvider()
+        task_input = model.task_input
 
-        id_assumption = len(variables) + 1
+        # Use start_var_id to avoid conflicts with Tseitin variables
+        id_assumption = model.next_tseitin_var
 
-        # Use shared KB preparation
+        # Use shared KB preparation (no negated forms needed for TestCaseTask)
         id_assumption = IncrementalKBPreparator.prepare_kb(
-            result, provider, constraint_map, id_assumption)
+            result, provider, model.constraint_map, id_assumption, negated_constraint_map=None)
 
         # Prepare positive test cases with negated forms
         start_id_tc = len(result.assumptions)
         id_assumption = self._prepare_testsuite_with_negation(
-            result, provider, variables, positive_test_cases, id_assumption, is_negative=False)
+            result, provider, model.variables, task_input.positive_test_cases, id_assumption, is_negative=False)
 
         # Prepare negative test cases with negated forms if provided
         start_id_tv = len(result.assumptions)
-        if negative_test_cases is not None:
+        if task_input.negative_test_cases is not None:
             self._prepare_testsuite_with_negation(
-                result, provider, variables, negative_test_cases, id_assumption, is_negative=True)
+                result, provider, model.variables, task_input.negative_test_cases, id_assumption, is_negative=True)
 
         # Assign sets: B = root, C = FM constraints, TC = positive, TV = negative
-        self._assign_sets(result, start_id_tc, start_id_tv, negative_test_cases is not None)
+        self._assign_sets(result, start_id_tc, start_id_tv, task_input.negative_test_cases is not None)
 
         return PreparationOutput(result, provider)
 
-    def _prepare_testsuite_with_negation(self, result: IncrementalDebuggingTask,
+    def _prepare_testsuite_with_negation(self, result: IncrementalTestCaseTask,
                                          provider: DescriptionProvider,
                                          variables: Dict[str, int],
                                          testsuite: TestSuite,
@@ -607,13 +723,13 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
                 result.set_neg_tc.append(negated_id)
 
             # Map original to negated
-            result.neg_map[original_id] = negated_id
+            result.neg_tc_map[original_id] = negated_id
 
             id_assumption += 1
 
         return id_assumption
 
-    def _assign_sets(self, result: IncrementalDebuggingTask,
+    def _assign_sets(self, result: IncrementalTestCaseTask,
                      start_id_tc: int, start_id_tv: int,
                      has_negative_test_cases: bool) -> None:
         """Assign sets from assumptions.
@@ -635,46 +751,45 @@ class IncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
         result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
 
 
-# === NON-INCREMENTAL DEBUGGING STRATEGY ===
+# === NON-INCREMENTAL TEST CASE STRATEGY ===
 
-class NonIncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
-    """Strategy for non-incremental debugging task with test cases.
+class NonIncrementalTestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
+    """Strategy for non-incremental test case task with test cases.
 
     Prepares model for KBDiag algorithm using clause-based consistency checking.
+    Prepares model for WipeOutR_T for test case redundancy detection.
     No assumptions - each constraint/test case is represented as a list of clauses.
 
-    Debugging task:
-        C = FM constraints (excluding root) as clause lists
-        B = root constraint as clause list
-        TC = positive test cases as clause lists
-        TV = negative test cases as clause lists
+    Supported task types:
+    1. Debugging task - Diagnosis with positive and negative
+        C = FM constraints (excluding root)
+        B = root constraint
+        TC = positive test cases
+        TV = negative test cases
+    2. WipeOutR_T - Redundancy detection for test cases
+        TC = positive test cases
     """
 
     @property
     def mode_name(self) -> str:
-        return "non-incremental-debugging"
+        return "non-incremental-testcase"
 
-    def prepare(self,
-                variables: Dict[str, int],
-                constraint_map: Dict[str, List[List]],
-                positive_test_cases: TestSuite,
-                negative_test_cases: Optional[TestSuite] = None) -> PreparationOutput:
-        """Prepare debugging task with test cases.
+    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+        """Prepare test case task with test cases.
 
         Args:
-            variables: Variable name to ID mapping
-            constraint_map: Constraint name to clauses mapping
-            positive_test_cases: TestSuite of positive test cases
-            negative_test_cases: Optional TestSuite of negative test cases
+            model: DiagnosisModel containing variables, constraint_map
+            task_input: TaskInput containing positive_test_cases, negative_test_cases
 
         Returns:
-            PreparationOutput with NonIncrementalDebuggingTask and description provider
+            PreparationOutput with NonIncrementalTestCaseTask and description provider
         """
-        result = NonIncrementalDebuggingTask()
+        result = NonIncrementalTestCaseTask()
         provider = DescriptionProvider()
+        task_input = model.task_input
 
         # Prepare KB from constraint_map (as clause lists)
-        for key, clauses in constraint_map.items():
+        for key, clauses in model.constraint_map.items():
             result.set_kb.append(clauses)
             provider.add_constraint_description(clauses, key)
 
@@ -682,23 +797,23 @@ class NonIncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
 
         # Prepare positive test cases with negated forms
         self._prepare_testsuite_with_negation(
-            result, provider, variables, positive_test_cases, is_negative=False)
+            result, provider, model.variables, task_input.positive_test_cases, is_negative=False)
 
         start_id_tv = len(result.set_kb)
 
         # Prepare negative test cases if provided
-        if negative_test_cases is not None:
+        if task_input.negative_test_cases is not None:
             self._prepare_testsuite_with_negation(
-                result, provider, variables, negative_test_cases, is_negative=True)
+                result, provider, model.variables, task_input.negative_test_cases, is_negative=True)
 
         # Assign sets
         self._assign_sets(result, start_id_tc, start_id_tv,
-                          negative_test_cases is not None)
+                          task_input.negative_test_cases is not None)
 
         return PreparationOutput(result, provider)
 
     def _prepare_testsuite_with_negation(self,
-                                         result: NonIncrementalDebuggingTask,
+                                         result: NonIncrementalTestCaseTask,
                                          provider: DescriptionProvider,
                                          variables: Dict[str, int],
                                          testsuite: TestSuite,
@@ -710,7 +825,7 @@ class NonIncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
         2. Negated: [[-var1, -var2, ...]] (single disjunction clause)
 
         Args:
-            result: NonIncrementalDebuggingTask to populate
+            result: NonIncrementalTestCaseTask to populate
             provider: Description provider for formatting
             variables: Variable name to ID mapping
             testsuite: TestSuite containing test cases
@@ -745,9 +860,9 @@ class NonIncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
                 result.set_neg_tc.append(negated_clauses)
 
             # Map original to negated
-            result.neg_map[get_hashcode(original_clauses)] = negated_clauses
+            result.neg_tc_map[get_hashcode(original_clauses)] = negated_clauses
 
-    def _assign_sets(self, result: NonIncrementalDebuggingTask,
+    def _assign_sets(self, result: NonIncrementalTestCaseTask,
                      start_id_tc: int, start_id_tv: int,
                      has_negative_test_cases: bool) -> None:
         """Assign sets from set_kb.
@@ -766,7 +881,6 @@ class NonIncrementalDebuggingTaskPreparation(DebuggingTaskPreparationStrategy):
         num_tc_original = (start_id_tv - start_id_tc) // 2
         result.set_tc = original_tc_tv[:num_tc_original]
         result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
-
 
 
 # === FORMATTER ===
@@ -796,8 +910,8 @@ class TaskPreparationFactory:
 
     _incremental_diagnosis: DiagnosisTaskPreparationStrategy = None
     _non_incremental_diagnosis: DiagnosisTaskPreparationStrategy = None
-    _incremental_debugging: DebuggingTaskPreparationStrategy = None
-    _non_incremental_debugging: DebuggingTaskPreparationStrategy = None
+    _incremental_testcase: TestCaseTaskPreparationStrategy = None
+    _non_incremental_testcase: TestCaseTaskPreparationStrategy = None
 
     @classmethod
     def create_diagnosis(cls, is_incremental: bool) -> DiagnosisTaskPreparationStrategy:
@@ -819,21 +933,20 @@ class TaskPreparationFactory:
             return cls._non_incremental_diagnosis
 
     @classmethod
-    def create_debugging(cls, is_incremental: bool = True) -> DebuggingTaskPreparationStrategy:
-        """Create debugging task preparation strategy.
+    def create_testcase(cls, is_incremental: bool = True) -> TestCaseTaskPreparationStrategy:
+        """Create test case task preparation strategy.
 
         Args:
             is_incremental: Whether to use incremental mode (default: True)
 
         Returns:
-            DebuggingTaskPreparationStrategy instance
+            TestCaseTaskPreparationStrategy instance
         """
         if is_incremental:
-            if cls._incremental_debugging is None:
-                cls._incremental_debugging = IncrementalDebuggingTaskPreparation()
-            return cls._incremental_debugging
+            if cls._incremental_testcase is None:
+                cls._incremental_testcase = IncrementalTestCaseTaskPreparation()
+            return cls._incremental_testcase
         else:
-            if cls._non_incremental_debugging is None:
-                cls._non_incremental_debugging = NonIncrementalDebuggingTaskPreparation()
-            return cls._non_incremental_debugging
-
+            if cls._non_incremental_testcase is None:
+                cls._non_incremental_testcase = NonIncrementalTestCaseTaskPreparation()
+            return cls._non_incremental_testcase

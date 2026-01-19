@@ -1,10 +1,10 @@
 from typing import List, Tuple, Dict
 
 from flamapy.core.exceptions import FlamaException
-from flamapy.metamodels.pysat_metamodel.models import PySATModel
 from flamapy.metamodels.pysat_metamodel.transformations import DimacsReader
 
 from explanation.models.pysat_diagnosis_model import DiagnosisModel
+from explanation.operations.algorithms.utils import negate_cnf_tseitin
 
 
 class DimacsToDiagPysat(DimacsReader):
@@ -13,10 +13,18 @@ class DimacsToDiagPysat(DimacsReader):
     def get_source_extension() -> str:
         return 'dimacs'
 
-    def __init__(self, path: str) -> None:
-        super().__init__(path)
+    def __init__(self, path: str, create_negation: bool = False) -> None:
+        """Initialize DIMACS to DiagnosisModel transformer.
 
-    def transform(self) -> PySATModel:
+        Args:
+            path: Path to DIMACS file.
+            create_negation: If True, create negated forms for all constraints.
+                Default is False (DIMACS files typically don't need negation).
+        """
+        super().__init__(path)
+        self.create_negation = create_negation
+
+    def transform(self) -> DiagnosisModel:
         with open(self.path, 'r', encoding='utf-8') as file:
             lines = file.read().splitlines()
             features_lines = [line for line in lines if line.startswith('c')]
@@ -39,7 +47,27 @@ class DimacsToDiagPysat(DimacsReader):
 
         self._parse_clauses(model, clauses_lines)
 
+        # Create negated forms if requested
+        if self.create_negation:
+            self._create_negated_forms(model)
+        else:
+            # Set next_tseitin_var for task preparation (no Tseitin vars in DIMACS)
+            model.next_tseitin_var = len(variables) + 1
+
         return model
+
+    def _create_negated_forms(self, model: DiagnosisModel) -> None:
+        """Create negated forms for all constraints in constraint_map.
+
+        Uses Tseitin transformation for multi-clause constraints.
+        """
+        tseitin_var = len(model.variables) + 1
+
+        for description, clauses in model.constraint_map.items():
+            negated_clauses, tseitin_var = negate_cnf_tseitin(clauses, tseitin_var)
+            model.add_negated_clause_to_map(f"NOT({description})", negated_clauses)
+
+        model.next_tseitin_var = tseitin_var
 
     def _parse_features_variables(self, lines: List[str]) -> Tuple[Dict[int, str], Dict[str, int]]:
         features = {int(line.split()[1]): line.split()[2] for line in lines}

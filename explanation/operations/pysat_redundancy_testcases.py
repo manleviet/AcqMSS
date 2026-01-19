@@ -10,10 +10,10 @@ from flamapy.core.models import VariabilityModel
 from explanation.models.pysat_diagnosis_model import DiagnosisModel
 from explanation.operations.algorithms.profiler import AbstractProfiler
 from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
-from explanation.operations.pysat_debugging import PySATDebugging
+from explanation.operations.pysat_testcase import PySATTestCase
 
 
-class PySATRedundancyTestCases(PySATDebugging):
+class PySATRedundancyTestCases(PySATTestCase):
     """Operation for detecting redundant test cases using WipeOutR_T.
 
     This operation finds test cases that are redundant (logically covered
@@ -52,9 +52,6 @@ class PySATRedundancyTestCases(PySATDebugging):
         """
         model = cast(DiagnosisModel, model)
 
-        # Reuse parent's model preparation (prepare_debugging_task)
-        self._prepare_model_for_diagnosis(model)
-
         # Create checker using parent's method
         checker = self._create_checker(model)
 
@@ -62,7 +59,7 @@ class PySATRedundancyTestCases(PySATDebugging):
             # Use WipeOutR_T instead of HSDAG
             wipeoutr = WipeOutR_T(checker, self.profiler)
             redundant, non_redundant = wipeoutr.find_redundant_testcases(
-                model.get_tc(), model.get_neg_map())
+                model.get_tc(), model.get_neg_tc_map())
 
             # Format result messages
             self._format_result_messages(model, redundant, non_redundant)

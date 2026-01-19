@@ -12,6 +12,7 @@ from typing import List, Dict, Tuple
 
 from .checker import ConsistencyChecker
 from .profiler import get_global_profiler, measure_time, count_calls, AbstractProfiler
+from .utils import diff
 
 
 class WipeOutR_T:
@@ -49,7 +50,7 @@ class WipeOutR_T:
     @measure_time('wipeoutr_t_runtime')
     @count_calls('wipeoutr_t_calls')
     def find_redundant_testcases(self, set_t: List,
-                                 neg_map: Dict) -> Tuple[List, List]:
+                                 neg_t_map: Dict) -> Tuple[List, List]:
         """
         Find redundant test cases in a test suite.
 
@@ -58,12 +59,12 @@ class WipeOutR_T:
 
         Args:
             set_t: List of test case assumption IDs (original forms)
-            neg_map: Mapping from original to negated assumption IDs
+            neg_t_map: Mapping from original to negated assumption IDs
 
         Returns:
             Tuple of (redundant test cases, non-redundant test cases)
         """
-        logging.debug('WipeOutR_T [T=%s, neg_map=%s]', set_t, neg_map)
+        logging.debug('WipeOutR_T [T=%s, neg_t_map=%s]', set_t, neg_t_map)
 
         if len(set_t) <= 1:
             # No redundancy possible with 0 or 1 test cases
@@ -76,23 +77,23 @@ class WipeOutR_T:
 
         while len(t_pi) > 0:
             # t_α ← first(T_π)
-            t_alpha = t_pi[0]
+            t_alpha = t_pi.pop()
 
             # for all t_γ ∈ T − T_Δ − {t_α} do
-            candidates = [t for t in set_t if t not in t_delta and t != t_alpha]
+            candidates = diff(diff(set_t, t_delta), [t_alpha])
 
             for t_gamma in candidates:
                 # Check if t_gamma is redundant w.r.t. t_alpha
                 # inconsistent(t_α ∧ ¬t_γ) means t_α |= t_γ
 
-                # Get the key for neg_map lookup (string for list, original for int)
+                # Get the key for neg_t_map lookup (string for list, original for int)
                 t_gamma_key = str(t_gamma) if isinstance(t_gamma, List) else t_gamma
 
-                if t_gamma_key not in neg_map:
+                if t_gamma_key not in neg_t_map:
                     logging.warning('No negated form for test case %s, skipping', t_gamma_key)
                     continue
 
-                neg_t_gamma = neg_map[t_gamma_key]
+                neg_t_gamma = neg_t_map[t_gamma_key]
 
                 # Check inconsistent(t_α ∧ ¬t_γ)
                 # Activate both t_alpha and neg_t_gamma
@@ -109,11 +110,8 @@ class WipeOutR_T:
                         t_pi.remove(t_gamma)
                     logging.debug('Test case %s is redundant (covered by %s)', t_gamma, t_alpha)
 
-            # T_π ← T_π − {t_α}
-            t_pi.remove(t_alpha)
-
         # return(T − T_Δ)
-        non_redundant = [t for t in set_t if t not in t_delta]
+        non_redundant = diff(set_t, t_delta)
 
         logging.debug('Redundant test cases: %s', t_delta)
         logging.debug('Non-redundant test cases: %s', non_redundant)

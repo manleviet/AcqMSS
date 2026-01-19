@@ -3,7 +3,6 @@ from typing import cast, List, Tuple, Optional
 
 from flamapy.core.models import VariabilityModel
 from flamapy.core.operations import Operation
-from flamapy.metamodels.configuration_metamodel.models import Configuration
 
 from explanation.models.pysat_diagnosis_model import DiagnosisModel
 from explanation.operations.algorithms.checker import ConsistencyChecker, CheckerFactory
@@ -65,8 +64,6 @@ class PySATAbstractExplanation(Operation):
     Subclasses implement specific labeler strategies while reusing common infrastructure.
 
     Attributes:
-        configuration: Optional configuration to be diagnosed
-        test_case: Optional test case for diagnosis
         solver_name: SAT solver to use (default: 'glucose3')
         max_conflicts: Maximum number of conflicts to find (None means no limit)
         max_diagnoses: Maximum number of diagnoses to find (None means no limit)
@@ -80,8 +77,6 @@ class PySATAbstractExplanation(Operation):
         self.profiler = profiler_instance if profiler_instance is not None else get_global_profiler()
 
         self.result = False
-        self.configuration: Optional[Configuration] = None
-        self.test_case: Optional[Configuration] = None
         self.solver_name: str = 'glucose3'
         self.result_messages: List[str] = []
 
@@ -149,22 +144,6 @@ class PySATAbstractExplanation(Operation):
             raise ValueError(f"max_depth must be positive, got {value}")
         self._max_depth = value
 
-    def set_configuration(self, configuration: Configuration) -> None:
-        """Set the configuration to be diagnosed.
-
-        Args:
-            configuration: Configuration instance to diagnose
-        """
-        self.configuration = configuration
-
-    def set_test_case(self, test_case: Configuration) -> None:
-        """Set the test case for diagnosis.
-
-        Args:
-            test_case: Test case configuration
-        """
-        self.test_case = test_case
-
     def get_result(self) -> List[str]:
         """Get the formatted result messages.
 
@@ -172,20 +151,6 @@ class PySATAbstractExplanation(Operation):
             List of result message strings
         """
         return self.result_messages
-
-    def _prepare_model_for_diagnosis(self, model: DiagnosisModel) -> None:
-        """Prepare model for diagnosis task.
-
-        This is common preparation logic that can be overridden by subclasses
-        if they need custom preparation behavior.
-
-        Args:
-            model: Diagnosis model to prepare
-        """
-        model.prepare_diagnosis_task(
-            configuration=self.configuration,
-            test_case=self.test_case
-        )
 
     def _create_checker(self, model: DiagnosisModel) -> ConsistencyChecker:
         """Create consistency checker from model.
@@ -276,8 +241,8 @@ class PySATAbstractExplanation(Operation):
         labeler strategy while optionally reusing common helper methods.
 
         Subclasses can either:
-        1. Use helper methods (_prepare_model_for_diagnosis, _create_checker,
-           _create_labeler, _configure_hsdag) for standard behavior
+        1. Use helper methods (_create_checker,
+           _create_labeler, _create_hsdag) for standard behavior
         2. Override this method completely for maximum flexibility
 
         Args:
@@ -288,7 +253,6 @@ class PySATAbstractExplanation(Operation):
 
         Example:
             def prepare_hsdag(self, model):
-                self._prepare_model_for_diagnosis(model)
                 set_c = model.get_c()
                 set_b = model.get_b()
                 checker = self._create_checker(model)

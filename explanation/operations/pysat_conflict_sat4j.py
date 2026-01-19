@@ -17,8 +17,6 @@ class PySATConflictSAT4J(PySATAbstractExplanation):
     using the combination of HSDAG tree search and QuickXPlain conflict labeling.
 
     Attributes:
-        configuration: Optional configuration to be diagnosed
-        test_case: Optional test case for diagnosis
         max_conflicts: Maximum number of conflicts to find (None for no limit)
         max_diagnoses: Maximum number of diagnoses to find (None for no limit)
         max_depth: Maximum depth of HSDAG tree (None for no limit)
@@ -28,7 +26,6 @@ class PySATConflictSAT4J(PySATAbstractExplanation):
     Example:
         >>> operation = PySATConflict()
         >>> operation.max_conflicts = 10
-        >>> operation.set_configuration(my_config)
         >>> result = operation.execute(diagnosis_model)
         >>> messages = result.get_result()
     """
@@ -61,10 +58,9 @@ class PySATConflictSAT4J(PySATAbstractExplanation):
         """Prepare HSDAG with QuickXPlain labeler for conflict detection.
 
         This method uses the helper methods to:
-        1. Prepare the diagnosis model
-        2. Create a consistency checker
-        3. Create a QuickXPlain labeler
-        4. Configure HSDAG with operation parameters
+        1. Create a consistency checker
+        2. Create a QuickXPlain labeler
+        3. Configure HSDAG with operation parameters
 
         Args:
             model: Diagnosis model to use
@@ -72,8 +68,6 @@ class PySATConflictSAT4J(PySATAbstractExplanation):
         Returns:
             Tuple of (consistency_checker, configured_hsdag)
         """
-        self._prepare_model_for_diagnosis(model)
-
         checker = self._create_checker(model)
         labeler = self._create_labeler(checker, model)
 
