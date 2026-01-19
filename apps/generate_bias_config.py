@@ -75,9 +75,9 @@ def parse_argument() -> Namespace:
     )
     parser.add_argument(
         "--cross-tree-mode",
-        choices=["all", "leaf"],
-        default="leaf",
-        help="Cross-tree constraint mode: 'all' for all features, 'leaf' for leaf features only (default: leaf)"
+        choices=["all", "leaf", "extracted"],
+        default="extracted",
+        help="Cross-tree constraint mode: 'all' for all features, 'leaf' for leaf features only, 'extracted' for features from CTCs (default: extracted)"
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -229,6 +229,24 @@ def extract_cross_tree_constraints(fm) -> List[Dict[str, Any]]:
     return constraints
 
 
+def extract_cross_tree_features(fm: FeatureModel) -> List[str]:
+    """
+    Extract unique features from cross-tree constraints.
+
+    Args:
+        fm: Feature model object
+
+    Returns:
+        Sorted list of feature names that appear in cross-tree constraints
+    """
+    ctc_features = set()
+    for ctc in fm.get_constraints():
+        # Flamapy Constraint.get_features() returns list of feature names (strings)
+        for feature_name in ctc.get_features():
+            ctc_features.add(feature_name)
+    return sorted(ctc_features)
+
+
 def extract_leaf_features(fm: FeatureModel) -> List[str]:
     """
     Extract leaf features (features with no children).
@@ -252,7 +270,8 @@ def generate_yaml_content(
         leaf_features: List[str],
         hierarchical_candidates: List[Dict[str, Any]],
         cross_tree_constraints: List[Dict[str, Any]],
-        cross_tree_mode: str = "leaf"
+        cross_tree_mode: str = "extracted",
+        cross_tree_features: List[str] = None
 ) -> str:
     """
     Generate YAML content for bias config.
@@ -263,7 +282,8 @@ def generate_yaml_content(
         leaf_features: List of leaf feature names (features with no children)
         hierarchical_candidates: List of hierarchical relationships
         cross_tree_constraints: List of cross-tree constraints (for comments)
-        cross_tree_mode: Mode for cross-tree constraints ('all' or 'leaf')
+        cross_tree_mode: Mode for cross-tree constraints ('all', 'leaf', or 'extracted')
+        cross_tree_features: List of features extracted from CTCs (for 'extracted' mode)
 
     Returns:
         YAML content as string
@@ -325,8 +345,16 @@ def generate_yaml_content(
 
     lines.append("# cross_tree_mode: 'all' generates requires/excludes for all feature pairs")
     lines.append("#                  'leaf' generates only between leaf features")
+    lines.append("#                  'extracted' generates only between features from CTCs")
     lines.append("cross_tree_candidates:")
     lines.append(f"  cross_tree_mode: {cross_tree_mode}")
+
+    # Output cross_tree_features for extracted mode
+    if cross_tree_features:
+        lines.append("  cross_tree_features:")
+        for feature in cross_tree_features:
+            lines.append(f"    - {feature}")
+
     lines.append("")
 
     return "\n".join(lines)
@@ -336,7 +364,7 @@ def process_model(
         fm_path: str,
         output: str = None,
         output_dir: str = "data/bias-config",
-        cross_tree_mode: str = "leaf",
+        cross_tree_mode: str = "extracted",
         verbose: bool = False
 ) -> bool:
     """
@@ -346,7 +374,7 @@ def process_model(
         fm_path: Path to feature model file
         output: Output YAML file path (optional, overrides output_dir)
         output_dir: Output directory for generated YAML files
-        cross_tree_mode: Mode for cross-tree constraints ('all' or 'leaf')
+        cross_tree_mode: Mode for cross-tree constraints ('all', 'leaf', or 'extracted')
         verbose: Verbose output
 
     Returns:
@@ -392,6 +420,11 @@ def process_model(
     if verbose:
         print(f"Cross-tree constraints: {len(cross_tree_constraints)}")
 
+    # Extract features from cross-tree constraints (for extracted mode)
+    ctc_features = extract_cross_tree_features(fm)
+    if verbose:
+        print(f"Features in cross-tree constraints: {len(ctc_features)}")
+
     # Generate YAML content
     yaml_content = generate_yaml_content(
         name=model_name,
@@ -399,7 +432,8 @@ def process_model(
         leaf_features=leaf_features,
         hierarchical_candidates=hierarchical_candidates,
         cross_tree_constraints=cross_tree_constraints,
-        cross_tree_mode=cross_tree_mode
+        cross_tree_mode=cross_tree_mode,
+        cross_tree_features=ctc_features if cross_tree_mode == "extracted" else None
     )
 
     # Determine output path
@@ -420,6 +454,8 @@ def process_model(
     print(f"  Leaf features: {len(leaf_features)}")
     print(f"  Hierarchical candidates: {len(hierarchical_candidates)}")
     print(f"  Cross-tree mode: {cross_tree_mode}")
+    if cross_tree_mode == "extracted":
+        print(f"  Cross-tree features (from CTCs): {len(ctc_features)}")
 
     return True
 

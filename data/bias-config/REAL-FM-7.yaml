@@ -97,5 +97,6 @@ hierarchical_candidates:
 #
 # cross_tree_mode: 'all' generates requires/excludes for all feature pairs
 #                  'leaf' generates only between leaf features
+#                  'extracted' generates only between features from CTCs
 cross_tree_candidates:
   cross_tree_mode: all

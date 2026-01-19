@@ -5811,5 +5811,65 @@ hierarchical_candidates:
 #
 # cross_tree_mode: 'all' generates requires/excludes for all feature pairs
 #                  'leaf' generates only between leaf features
+#                  'extracted' generates only between features from CTCs
 cross_tree_candidates:
-  cross_tree_mode: leaf
+  cross_tree_mode: extracted
+  cross_tree_features:
+    - ASH
+    - BUILD_LIBBUSYBOX
+    - CHCON
+    - DEPMOD
+    - FEATURE_2_4_MODULES
+    - FEATURE_BASH_IS_ASH
+    - FEATURE_BASH_IS_HUSH
+    - FEATURE_CHECK_UNICODE_IN_ENV
+    - FEATURE_FIND_CONTEXT
+    - FEATURE_IFUPDOWN_IFCONFIG_BUILTIN
+    - FEATURE_IFUPDOWN_IP
+    - FEATURE_INSMOD_KSYMOOPS_SYMBOLS
+    - FEATURE_INSMOD_LOADINKMEM
+    - FEATURE_INSMOD_LOAD_MAP
+    - FEATURE_INSMOD_TRY_MMAP
+    - FEATURE_INSMOD_VERSION_CHECKING
+    - FEATURE_INSTALLER
+    - FEATURE_MTAB_SUPPORT
+    - FEATURE_PREFER_APPLETS
+    - FEATURE_PS_TIME
+    - FEATURE_PS_UNUSUAL_SYSTEMS
+    - FEATURE_SH_IS_ASH
+    - FEATURE_SH_IS_HUSH
+    - FEATURE_SH_NOFORK
+    - FEATURE_SH_STANDALONE
+    - FEATURE_TAR_SELINUX
+    - FIND
+    - GETENFORCE
+    - GETSEBOOL
+    - HUSH
+    - IFUPDOWN
+    - INSMOD
+    - INSTALL_APPLET_DONT
+    - LOAD_POLICY
+    - LOCALE_SUPPORT
+    - LSMOD
+    - MATCHPATHCON
+    - MODPROBE
+    - MODPROBE_SMALL
+    - MOUNT
+    - NOMMU
+    - PIE
+    - PLATFORM_LINUX
+    - RESTORECON
+    - RMMOD
+    - RUNCON
+    - SELINUX
+    - SELINUXENABLED
+    - SESTATUS
+    - SETENFORCE
+    - SETFILES
+    - SETSEBOOL
+    - STATIC
+    - TAR
+    - UMOUNT
+    - UNICODE_BIDI_SUPPORT
+    - UNICODE_SUPPORT
+    - UNICODE_USING_LOCALE

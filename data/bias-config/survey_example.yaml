@@ -47,4 +47,4 @@ hierarchical_candidates:
 # Cross-tree constraint candidates
 # auto_generate: true will create all possible requires and excludes for all feature pairs
 cross_tree_candidates:
-  auto_generate: true
+  cross_tree_mode: all
