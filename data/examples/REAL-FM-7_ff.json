@@ -1,0 +1,196 @@
+{
+  "metadata": {
+    "method": "FF",
+    "max_examples": 140,
+    "seed": 42,
+    "coverage": {
+      "total_needed": 56,
+      "covered": 54,
+      "percentage": 96.42857142857143,
+      "uncovered_features": [
+        {
+          "feature": "diagram_builder",
+          "missing": [
+            "False/pos"
+          ]
+        },
+        {
+          "feature": "compiler",
+          "missing": [
+            "False/pos"
+          ]
+        }
+      ]
+    },
+    "fully_covered": false,
+    "pos_attempts": 1400,
+    "neg_attempts": 4,
+    "strategy": "ff",
+    "model": "REAL-FM-7",
+    "fm_path": "data/fms/REAL-FM-7.uvl",
+    "n_features": 14
+  },
+  "statistics": {
+    "total": 8,
+    "n_positive": 4,
+    "n_negative": 4,
+    "pos_ratio": 0.5,
+    "neg_ratio": 0.5
+  },
+  "positive": [
+    {
+      "id": "ff_1",
+      "assignments": {
+        "compiler": true,
+        "diagram_builder": true,
+        "gui_builder": true,
+        "interface": false,
+        "java": false,
+        "javac": false,
+        "jplug": false,
+        "mdi": false,
+        "model_code_synch": false,
+        "mvc": false,
+        "petri_net": false,
+        "qt": true,
+        "sdi": true,
+        "uml": true
+      }
+    },
+    {
+      "id": "ff_2",
+      "assignments": {
+        "compiler": true,
+        "diagram_builder": true,
+        "gui_builder": true,
+        "interface": false,
+        "java": false,
+        "javac": false,
+        "jplug": false,
+        "mdi": true,
+        "model_code_synch": false,
+        "mvc": false,
+        "petri_net": false,
+        "qt": true,
+        "sdi": true,
+        "uml": false
+      }
+    },
+    {
+      "id": "ff_3",
+      "assignments": {
+        "compiler": true,
+        "diagram_builder": true,
+        "gui_builder": false,
+        "interface": true,
+        "java": true,
+        "javac": true,
+        "jplug": true,
+        "mdi": false,
+        "model_code_synch": true,
+        "mvc": true,
+        "petri_net": false,
+        "qt": false,
+        "sdi": false,
+        "uml": false
+      }
+    },
+    {
+      "id": "ff_4",
+      "assignments": {
+        "compiler": true,
+        "diagram_builder": true,
+        "gui_builder": false,
+        "interface": true,
+        "java": false,
+        "javac": false,
+        "jplug": false,
+        "mdi": true,
+        "model_code_synch": true,
+        "mvc": false,
+        "petri_net": true,
+        "qt": true,
+        "sdi": true,
+        "uml": false
+      }
+    }
+  ],
+  "negative": [
+    {
+      "id": "ff_5",
+      "assignments": {
+        "compiler": true,
+        "diagram_builder": false,
+        "gui_builder": false,
+        "interface": false,
+        "java": true,
+        "javac": false,
+        "jplug": false,
+        "mdi": true,
+        "model_code_synch": true,
+        "mvc": true,
+        "petri_net": false,
+        "qt": false,
+        "sdi": false,
+        "uml": true
+      }
+    },
+    {
+      "id": "ff_6",
+      "assignments": {
+        "compiler": false,
+        "diagram_builder": true,
+        "gui_builder": true,
+        "interface": false,
+        "java": false,
+        "javac": true,
+        "jplug": true,
+        "mdi": true,
+        "model_code_synch": true,
+        "mvc": true,
+        "petri_net": false,
+        "qt": false,
+        "sdi": true,
+        "uml": false
+      }
+    },
+    {
+      "id": "ff_7",
+      "assignments": {
+        "compiler": false,
+        "diagram_builder": true,
+        "gui_builder": true,
+        "interface": true,
+        "java": true,
+        "javac": false,
+        "jplug": true,
+        "mdi": true,
+        "model_code_synch": false,
+        "mvc": false,
+        "petri_net": true,
+        "qt": true,
+        "sdi": false,
+        "uml": false
+      }
+    },
+    {
+      "id": "ff_8",
+      "assignments": {
+        "compiler": true,
+        "diagram_builder": true,
+        "gui_builder": true,
+        "interface": true,
+        "java": false,
+        "javac": false,
+        "jplug": true,
+        "mdi": false,
+        "model_code_synch": true,
+        "mvc": false,
+        "petri_net": false,
+        "qt": false,
+        "sdi": true,
+        "uml": false
+      }
+    }
+  ]
+}
