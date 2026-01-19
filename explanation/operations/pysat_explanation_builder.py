@@ -23,6 +23,7 @@ from explanation.operations.pysat_diagnosis_sat4j import PySATDiagnosisSAT4J
 from explanation.operations.pysat_redundancy_testcases import PySATRedundancyTestCases
 from explanation.operations.pysat_redundancy_constraints import PySATRedundancyConstraints
 from explanation.operations.algorithms.profiler import AbstractProfiler
+from explanation.operations.pysat_testcase_quickxplain import PySATTestCaseQuickXPlain
 
 # Type variable for method chaining with correct return types
 T = TypeVar('T', bound='PySATExplanationBuilder')
@@ -248,6 +249,45 @@ class PySATTestcaseBuilder(PySATExplanationBuilder):
         """
         self._testcase_operation.m = m
         return self
+
+
+class PySATTestcaseQuickXplainBuilder(PySATExplanationBuilder):
+    """Builder for debugging operations with test cases.
+
+    This builder is used for operations that work with positive and negative
+    test cases using the HSDAG+QuickXPlainWithTestCase algorithm.
+
+    Example:
+        >>> operation = (PySATTestcaseQuickXplainBuilder.for_debugging()
+        ...     .with_max_diagnoses(5)
+        ...     .build())
+        >>> result = operation.execute(model)
+    """
+
+    def __init__(self, operation: PySATTestCaseQuickXPlain):
+        """Initialize builder with a PySATTestCaseQuickXPlain operation.
+
+        Args:
+            operation: The PySATTestCaseQuickXPlain instance to configure
+        """
+        super().__init__(operation)
+        self._testcase_operation = operation
+
+    @classmethod
+    def for_debugging(cls) -> 'PySATTestcaseQuickXplainBuilder':
+        """Create a builder for test case operations with test cases.
+
+        Uses HSDAG+QuickXPlainWithTestCase algorithm to find diagnoses based on positive/negative test cases.
+
+        Returns:
+            PySATTestcaseQuickXplainBuilder configured for PySATTestCaseQuickXPlain
+
+        Example:
+            >>> operation = (PySATTestcaseQuickXplainBuilder.for_debugging()
+            ...     .with_max_diagnoses(1)
+            ...     .build())
+        """
+        return cls(PySATTestCaseQuickXPlain())
 
 
 class PySATRedundancyTestCasesBuilder:

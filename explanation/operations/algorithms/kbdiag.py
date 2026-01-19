@@ -45,6 +45,10 @@ class KBDiag:
 
         logging.debug('kbDiag [C=%s, B=%s, TC=%s, neg_TV=%s]',
                       set_c, set_b, set_tc, set_neg_tv)
+        # If C is empty or consistent(B U C, TC) then return (None, Φ)
+        if len(set_c) == 0:
+            logging.debug('<<< No conflict found (C is empty)')
+            return [], []
 
         # Build background with negated negative test cases
         # B_with_neg_tv = B ∪ negTν

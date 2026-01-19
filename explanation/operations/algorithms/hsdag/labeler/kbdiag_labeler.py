@@ -50,7 +50,8 @@ class KBDiagLabeler(KBDiag, IHSLabelable):
                 and (len(parameters.set_b) == 0
                      or len(self.checker.is_consistent_test_cases(parameters.set_b, parameters.set_tc, True)) == 0):
 
-            set_tcp, diag = self.find_diagnosis(parameters.set_c, parameters.set_b, parameters.set_tc, parameters.set_neg_tv)
+            set_tcp, diag = self.find_diagnosis(parameters.set_c, parameters.set_b, parameters.set_tc,
+                                                parameters.set_neg_tv)
 
             # update the parameters, which will be used by the children's nodes
             # set_tcp

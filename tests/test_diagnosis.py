@@ -24,13 +24,14 @@ from explanation.operations.algorithms.fastdiagp import FastDiagP
 from explanation.operations.algorithms.kbdiag import KBDiag
 from explanation.operations.algorithms.profiler import ProfilerMode, ProfilerPreset, use_global_profiler
 from explanation.operations.algorithms.quickxplain import QuickXPlain
+from explanation.operations.algorithms.quickxplain_with_testcases import QuickXPlainWithTestCases
 from explanation.operations.algorithms.wipeoutr_fm import WipeOutR_FM
 from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
 from explanation.operations.pysat_abstract_explanation import _format_results
 from explanation.operations.pysat_redundancy_testcases import PySATRedundancyTestCases
 from explanation.operations.pysat_explanation_builder import (
     PySATDiagnosisBuilder, PySATTestcaseBuilder,
-    PySATRedundancyTestCasesBuilder, PySATRedundancyConstraintsBuilder
+    PySATRedundancyTestCasesBuilder, PySATRedundancyConstraintsBuilder, PySATTestcaseQuickXplainBuilder
 )
 from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 from explanation.transformations.testsuite_reader import TestSuiteReader
@@ -48,6 +49,8 @@ ENABLED_TESTS = {
     'kbdiag_1diag_1_neg': True,
     'kbdiag_1diag_2': True,
     'kbdiag_1diag_2_neg': True,
+    'quickxplainwithtestcases_1cs_1': True,
+    'quickxplainwithtestcases_1cs_1_neg': True,
 
     # HSDAG with FastDiag
     'hsdag_fastdiag_1diag': True,
@@ -75,6 +78,12 @@ ENABLED_TESTS = {
     'hsdag_kbdiag_1diag_2_neg': True,
     'hsdag_kbdiag_all_2': True,
     'hsdag_kbdiag_all_2_neg': True,
+
+    # HSDAG+QuickXPlainWithTestCases tests
+    'hsdag_quickxplainwithtestcases_1cs_1': True,
+    'hsdag_quickxplainwithtestcases_1cs_1_neg': True,
+    'hsdag_quickxplainwithtestcases_all_1': True,
+    'hsdag_quickxplainwithtestcases_all_1_neg': True,
 
     # WipeOutR_FM tests
     'wipeoutr_fm_redundancy': True,
@@ -122,7 +131,7 @@ def _get_sat4j_only_params():
     ]
     return [p for p in all_params if ENABLED_PARAMS.get(p[0], True)]
 
-def _get_kbdiag_params():
+def _get_no_sat4j_params():
     """Get standard parameter combinations based on ENABLED_PARAMS config."""
     all_params = [
         ("incremental_with_profiling", True, 'glucose3', False, True),
@@ -136,7 +145,7 @@ def _get_kbdiag_params():
 
 STANDARD_PARAMS = _get_standard_params()
 SAT4J_ONLY_PARAMS = _get_sat4j_only_params()
-KBDIAG_PARAMS = _get_kbdiag_params()
+NO_SAT4J_PARAMS = _get_no_sat4j_params()
 
 # =============================================================================
 # TEST RESOURCES
@@ -293,7 +302,7 @@ def test_fastdiagp_1diag(name, is_incremental, solver_name, use_sat4j, enable_pr
         print(diag_mess)
         assert diag_mess == 'Diagnosis: [(5) IMPLIES[Smartwatch][Analog]]'
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('kbdiag_1diag_1')
 def test_kbdiag_1diag_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """Test KBDIAG: find one diagnosis."""
@@ -319,7 +328,7 @@ def test_kbdiag_1diag_1(name, is_incremental, solver_name, use_sat4j, enable_pro
         print(diag_mess)
         assert diag_mess == 'Diagnosis: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]'
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('kbdiag_1diag_1_neg')
 def test_kbdiag_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """Test KBDIAG: find one diagnosis."""
@@ -347,7 +356,7 @@ def test_kbdiag_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable
         print(diag_mess)
         assert diag_mess == 'Diagnosis: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]QType ]'
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('kbdiag_1diag_2')
 def test_kbdiag_1diag_2(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """Test KBDIAG: find one diagnosis."""
@@ -375,7 +384,7 @@ def test_kbdiag_1diag_2(name, is_incremental, solver_name, use_sat4j, enable_pro
         print(diag_mess)
         assert diag_mess == 'Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]'
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('kbdiag_1diag_2_neg')
 def test_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """Test KBDIAG: find one diagnosis."""
@@ -402,6 +411,58 @@ def test_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, enable
         profiler.print_summary(include_raw_timers=True)
         print(diag_mess)
         assert diag_mess == 'Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]'
+
+@parameterized.expand(STANDARD_PARAMS)
+@skip_if_disabled('quickxplainwithtestcases_1cs_1')
+def test_quickxplainwithtestcases_1cs_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
+    print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
+
+    with (profiler_context(enable_profiling) as profiler):
+        print_profiler_status(profiler)
+
+        positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
+        model = (DiagnosisModelBuilder
+                 .from_uvl(Resources.FM_10_1)
+                 .use_incremental(is_incremental)
+                 .with_positive_testcases(positive_testcases)
+                 .build())
+
+        checker = create_checker(use_sat4j, model)
+        quickxplain = QuickXPlainWithTestCases(checker)
+        _, cs = quickxplain.find_conflict_set(model.get_c(), model.get_b(), model.get_tc())
+
+        cs_mess = _format_results("Conflict", "Conflicts", [cs], model)
+
+        profiler.print_summary(include_raw_timers=True)
+        print(cs_mess)
+        assert cs_mess == 'Conflict: [(mandatory) CheckR[1,1]SDC , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]]]'
+
+@parameterized.expand(STANDARD_PARAMS)
+@skip_if_disabled('quickxplainwithtestcases_1cs_1_neg')
+def test_quickxplainwithtestcases_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
+    print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
+
+    with (profiler_context(enable_profiling) as profiler):
+        print_profiler_status(profiler)
+
+        positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
+        negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
+        model = (DiagnosisModelBuilder
+                 .from_uvl(Resources.FM_10_1)
+                 .use_incremental(is_incremental)
+                 .with_positive_testcases(positive_testcases)
+                 .with_negative_testcases(negative_testcases)
+                 .build())
+
+        checker = create_checker(use_sat4j, model)
+        quickxplain = QuickXPlainWithTestCases(checker)
+        _, cs = quickxplain.find_conflict_set(model.get_c(), model.get_b(), model.get_tc(), model.get_neg_tv())
+
+        diag_mess = _format_results("Conflict", "Conflicts", [cs], model)
+
+        profiler.print_summary(include_raw_timers=True)
+        print(diag_mess)
+        assert diag_mess == 'Conflict: [(mandatory) CheckR[1,1]SDC ]'
 
 # =============================================================================
 # HSDAG WITH FASTDIAG TESTS
@@ -696,7 +757,7 @@ def test_hsdag_quickxplain_with_testcase(name, is_incremental, solver_name, use_
 # HSDAG + KBDIAG TESTS
 # =============================================================================
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('hsdag_kbdiag_1diag_1')
 def test_hsdag_kbdiag_1diag_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """HSDAG with KBDIAG: find one diagnosis."""
@@ -726,7 +787,7 @@ def test_hsdag_kbdiag_1diag_1(name, is_incremental, solver_name, use_sat4j, enab
             'Diagnosis: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]',
             'No conflict found']
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('hsdag_kbdiag_1diag_1_neg')
 def test_hsdag_kbdiag_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """HSDAG with KBDIAG: find one diagnosis."""
@@ -760,7 +821,7 @@ def test_hsdag_kbdiag_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, 
             'Diagnosis: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]QType ]',
             'No conflict found']
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('hsdag_kbdiag_all_1')
 def test_hsdag_kbdiag_all_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """HSDAG with KBDIAG: all diagnoses."""
@@ -791,7 +852,7 @@ def test_hsdag_kbdiag_all_1(name, is_incremental, solver_name, use_sat4j, enable
                              '(Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , '
                              '(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]QType ]')
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('hsdag_kbdiag_all_1_neg')
 def test_hsdag_kbdiag_all_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """HSDAG with KBDIAG: all diagnoses."""
@@ -822,7 +883,7 @@ def test_hsdag_kbdiag_all_1_neg(name, is_incremental, solver_name, use_sat4j, en
         print(result[0])
         assert result[0] == 'Diagnoses: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]QType ],[(mandatory) CheckR[1,1]RecEng , (alternative) RecEng[1,1]UBRec CBRec , (optional) CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (optional) CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (alternative) RecEng[1,1]UBRec CBRec , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (alternative) RecEng[1,1]UBRec CBRec , (optional) CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (optional) CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]'
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('hsdag_kbdiag_1diag_2')
 def test_hsdag_kbdiag_1diag_2(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """HSDAG with KBDIAG: find one diagnosis."""
@@ -852,7 +913,7 @@ def test_hsdag_kbdiag_1diag_2(name, is_incremental, solver_name, use_sat4j, enab
             'Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]',
             'No conflict found']
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('hsdag_kbdiag_1diag_2_neg')
 def test_hsdag_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """HSDAG with KBDIAG: find one diagnosis."""
@@ -886,7 +947,7 @@ def test_hsdag_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, 
             'Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]',
             'No conflict found']
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('hsdag_kbdiag_all_2')
 def test_hsdag_kbdiag_all_2(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """HSDAG with KBDIAG: all diagnoses."""
@@ -914,7 +975,7 @@ def test_hsdag_kbdiag_all_2(name, is_incremental, solver_name, use_sat4j, enable
         print(result[0])
         assert result[0] == ('Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]')
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('hsdag_kbdiag_all_2_neg')
 def test_hsdag_kbdiag_all_2_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """HSDAG with KBDIAG: all diagnoses."""
@@ -946,10 +1007,161 @@ def test_hsdag_kbdiag_all_2_neg(name, is_incremental, solver_name, use_sat4j, en
         assert result[0] == ('Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]')
 
 # =============================================================================
+# HSDAG + QUICKXPLAINWITHTESTCASES TESTS
+# =============================================================================
+
+@parameterized.expand(STANDARD_PARAMS)
+@skip_if_disabled('hsdag_quickxplainwithtestcases_1diag_1')
+def test_hsdag_quickxplainwithtestcases_1diag_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
+    print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
+
+    with (profiler_context(enable_profiling) as profiler):
+        print_profiler_status(profiler)
+
+        positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
+        model = (DiagnosisModelBuilder
+                 .from_uvl(Resources.FM_10_1)
+                 .with_positive_testcases(positive_testcases)
+                 .use_incremental(is_incremental)
+                 .build())
+
+        builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
+        if builder is None:
+            return
+
+        op = builder.with_max_diagnoses(1).build()
+        op.execute(model)
+        result = op.get_result()
+
+        profiler.print_summary(include_raw_timers=True)
+        print(result)
+        assert result == [
+            'Diagnosis: [(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType ]',
+            'Conflicts: [(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (mandatory) '
+            'CheckR[1,1]SDC ],[(Constraint 1) OR[NOT[SDC][]][Stat], (mandatory) '
+            'CheckR[1,1]SDC ],[(mandatory) CheckR[1,1]RecEng ],[(mandatory) '
+            'CheckR[1,1]QType ]']
+
+@parameterized.expand(STANDARD_PARAMS)
+@skip_if_disabled('hsdag_quickxplainwithtestcases_1diag_1_neg')
+def test_hsdag_quickxplainwithtestcases_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
+    print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
+
+    with (profiler_context(enable_profiling) as profiler):
+        print_profiler_status(profiler)
+
+        positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
+        negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
+        model = (DiagnosisModelBuilder
+                 .from_uvl(Resources.FM_10_1)
+                 .with_positive_testcases(positive_testcases)
+                 .with_negative_testcases(negative_testcases)
+                 .use_incremental(is_incremental)
+                 .build())
+
+        builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
+        if builder is None:
+            return
+
+        hsdag = (builder
+                 .with_max_diagnoses(1)
+                 .build())
+        hsdag.execute(model)
+        result = hsdag.get_result()
+
+        profiler.print_summary(include_raw_timers=True)
+        print(result)
+        assert result == [
+            'Diagnosis: [(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType ]',
+            'Conflicts: [(mandatory) CheckR[1,1]SDC ],[(mandatory) CheckR[1,1]RecEng ],[(mandatory) CheckR[1,1]QType ]']
+
+@parameterized.expand(STANDARD_PARAMS)
+@skip_if_disabled('hsdag_quickxplainwithtestcases_all_1')
+def test_hsdag_quickxplainwithtestcases_all_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
+    print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
+
+    with (profiler_context(enable_profiling) as profiler):
+        print_profiler_status(profiler)
+
+        positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
+        model = (DiagnosisModelBuilder
+                 .from_uvl(Resources.FM_10_1)
+                 .with_positive_testcases(positive_testcases)
+                 .use_incremental(is_incremental)
+                 .build())
+
+        builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
+        if builder is None:
+            return
+
+        hsdag = builder.build()
+        hsdag.execute(model)
+        result = hsdag.get_result()
+
+        profiler.print_summary(include_raw_timers=True)
+        print(result[0])
+        assert result[0] == ('Diagnoses: [(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]RecEng , '
+                             '(mandatory) CheckR[1,1]QType ],[(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], '
+                             '(Constraint 1) OR[NOT[SDC][]][Stat], (mandatory) CheckR[1,1]RecEng , '
+                             '(mandatory) CheckR[1,1]QType ],[(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], '
+                             '(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]RecEng , (mandatory) '
+                             'CheckR[1,1]QType ]')
+
+@parameterized.expand(STANDARD_PARAMS)
+@skip_if_disabled('hsdag_quickxplainwithtestcases_all_1_neg')
+def test_hsdag_quickxplainwithtestcases_all_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
+    print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
+
+    with (profiler_context(enable_profiling) as profiler):
+        print_profiler_status(profiler)
+
+        positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
+        negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
+        model = (DiagnosisModelBuilder
+                 .from_uvl(Resources.FM_10_1)
+                 .with_positive_testcases(positive_testcases)
+                 .with_negative_testcases(negative_testcases)
+                 .use_incremental(is_incremental)
+                 .build())
+
+        builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+        if builder is None:
+            return
+
+        hsdag = (builder
+                 .build())
+        hsdag.execute(model)
+        result = hsdag.get_result()
+
+        profiler.print_summary(include_raw_timers=True)
+        print(result[0])
+        assert result[0] == ('Diagnoses: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]SDC , '
+                             '(mandatory) CheckR[1,1]QType ],[(mandatory) CheckR[1,1]RecEng , '
+                             '(alternative) RecEng[1,1]UBRec CBRec , (optional) CheckR[0,1]Stat , '
+                             '(mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , '
+                             '(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
+                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (optional) '
+                             'CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice '
+                             'ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
+                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (alternative) '
+                             'RecEng[1,1]UBRec CBRec , (mandatory) CheckR[1,1]QType , (or) '
+                             'QType[1,2]MulChoice ImgAnaTask , (Constraint 0) '
+                             'OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
+                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (alternative) '
+                             'RecEng[1,1]UBRec CBRec , (optional) CheckR[0,1]Stat , (mandatory) '
+                             'CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint '
+                             '1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (mandatory) '
+                             'CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) '
+                             'OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
+                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (optional) '
+                             'CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (Constraint 0) '
+                             'OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]')
+
+# =============================================================================
 # WIPEOUTR_FM TESTS
 # =============================================================================
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('wipeoutr_fm_redundancy')
 def test_wipeoutr_fm_redundancy(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """Test WipeOutR_FM: detect redundant constraints in feature model.
@@ -1007,7 +1219,7 @@ def test_wipeoutr_fm_redundancy(name, is_incremental, solver_name, use_sat4j, en
         assert result[1] == 'Non-redundant constraints: [(optional) RedundantFM[0,1]FeatureC , (mandatory) RedundantFM[1,1]FeatureB , (mandatory) RedundantFM[1,1]FeatureA ]'
 
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('pysat_redundancy_constraints')
 def test_pysat_redundancy_constraints(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """Test PySATRedundancyConstraints operation using WipeOutR_FM algorithm.
@@ -1040,10 +1252,10 @@ def test_pysat_redundancy_constraints(name, is_incremental, solver_name, use_sat
         assert len(model.negated_constraint_map) > 0, "Negated constraint map should be populated"
 
         # Create and configure the operation using builder
-        solver = 'sat4j' if use_sat4j else solver_name
-        operation = (PySATRedundancyConstraintsBuilder.for_redundancy_constraints(profiler)
-                     .with_solver(solver)
-                     .build())
+        builder = None if use_sat4j else PySATRedundancyConstraintsBuilder.for_redundancy_constraints(profiler)
+        if builder is None:
+            return
+        operation = builder.build()
 
         # Execute the operation
         operation.execute(model)
@@ -1076,7 +1288,7 @@ def test_pysat_redundancy_constraints(name, is_incremental, solver_name, use_sat
 # WIPEOUTR_T TESTS
 # =============================================================================
 
-@parameterized.expand(KBDIAG_PARAMS)
+@parameterized.expand(STANDARD_PARAMS)
 @skip_if_disabled('wipeoutr_t_redundancy')
 def test_wipeoutr_t_redundancy(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     """Test PySATRedundancyTestCases operation using WipeOutR_T algorithm.
@@ -1141,6 +1353,9 @@ def run_all_tests():
         ("KBDiag 1 Diagnosis 1", 'kbdiag_1diag_1', test_kbdiag_1diag_1),
         ("KBDiag 1 Diagnosis 1 neg", 'kbdiag_1diag_1_neg', test_kbdiag_1diag_1_neg),
         ("KBDiag 1 Diagnosis 2", 'kbdiag_1diag_2', test_kbdiag_1diag_2),
+        ("KBDiag 1 Diagnosis 2 neg", 'kbdiag_1diag_2_neg', test_kbdiag_1diag_2_neg),
+        ("QuickXPlainWithTestCases 1 CS 1", 'quickxplainwithtestcases_1cs_1', test_quickxplainwithtestcases_1cs_1),
+        ("QuickXPlainWithTestCases 1 CS 1 neg", 'quickxplainwithtestcases_1cs_1_neg', test_quickxplainwithtestcases_1cs_1_neg),
         ("HS-DAG FastDiag 1 Diagnosis", 'hsdag_fastdiag_1diag', test_hsdag_fastdiag_1diag),
         ("HS-DAG FastDiag 2 Diagnoses", 'hsdag_fastdiag_2diag', test_hsdag_fastdiag_2diag),
         ("HS-DAG FastDiag All Diagnoses", 'hsdag_fastdiag_all', test_hsdag_fastdiag_all),
@@ -1160,6 +1375,10 @@ def run_all_tests():
         ("HS-DAG KBDiag 1 Diagnosis 2 neg", 'hsdag_kbdiag_1diag_2_neg', test_hsdag_kbdiag_1diag_2_neg),
         ("HS-DAG KBDiag All Diagnoses 2", 'hsdag_kbdiag_all_2', test_hsdag_kbdiag_all_2),
         ("HS-DAG KBDiag All Diagnoses 2 neg", 'hsdag_kbdiag_all_2_neg', test_hsdag_kbdiag_all_2_neg),
+        ("HS-DAG QuickXPlainWithTestCases 1 CS 1", 'hsdag_quickxplainwithtestcases_1diag_1', test_hsdag_quickxplainwithtestcases_1diag_1),
+        ("HS-DAG QuickXPlainWithTestCases 1 CS 1 neg", 'hsdag_quickxplainwithtestcases_1diag_1_neg', test_hsdag_quickxplainwithtestcases_1diag_1_neg),
+        ("HS-DAG QuickXPlainWithTestCases All CS 1", 'hsdag_quickxplainwithtestcases_all_1', test_hsdag_quickxplainwithtestcases_all_1),
+        ("HS-DAG QuickXPlainWithTestCases All CS 1 neg", 'hsdag_quickxplainwithtestcases_all_1_neg', test_hsdag_quickxplainwithtestcases_all_1_neg),
         ("WipeOutR_FM Redundancy", 'wipeoutr_fm_redundancy', test_wipeoutr_fm_redundancy),
         ("PySAT Redundancy Constraints", 'pysat_redundancy_constraints', test_pysat_redundancy_constraints),
         ("WipeOutR_T Redundancy", 'wipeoutr_t_redundancy', test_wipeoutr_t_redundancy),
