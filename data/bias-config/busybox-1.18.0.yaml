@@ -141,7 +141,7 @@ features:
   - FIRST_SYSTEM_ID
   - FAKEIDENTD
   - FEATURE_VOLUMEID_ISO9660
-  - TRUE
+  - TRUE1
   - MOUNT
   - FEATURE_MOUNT_FSTAB
   - FEATURE_MOUNT_FAKE
@@ -440,7 +440,7 @@ features:
   - FEATURE_TRACEROUTE_SOURCE_ROUTE
   - TRACEROUTE6
   - RFKILL
-  - FALSE
+  - FALSE1
   - CHATTR
   - LFS
   - FSYNC
@@ -787,7 +787,7 @@ features:
   - DUMPLEASES
   - SOFTLIMIT
   - DPKG
-  - YES
+  - YES1
   - UDHCPC_DEFAULT_SCRIPT
   - FEATURE_PIDFILE
   - NBDCLIENT
@@ -968,7 +968,7 @@ leaf_features:
   - FIRST_SYSTEM_ID
   - FAKEIDENTD
   - FEATURE_VOLUMEID_ISO9660
-  - TRUE
+  - TRUE1
   - FEATURE_MOUNT_FSTAB
   - FEATURE_MOUNT_FAKE
   - FEATURE_MOUNT_FLAGS
@@ -1200,7 +1200,7 @@ leaf_features:
   - FEATURE_TRACEROUTE_SOURCE_ROUTE
   - TRACEROUTE6
   - RFKILL
-  - FALSE
+  - FALSE1
   - CHATTR
   - LFS
   - FSYNC
@@ -1482,7 +1482,7 @@ leaf_features:
   - DUMPLEASES
   - SOFTLIMIT
   - DPKG
-  - YES
+  - YES1
   - UDHCPC_DEFAULT_SCRIPT
   - FEATURE_PIDFILE
   - NBDCLIENT
@@ -2216,7 +2216,7 @@ hierarchical_candidates:
 
   # Binary relationships: will generate with mandatory and optional operators
   - parent: root
-    children: [TRUE]
+    children: [TRUE1]
     relationship_type: binary
 
   # Binary relationships: will generate with mandatory and optional operators
@@ -3686,7 +3686,7 @@ hierarchical_candidates:
 
   # Binary relationships: will generate with mandatory and optional operators
   - parent: root
-    children: [FALSE]
+    children: [FALSE1]
     relationship_type: binary
 
   # Binary relationships: will generate with mandatory and optional operators
@@ -5381,7 +5381,7 @@ hierarchical_candidates:
 
   # Binary relationships: will generate with mandatory and optional operators
   - parent: root
-    children: [YES]
+    children: [YES1]
     relationship_type: binary
 
   # Binary relationships: will generate with mandatory and optional operators
