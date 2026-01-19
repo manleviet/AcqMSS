@@ -20,6 +20,18 @@ features:
   - uml
   - petri_net
 
+# Leaf features (features with no children)
+leaf_features:
+  - sdi
+  - mdi
+  - java
+  - qt
+  - model_code_synch
+  - javac
+  - mvc
+  - uml
+  - petri_net
+
 # Hierarchical relationship candidates
 # The generator will create constraints with allowed operators based on relationship_type
 hierarchical_candidates:
@@ -83,6 +95,7 @@ hierarchical_candidates:
 #   (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]
 #   (Constraint 1) OR[NOT[model_code_synch][]][diagram_builder]
 #
-# auto_generate: true will create all possible requires and excludes for all feature pairs
+# cross_tree_mode: 'all' generates requires/excludes for all feature pairs
+#                  'leaf' generates only between leaf features
 cross_tree_candidates:
-  auto_generate: true
+  cross_tree_mode: all

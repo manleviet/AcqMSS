@@ -71,6 +71,57 @@ features:
   - BricklesGameMenu
   - BowlingGameMenu
 
+# Leaf features (features with no children)
+leaf_features:
+  - CheckPreviousBestScore
+  - SaveScore
+  - SaveGame
+  - ExitGame
+  - InstallGame
+  - UninstallGame
+  - ListGame
+  - PlayBrickles
+  - PlayPong
+  - PlayBowling
+  - Initialization
+  - AnimationLoop
+  - SpritePair
+  - Size
+  - Point
+  - Velocity
+  - Puck
+  - BowlingBall
+  - BowlingPin
+  - TopPaddle
+  - BottomPaddle
+  - Leftpong
+  - Rightpont
+  - Leftbrickles
+  - Rightbrickles
+  - Brick
+  - BrickPile
+  - Ceilingbrickles
+  - Floorbrickles
+  - Lane
+  - Gutter
+  - Edge
+  - EndofAlley
+  - RackofPins
+  - ScoreBoard
+  - Floorpong
+  - Ceilingpong
+  - DividingLine
+  - Pucksupply
+  - PongBoard
+  - BricklesBoard
+  - BowlingBoard
+  - Pong
+  - Brickles
+  - Bowling
+  - PongGameMenu
+  - BricklesGameMenu
+  - BowlingGameMenu
+
 # Hierarchical relationship candidates
 # The generator will create constraints with allowed operators based on relationship_type
 hierarchical_candidates:
@@ -291,6 +342,7 @@ hierarchical_candidates:
 #   (Constraint 32) OR[NOT[Floorbrickles][]][Brickles]
 #   (Constraint 33) OR[NOT[Pucksupply][]][Brickles]
 #
-# auto_generate: true will create all possible requires and excludes for all feature pairs
+# cross_tree_mode: 'all' generates requires/excludes for all feature pairs
+#                  'leaf' generates only between leaf features
 cross_tree_candidates:
-  auto_generate: true
+  cross_tree_mode: all
