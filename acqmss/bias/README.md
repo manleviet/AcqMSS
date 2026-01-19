@@ -51,7 +51,7 @@ cross_tree_candidates:
 ### 2. Sinh bias
 
 ```python
-from bias import ConfigLoader, BiasGenerator, BiasIO
+from acqmss.bias import ConfigLoader, BiasGenerator, BiasIO
 
 # Load config
 config = ConfigLoader.load('configs/survey.yaml')
@@ -68,7 +68,7 @@ BiasIO.save_to_cnf(bias, 'data/bias.cnf')
 ### 3. Sử dụng trong CONGEN
 
 ```python
-from bias import BiasIO
+from acqmss.bias import BiasIO
 
 # Load bias
 B = BiasIO.load_from_json('data/bias.json')

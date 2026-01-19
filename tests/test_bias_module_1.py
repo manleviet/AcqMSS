@@ -1,4 +1,4 @@
-from bias import ConfigLoader, BiasGenerator, BiasIO
+from acqmss.bias import ConfigLoader, BiasGenerator, BiasIO
 
 # 1. Load config
 config = ConfigLoader.load("./data/bias-config/REAL-FM-7.yaml")
