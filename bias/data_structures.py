@@ -119,6 +119,7 @@ class CrossTreeMode(Enum):
     """Mode for cross-tree constraint generation"""
     ALL = "all"    # Generate constraints between all features
     LEAF = "leaf"  # Generate constraints only between leaf features
+    EXTRACTED = "extracted"  # Generate constraints only between features extracted from CTCs
 
 
 @dataclass
@@ -126,6 +127,7 @@ class SimplifiedCrossTreeConfig:
     """Simplified cross-tree configuration"""
     cross_tree_mode: CrossTreeMode = CrossTreeMode.LEAF
     specific_pairs: List[tuple] = field(default_factory=list)
+    cross_tree_features: List[str] = field(default_factory=list)  # Features for extracted mode
 
     def get_allowed_operators(self) -> List[str]:
         """Always generate both requires and excludes"""
@@ -152,5 +154,7 @@ class SimplifiedBiasConfig:
         """Get features to use for cross-tree constraint generation based on mode"""
         if self.cross_tree_config.cross_tree_mode == CrossTreeMode.LEAF:
             return self.leaf_features
+        elif self.cross_tree_config.cross_tree_mode == CrossTreeMode.EXTRACTED:
+            return self.cross_tree_config.cross_tree_features if self.cross_tree_config.cross_tree_features else []
         else:  # ALL
             return self.features

@@ -56,7 +56,10 @@ class SimplifiedConfigLoader:
                 children: [license, nolicense]
                 relationship_type: group
             cross_tree_candidates:
-              cross_tree_mode: leaf  # 'all' or 'leaf'
+              cross_tree_mode: leaf  # 'all', 'leaf', or 'extracted'
+              cross_tree_features:   # Optional: features for 'extracted' mode
+                - featureA
+                - featureB
         """
         config_file = Path(config_path)
         if not config_file.exists():
@@ -107,12 +110,18 @@ class SimplifiedConfigLoader:
 
         # Parse cross_tree_mode (default: leaf)
         mode_str = ct_data.get('cross_tree_mode', 'leaf')
-        if mode_str not in ['all', 'leaf']:
-            raise ValueError(f"Invalid cross_tree_mode: {mode_str}. Must be 'all' or 'leaf'")
+        if mode_str not in ['all', 'leaf', 'extracted']:
+            raise ValueError(f"Invalid cross_tree_mode: {mode_str}. Must be 'all', 'leaf', or 'extracted'")
+
+        # Parse cross_tree_features (for extracted mode)
+        cross_tree_features = ct_data.get('cross_tree_features', [])
+        if not isinstance(cross_tree_features, list):
+            raise ValueError("Field 'cross_tree_features' must be a list")
 
         cross_tree_config = SimplifiedCrossTreeConfig(
             cross_tree_mode=CrossTreeMode(mode_str),
-            specific_pairs=ct_data.get('specific_pairs', [])
+            specific_pairs=ct_data.get('specific_pairs', []),
+            cross_tree_features=cross_tree_features
         )
 
         return SimplifiedBiasConfig(
@@ -166,6 +175,11 @@ class SimplifiedConfigLoader:
         for feature in config.features:
             if not feature or not isinstance(feature, str):
                 errors.append(f"Invalid feature name: {feature}")
+
+        # Check that all cross_tree_features exist in features list
+        for feature in config.cross_tree_config.cross_tree_features:
+            if feature not in feature_set:
+                errors.append(f"Cross-tree feature '{feature}' not in features list")
 
         # Warnings
         if not config.hierarchical_candidates:
