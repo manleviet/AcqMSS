@@ -51,13 +51,13 @@ cross_tree_candidates:
 ### 2. Sinh bias
 
 ```python
-from bias import SimplifiedConfigLoader, SimplifiedBiasGenerator, BiasIO
+from bias import ConfigLoader, BiasGenerator, BiasIO
 
 # Load config
-config = SimplifiedConfigLoader.load('configs/survey.yaml')
+config = ConfigLoader.load('configs/survey.yaml')
 
 # Generate bias
-generator = SimplifiedBiasGenerator(config)
+generator = BiasGenerator(config)
 bias = generator.generate_bias()
 
 # Save

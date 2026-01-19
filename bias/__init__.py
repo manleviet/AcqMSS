@@ -11,13 +11,13 @@ from .data_structures import (
     Bias,
     OperatorType,
     RelationshipType,
-    SimplifiedHierarchicalCandidate,
-    SimplifiedCrossTreeConfig,
-    SimplifiedBiasConfig,
+    HierarchicalCandidate,
+    CrossTreeConfig,
+    BiasConfig,
 )
 from .clause_generator import ConstraintClauseGenerator
-from .config_loader import SimplifiedConfigLoader
-from .bias_generator import SimplifiedBiasGenerator
+from .config_loader import ConfigLoader
+from .bias_generator import BiasGenerator
 from .bias_io import BiasIO
 
 __all__ = [
@@ -27,12 +27,12 @@ __all__ = [
     'Bias',
     'OperatorType',
     'RelationshipType',
-    'SimplifiedHierarchicalCandidate',
-    'SimplifiedCrossTreeConfig',
-    'SimplifiedBiasConfig',
+    'HierarchicalCandidate',
+    'CrossTreeConfig',
+    'BiasConfig',
     # Generators and utilities
     'ConstraintClauseGenerator',
-    'SimplifiedConfigLoader',
-    'SimplifiedBiasGenerator',
+    'ConfigLoader',
+    'BiasGenerator',
     'BiasIO',
 ]

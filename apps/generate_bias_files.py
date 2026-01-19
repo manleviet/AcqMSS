@@ -33,7 +33,7 @@ ROOT_PROJECT_FOLDER = Path(__file__).resolve().parent.parent
 os.chdir(ROOT_PROJECT_FOLDER)
 sys.path.insert(0, str(ROOT_PROJECT_FOLDER))
 
-from bias import SimplifiedConfigLoader, SimplifiedBiasGenerator, BiasIO
+from bias import ConfigLoader, BiasGenerator, BiasIO
 
 
 @dataclass
@@ -155,10 +155,10 @@ class BatchBiasGenerator:
             if self.config.verbose:
                 print(f"  Loading config: {model_config.config_path}")
 
-            yaml_config = SimplifiedConfigLoader.load(model_config.config_path)
+            yaml_config = ConfigLoader.load(model_config.config_path)
 
             # 2. Validate
-            validation = SimplifiedConfigLoader.validate_config(yaml_config)
+            validation = ConfigLoader.validate_config(yaml_config)
             if not validation['valid']:
                 result['error'] = f"Validation failed: {validation['errors']}"
                 return result
@@ -171,7 +171,7 @@ class BatchBiasGenerator:
             if self.config.verbose:
                 print(f"  Generating bias...")
 
-            generator = SimplifiedBiasGenerator(yaml_config)
+            generator = BiasGenerator(yaml_config)
             bias = generator.generate_bias()
 
             # 4. Get statistics

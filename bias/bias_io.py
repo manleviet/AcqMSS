@@ -209,7 +209,7 @@ class BiasIO:
 
             # Count by operator
             op_counts = Counter(c.operator.value if c.operator else 'unknown'
-                              for c in bias.constraints)
+                                for c in bias.constraints)
             f.write("Constraints by operator:\n")
             for op, count in sorted(op_counts.items()):
                 f.write(f"  {op}: {count}\n")

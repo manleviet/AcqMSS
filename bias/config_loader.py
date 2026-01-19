@@ -1,8 +1,8 @@
 """
-Configuration loader for simplified YAML bias configurations.
+Configuration loader for YAML bias configurations.
 
-This module provides functionality to load simplified bias configurations
-from YAML files. The simplified format only requires:
+This module provides functionality to load bias configurations
+from YAML files. The format only requires:
 - Feature names (no IDs)
 - Hierarchical candidates with relationship types
 - Cross-tree config (auto-generate or specific pairs)
@@ -12,27 +12,27 @@ import yaml
 from pathlib import Path
 from typing import Dict
 from .data_structures import (
-    SimplifiedBiasConfig,
-    SimplifiedHierarchicalCandidate,
-    SimplifiedCrossTreeConfig,
+    BiasConfig,
+    HierarchicalCandidate,
+    CrossTreeConfig,
     RelationshipType,
     CrossTreeMode,
 )
 
 
-class SimplifiedConfigLoader:
+class ConfigLoader:
     """Load YAML configuration for bias generation"""
 
     @staticmethod
-    def load(config_path: str) -> SimplifiedBiasConfig:
+    def load(config_path: str) -> BiasConfig:
         """
-        Load simplified config from YAML file.
+        Load config from YAML file.
 
         Args:
             config_path: Path to YAML configuration file
 
         Returns:
-            SimplifiedBiasConfig object
+            BiasConfig object
 
         Raises:
             FileNotFoundError: If config file doesn't exist
@@ -98,7 +98,7 @@ class SimplifiedConfigLoader:
             if rel_type_str not in ['binary', 'group']:
                 raise ValueError(f"Invalid relationship_type: {rel_type_str}. Must be 'binary' or 'group'")
 
-            candidate = SimplifiedHierarchicalCandidate(
+            candidate = HierarchicalCandidate(
                 parent=hc['parent'],
                 children=hc['children'] if isinstance(hc['children'], list) else [hc['children']],
                 relationship_type=RelationshipType(rel_type_str)
@@ -118,13 +118,13 @@ class SimplifiedConfigLoader:
         if not isinstance(cross_tree_features, list):
             raise ValueError("Field 'cross_tree_features' must be a list")
 
-        cross_tree_config = SimplifiedCrossTreeConfig(
+        cross_tree_config = CrossTreeConfig(
             cross_tree_mode=CrossTreeMode(mode_str),
             specific_pairs=ct_data.get('specific_pairs', []),
             cross_tree_features=cross_tree_features
         )
 
-        return SimplifiedBiasConfig(
+        return BiasConfig(
             name=data.get('name', 'Unnamed'),
             features=features,
             leaf_features=leaf_features,
@@ -133,7 +133,7 @@ class SimplifiedConfigLoader:
         )
 
     @staticmethod
-    def validate_config(config: SimplifiedBiasConfig) -> Dict[str, any]:
+    def validate_config(config: BiasConfig) -> Dict[str, any]:
         """
         Validate that the configuration is consistent.
 
@@ -143,7 +143,7 @@ class SimplifiedConfigLoader:
         - Feature names are valid strings
 
         Args:
-            config: SimplifiedBiasConfig to validate
+            config: BiasConfig to validate
 
         Returns:
             Dictionary with validation results:

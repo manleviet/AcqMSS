@@ -1,15 +1,15 @@
-from bias import SimplifiedConfigLoader, SimplifiedBiasGenerator, BiasIO
+from bias import ConfigLoader, BiasGenerator, BiasIO
 
 # 1. Load config
-config = SimplifiedConfigLoader.load("./data/bias-config/REAL-FM-7.yaml")
+config = ConfigLoader.load("./data/bias-config/REAL-FM-7.yaml")
 
 # 2. Validate
-result = SimplifiedConfigLoader.validate_config(config)
+result = ConfigLoader.validate_config(config)
 if not result['valid']:
     print(result['errors'])
 
 # 3. Generate bias
-generator = SimplifiedBiasGenerator(config)
+generator = BiasGenerator(config)
 bias = generator.generate_bias()
 
 # 4. Save

@@ -1,8 +1,8 @@
 """
 Bias generator for feature model constraint acquisition.
 
-This module implements the simplified bias generator that creates
-constraint biases from simplified YAML configurations.
+This module implements the bias generator that creates
+constraint biases from YAML configurations.
 """
 
 from itertools import combinations
@@ -13,26 +13,26 @@ from .data_structures import (
     Bias,
     OperatorType,
     RelationshipType,
-    SimplifiedBiasConfig,
+    BiasConfig,
     CrossTreeMode,
 )
 from .clause_generator import ConstraintClauseGenerator
 
 
-class SimplifiedBiasGenerator:
+class BiasGenerator:
     """
-    Generate constraint bias from simplified configuration.
+    Generate constraint bias from configuration.
 
     The generator automatically determines allowed operators based on
     relationship types and generates all candidate constraints.
     """
 
-    def __init__(self, config: SimplifiedBiasConfig):
+    def __init__(self, config: BiasConfig):
         """
         Initialize bias generator.
 
         Args:
-            config: SimplifiedBiasConfig object loaded from YAML
+            config: BiasConfig object loaded from YAML
         """
         self.config = config
         self.feature_ids = config.get_feature_ids()

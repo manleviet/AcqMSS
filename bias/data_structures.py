@@ -101,8 +101,8 @@ class Bias:
 
 
 @dataclass
-class SimplifiedHierarchicalCandidate:
-    """Simplified hierarchical candidate specification for config file"""
+class HierarchicalCandidate:
+    """Hierarchical candidate specification for config file"""
     parent: str
     children: List[str]
     relationship_type: RelationshipType
@@ -117,14 +117,14 @@ class SimplifiedHierarchicalCandidate:
 
 class CrossTreeMode(Enum):
     """Mode for cross-tree constraint generation"""
-    ALL = "all"    # Generate constraints between all features
+    ALL = "all"  # Generate constraints between all features
     LEAF = "leaf"  # Generate constraints only between leaf features
     EXTRACTED = "extracted"  # Generate constraints only between features extracted from CTCs
 
 
 @dataclass
-class SimplifiedCrossTreeConfig:
-    """Simplified cross-tree configuration"""
+class CrossTreeConfig:
+    """Cross-tree configuration"""
     cross_tree_mode: CrossTreeMode = CrossTreeMode.LEAF
     specific_pairs: List[tuple] = field(default_factory=list)
     cross_tree_features: List[str] = field(default_factory=list)  # Features for extracted mode
@@ -135,13 +135,13 @@ class SimplifiedCrossTreeConfig:
 
 
 @dataclass
-class SimplifiedBiasConfig:
-    """Simplified bias configuration loaded from YAML"""
+class BiasConfig:
+    """Bias configuration loaded from YAML"""
     name: str
     features: List[str]  # All feature names
     leaf_features: List[str]  # Leaf feature names (features with no children)
-    hierarchical_candidates: List[SimplifiedHierarchicalCandidate]
-    cross_tree_config: SimplifiedCrossTreeConfig
+    hierarchical_candidates: List[HierarchicalCandidate]
+    cross_tree_config: CrossTreeConfig
 
     def get_feature_ids(self) -> Dict[str, int]:
         """Auto-assign IDs to features (starting from 1)"""
