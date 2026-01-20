@@ -1,0 +1,13 @@
+# CONGEN Configuration
+# Run with: PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml
+
+[general]
+seed = 82
+output_dir = "data/results"
+verbose = true
+
+# Feature models to process
+[[models]]
+path = "data/fms/REAL-FM-7.uvl"
+bias = "data/bias/REAL-FM-7-bias.json"
+examples = "data/examples/REAL-FM-7_rs_1n.json"

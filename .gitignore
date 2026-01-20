@@ -207,3 +207,8 @@ marimo/_lsp/
 __marimo__/
 
 .DS_Store
+/data/bias/ea2468-bias.cnf
+/data/bias/ea2468-bias.json
+/data/bias/linux-2.6.33.3-bias.cnf
+/data/bias/linux-2.6.33.3-bias.json
+/data/bias/linux-2.6.33.3-bias-stats.txt
