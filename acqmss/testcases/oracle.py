@@ -214,6 +214,108 @@ class FeatureModelOracle(Oracle):
         """Get number of CNF clauses in ground truth"""
         return len(self.cnf_clauses)
 
+    def get_constraint_descriptions(self) -> Set[str]:
+        """
+        Extract constraint descriptions from FM.
+
+        Returns descriptions in format matching bias:
+        - "parent --mandatory--> child"
+        - "parent --optional--> child"
+        - "parent --alternative--> [child1, child2, ...]"
+        - "parent --or--> [child1, child2, ...]"
+        - "feature1 requires feature2"
+        - "feature1 excludes feature2"
+
+        Returns:
+            Set of constraint descriptions
+        """
+        descriptions = set()
+
+        # Extract hierarchical constraints from feature relationships
+        for feature in self.fm.get_features():
+            for relation in feature.get_relations():
+                if relation.is_mandatory():
+                    for child in relation.children:
+                        descriptions.add(f"{feature.name} --mandatory--> {child.name}")
+                elif relation.is_optional():
+                    for child in relation.children:
+                        descriptions.add(f"{feature.name} --optional--> {child.name}")
+                elif relation.is_alternative():
+                    children_names = sorted([c.name for c in relation.children])
+                    descriptions.add(f"{feature.name} --alternative--> {children_names}")
+                elif relation.is_or():
+                    children_names = sorted([c.name for c in relation.children])
+                    descriptions.add(f"{feature.name} --or--> {children_names}")
+
+        # Extract cross-tree constraints
+        for ctc in self.fm.get_constraints():
+            desc = self._parse_ctc_to_description(ctc)
+            if desc:
+                descriptions.add(desc)
+
+        return descriptions
+
+    def _parse_ctc_to_description(self, ctc) -> Optional[str]:
+        """
+        Parse cross-tree constraint to description format.
+
+        Supports requires and excludes constraints.
+        """
+        from flamapy.core.models.ast import ASTOperation
+
+        ast = ctc.ast
+        if ast is None:
+            return None
+
+        root = ast.root
+
+        # Handle requires: A => B (same as !A | B)
+        if root.data == ASTOperation.IMPLIES:
+            left = root.left
+            right = root.right
+            if left and right:
+                left_name = self._get_feature_name(left)
+                right_name = self._get_feature_name(right)
+                if left_name and right_name:
+                    return f"{left_name} requires {right_name}"
+
+        # Handle excludes: !(A & B) or A => !B
+        if root.data == ASTOperation.NOT:
+            inner = root.left
+            if inner and inner.data == ASTOperation.AND:
+                left = inner.left
+                right = inner.right
+                if left and right:
+                    left_name = self._get_feature_name(left)
+                    right_name = self._get_feature_name(right)
+                    if left_name and right_name:
+                        return f"{left_name} excludes {right_name}"
+
+        if root.data == ASTOperation.IMPLIES:
+            left = root.left
+            right = root.right
+            if right and right.data == ASTOperation.NOT:
+                left_name = self._get_feature_name(left)
+                right_name = self._get_feature_name(right.left)
+                if left_name and right_name:
+                    return f"{left_name} excludes {right_name}"
+
+        # Fallback: use constraint string representation
+        return str(ctc)
+
+    def _get_feature_name(self, node) -> Optional[str]:
+        """Extract feature name from AST node."""
+        from flamapy.core.models.ast import ASTOperation
+
+        if node is None:
+            return None
+
+        # If it's a simple feature reference
+        if node.data is None or not isinstance(node.data, ASTOperation):
+            return str(node.data) if node.data else None
+
+        return None
+
     def __repr__(self):
         return f"FeatureModelOracle(features={len(self.features)}, " \
                f"clauses={len(self.cnf_clauses)})"
