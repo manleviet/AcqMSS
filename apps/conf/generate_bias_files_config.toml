@@ -1,5 +1,5 @@
 # Batch Bias Generation Configuration
-# Usage: python apps/generate_bias_files_1.py apps/conf/generate_bias_files_config.toml
+# Usage: python apps/generate_bias_files.py apps/conf/generate_bias_files_config.toml
 
 [settings]
 # Output directory for generated bias files
@@ -21,8 +21,8 @@ verbose = true
 #[[models]]
 #config = "data/bias-config/REAL-FM-7.yaml"
 #
-#[[models]]
-#config = "data/bias-config/arcade-game.yaml"
+[[models]]
+config = "data/bias-config/arcade-game.yaml"
 #
 #[[models]]
 #config = "data/bias-config/fqa.yaml"
@@ -34,8 +34,8 @@ verbose = true
 #config = "data/bias-config/ea2468.yaml"
 
 # Large models - uncomment if needed (will generate many constraints)
-[[models]]
-config = "data/bias-config/busybox-1.18.0.yaml"
+#[[models]]
+#config = "data/bias-config/busybox-1.18.0.yaml"
 
 #[[models]]
 #config = "data/bias-config/linux-2.6.33.3.yaml"

@@ -10,29 +10,32 @@ verbose = true
 # Each model requires 'fm_path'
 # Optional per-model: 'output' (overrides output_dir), 'cross_tree_mode'
 
-[[models]]
-fm_path = "data/fms/REAL-FM-7.uvl"
+#[[models]]
+#fm_path = "data/fms/REAL-FM-7.uvl"
 
-[[models]]
-fm_path = "data/fms/REAL-FM-4.uvl"
+#[[models]]
+#fm_path = "data/fms/REAL-FM-4.uvl"
+#cross_tree_mode = "extracted"
 
-[[models]]
-fm_path = "data/fms/fqa.uvl"
-
+#[[models]]
+#fm_path = "data/fms/fqa.uvl"
+#cross_tree_mode = "extracted"
+#
 [[models]]
 fm_path = "data/fms/arcade-game.uvl"
-
-[[models]]
-fm_path = "data/fms/busybox-1.18.0.uvl"
 cross_tree_mode = "extracted"
-
-[[models]]
-fm_path = "data/fms/ea2468.uvl"
-cross_tree_mode = "extracted"
-
-[[models]]
-fm_path = "data/fms/linux-2.6.33.3.uvl"
-cross_tree_mode = "extracted"
+#
+#[[models]]
+#fm_path = "data/fms/busybox-1.18.0.uvl"
+#cross_tree_mode = "extracted"
+#
+#[[models]]
+#fm_path = "data/fms/ea2468.uvl"
+#cross_tree_mode = "extracted"
+#
+#[[models]]
+#fm_path = "data/fms/linux-2.6.33.3.uvl"
+#cross_tree_mode = "extracted"
 
 # Example with custom settings:
 # [[models]]

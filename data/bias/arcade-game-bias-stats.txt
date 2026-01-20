@@ -1,15 +1,15 @@
 === Bias Statistics ===
 Total features: 65
-Total constraints: 6312
-Total clauses: 6517
+Total constraints: 1755
+Total clauses: 1960
 
 Constraints by operator:
   alternative: 9
-  excludes: 2080
+  excludes: 561
   mandatory: 27
   optional: 27
   or: 9
-  requires: 4160
+  requires: 1122
 
 Features:
   1: ArcadeGame
