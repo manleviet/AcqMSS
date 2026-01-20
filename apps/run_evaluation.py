@@ -35,6 +35,7 @@ from acqmss.eval import (
     generate_evaluation_report,
     generate_accuracy_report,
     generate_cv_report,
+    save_cv_kb_files,
 )
 from acqmss.testcases import ExampleIO
 
@@ -227,6 +228,12 @@ def evaluate_model(
                 output_file = output_dir / f"{model_name}_cv_{mode_name}.json"
                 cv_report = generate_cv_report(cv_result, output_file)
                 print(cv_report)
+
+                # Save KB files (fold KBs + intersected KB)
+                saved_kbs = save_cv_kb_files(cv_result, output_dir, model_name, mode_name)
+                print(f"  Saved {len(saved_kbs['fold_kbs'])} fold KB files")
+                print(f"  Intersected KB: {len(cv_result.intersected_kb)} constraints")
+                print(f"  -> {saved_kbs['intersected_kb']}")
 
         print(f"\nResults saved to {output_dir}")
         return True

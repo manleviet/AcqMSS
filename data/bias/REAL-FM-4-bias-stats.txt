@@ -1,15 +1,15 @@
 === Bias Statistics ===
 Total features: 291
-Total constraints: 126981
-Total clauses: 127616
+Total constraints: 2079
+Total clauses: 2714
 
 Constraints by operator:
   alternative: 39
-  excludes: 42195
+  excludes: 561
   mandatory: 159
   optional: 159
   or: 39
-  requires: 84390
+  requires: 1122
 
 Features:
   1: eShop

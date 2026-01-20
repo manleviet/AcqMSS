@@ -112,6 +112,8 @@ def generate_cv_report(
     """
     Generate cross-validation report.
 
+    Standard CV report shows mean accuracy ± std across folds.
+
     Args:
         result: CrossValidationResult from n_fold_cross_validation
         output_path: Optional path to save JSON report
@@ -120,40 +122,146 @@ def generate_cv_report(
         Formatted report string
     """
     p = result.performance
+
+    # Format per-fold results
+    fold_details = []
+    for fr in result.fold_results:
+        fold_details.append(
+            f"  Fold {fr.fold_index + 1}: accuracy={fr.accuracy:.4f}, "
+            f"KB={fr.n_kb}, TP={fr.metrics.true_positives}, TN={fr.metrics.true_negatives}, "
+            f"FP={fr.metrics.false_positives}, FN={fr.metrics.false_negatives}"
+        )
+
     report = f"""
 === Cross-Validation Report ===
 
 Folds: {result.n_folds}
 
-Accuracy:
+Accuracy (Formula 1 from paper):
   Mean:  {result.mean_accuracy:.4f}
   Std:   {result.std_accuracy:.4f}
   Per Fold: {', '.join(f'{a:.4f}' for a in result.fold_accuracies)}
 
-Performance (aggregated):
-  Runtime:
+Fold Details:
+{chr(10).join(fold_details)}
+
+Intersected KB: {len(result.intersected_kb)} constraints
+
+Performance:
+  Total CV Runtime: {result.total_runtime_ms:.2f} ms
+
+  CONGEN Runtime (per fold):
     Mean:  {p.runtime_mean_ms:.2f} ms
     Std:   {p.runtime_std_ms:.2f} ms
     Range: [{p.runtime_min_ms:.2f}, {p.runtime_max_ms:.2f}] ms
 
   Consistency Checks:
     Mean:  {p.checks_mean:.1f}
-    Std:   {p.checks_std:.1f}
     Range: [{p.checks_min}, {p.checks_max}]
 
-  Memory:
-    Mean:  {p.memory_mean_mb:.2f} MB
-    Max:   {p.memory_max_mb:.2f} MB
-
   KB Size:
-    n_mss Mean: {p.n_mss_mean:.1f}
-    n_kb Mean:  {p.n_kb_mean:.1f}
+    Mean:  {p.n_kb_mean:.1f}
+
+  Memory:
+    Max:   {p.memory_max_mb:.2f} MB
 """
 
     if output_path:
         _save_json(result.to_dict(), output_path)
 
     return report
+
+
+def save_kb_result(
+        kb_constraints: list,
+        redundant_constraints: list,
+        n_bias: int,
+        n_mss: int,
+        n_kb: int,
+        output_path: Path,
+        metadata: dict = None
+) -> None:
+    """
+    Save KB result to JSON file.
+
+    This saves the generated knowledge base from CONGEN in the same format
+    as the original run_congen.py output.
+
+    Args:
+        kb_constraints: List of constraint IDs in the learned KB
+        redundant_constraints: List of redundant constraint IDs
+        n_bias: Original number of bias constraints
+        n_mss: Size of MSS before REDUCE
+        n_kb: Final KB size
+        output_path: Path to save JSON file
+        metadata: Optional metadata dict
+    """
+    data = {
+        'kb_constraints': kb_constraints,
+        'redundant_constraints': redundant_constraints,
+        'statistics': {
+            'n_bias': n_bias,
+            'n_mss': n_mss,
+            'n_kb': n_kb
+        }
+    }
+    if metadata:
+        data['metadata'] = metadata
+
+    _save_json(data, output_path)
+
+
+def save_cv_kb_files(
+        cv_result: CrossValidationResult,
+        output_dir: Path,
+        model_name: str,
+        mode_name: str
+) -> dict:
+    """
+    Save KB files from cross-validation.
+
+    Saves:
+    1. KB for each fold: {model_name}_{mode}_fold{i}_kb.json
+    2. Intersected KB: {model_name}_{mode}_intersected_kb.json
+
+    Args:
+        cv_result: CrossValidationResult with fold_results and intersected_kb
+        output_dir: Output directory
+        model_name: Model name for file naming
+        mode_name: Mode name (incremental/non-incremental)
+
+    Returns:
+        Dict with paths to saved files
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    saved_files = {'fold_kbs': [], 'intersected_kb': None}
+
+    # Save KB for each fold
+    for fold_result in cv_result.fold_results:
+        fold_path = output_dir / f"{model_name}_{mode_name}_fold{fold_result.fold_index + 1}_kb.json"
+        _save_json(fold_result.to_kb_dict(), fold_path)
+        saved_files['fold_kbs'].append(str(fold_path))
+
+    # Save intersected KB
+    intersected_path = output_dir / f"{model_name}_{mode_name}_intersected_kb.json"
+    intersected_data = {
+        'kb_constraints': cv_result.intersected_kb,
+        'statistics': {
+            'n_kb': len(cv_result.intersected_kb),
+            'n_folds': cv_result.n_folds,
+            'fold_kb_sizes': [fr.n_kb for fr in cv_result.fold_results],
+        },
+        'cv_accuracy': {
+            'mean': cv_result.mean_accuracy,
+            'std': cv_result.std_accuracy,
+        }
+    }
+    _save_json(intersected_data, intersected_path)
+    saved_files['intersected_kb'] = str(intersected_path)
+
+    return saved_files
 
 
 def _format_list(items: list, max_items: int = 10) -> str:

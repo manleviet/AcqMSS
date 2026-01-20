@@ -1,15 +1,15 @@
 === Bias Statistics ===
 Total features: 179
-Total constraints: 47979
-Total clauses: 48452
+Total constraints: 459
+Total clauses: 932
 
 Constraints by operator:
   alternative: 36
-  excludes: 15931
+  excludes: 91
   mandatory: 57
   optional: 57
   or: 36
-  requires: 31862
+  requires: 182
 
 Features:
   1: FQAs

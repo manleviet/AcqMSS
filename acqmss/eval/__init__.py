@@ -62,7 +62,9 @@ from .evaluator import Evaluator, EvaluationStrategy, EvaluationResult
 from .report import (
     generate_evaluation_report,
     generate_accuracy_report,
-    generate_cv_report
+    generate_cv_report,
+    save_kb_result,
+    save_cv_kb_files
 )
 
 __all__ = [
@@ -103,4 +105,6 @@ __all__ = [
     'generate_evaluation_report',
     'generate_accuracy_report',
     'generate_cv_report',
+    'save_kb_result',
+    'save_cv_kb_files',
 ]

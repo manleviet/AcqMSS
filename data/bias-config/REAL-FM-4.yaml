@@ -1515,4 +1515,39 @@ hierarchical_candidates:
 #                  'leaf' generates only between leaf features
 #                  'extracted' generates only between features from CTCs
 cross_tree_candidates:
-  cross_tree_mode: all
+  cross_tree_mode: extracted
+  cross_tree_features:
+    - Availability
+    - Categories
+    - Categorypage
+    - Customerpreferences
+    - Discounts
+    - E_mailwishlist
+    - Eletronicgoods
+    - Eletronicgoodsfulfillment
+    - Externalreferringpages
+    - Inventorytracking
+    - Locallyvisitedpages
+    - Permissions
+    - Physicalgoods
+    - Physicalgoodsfulfillment
+    - Preferences
+    - Previouslyvisitedpages
+    - Quickcheckout
+    - Quickcheckoutprofile
+    - Registeredcheckout
+    - Registertobuy
+    - Registration
+    - Registrationenforcement
+    - Services
+    - Servicesfulfillment
+    - Shipping1
+    - Shippingoptions
+    - Size
+    - Specialoffers
+    - Userbehaviourtracking
+    - Userbehaviourtrackinginformation
+    - Weight
+    - Wishlist
+    - Wishlistcontent
+    - Wishlistsaveaftersession

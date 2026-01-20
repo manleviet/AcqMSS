@@ -383,8 +383,10 @@ class TestReportGeneration:
 
 # Integration tests require actual data files
 @pytest.mark.skipif(
-    not Path('data/fms/REAL-FM-7.uvl').exists(),
-    reason="Test data files not found"
+    not (Path('data/fms/REAL-FM-7.uvl').exists() and
+         Path('data/results/REAL-FM-7_rs_1n_kb.json').exists() and
+         Path('data/examples/REAL-FM-7_rs_1n.json').exists()),
+    reason="Test data files not found (need FM, result, and examples)"
 )
 class TestIntegration:
     """Integration tests with actual data files."""

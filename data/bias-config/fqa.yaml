@@ -796,4 +796,19 @@ hierarchical_candidates:
 #                  'leaf' generates only between leaf features
 #                  'extracted' generates only between features from CTCs
 cross_tree_candidates:
-  cross_tree_mode: all
+  cross_tree_mode: extracted
+  cross_tree_features:
+    - Alerts
+    - AuthenticatedUser
+    - Authentication
+    - BatteryStatus
+    - Confidentiality
+    - CypheredMessages
+    - Encryption
+    - FileStorage
+    - Privacy
+    - SecureDatabase
+    - SimpleImplementationSLF4J
+    - TimeAware
+    - TraceFile
+    - XML
