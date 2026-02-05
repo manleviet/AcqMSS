@@ -1,0 +1,46 @@
+# Interactive (QuAcq) Constraint Acquisition Configuration
+#
+# Usage:
+#   PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v
+#   PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml --interactive
+
+[general]
+seed = 42
+output_dir = "data/results/interactive"
+verbose = true
+
+[interactive]
+# Maximum number of membership queries
+max_queries = 1000
+
+# Mode: "automated" (Oracle answers using FM) or "interactive" (human expert)
+mode = "automated"
+
+# SAT solver name
+solver_name = "glucose4"
+
+# Models to process
+# Each model needs:
+#   - path: Path to feature model (.uvl)
+#   - bias: Path to bias file (.json)
+
+[[models]]
+path = "data/fms/REAL-FM-7.uvl"
+bias = "data/bias/REAL-FM-7-bias.json"
+
+[[models]]
+path = "data/fms/REAL-FM-4.uvl"
+bias = "data/bias/REAL-FM-4-bias.json"
+
+[[models]]
+path = "data/fms/arcade-game.uvl"
+bias = "data/bias/arcade-game-bias.json"
+
+[[models]]
+path = "data/fms/fqa.uvl"
+bias = "data/bias/fqa-bias.json"
+
+# Add more models as needed:
+# [[models]]
+# path = "data/fms/REAL-FM-8.uvl"
+# bias = "data/bias/REAL-FM-8-bias.json"

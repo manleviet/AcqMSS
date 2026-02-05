@@ -1,0 +1,45 @@
+# CONGEN Results Evaluation Configuration
+#
+# Usage:
+#   PYTHONPATH=. python apps/evaluate_congen_results.py apps/conf/evaluate_congen_config.toml -v
+
+[general]
+fm_dir = "data/fms"
+bias_dir = "data/bias"
+output_dir = "data/kb_eval"
+
+# List specific files to evaluate
+# If empty or not using config, script evaluates all *_intersected_kb.json files in data/results
+files = [
+    # REAL-FM-4
+    "data/results/REAL-FM-4_rs_1n_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-4_rs_2n_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-4_rs_3n_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-4_rs_m_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-4_2cov_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-4_ff_non-incremental_intersected_kb.json",
+
+    # REAL-FM-7
+    "data/results/REAL-FM-7_rs_1n_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-7_rs_2n_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-7_rs_3n_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-7_rs_m_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-7_2cov_non-incremental_intersected_kb.json",
+    "data/results/REAL-FM-7_ff_non-incremental_intersected_kb.json",
+
+    # arcade-game
+    "data/results/arcade-game_rs_1n_non-incremental_intersected_kb.json",
+    "data/results/arcade-game_rs_2n_non-incremental_intersected_kb.json",
+    "data/results/arcade-game_rs_3n_non-incremental_intersected_kb.json",
+    "data/results/arcade-game_rs_m_non-incremental_intersected_kb.json",
+    "data/results/arcade-game_2cov_non-incremental_intersected_kb.json",
+    "data/results/arcade-game_ff_non-incremental_intersected_kb.json",
+
+    # fqa
+    "data/results/fqa_rs_1n_non-incremental_intersected_kb.json",
+    "data/results/fqa_rs_2n_non-incremental_intersected_kb.json",
+    "data/results/fqa_rs_3n_non-incremental_intersected_kb.json",
+    "data/results/fqa_rs_m_non-incremental_intersected_kb.json",
+    "data/results/fqa_2cov_non-incremental_intersected_kb.json",
+    "data/results/fqa_ff_non-incremental_intersected_kb.json",
+]
