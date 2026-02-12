@@ -515,7 +515,7 @@
           -2
         ]
       ],
-      "description": "jplug excludes interface"
+      "description": "interface excludes jplug"
     },
     {
       "id": "c26",
@@ -650,7 +650,7 @@
           -5
         ]
       ],
-      "description": "jplug excludes gui_builder"
+      "description": "gui_builder excludes jplug"
     },
     {
       "id": "c35",
@@ -695,7 +695,7 @@
           -6
         ]
       ],
-      "description": "jplug excludes java"
+      "description": "java excludes jplug"
     },
     {
       "id": "c38",
@@ -830,7 +830,7 @@
           -9
         ]
       ],
-      "description": "jplug excludes compiler"
+      "description": "compiler excludes jplug"
     },
     {
       "id": "c47",
@@ -875,7 +875,7 @@
           -10
         ]
       ],
-      "description": "jplug excludes javac"
+      "description": "javac excludes jplug"
     },
     {
       "id": "c50",
@@ -965,7 +965,7 @@
           -12
         ]
       ],
-      "description": "jplug excludes diagram_builder"
+      "description": "diagram_builder excludes jplug"
     },
     {
       "id": "c56",
@@ -1190,7 +1190,7 @@
           -5
         ]
       ],
-      "description": "interface excludes gui_builder"
+      "description": "gui_builder excludes interface"
     },
     {
       "id": "c71",
@@ -1370,7 +1370,7 @@
           -9
         ]
       ],
-      "description": "interface excludes compiler"
+      "description": "compiler excludes interface"
     },
     {
       "id": "c83",
@@ -1505,7 +1505,7 @@
           -12
         ]
       ],
-      "description": "interface excludes diagram_builder"
+      "description": "diagram_builder excludes interface"
     },
     {
       "id": "c92",
@@ -1640,7 +1640,7 @@
           -4
         ]
       ],
-      "description": "sdi excludes mdi"
+      "description": "mdi excludes sdi"
     },
     {
       "id": "c101",
@@ -1685,7 +1685,7 @@
           -5
         ]
       ],
-      "description": "sdi excludes gui_builder"
+      "description": "gui_builder excludes sdi"
     },
     {
       "id": "c104",
@@ -1730,7 +1730,7 @@
           -6
         ]
       ],
-      "description": "sdi excludes java"
+      "description": "java excludes sdi"
     },
     {
       "id": "c107",
@@ -1775,7 +1775,7 @@
           -7
         ]
       ],
-      "description": "sdi excludes qt"
+      "description": "qt excludes sdi"
     },
     {
       "id": "c110",
@@ -1820,7 +1820,7 @@
           -8
         ]
       ],
-      "description": "sdi excludes model_code_synch"
+      "description": "model_code_synch excludes sdi"
     },
     {
       "id": "c113",
@@ -1865,7 +1865,7 @@
           -9
         ]
       ],
-      "description": "sdi excludes compiler"
+      "description": "compiler excludes sdi"
     },
     {
       "id": "c116",
@@ -1910,7 +1910,7 @@
           -10
         ]
       ],
-      "description": "sdi excludes javac"
+      "description": "javac excludes sdi"
     },
     {
       "id": "c119",
@@ -1955,7 +1955,7 @@
           -11
         ]
       ],
-      "description": "sdi excludes mvc"
+      "description": "mvc excludes sdi"
     },
     {
       "id": "c122",
@@ -2000,7 +2000,7 @@
           -12
         ]
       ],
-      "description": "sdi excludes diagram_builder"
+      "description": "diagram_builder excludes sdi"
     },
     {
       "id": "c125",
@@ -2090,7 +2090,7 @@
           -14
         ]
       ],
-      "description": "sdi excludes petri_net"
+      "description": "petri_net excludes sdi"
     },
     {
       "id": "c131",
@@ -2135,7 +2135,7 @@
           -5
         ]
       ],
-      "description": "mdi excludes gui_builder"
+      "description": "gui_builder excludes mdi"
     },
     {
       "id": "c134",
@@ -2180,7 +2180,7 @@
           -6
         ]
       ],
-      "description": "mdi excludes java"
+      "description": "java excludes mdi"
     },
     {
       "id": "c137",
@@ -2315,7 +2315,7 @@
           -9
         ]
       ],
-      "description": "mdi excludes compiler"
+      "description": "compiler excludes mdi"
     },
     {
       "id": "c146",
@@ -2360,7 +2360,7 @@
           -10
         ]
       ],
-      "description": "mdi excludes javac"
+      "description": "javac excludes mdi"
     },
     {
       "id": "c149",
@@ -2450,7 +2450,7 @@
           -12
         ]
       ],
-      "description": "mdi excludes diagram_builder"
+      "description": "diagram_builder excludes mdi"
     },
     {
       "id": "c155",
@@ -2720,7 +2720,7 @@
           -9
         ]
       ],
-      "description": "gui_builder excludes compiler"
+      "description": "compiler excludes gui_builder"
     },
     {
       "id": "c173",
@@ -2855,7 +2855,7 @@
           -12
         ]
       ],
-      "description": "gui_builder excludes diagram_builder"
+      "description": "diagram_builder excludes gui_builder"
     },
     {
       "id": "c182",
@@ -3080,7 +3080,7 @@
           -9
         ]
       ],
-      "description": "java excludes compiler"
+      "description": "compiler excludes java"
     },
     {
       "id": "c197",
@@ -3215,7 +3215,7 @@
           -12
         ]
       ],
-      "description": "java excludes diagram_builder"
+      "description": "diagram_builder excludes java"
     },
     {
       "id": "c206",
@@ -3350,7 +3350,7 @@
           -8
         ]
       ],
-      "description": "qt excludes model_code_synch"
+      "description": "model_code_synch excludes qt"
     },
     {
       "id": "c215",
@@ -3395,7 +3395,7 @@
           -9
         ]
       ],
-      "description": "qt excludes compiler"
+      "description": "compiler excludes qt"
     },
     {
       "id": "c218",
@@ -3440,7 +3440,7 @@
           -10
         ]
       ],
-      "description": "qt excludes javac"
+      "description": "javac excludes qt"
     },
     {
       "id": "c221",
@@ -3485,7 +3485,7 @@
           -11
         ]
       ],
-      "description": "qt excludes mvc"
+      "description": "mvc excludes qt"
     },
     {
       "id": "c224",
@@ -3530,7 +3530,7 @@
           -12
         ]
       ],
-      "description": "qt excludes diagram_builder"
+      "description": "diagram_builder excludes qt"
     },
     {
       "id": "c227",
@@ -3620,7 +3620,7 @@
           -14
         ]
       ],
-      "description": "qt excludes petri_net"
+      "description": "petri_net excludes qt"
     },
     {
       "id": "c233",
@@ -3665,7 +3665,7 @@
           -9
         ]
       ],
-      "description": "model_code_synch excludes compiler"
+      "description": "compiler excludes model_code_synch"
     },
     {
       "id": "c236",
@@ -3710,7 +3710,7 @@
           -10
         ]
       ],
-      "description": "model_code_synch excludes javac"
+      "description": "javac excludes model_code_synch"
     },
     {
       "id": "c239",
@@ -3800,7 +3800,7 @@
           -12
         ]
       ],
-      "description": "model_code_synch excludes diagram_builder"
+      "description": "diagram_builder excludes model_code_synch"
     },
     {
       "id": "c245",
@@ -4205,7 +4205,7 @@
           -12
         ]
       ],
-      "description": "javac excludes diagram_builder"
+      "description": "diagram_builder excludes javac"
     },
     {
       "id": "c272",
@@ -4340,7 +4340,7 @@
           -12
         ]
       ],
-      "description": "mvc excludes diagram_builder"
+      "description": "diagram_builder excludes mvc"
     },
     {
       "id": "c281",
@@ -4565,7 +4565,7 @@
           -14
         ]
       ],
-      "description": "uml excludes petri_net"
+      "description": "petri_net excludes uml"
     }
   ]
 }

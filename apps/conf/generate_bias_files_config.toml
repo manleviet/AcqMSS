@@ -18,11 +18,11 @@ verbose = true
 # Each model requires a 'config' path to a YAML file
 # Optional 'name' field overrides the output filename
 
-#[[models]]
-#config = "data/bias-config/REAL-FM-7.yaml"
-#
 [[models]]
-config = "data/bias-config/arcade-game.yaml"
+config = "data/bias-config/REAL-FM-7.yaml"
+#
+#[[models]]
+#config = "data/bias-config/arcade-game.yaml"
 #
 #[[models]]
 #config = "data/bias-config/fqa.yaml"
