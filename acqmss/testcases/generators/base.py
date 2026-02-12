@@ -2,7 +2,12 @@
 Base class for example generators.
 """
 
+import random
 from abc import ABC, abstractmethod
+from typing import Optional, Dict
+
+from pysat.solvers import Solver
+
 from ..data_structures import Example, ExampleSet
 from ..oracle import Oracle
 
@@ -51,3 +56,53 @@ class ExampleGenerator(ABC):
         """
         example.example_type = self.oracle.classify(example)
         example_set.add(example)
+
+    def _generate_valid_config(self, features_list: list) -> Optional[Dict[str, bool]]:
+        """
+        Generate a valid configuration with randomness.
+
+        Uses partial random assumptions to get diverse valid configs.
+
+        Args:
+            features_list: List of feature names
+
+        Returns:
+            Valid configuration dict, or None if failed
+        """
+        # Shuffle to add randomness
+        shuffled = list(features_list)
+        random.shuffle(shuffled)
+
+        # Pick random subset to fix
+        n_fixed = random.randint(0, len(shuffled) // 2)
+        assumptions = []
+
+        for f in shuffled[:n_fixed]:
+            fid = self.feature_ids[f]
+            val = random.choice([True, False])
+            assumptions.append(fid if val else -fid)
+
+        # Create temporary solver
+        solver = Solver(name='glucose4')
+        for clause in self.oracle.get_cnf_clauses():
+            solver.add_clause(clause)
+
+        try:
+            if solver.solve(assumptions=assumptions):
+                model = solver.get_model()
+                config = {}
+                for name, fid in self.feature_ids.items():
+                    config[name] = fid in model
+                return config
+            else:
+                # Fallback: try without assumptions
+                if solver.solve():
+                    model = solver.get_model()
+                    config = {}
+                    for name, fid in self.feature_ids.items():
+                        config[name] = fid in model
+                    return config
+        finally:
+            solver.delete()
+
+        return None

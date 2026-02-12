@@ -15,7 +15,6 @@ import argparse
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
 
 try:
     import tomllib
@@ -24,7 +23,6 @@ except ImportError:
 
 from acqmss.testcases import (
     FeatureModelOracle,
-    RandomSamplingGenerator,
     BalancedRandomSamplingGenerator,
     ControlledRandomSamplingGenerator,
     FeatureFrequencyGenerator,
@@ -34,88 +32,42 @@ from acqmss.testcases import (
 )
 
 
-@dataclass
-class ModelConfig:
-    """Configuration for a single model"""
-    path: str
-    strategies: Optional[List[str]] = None
-    n: Optional[int] = None  # Pre-computed number of features
-    valid_configs: Optional[int] = None  # Pre-computed valid configurations
-    m: Optional[int] = None  # Pre-computed 2-COV count
-
-
 def load_config(config_path: str) -> Dict[str, Any]:
     """Load TOML configuration file."""
     with open(config_path, 'rb') as f:
         return tomllib.load(f)
 
 
-def parse_models(config: Dict) -> List[ModelConfig]:
-    """Parse models list from config"""
-    models_data = config.get('models', [])
-    models = []
-
-    for m in models_data:
-        models.append(ModelConfig(
-            path=m['path'],
-            strategies=m.get('strategies'),
-            n=m.get('n'),
-            valid_configs=m.get('valid_configs'),
-            m=m.get('m'),
-        ))
-
-    return models
+# Strategy -> example count function(n_features, m_value)
+STRATEGY_COUNTS = {
+    'rs_1n': lambda n, m: n,
+    'rs_2n': lambda n, m: 2 * n,
+    'rs_3n': lambda n, m: 3 * n,
+    'rs_m': lambda n, m: m,
+    '2cov': lambda n, m: None,
+    'ff': lambda n, m: 10 * n,
+    'balanced': lambda n, m: 2 * n,
+}
 
 
 def get_example_count_for_strategy(strategy: str, n_features: int, m_value: Optional[int] = None) -> Optional[int]:
     """
     Get number of examples based on strategy and feature count.
 
-    Paper uses:
-    - rs_1n: n examples
-    - rs_2n: 2n examples
-    - rs_3n: 3n examples
-    - rs_m: m examples (m = smallest number for 2-wise coverage)
-    - 2cov: determined by pairwise coverage (allpairspy)
-    - ff: determined by coverage (use 10n as max)
-
-    Args:
-        strategy: Strategy name
-        n_features: Number of features in the model
-        m_value: Pre-computed m value (for rs_m strategy)
-
-    Returns:
-        Number of examples to generate, or None for coverage-based strategies
+    Paper strategies: rs_1n=n, rs_2n=2n, rs_3n=3n, rs_m=m (2-COV count),
+    2cov=coverage-based (None), ff=10n, balanced=2n.
     """
-    if strategy == 'rs_1n':
-        return n_features
-    elif strategy == 'rs_2n':
-        return 2 * n_features
-    elif strategy == 'rs_3n':
-        return 3 * n_features
-    elif strategy == 'rs_m':
-        # rs_m: m = number of examples for 2-wise coverage
-        return m_value
-    elif strategy == '2cov':
-        # 2-COV: determined by allpairspy, return None
-        return None
-    elif strategy == 'ff':
-        # FF needs enough examples to cover all features in all contexts
-        # Use 10n as max, typically converges faster
-        return 10 * n_features
-    elif strategy == 'balanced':
-        # Balanced: use 2n total (n positive, n negative)
-        return 2 * n_features
-    else:
+    if strategy not in STRATEGY_COUNTS:
         raise ValueError(f"Unknown strategy: {strategy}")
+    return STRATEGY_COUNTS[strategy](n_features, m_value)
 
 
 def generate_examples_for_strategy(
         oracle: FeatureModelOracle,
         strategy: str,
+        n_examples: Optional[int],
         n_features: int,
         seed: int,
-        m_value: int = None,
         valid_configs: int = None
 ) -> ExampleSet:
     """
@@ -124,53 +76,38 @@ def generate_examples_for_strategy(
     Args:
         oracle: Feature model oracle
         strategy: Strategy name (rs_1n, rs_2n, rs_3n, rs_m, 2cov, ff, balanced)
+        n_examples: Pre-computed example count (None for coverage-based)
         n_features: Number of features
         seed: Random seed
-        m_value: Pre-computed m value (for rs_m strategy)
         valid_configs: Pre-computed valid configurations count (for E+/E- distribution)
 
     Returns:
         Generated ExampleSet
     """
-    n_examples = get_example_count_for_strategy(strategy, n_features, m_value)
-
-    if strategy in ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m']:
-        # Controlled Random Sampling: controlled E+/E- ratio with deduplication
+    if strategy in ('rs_1n', 'rs_2n', 'rs_3n', 'rs_m'):
         gen = ControlledRandomSamplingGenerator(oracle)
         examples = gen.generate(total=n_examples, valid_configs=valid_configs, seed=seed)
-        examples.metadata['strategy'] = strategy
         examples.metadata['target_total'] = n_examples
-        return examples
-
     elif strategy == '2cov':
-        # 2-wise Coverage: uses allpairspy for pairwise test generation
         gen = TwoCoverageGenerator(oracle)
         examples = gen.generate(seed=seed)
-        examples.metadata['strategy'] = strategy
-        return examples
-
     elif strategy == 'ff':
-        # Feature Frequency: generates until coverage or max reached
         gen = FeatureFrequencyGenerator(oracle)
         examples = gen.generate(max_examples=n_examples, seed=seed)
-        examples.metadata['strategy'] = strategy
         examples.metadata['max_examples'] = n_examples
-        return examples
-
     elif strategy == 'balanced':
-        # Balanced Random Sampling: equal E+/E-
         gen = BalancedRandomSamplingGenerator(oracle)
-        n_each = n_features  # n positive, n negative
+        n_each = n_features
         examples = gen.generate(n_positive=n_each, n_negative=n_each, seed=seed)
-        examples.metadata['strategy'] = strategy
-        return examples
-
     else:
         raise ValueError(f"Unknown strategy: {strategy}")
 
+    examples.metadata['strategy'] = strategy
+    return examples
+
 
 def process_model(
-        model_config: ModelConfig,
+        model_config: Dict[str, Any],
         default_strategies: List[str],
         output_dir: Path,
         seed: int,
@@ -180,7 +117,7 @@ def process_model(
     Process a single feature model.
 
     Args:
-        model_config: Model configuration
+        model_config: Model configuration dict from TOML
         default_strategies: Default strategies to use
         output_dir: Output directory
         seed: Random seed
@@ -189,7 +126,7 @@ def process_model(
     Returns:
         True if successful
     """
-    fm_path = model_config.path
+    fm_path = model_config['path']
 
     if not Path(fm_path).exists():
         print(f"Error: Feature model not found: {fm_path}")
@@ -206,11 +143,11 @@ def process_model(
         n_features = len(oracle.get_features())
 
         # Use pre-computed values from config if available
-        valid_configs = model_config.valid_configs
-        m_value = model_config.m
+        valid_configs = model_config.get('valid_configs')
+        m_value = model_config.get('m')
 
         # Determine strategies
-        strategies = model_config.strategies or default_strategies
+        strategies = model_config.get('strategies') or default_strategies
 
         if verbose:
             print(f"  Features: {n_features}")
@@ -234,20 +171,16 @@ def process_model(
 
             if verbose:
                 if n_examples is not None:
-                    # Show expected E+/E- distribution
-                    n_pos, n_neg = ControlledRandomSamplingGenerator.calculate_distribution(
-                        n_examples, valid_configs
-                    )
-                    print(f"  {strategy} (total={n_examples}, E+~{n_pos}, E-~{n_neg})...", end=" ")
+                    print(f"  {strategy} (total={n_examples})...", end=" ")
                 else:
                     print(f"  {strategy} (coverage-based)...", end=" ")
 
             examples = generate_examples_for_strategy(
                 oracle=oracle,
                 strategy=strategy,
+                n_examples=n_examples,
                 n_features=n_features,
                 seed=seed,
-                m_value=m_value,
                 valid_configs=valid_configs
             )
 
@@ -323,7 +256,7 @@ Example:
     default_strategies = general.get('strategies', ['rs_1n', 'rs_2n', 'rs_3n', 'ff'])
 
     # Parse models
-    models = parse_models(config)
+    models = config.get('models', [])
 
     if not models:
         print("Error: No models specified in configuration")

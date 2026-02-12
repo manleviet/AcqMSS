@@ -1,5 +1,7 @@
 """
 Unit tests for the evaluation module.
+
+Uses REAL-FM-7 feature model with generated bias and results.
 """
 
 import pytest
@@ -19,6 +21,14 @@ from acqmss.eval import (
     generate_evaluation_report,
     generate_accuracy_report,
 )
+
+
+# Test data paths
+DATA_DIR = Path(__file__).parent.parent / "data"
+FM_PATH = DATA_DIR / "fms" / "REAL-FM-7.uvl"
+BIAS_PATH = DATA_DIR / "bias" / "REAL-FM-7-bias.json"
+RESULT_PATH = DATA_DIR / "results" / "REAL-FM-7_rs_1n_incremental_fold1_kb.json"
+EXAMPLES_RS_1N_PATH = DATA_DIR / "examples" / "REAL-FM-7_rs_1n.json"
 
 
 class TestEvaluationMetrics:
@@ -208,6 +218,11 @@ class TestCONGENResultData:
         assert result.n_bias == 100
         assert result.n_kb == 3
 
+    def test_bg_clauses_default_empty(self):
+        """Verify bg_clauses defaults to empty, no impact on eval."""
+        result = CONGENResultData(kb_constraints=[], n_bias=10, n_kb=0)
+        assert result.bg_clauses == []
+
     def test_kb_reduction_ratio(self, tmp_path):
         """Test KB reduction ratio calculation."""
         result_json = tmp_path / "test_result.json"
@@ -381,25 +396,13 @@ class TestReportGeneration:
         assert 'Formula 1' in report
 
 
-# Integration tests require actual data files
-@pytest.mark.skipif(
-    not (Path('data/fms/REAL-FM-7.uvl').exists() and
-         Path('data/results/REAL-FM-7_rs_1n_kb.json').exists() and
-         Path('data/examples/REAL-FM-7_rs_1n.json').exists()),
-    reason="Test data files not found (need FM, result, and examples)"
-)
 class TestIntegration:
     """Integration tests with actual data files."""
 
     def test_evaluate_real_fm_7(self):
         """Test evaluation with REAL-FM-7 data."""
-        evaluator = Evaluator.from_files(
-            Path('data/fms/REAL-FM-7.uvl'),
-            Path('data/bias/REAL-FM-7-bias.json')
-        )
-        result = CONGENResultData.from_json(
-            Path('data/results/REAL-FM-7_rs_1n_kb.json')
-        )
+        evaluator = Evaluator.from_files(FM_PATH, BIAS_PATH)
+        result = CONGENResultData.from_json(RESULT_PATH)
 
         eval_result = evaluator.evaluate(result, EvaluationStrategy.DESCRIPTION)
 
@@ -412,11 +415,9 @@ class TestIntegration:
         """Test accuracy calculation with real examples."""
         from acqmss.testcases import ExampleIO
 
-        bias = BiasData.from_json(Path('data/bias/REAL-FM-7-bias.json'))
-        examples = ExampleIO.load_json(Path('data/examples/REAL-FM-7_rs_1n.json'))
-        result = CONGENResultData.from_json(
-            Path('data/results/REAL-FM-7_rs_1n_kb.json')
-        )
+        bias = BiasData.from_json(BIAS_PATH)
+        examples = ExampleIO.load_json(EXAMPLES_RS_1N_PATH)
+        result = CONGENResultData.from_json(RESULT_PATH)
 
         # Build KB clauses
         kb_clauses = []
@@ -441,3 +442,33 @@ class TestIntegration:
                  accuracy_result.metrics.false_positives +
                  accuracy_result.metrics.false_negatives)
         assert total == len(examples.positive) + len(examples.negative)
+
+    def test_clause_eval_includes_bg_clauses(self):
+        """Verify bg_clauses are unioned with kb_clauses in clause eval."""
+        evaluator = Evaluator.from_files(FM_PATH, BIAS_PATH)
+
+        # Get root feature ID from oracle
+        root_id = evaluator.oracle.feature_map[evaluator.oracle.root_feature]
+
+        # Result with NO KB but WITH bg_clauses containing root
+        result_with_bg = CONGENResultData(
+            kb_constraints=[],
+            n_bias=len(evaluator.bias.constraints),
+            n_kb=0,
+            bg_clauses=[[root_id]]
+        )
+
+        # Result with NO KB and NO bg_clauses
+        result_without_bg = CONGENResultData(
+            kb_constraints=[],
+            n_bias=len(evaluator.bias.constraints),
+            n_kb=0,
+            bg_clauses=[]
+        )
+
+        eval_with = evaluator.evaluate(result_with_bg, EvaluationStrategy.CLAUSE)
+        eval_without = evaluator.evaluate(result_without_bg, EvaluationStrategy.CLAUSE)
+
+        # With bg_clauses: root clause should be TP → more TP, fewer FN
+        assert eval_with.metrics.true_positives >= eval_without.metrics.true_positives
+        assert eval_with.metrics.false_negatives <= eval_without.metrics.false_negatives

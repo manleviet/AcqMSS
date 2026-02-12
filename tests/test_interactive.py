@@ -319,6 +319,27 @@ class TestInteractiveLearner:
         assert len(learner.task.bias) > 0
         assert learner.oracle is not None
 
+        # Verify root feature ID in background
+        assert len(learner.task.background) > 0, "Background should contain root"
+        root_name = learner.oracle.get_root_feature()
+        root_id = learner.oracle.get_feature_ids()[root_name]
+        assert root_id in learner.task.background, "Root feature ID should be in background"
+
+    def test_build_task_from_bias_includes_root(self):
+        """Verify _build_task_from_bias sets background with root."""
+        if not FM_PATH.exists() or not BIAS_PATH.exists():
+            pytest.skip("Test data files not found")
+
+        oracle = AutomatedOracle(str(FM_PATH))
+        bias = BiasIO.load_from_json(str(BIAS_PATH))
+
+        task = InteractiveLearner._build_task_from_bias(bias, oracle)
+
+        root_name = oracle.get_root_feature()
+        root_id = oracle.get_feature_ids()[root_name]
+        assert task.background == [root_id], \
+            f"Expected background=[{root_id}], got {task.background}"
+
     def test_learner_learn_automated(self):
         """Test learner in automated mode."""
         if not FM_PATH.exists() or not BIAS_PATH.exists():

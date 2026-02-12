@@ -74,7 +74,7 @@ def create_checker_and_task(oracle, bias, examples, is_incremental=True):
         is_incremental: Use incremental mode
 
     Returns:
-        Tuple of (checker, task, profiler)
+        Tuple of (checker, task, profiler, root_id)
     """
     # Convert bias to constraint dict
     bias_constraints = {c.id: c.clauses for c in bias.constraints}
@@ -83,12 +83,17 @@ def create_checker_and_task(oracle, bias, examples, is_incremental=True):
     positive_examples = [e.assignments for e in examples.positive]
     negative_examples = [e.assignments for e in examples.negative]
 
+    # Extract root feature ID for background knowledge
+    root_name = oracle.get_root_feature()
+    root_id = oracle.get_feature_ids()[root_name]
+
     # Create model
     model = CONGENModel.from_bias_and_examples(
         bias_constraints=bias_constraints,
         positive_examples=positive_examples,
         negative_examples=negative_examples,
-        feature_ids=oracle.get_feature_ids()
+        feature_ids=oracle.get_feature_ids(),
+        root_feature_id=root_id
     )
 
     profiler = get_global_profiler()
@@ -107,7 +112,7 @@ def create_checker_and_task(oracle, bias, examples, is_incremental=True):
         # NonIncrementalPySATChecker doesn't take KB - creates fresh solver per check
         checker = NonIncrementalPySATChecker('glucose4', profiler)
 
-    return checker, task, profiler
+    return checker, task, profiler, root_id
 
 
 class TestCONGEN:
@@ -115,11 +120,14 @@ class TestCONGEN:
 
     def test_congen_incremental_with_rs_examples(self, oracle, bias, examples_rs):
         """Test CONGEN incremental mode with random sampling examples."""
-        checker, task, profiler = create_checker_and_task(
+        checker, task, profiler, root_id = create_checker_and_task(
             oracle, bias, examples_rs, is_incremental=True
         )
 
         try:
+            # Verify root in set_b (incremental: List[int] of assumption IDs)
+            assert root_id in task.set_b, "Root should be in set_b"
+
             congen = CONGEN(checker, profiler)
             result = congen.acquire(task)
 
@@ -128,6 +136,9 @@ class TestCONGEN:
             assert result.n_bias == len(bias.constraints)
             assert result.n_kb >= 0
             assert isinstance(result.kb_constraints, list)
+
+            # Verify bg_clauses contains root clause
+            assert [root_id] in result.bg_clauses, "Root clause should be in bg_clauses"
 
             print(f"\nCONGEN Incremental Result (RS 1n):")
             print(f"  Bias: {result.n_bias}")
@@ -141,11 +152,14 @@ class TestCONGEN:
 
     def test_congen_non_incremental_with_rs_examples(self, oracle, bias, examples_rs):
         """Test CONGEN non-incremental mode with random sampling examples."""
-        checker, task, profiler = create_checker_and_task(
+        checker, task, profiler, root_id = create_checker_and_task(
             oracle, bias, examples_rs, is_incremental=False
         )
 
         try:
+            # Verify root in set_b (non-incremental: List[List[List[int]]] clause lists)
+            assert [[root_id]] in task.set_b, "Root should be in set_b"
+
             congen = CONGEN(checker, profiler)
             result = congen.acquire(task)
 
@@ -154,6 +168,9 @@ class TestCONGEN:
             assert result.n_bias == len(bias.constraints)
             assert result.n_kb >= 0
             assert isinstance(result.kb_constraints, list)
+
+            # Verify bg_clauses contains root clause
+            assert [root_id] in result.bg_clauses, "Root clause should be in bg_clauses"
 
             print(f"\nCONGEN Non-Incremental Result (RS 1n):")
             print(f"  Bias: {result.n_bias}")
@@ -165,17 +182,23 @@ class TestCONGEN:
 
     def test_congen_incremental_with_ff_examples(self, oracle, bias, examples_ff):
         """Test CONGEN incremental mode with feature frequency examples."""
-        checker, task, profiler = create_checker_and_task(
+        checker, task, profiler, root_id = create_checker_and_task(
             oracle, bias, examples_ff, is_incremental=True
         )
 
         try:
+            # Verify root in set_b (incremental: List[int] of assumption IDs)
+            assert root_id in task.set_b, "Root should be in set_b"
+
             congen = CONGEN(checker, profiler)
             result = congen.acquire(task)
 
             # Verify result
             assert result is not None
             assert result.n_bias == len(bias.constraints)
+
+            # Verify bg_clauses contains root clause
+            assert [root_id] in result.bg_clauses, "Root clause should be in bg_clauses"
 
             print(f"\nCONGEN Incremental Result (FF):")
             print(f"  Bias: {result.n_bias}")
