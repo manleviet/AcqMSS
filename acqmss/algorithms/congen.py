@@ -47,6 +47,7 @@ class CONGENResult:
     n_bias: int  # Number of bias constraints
     n_mss: int  # Size of MSS before REDUCE
     n_kb: int  # Size of final KB
+    bg_clauses: List[List[int]] = field(default_factory=list)  # BG clauses (e.g., [[1]])
     metadata: Dict = field(default_factory=dict)
 
 
@@ -152,6 +153,15 @@ class CONGEN:
         if len(inconsistent) > 0:
             # Step 6-7: print "examples inconsistent", return (∅)
             logging.debug('<<< CONGEN return Φ (E+ inconsistent with NE ∪ BG)')
+            # Extract BG clauses even for error path
+            bg = []
+            if self._is_incremental:
+                bg = [[lit] for lit in task.set_b]
+            else:
+                for clause_list in task.set_b:
+                    for clause in clause_list:
+                        bg.append(clause)
+
             self.result = CONGENResult(
                 kb_constraints=[],
                 kb_assumption_ids=[],
@@ -159,6 +169,7 @@ class CONGEN:
                 n_bias=len(task.set_c),
                 n_mss=0,
                 n_kb=0,
+                bg_clauses=bg,
                 metadata={'error': 'E+ inconsistent with NE ∪ BG'}
             )
             return self.result
@@ -188,6 +199,17 @@ class CONGEN:
         kb_names = [task.get_constraint_name(a) for a in kb]
         redundant_names = [task.get_constraint_name(a) for a in redundant]
 
+        # Extract BG clauses for evaluation
+        bg_clauses: List[List[int]] = []
+        if self._is_incremental:
+            # Incremental: set_b contains assumption IDs (ints), each is a unit clause
+            bg_clauses = [[lit] for lit in task.set_b]
+        else:
+            # Non-incremental: set_b contains clause lists (List[List[List[int]]])
+            for clause_list in task.set_b:
+                for clause in clause_list:
+                    bg_clauses.append(clause)
+
         self.result = CONGENResult(
             kb_constraints=kb_names,
             kb_assumption_ids=kb,
@@ -195,6 +217,7 @@ class CONGEN:
             n_bias=len(task.set_c),
             n_mss=len(b_prime),
             n_kb=len(kb),
+            bg_clauses=bg_clauses,
             metadata={
                 'n_ne': len(set_ne),
                 'n_e_pos': len(task.set_tc),
@@ -218,6 +241,7 @@ class CONGEN:
                 'n_mss': self.result.n_mss,
                 'n_kb': self.result.n_kb,
             },
+            'bg_clauses': self.result.bg_clauses,
             'metadata': self.result.metadata,
         }
 

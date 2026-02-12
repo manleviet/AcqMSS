@@ -205,7 +205,8 @@ class InteractiveEvaluator:
             redundant_constraints=[],
             n_bias=len(self.evaluator.bias.constraints),
             n_mss=0,
-            n_kb=result_data.get('n_kb', len(kb_constraints))
+            n_kb=result_data.get('n_kb', len(kb_constraints)),
+            bg_clauses=result_data.get('bg_clauses', [])
         )
 
         # Evaluate using specified strategy
@@ -285,7 +286,8 @@ class InteractiveEvaluator:
             redundant_constraints=result_data.get('redundant_constraints', []),
             n_bias=result_data.get('statistics', {}).get('n_bias', 0),
             n_mss=result_data.get('statistics', {}).get('n_mss', 0),
-            n_kb=result_data.get('statistics', {}).get('n_kb', len(kb_constraints))
+            n_kb=result_data.get('statistics', {}).get('n_kb', len(kb_constraints)),
+            bg_clauses=result_data.get('bg_clauses', [])
         )
 
         # Evaluate

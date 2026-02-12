@@ -182,6 +182,12 @@ class Evaluator:
                     constraint_clauses.append(normalized)
                 kb_to_clauses[cid] = constraint_clauses
 
+        # Union background clauses (KB ∪ BG)
+        if result.bg_clauses:
+            for clause in result.bg_clauses:
+                normalized = tuple(sorted(clause))
+                kb_clauses.add(normalized)
+
         # Get bias clause set
         bias_clauses = self.bias.get_all_clauses()
 

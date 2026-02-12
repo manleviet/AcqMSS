@@ -203,7 +203,8 @@ def evaluate_result_file(
         redundant_constraints=[],
         n_bias=len(evaluator.bias.constraints),
         n_mss=0,
-        n_kb=n_kb
+        n_kb=n_kb,
+        bg_clauses=result_data.get('bg_clauses', [])
     )
 
     # Evaluate with both strategies

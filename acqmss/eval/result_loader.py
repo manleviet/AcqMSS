@@ -21,6 +21,7 @@ class CONGENResultData:
         n_bias: Original number of bias constraints
         n_mss: Size of MSS before REDUCE
         n_kb: Final KB size
+        bg_clauses: Background knowledge clauses (e.g., [[1]] for root)
         metadata: Additional metadata
     """
     kb_constraints: List[str] = field(default_factory=list)
@@ -28,6 +29,7 @@ class CONGENResultData:
     n_bias: int = 0
     n_mss: int = 0
     n_kb: int = 0
+    bg_clauses: List[List[int]] = field(default_factory=list)
     metadata: Dict = field(default_factory=dict)
 
     @classmethod
@@ -53,6 +55,7 @@ class CONGENResultData:
             n_bias=stats.get('n_bias', 0),
             n_mss=stats.get('n_mss', 0),
             n_kb=stats.get('n_kb', 0),
+            bg_clauses=data.get('bg_clauses', []),
             metadata=data.get('metadata', {})
         )
 
@@ -77,6 +80,7 @@ class CONGENResultData:
                 'n_mss': self.n_mss,
                 'n_kb': self.n_kb,
             },
+            'bg_clauses': self.bg_clauses,
             'metadata': self.metadata
         }
 

@@ -129,12 +129,18 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         positive_examples = [e.assignments for e in examples.positive]
         negative_examples = [e.assignments for e in examples.negative]
 
+        # Extract root feature ID from oracle
+        feature_ids = oracle.get_feature_ids()
+        root_name = oracle.get_root_feature()
+        root_feature_id = feature_ids.get(root_name)
+
         # Create CONGEN model
         congen_model = CONGENModel.from_bias_and_examples(
             bias_constraints=bias_constraints,
             positive_examples=positive_examples,
             negative_examples=negative_examples,
-            feature_ids=oracle.get_feature_ids()
+            feature_ids=feature_ids,
+            root_feature_id=root_feature_id
         )
 
         # Prepare task based on mode

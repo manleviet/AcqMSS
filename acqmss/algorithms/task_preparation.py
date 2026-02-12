@@ -79,8 +79,9 @@ class IncrementalCONGENTaskPreparation(TestCaseTaskPreparationStrategy):
                 result, provider, model.variables,
                 task_input.negative_test_cases, id_assumption, is_negative=True)
 
-        # set_b (BG) is empty for CONGEN (no FM background)
-        # Can be extended to include FM if needed
+        # Add root constraint to background knowledge if provided
+        if model.root_feature_id is not None:
+            result.set_b.append(model.root_feature_id)
 
         # Store next available assumption ID for GenerateNE
         result.next_assumption_id = id_assumption
@@ -252,6 +253,10 @@ class NonIncrementalCONGENTaskPreparation(TestCaseTaskPreparationStrategy):
             self._prepare_examples(
                 result, provider, model.variables,
                 task_input.negative_test_cases, is_negative=True)
+
+        # Add root constraint to background knowledge if provided
+        if model.root_feature_id is not None:
+            result.set_b.append([[model.root_feature_id]])
 
         logging.debug('<<< NonIncrementalCONGENTaskPreparation: set_c=%d, set_tc=%d, e_neg=%d',
                       len(result.set_c), len(result.set_tc), len(result.e_neg_literals))

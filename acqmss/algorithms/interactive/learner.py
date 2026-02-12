@@ -167,6 +167,11 @@ class InteractiveLearner:
         feature_ids = oracle.get_feature_ids()
         id_to_feature = {v: k for k, v in feature_ids.items()}
 
+        # Extract root feature ID for background knowledge
+        root_name = oracle.get_root_feature()
+        root_feature_id = feature_ids.get(root_name)
+        background = [root_feature_id] if root_feature_id is not None else []
+
         constraint_map = {}
         negated_constraint_map = {}
         tseitin_var = max(feature_ids.values()) + 1
@@ -181,7 +186,7 @@ class InteractiveLearner:
         task = InteractiveTask(
             bias=[c.id for c in bias.constraints],
             learned_kb=[],
-            background=[],
+            background=background,
             feature_ids=feature_ids,
             id_to_feature=id_to_feature,
             constraint_map=constraint_map,
@@ -319,12 +324,15 @@ class InteractiveLearner:
         )
 
         # Create a result-like object for the evaluator
+        # Wrap background assumptions as unit clauses for clause-based eval
+        bg_clauses = [[lit] for lit in self.task.background] if self.task.background else []
         congen_result = CONGENResultData(
             kb_constraints=result.kb_constraints,
             redundant_constraints=[],
             n_bias=len(self.task.bias) + len(result.kb_constraints),  # Original bias size
             n_mss=0,
-            n_kb=result.n_kb
+            n_kb=result.n_kb,
+            bg_clauses=bg_clauses
         )
 
         # Evaluate with description-based strategy

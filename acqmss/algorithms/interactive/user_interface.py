@@ -85,6 +85,10 @@ class AutomatedOracle(InteractiveOracle):
         """Get feature name to SAT variable ID mapping."""
         return self.fm_oracle.get_feature_ids()
 
+    def get_root_feature(self) -> str:
+        """Get the root feature name from the feature model."""
+        return self.fm_oracle.get_root_feature()
+
     def __repr__(self):
         return f"AutomatedOracle(features={len(self.fm_oracle.features)})"
 

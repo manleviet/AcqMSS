@@ -10,7 +10,7 @@ the full DiagnosisModel infrastructure (no FM transformation needed).
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from explanation.models.task_preparation import TaskInput
@@ -35,6 +35,7 @@ class CONGENModel:
     variables: Dict[str, int] = field(default_factory=dict)
     task_input: TaskInput = field(default_factory=TaskInput)
     next_tseitin_var: int = 1
+    root_feature_id: Optional[int] = None
 
     @classmethod
     def from_bias_and_examples(
@@ -42,7 +43,8 @@ class CONGENModel:
             bias_constraints: Dict[str, List[List[int]]],
             positive_examples: List[Dict[str, bool]],
             negative_examples: List[Dict[str, bool]],
-            feature_ids: Dict[str, int]
+            feature_ids: Dict[str, int],
+            root_feature_id: Optional[int] = None
     ) -> 'CONGENModel':
         """Create model from bias constraints and examples.
 
@@ -74,7 +76,8 @@ class CONGENModel:
                 positive_test_cases=positive_tc,
                 negative_test_cases=negative_tc
             ),
-            next_tseitin_var=max_var + 1
+            next_tseitin_var=max_var + 1,
+            root_feature_id=root_feature_id
         )
 
     @staticmethod
