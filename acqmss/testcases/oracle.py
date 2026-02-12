@@ -87,11 +87,15 @@ class FeatureModelOracle(Oracle):
         self.fm_path = fm_path
         self.fm = self._load_fm(fm_path)
         self.features = self._extract_features()
-        self.feature_ids = self._build_feature_ids()
         self.leaf_features = self._extract_leaf_features()
 
-        # Build ground truth CNF
+        # Build ground truth CNF (also extracts flamapy variable mapping)
         self.cnf_clauses = self._build_cnf()
+        self.feature_ids = self._build_feature_ids()
+
+        # Verify feature_ids covers contiguous 1..n range matching CNF variables
+        assert set(self.feature_ids.values()) == set(range(1, len(self.features) + 1)), \
+            "feature_ids must cover variables 1..n matching CNF clause space"
 
         # Initialize persistent SAT solver
         self.solver = Solver(name='glucose4')
@@ -116,12 +120,19 @@ class FeatureModelOracle(Oracle):
         return {f.name for f in self.fm.get_features() if f.is_leaf()}
 
     def _build_feature_ids(self) -> Dict[str, int]:
-        """Build mapping from feature names to SAT variable IDs"""
-        return {f: i + 1 for i, f in enumerate(sorted(self.features))}
+        """Build mapping from feature names to SAT variable IDs.
+
+        Uses flamapy's variable assignment (tree traversal order)
+        to match CNF clause variable IDs.
+        """
+        return dict(self._flamapy_variables)
 
     def _build_cnf(self) -> List[List[int]]:
         """
         Build CNF clauses from feature model using flamapy.
+
+        Also stores flamapy's variable mapping as the authoritative
+        source for feature-to-SAT-variable ID assignment.
 
         Returns:
             List of CNF clauses (each clause is a list of literals)
@@ -130,8 +141,10 @@ class FeatureModelOracle(Oracle):
 
         sat_model = FmToPysat(self.fm).transform()
 
+        # Store flamapy's variable mapping (authoritative source)
+        self._flamapy_variables = dict(sat_model.variables)
+
         # Extract clauses from the model
-        # The clauses are stored in sat_model.cnf
         clauses = []
         for clause in sat_model.get_all_clauses().clauses:
             clauses.append(list(clause))

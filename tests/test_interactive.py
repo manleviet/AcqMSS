@@ -52,42 +52,19 @@ def bias():
 @pytest.fixture
 def interactive_task(oracle, bias):
     """Create InteractiveTask from oracle and bias."""
-    # Get feature mappings from oracle
     feature_ids = oracle.get_feature_ids()
     id_to_feature = {v: k for k, v in feature_ids.items()}
 
-    # Build constraint maps
     constraint_map = {}
     negated_constraint_map = {}
 
-    # Create ID translation (bias may use different IDs)
-    bias_feature_ids = {f.name: f.id for f in bias.features}
-    id_translation = {}
-    for f in bias.features:
-        if f.name in feature_ids:
-            id_translation[f.id] = feature_ids[f.name]
-        else:
-            id_translation[f.id] = f.id
-
     for constraint in bias.constraints:
         c_id = constraint.id
-
-        # Translate clauses to use oracle feature IDs
-        translated_clauses = []
-        for clause in constraint.clauses:
-            translated_clause = []
-            for lit in clause:
-                var = abs(lit)
-                sign = 1 if lit > 0 else -1
-                new_var = id_translation.get(var, var)
-                translated_clause.append(sign * new_var)
-            translated_clauses.append(translated_clause)
-
-        constraint_map[c_id] = translated_clauses
+        constraint_map[c_id] = constraint.clauses
 
         # Build negation (simple: negate first clause literals)
-        if translated_clauses:
-            negated_constraint_map[c_id] = [[-lit] for lit in translated_clauses[0]]
+        if constraint.clauses:
+            negated_constraint_map[c_id] = [[-lit] for lit in constraint.clauses[0]]
 
     task = InteractiveTask(
         bias=[c.id for c in bias.constraints],

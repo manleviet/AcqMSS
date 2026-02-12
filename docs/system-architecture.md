@@ -373,9 +373,14 @@ def feature_model_to_diagnosis_model(fm: FeatureModel) -> DiagnosisModel:
     Steps:
     1. Extract features and constraints from FM
     2. Convert to propositional clauses (CNF)
-    3. Create variable mapping (feature → var ID)
+    3. Create variable mapping (feature → var ID) — MUST use flamapy's tree traversal order
     4. Instantiate SAT solver
     5. Return DiagnosisModel with clauses + solver
+
+    CRITICAL: The variable mapping MUST come from flamapy's variable assignment
+    (tree traversal order), NOT from alphabetical sorting. The Oracle uses flamapy's
+    variable mapping as the authoritative source to ensure feature_ids match the
+    SAT variable IDs in CNF clauses.
     """
     pass
 ```
@@ -383,6 +388,12 @@ def feature_model_to_diagnosis_model(fm: FeatureModel) -> DiagnosisModel:
 **DIMACS Format Support**:
 - Read/write CNF files (standard SAT competition format)
 - Convert between variable assignments and configurations
+
+**Feature ID Resolution**:
+- **Source of Truth**: Flamapy's variable mapping from `FmToPysat` transformation
+- **Why**: Flamapy uses tree traversal order (depth-first) for variable numbering
+- **Not**: Alphabetical sorting (incorrect mismatch between Oracle feature_ids and SAT variables)
+- **Risk**: Mismatch causes SAT solver inconsistency, leading to incorrect Oracle validation
 
 ### Runner Pattern (for Evaluation Framework)
 
@@ -599,6 +610,23 @@ class ACQMSS:
 - Unified CNF clause format (list[list[int]])
 - Variable mapping (feature → literal ID)
 - Shared across generation, acquisition, and diagnosis
+
+**Feature ID Consistency (CRITICAL)**:
+
+The Oracle and all SAT-based components must use the **same** feature_ids mapping:
+
+```
+Oracle (acqmss/testcases/oracle.py)
+  ├─ _build_cnf(): Uses FmToPysat → generates CNF clauses with variable IDs
+  └─ _build_feature_ids(): Must extract mapping from same FmToPysat transform
+
+Result: feature_ids matches SAT variable IDs in CNF
+```
+
+- **Source of Truth**: Flamapy's variable mapping (tree traversal order)
+- **In Oracle**: `self._flamapy_variables = dict(sat_model.variables)` from FmToPysat
+- **Pattern**: All code using feature_ids must receive it from Oracle or same FM→SAT conversion
+- **Failure Mode**: Alphabetical sorting breaks mismatch → incorrect Oracle validation
 
 ## Solver Architecture
 

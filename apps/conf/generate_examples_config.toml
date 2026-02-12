@@ -5,7 +5,7 @@
 
 [general]
 # Random seed for reproducibility
-seed = 42
+seed = 82
 
 # Output directory for generated examples
 output_dir = "data/examples"

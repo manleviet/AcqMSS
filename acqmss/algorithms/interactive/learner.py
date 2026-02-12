@@ -164,56 +164,24 @@ class InteractiveLearner:
     @staticmethod
     def _build_task_from_bias(bias: Bias, oracle: AutomatedOracle) -> InteractiveTask:
         """Build InteractiveTask from Bias and AutomatedOracle."""
-        # Get feature mappings from oracle (to match FM variable IDs)
         feature_ids = oracle.get_feature_ids()
         id_to_feature = {v: k for k, v in feature_ids.items()}
 
-        # Build constraint map using bias feature IDs
-        # Need to translate from bias feature IDs to oracle feature IDs
-        bias_feature_ids = {f.name: f.id for f in bias.features}
-
-        # Create ID translation if needed
-        # (If bias uses different IDs than FM, we need to translate)
-        id_translation = {}
-        for f in bias.features:
-            if f.name in feature_ids:
-                id_translation[f.id] = feature_ids[f.name]
-            else:
-                id_translation[f.id] = f.id
-
-        # Build constraint maps
         constraint_map = {}
         negated_constraint_map = {}
-
-        # Compute tseitin_start from max variable ID across both spaces
-        max_var = max(max(feature_ids.values()), max(f.id for f in bias.features))
-        tseitin_var = max_var + 1
+        tseitin_var = max(feature_ids.values()) + 1
 
         for constraint in bias.constraints:
             c_id = constraint.id
+            constraint_map[c_id] = constraint.clauses
 
-            # Translate clauses to use oracle feature IDs
-            translated_clauses = []
-            for clause in constraint.clauses:
-                translated_clause = []
-                for lit in clause:
-                    var = abs(lit)
-                    sign = 1 if lit > 0 else -1
-                    new_var = id_translation.get(var, var)
-                    translated_clause.append(sign * new_var)
-                translated_clauses.append(translated_clause)
-
-            constraint_map[c_id] = translated_clauses
-
-            # Proper Tseitin negation
-            neg_clauses, tseitin_var = negate_cnf_tseitin(translated_clauses, tseitin_var)
+            neg_clauses, tseitin_var = negate_cnf_tseitin(constraint.clauses, tseitin_var)
             negated_constraint_map[c_id] = neg_clauses
 
-        # Create task
         task = InteractiveTask(
             bias=[c.id for c in bias.constraints],
             learned_kb=[],
-            background=[],  # Could add FM root constraint here
+            background=[],
             feature_ids=feature_ids,
             id_to_feature=id_to_feature,
             constraint_map=constraint_map,

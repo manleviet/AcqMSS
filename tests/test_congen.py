@@ -252,5 +252,46 @@ class TestGenerateNE:
             checker.cleanup()
 
 
+class TestOracleFeatureIds:
+    """Regression tests: Oracle feature_ids must match flamapy and bias IDs."""
+
+    MODELS = [
+        ("REAL-FM-7", "data/fms/REAL-FM-7.uvl", "data/bias/REAL-FM-7-bias.json"),
+        ("arcade-game", "data/fms/arcade-game.uvl", "data/bias/arcade-game-bias.json"),
+        ("REAL-FM-4", "data/fms/REAL-FM-4.uvl", "data/bias/REAL-FM-4-bias.json"),
+    ]
+
+    @pytest.mark.parametrize("name,fm_path,bias_path", MODELS)
+    def test_oracle_ids_match_flamapy(self, name, fm_path, bias_path):
+        """Oracle feature_ids must match flamapy's variable assignment."""
+        from flamapy.metamodels.fm_metamodel.transformations import UVLReader
+        from flamapy.metamodels.pysat_metamodel.transformations import FmToPysat
+
+        if not Path(fm_path).exists():
+            pytest.skip(f"FM not found: {fm_path}")
+
+        oracle = FeatureModelOracle(fm_path)
+        fm = UVLReader(fm_path).transform()
+        sat = FmToPysat(fm).transform()
+
+        assert oracle.feature_ids == dict(sat.variables), \
+            f"{name}: Oracle IDs don't match flamapy"
+        del oracle
+
+    @pytest.mark.parametrize("name,fm_path,bias_path", MODELS)
+    def test_oracle_ids_match_bias(self, name, fm_path, bias_path):
+        """Oracle feature_ids must match bias file IDs."""
+        if not Path(fm_path).exists() or not Path(bias_path).exists():
+            pytest.skip(f"Files not found: {fm_path} or {bias_path}")
+
+        oracle = FeatureModelOracle(fm_path)
+        bias = BiasIO.load_from_json(bias_path)
+        bias_ids = {f.name: f.id for f in bias.features}
+
+        assert oracle.feature_ids == bias_ids, \
+            f"{name}: Oracle IDs don't match bias"
+        del oracle
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
