@@ -101,31 +101,11 @@ def _prune_rejecting_partial(task: InteractiveTask, e: dict, R: set) -> None:
     for c_id in list(task.bias):
         clauses = task.constraint_map.get(c_id, [])
         # Only check constraints whose variables are all in R
-        c_vars = set()
-        for clause in clauses:
-            for lit in clause:
-                var = abs(lit)
-                if var in task.id_to_feature:
-                    c_vars.add(task.id_to_feature[var])
-
+        c_vars = task._get_constraint_vars(c_id)
         if not c_vars.issubset(R):
             continue
 
-        # Check if this partial assignment violates the constraint
-        violated = False
-        for clause in clauses:
-            clause_satisfied = False
-            for lit in clause:
-                var = abs(lit)
-                if var in assignment:
-                    if (lit > 0 and assignment[var]) or (lit < 0 and not assignment[var]):
-                        clause_satisfied = True
-                        break
-            if not clause_satisfied:
-                violated = True
-                break
-
-        if violated:
+        if task.violates_clauses(clauses, assignment):
             pruned.append(c_id)
 
     if pruned:

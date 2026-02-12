@@ -114,7 +114,7 @@ class TestInteractiveTask:
 
     def test_add_to_kb(self, interactive_task):
         """Test adding constraint to KB."""
-        c_id = interactive_task.bias[0]
+        c_id = next(iter(interactive_task.bias))
         interactive_task.add_to_kb(c_id)
 
         assert c_id in interactive_task.learned_kb
@@ -123,7 +123,8 @@ class TestInteractiveTask:
     def test_remove_from_bias(self, interactive_task):
         """Test removing constraints from bias."""
         initial_size = len(interactive_task.bias)
-        to_remove = interactive_task.bias[:2]
+        bias_iter = iter(interactive_task.bias)
+        to_remove = [next(bias_iter), next(bias_iter)]
         interactive_task.remove_from_bias(to_remove)
 
         assert len(interactive_task.bias) == initial_size - 2
@@ -142,8 +143,9 @@ class TestInteractiveTask:
     def test_get_kb_clauses(self, interactive_task):
         """Test getting KB clauses."""
         # Add some constraints to KB
-        interactive_task.add_to_kb(interactive_task.bias[0])
-        interactive_task.add_to_kb(interactive_task.bias[1])
+        bias_iter = iter(interactive_task.bias)
+        interactive_task.add_to_kb(next(bias_iter))
+        interactive_task.add_to_kb(next(bias_iter))
 
         clauses = interactive_task.get_kb_clauses()
         assert isinstance(clauses, list)

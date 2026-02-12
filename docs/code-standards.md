@@ -305,6 +305,53 @@ result = congen.acquire(task)
 - Clear dependencies
 - Profiling optional
 
+### 6. Shared Utility Methods
+
+Extract duplicated logic into static/class methods to avoid code repetition:
+
+```python
+@dataclass
+class InteractiveTask:
+    """Task state for QuAcq."""
+
+    # ... fields ...
+
+    @staticmethod
+    def violates_clauses(clauses: List[List[int]],
+                         assignment: Dict[int, bool]) -> bool:
+        """Check if assignment violates constraint clauses.
+
+        Shared utility used by QuAcq, FindScope, and FindC.
+        Centralizes violation checking logic in one place.
+        """
+        for clause in clauses:
+            clause_satisfied = False
+            for lit in clause:
+                var = abs(lit)
+                if var in assignment:
+                    if (lit > 0 and assignment[var]) or (lit < 0 and not assignment[var]):
+                        clause_satisfied = True
+                        break
+            if not clause_satisfied:
+                return True
+        return False
+
+# Usage across multiple modules
+class QuAcq:
+    def check_violation(self, config):
+        return InteractiveTask.violates_clauses(clauses, assignment)
+
+class FindScope:
+    def check_partial(self, partial_config):
+        return InteractiveTask.violates_clauses(clauses, assignment)
+```
+
+**Benefits**:
+- Single source of truth for common logic
+- DRY principle: eliminate duplicate implementations
+- Easier testing and maintenance
+- Clear API via static methods
+
 ## Testing Strategy
 
 ### Test Structure

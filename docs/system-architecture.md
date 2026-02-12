@@ -198,6 +198,25 @@ class CONGENTask:
         self.positive_examples: list     # E+
         self.negative_examples: list     # E-
         self.split_diff_utils: dict      # CNF diff utilities
+
+class InteractiveTask:
+    """Task state for QuAcq interactive learning."""
+    def __init__(self, bias, learned_kb, background):
+        self.bias: Set[str]              # Remaining bias (set for O(1) removal)
+        self.learned_kb: List[str]       # Learned constraint IDs (KB)
+        self.background: List[int]       # Background assumptions (BG)
+        self.constraint_map: dict        # Constraint ID → CNF clauses
+        self.feature_ids: dict           # Feature name → SAT variable ID
+        self.n_queries: int              # Query count
+
+    def __post_init__(self):
+        """Auto-convert list→set for backward compatibility."""
+        if not isinstance(self.bias, set):
+            self.bias = set(self.bias)
+
+    def remove_from_bias(self, constraint_ids: List[str]):
+        """Remove constraints using set subtraction (O(1) per item)."""
+        self.bias -= set(constraint_ids)
 ```
 
 **Construction**:
@@ -462,6 +481,8 @@ Feature Model + Bias + E+/E- Examples
         │   │   └─ O(|S| * log|X|) queries (ConsistencyChecker against FM)
         │   │
         │   ├─ FindC: Discriminate candidates with matching scope
+        │   │   ├─ Exact scope match (c_vars == scope) preferred
+        │   │   ├─ Fallback to subset match (c_vars ⊆ scope)
         │   │   ├─ Use pool examples (ExampleProvider)
         │   │   └─ Generate SAT queries if needed (query_mode=example_first)
         │   │
@@ -598,6 +619,8 @@ result = checker.is_consistent(clauses)
 2. **Incremental Solver** — ~50x faster SAT checks
 3. **Assumption-based Hypothesis Testing** — Reuse solver state
 4. **Divide-and-Conquer** — ACQMSS reduces problem size
+5. **Set-Based Bias Storage** — O(1) constraint removal vs O(n) for lists (QuAcq)
+6. **Exact Scope Matching** — Prefers exact scope match before subset fallback (FindC)
 
 Combined effect: 500-1000x speedup over naive approach for large models.
 

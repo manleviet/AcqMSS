@@ -31,7 +31,7 @@ Primary constraint discovery algorithms:
 | `user_interface.py` | 248 | ManualOracle, AutomatedOracle, ExampleProvider: oracle + batch example interfaces |
 | `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): identify violated constraint scope via partial queries |
 | `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): identify specific constraint from scope |
-| `task.py` | — | Task state management, scope helpers, partial config support |
+| `task.py` | 194 | Task state management, scope helpers, shared utilities (violates_clauses) |
 
 #### acqmss/bias/ — Bias (Constraint) Generation (1,097 LOC, 6 files)
 

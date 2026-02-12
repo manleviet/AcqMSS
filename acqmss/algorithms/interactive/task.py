@@ -6,7 +6,7 @@ interactive learning process.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Set, Tuple, Optional, Any
 
 
 def _to_hashable(item: Any) -> Any:
@@ -37,8 +37,8 @@ class InteractiveTask:
         n_queries: Count of membership queries asked
         query_history: History of (query, answer) pairs for analysis
     """
-    # Remaining bias constraint IDs
-    bias: List[str] = field(default_factory=list)
+    # Remaining bias constraint IDs (set for O(1) removal)
+    bias: Set[str] = field(default_factory=set)
 
     # Learned constraint IDs (KB)
     learned_kb: List[str] = field(default_factory=list)
@@ -64,6 +64,11 @@ class InteractiveTask:
     # Query history: list of (configuration, oracle_answer) tuples
     query_history: List[Tuple[Dict[str, bool], bool]] = field(default_factory=list)
 
+    def __post_init__(self):
+        """Ensure bias is a set (accepts list input for backward compat)."""
+        if not isinstance(self.bias, set):
+            self.bias = set(self.bias)
+
     def get_kb_clauses(self) -> List[List[int]]:
         """Get all CNF clauses from the learned KB."""
         clauses = []
@@ -85,9 +90,7 @@ class InteractiveTask:
 
     def remove_from_bias(self, constraint_ids: List[str]) -> None:
         """Remove constraints from the bias."""
-        for c_id in constraint_ids:
-            if c_id in self.bias:
-                self.bias.remove(c_id)
+        self.bias -= set(constraint_ids)
 
     def record_query(self, config: Dict[str, bool], answer: bool) -> None:
         """Record a membership query and its answer."""
@@ -117,20 +120,33 @@ class InteractiveTask:
         return constraint_id
 
     def get_constraints_with_scope(self, scope: set) -> List[str]:
-        """Get constraint IDs from bias whose variables are subset of scope."""
-        result = []
+        """Get constraint IDs from bias whose variables match scope.
+
+        Prefers exact scope match (c_vars == scope). Falls back to subset
+        match (c_vars ⊆ scope) if no exact matches found.
+        """
+        exact = []
+        subset = []
         for c_id in self.bias:
-            clauses = self.constraint_map.get(c_id, [])
-            # Get all variables used by this constraint
-            c_vars = set()
-            for clause in clauses:
-                for lit in clause:
-                    var = abs(lit)
-                    if var in self.id_to_feature:
-                        c_vars.add(self.id_to_feature[var])
-            if c_vars and c_vars.issubset(scope):
-                result.append(c_id)
-        return result
+            c_vars = self._get_constraint_vars(c_id)
+            if not c_vars:
+                continue
+            if c_vars == scope:
+                exact.append(c_id)
+            elif c_vars.issubset(scope):
+                subset.append(c_id)
+        return exact if exact else subset
+
+    def _get_constraint_vars(self, c_id: str) -> set:
+        """Get the set of feature-name variables for a constraint."""
+        clauses = self.constraint_map.get(c_id, [])
+        c_vars = set()
+        for clause in clauses:
+            for lit in clause:
+                var = abs(lit)
+                if var in self.id_to_feature:
+                    c_vars.add(self.id_to_feature[var])
+        return c_vars
 
     def partial_config_to_assumptions(self, config: Dict[str, bool],
                                        variables: set) -> List[int]:
@@ -142,10 +158,29 @@ class InteractiveTask:
                 assumptions.append(fid if config[name] else -fid)
         return assumptions
 
+    @staticmethod
+    def violates_clauses(clauses: List[List[int]],
+                         assignment: Dict[int, bool]) -> bool:
+        """Check if assignment violates constraint clauses.
+
+        Shared utility used by QuAcq, FindScope, and FindC.
+        """
+        for clause in clauses:
+            clause_satisfied = False
+            for lit in clause:
+                var = abs(lit)
+                if var in assignment:
+                    if (lit > 0 and assignment[var]) or (lit < 0 and not assignment[var]):
+                        clause_satisfied = True
+                        break
+            if not clause_satisfied:
+                return True
+        return False
+
     def clone(self) -> 'InteractiveTask':
         """Create a deep copy of this task."""
         return InteractiveTask(
-            bias=self.bias.copy(),
+            bias=set(self.bias),
             learned_kb=self.learned_kb.copy(),
             background=self.background.copy(),
             feature_ids=self.feature_ids.copy(),

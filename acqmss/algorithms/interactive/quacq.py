@@ -273,32 +273,16 @@ class QuAcq:
         """Remove constraints from Bias that reject the positive example."""
         assumptions = task.config_to_assumptions(positive_example)
 
+        assignment = {abs(lit): lit > 0 for lit in assumptions}
+
         pruned = []
         for c_id in list(task.bias):
             clauses = task.constraint_map.get(c_id, [])
-            if self._violates_constraint(assumptions, clauses):
+            if task.violates_clauses(clauses, assignment):
                 pruned.append(c_id)
 
         task.remove_from_bias(pruned)
         return pruned
-
-    def _violates_constraint(self, assumptions: List[int],
-                             constraint_clauses: List[List[int]]) -> bool:
-        """Check if configuration violates a constraint."""
-        assignment = {abs(lit): lit > 0 for lit in assumptions}
-
-        for clause in constraint_clauses:
-            clause_satisfied = False
-            for lit in clause:
-                var = abs(lit)
-                if var in assignment:
-                    if (lit > 0 and assignment[var]) or (lit < 0 and not assignment[var]):
-                        clause_satisfied = True
-                        break
-            if not clause_satisfied:
-                return True
-
-        return False
 
     @count_calls('find_conflict_calls')
     def _find_conflict(self, task: InteractiveTask,

@@ -60,7 +60,7 @@ def find_c(
 
     for c_id in candidates:
         clauses = task.constraint_map.get(c_id, [])
-        if _violates(clauses, assignment):
+        if task.violates_clauses(clauses, assignment):
             rejecting.append(c_id)
 
     if not rejecting:
@@ -108,7 +108,7 @@ def _narrow_with_pool(
 
         # Check which candidates this example violates
         violating = [c for c in candidates
-                     if _violates(task.constraint_map.get(c, []), disc_assignment)]
+                     if task.violates_clauses(task.constraint_map.get(c, []), disc_assignment)]
         non_violating = [c for c in candidates if c not in violating]
 
         # Check if disc_e is consistent with FM
@@ -175,21 +175,6 @@ def _narrow_with_sat(
     if len(candidates) == 1:
         return candidates[0]
     return candidates[0] if candidates else None
-
-
-def _violates(clauses: List[List[int]], assignment: dict) -> bool:
-    """Check if assignment violates constraint clauses."""
-    for clause in clauses:
-        clause_satisfied = False
-        for lit in clause:
-            var = abs(lit)
-            if var in assignment:
-                if (lit > 0 and assignment[var]) or (lit < 0 and not assignment[var]):
-                    clause_satisfied = True
-                    break
-        if not clause_satisfied:
-            return True
-    return False
 
 
 def _check_fm_consistency(fm_clauses: List[List[int]],
