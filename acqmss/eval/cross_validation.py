@@ -20,7 +20,7 @@ import time
 from .metrics import EvaluationMetrics
 from .accuracy import AccuracyCalculator
 from .congen_runner import CONGENRunner
-from .fold_io import FoldData, apply_folds
+from .fold_io import FoldData, generate_folds, apply_folds
 from .performance_metrics import (
     PerformanceMetrics,
     AggregatedPerformanceMetrics,
@@ -131,7 +131,7 @@ def n_fold_cross_validation(
         n_folds: int,
         bias_clauses: Dict[str, List[List[int]]],
         feature_ids: Dict[str, int],
-        seed: int = None,
+        seed: int,
         solver_name: str = 'glucose4',
         is_incremental: bool = True,
         shuffle_each_fold: bool = True,
@@ -155,7 +155,7 @@ def n_fold_cross_validation(
         n_folds: Number of folds (e.g., 5 or 10)
         bias_clauses: {constraint_id: clauses} from bias file
         feature_ids: {feature_name: SAT_variable_id}
-        seed: Random seed for reproducibility
+        seed: Random seed for fold generation and training shuffle (required)
         solver_name: SAT solver name
         is_incremental: Use incremental solver mode
         shuffle_each_fold: Shuffle training examples before each fold
@@ -165,16 +165,20 @@ def n_fold_cross_validation(
     Returns:
         CrossValidationResult with mean accuracy ± std and KB data
     """
-    if seed is not None:
-        random.seed(seed)
-
-    # Use pre-generated folds if provided
-    if fold_data is not None:
-        n_folds = fold_data.n_folds
+    # Generate folds if not pre-provided
+    folds_provided = fold_data is not None
+    if not folds_provided:
+        fold_data = generate_folds(
+            n_positive=len(positive_examples),
+            n_negative=len(negative_examples),
+            n_folds=n_folds,
+            seed=seed
+        )
+    n_folds = fold_data.n_folds
 
     logging.info('>>> n_fold_cross_validation(n=%d, |E+|=%d, |E-|=%d, shared_folds=%s)',
                  n_folds, len(positive_examples), len(negative_examples),
-                 fold_data is not None)
+                 folds_provided)
 
     # Start total time measurement
     cv_start_time = time.perf_counter()
@@ -187,11 +191,6 @@ def n_fold_cross_validation(
         is_incremental=is_incremental
     )
 
-    # Split into folds: use pre-generated or generate on-the-fly
-    if fold_data is None:
-        pos_folds = _split_into_folds(positive_examples, n_folds)
-        neg_folds = _split_into_folds(negative_examples, n_folds)
-
     fold_accuracies: List[float] = []
     fold_results: List[CrossValidationFoldResult] = []
     performance_list: List[PerformanceMetrics] = []
@@ -200,31 +199,22 @@ def n_fold_cross_validation(
     for fold_idx in range(n_folds):
         logging.info('=== Fold %d/%d ===', fold_idx + 1, n_folds)
 
-        if fold_data is not None:
-            # Use pre-generated folds
-            train_pos, train_neg, test_pos, test_neg = apply_folds(
-                fold_data, positive_examples, negative_examples, fold_idx
-            )
-        else:
-            # On-the-fly folds (backward compat)
-            train_pos = [ex for i, fold in enumerate(pos_folds) for ex in fold if i != fold_idx]
-            train_neg = [ex for i, fold in enumerate(neg_folds) for ex in fold if i != fold_idx]
-            test_pos = pos_folds[fold_idx]
-            test_neg = neg_folds[fold_idx]
+        train_pos, train_neg, test_pos, test_neg = apply_folds(
+            fold_data, positive_examples, negative_examples, fold_idx
+        )
 
-        # Shuffle training examples if requested
+        # Shuffle training examples with per-fold deterministic RNG
         if shuffle_each_fold:
-            random.shuffle(train_pos)
-            random.shuffle(train_neg)
+            fold_rng = random.Random(fold_data.shuffle_seeds[fold_idx])
+            fold_rng.shuffle(train_pos)
+            fold_rng.shuffle(train_neg)
 
         logging.debug('Fold %d: train=(%d+, %d-), test=(%d+, %d-)',
                       fold_idx + 1, len(train_pos), len(train_neg),
                       len(test_pos), len(test_neg))
 
         # Determine bias shuffle seed for this fold
-        fold_shuffle_seed = None
-        if shuffle_bias and fold_data is not None:
-            fold_shuffle_seed = fold_data.shuffle_seeds[fold_idx]
+        fold_shuffle_seed = fold_data.shuffle_seeds[fold_idx] if shuffle_bias else None
 
         # Train: run CONGEN on training set
         congen_result = runner.run(train_pos, train_neg,
@@ -319,7 +309,7 @@ def n_fold_cross_validation_interactive(
         feature_ids: Dict[str, int],
         fm_path: str,
         bias_path: str,
-        seed: int = None,
+        seed: int,
         solver_name: str = 'glucose4',
         max_queries: int = 1000,
         query_mode: str = 'example_only',
@@ -340,7 +330,7 @@ def n_fold_cross_validation_interactive(
         feature_ids: {feature_name: SAT_variable_id}
         fm_path: Path to feature model (.uvl)
         bias_path: Path to bias file (.json)
-        seed: Random seed for reproducibility
+        seed: Random seed for fold generation and training shuffle (required)
         solver_name: SAT solver name
         max_queries: Maximum queries per fold
         query_mode: 'example_only' or 'example_first'
@@ -351,14 +341,20 @@ def n_fold_cross_validation_interactive(
     Returns:
         CrossValidationResult with mean accuracy +/- std and KB data
     """
-    if seed is not None:
-        random.seed(seed)
+    # Generate folds if not pre-provided
+    folds_provided = fold_data is not None
+    if not folds_provided:
+        fold_data = generate_folds(
+            n_positive=len(positive_examples),
+            n_negative=len(negative_examples),
+            n_folds=n_folds,
+            seed=seed
+        )
+    n_folds = fold_data.n_folds
 
-    if fold_data is not None:
-        n_folds = fold_data.n_folds
-
-    logging.info('>>> n_fold_cross_validation_interactive(n=%d, |E+|=%d, |E-|=%d)',
-                 n_folds, len(positive_examples), len(negative_examples))
+    logging.info('>>> n_fold_cross_validation_interactive(n=%d, |E+|=%d, |E-|=%d, shared_folds=%s)',
+                 n_folds, len(positive_examples), len(negative_examples),
+                 folds_provided)
 
     cv_start_time = time.perf_counter()
 
@@ -376,11 +372,6 @@ def n_fold_cross_validation_interactive(
         query_mode=query_mode
     )
 
-    # Split into folds
-    if fold_data is None:
-        pos_folds = _split_into_folds(positive_examples, n_folds)
-        neg_folds = _split_into_folds(negative_examples, n_folds)
-
     fold_accuracies: List[float] = []
     fold_results: List[CrossValidationFoldResult] = []
     performance_list: List[PerformanceMetrics] = []
@@ -389,28 +380,22 @@ def n_fold_cross_validation_interactive(
     for fold_idx in range(n_folds):
         logging.info('=== Interactive Fold %d/%d ===', fold_idx + 1, n_folds)
 
-        if fold_data is not None:
-            train_pos, train_neg, test_pos, test_neg = apply_folds(
-                fold_data, positive_examples, negative_examples, fold_idx
-            )
-        else:
-            train_pos = [ex for i, fold in enumerate(pos_folds) for ex in fold if i != fold_idx]
-            train_neg = [ex for i, fold in enumerate(neg_folds) for ex in fold if i != fold_idx]
-            test_pos = pos_folds[fold_idx]
-            test_neg = neg_folds[fold_idx]
+        train_pos, train_neg, test_pos, test_neg = apply_folds(
+            fold_data, positive_examples, negative_examples, fold_idx
+        )
 
+        # Shuffle training examples with per-fold deterministic RNG
         if shuffle_each_fold:
-            random.shuffle(train_pos)
-            random.shuffle(train_neg)
+            fold_rng = random.Random(fold_data.shuffle_seeds[fold_idx])
+            fold_rng.shuffle(train_pos)
+            fold_rng.shuffle(train_neg)
 
         logging.debug('Fold %d: train=(%d+, %d-), test=(%d+, %d-)',
                       fold_idx + 1, len(train_pos), len(train_neg),
                       len(test_pos), len(test_neg))
 
         # Determine bias shuffle seed for this fold
-        fold_shuffle_seed = None
-        if shuffle_bias and fold_data is not None:
-            fold_shuffle_seed = fold_data.shuffle_seeds[fold_idx]
+        fold_shuffle_seed = fold_data.shuffle_seeds[fold_idx] if shuffle_bias else None
 
         # Train: run interactive learning on training set
         interactive_result = runner.run(train_pos, train_neg,
@@ -483,22 +468,3 @@ def n_fold_cross_validation_interactive(
         intersected_kb=intersected_kb,
         total_runtime_ms=total_runtime_ms
     )
-
-
-def _split_into_folds(items: List, n_folds: int) -> List[List]:
-    """
-    Split items into n approximately equal folds.
-
-    Args:
-        items: List of items to split
-        n_folds: Number of folds
-
-    Returns:
-        List of fold lists
-    """
-    shuffled = items.copy()
-    random.shuffle(shuffled)
-    folds = [[] for _ in range(n_folds)]
-    for i, item in enumerate(shuffled):
-        folds[i % n_folds].append(item)
-    return folds

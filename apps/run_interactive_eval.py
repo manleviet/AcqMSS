@@ -325,7 +325,7 @@ Example:
     max_queries = args.max_queries or interactive_config.get('max_queries', 1000)
 
     # Seed
-    seed = general.get('seed', None)
+    seed = general.get('seed', 42)
 
     models = parse_models(config)
 
