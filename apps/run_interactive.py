@@ -29,6 +29,14 @@ from acqmss.algorithms.interactive import (
     InteractiveLearner,
     InteractiveResult
 )
+from acqmss.eval import (
+    BiasData,
+    load_folds,
+    n_fold_cross_validation_interactive,
+    generate_cv_report,
+    save_cv_kb_files,
+)
+from acqmss.testcases import ExampleIO
 from explanation.operations.algorithms.profiler import (
     use_global_profiler,
     ProfilerPreset
@@ -38,8 +46,11 @@ from explanation.operations.algorithms.profiler import (
 @dataclass
 class ModelConfig:
     """Configuration for a single model"""
-    path: str
+    name: str
+    oracle: str
     bias: str
+    examples: str = None
+    folds_path: str = None
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
@@ -53,8 +64,11 @@ def parse_models(config: Dict) -> List[ModelConfig]:
     models_data = config.get('models', [])
     return [
         ModelConfig(
-            path=m['path'],
-            bias=m['bias']
+            name=m.get('name', Path(m['oracle']).stem),
+            oracle=m['oracle'],
+            bias=m['bias'],
+            examples=m.get('examples'),
+            folds_path=m.get('folds_path')
         )
         for m in models_data
     ]
@@ -107,7 +121,9 @@ def print_evaluation_results(model_name: str, evaluation: dict, verbose: bool = 
 def process_model(model_config: ModelConfig, output_dir: Path,
                   max_queries: int, mode: str, verbose: bool,
                   solver_name: str = 'glucose4',
-                  evaluate: bool = True) -> InteractiveResult:
+                  evaluate: bool = True,
+                  interactive_config: Dict = None,
+                  seed: int = None) -> InteractiveResult:
     """Process a single model with interactive learning.
 
     Args:
@@ -118,23 +134,31 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         verbose: Enable verbose output
         solver_name: SAT solver name
         evaluate: If True, evaluate the result against ground truth FM
+        interactive_config: Interactive config section from TOML
+        seed: Random seed for CV reproducibility
 
     Returns:
         InteractiveResult from learning
     """
+    if interactive_config is None:
+        interactive_config = {}
     try:
-        model_name = Path(model_config.path).stem
+        model_name = model_config.name
 
         if verbose:
             print(f"\nProcessing: {model_name}")
-            print(f"  FM: {model_config.path}")
+            print(f"  FM: {model_config.oracle}")
             print(f"  Bias: {model_config.bias}")
+            if model_config.examples:
+                print(f"  Examples: {model_config.examples}")
+            if model_config.folds_path:
+                print(f"  Folds: {model_config.folds_path}")
             print(f"  Mode: {mode}")
             print(f"  Max queries: {max_queries}")
 
         # Create learner
         learner = InteractiveLearner.from_files(
-            fm_path=model_config.path,
+            fm_path=model_config.oracle,
             bias_path=model_config.bias,
             solver_name=solver_name,
             enable_profiling=True
@@ -178,10 +202,57 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         if verbose:
             print(f"\n  Saved: {output_file}")
 
+        # Cross-validation (if n_folds > 0 and examples provided)
+        n_folds = interactive_config.get('n_folds', 0)
+        if n_folds > 0 and model_config.examples:
+            if verbose:
+                print(f"\n  --- Cross-Validation ({n_folds} folds) ---")
+
+            examples = ExampleIO.load_json(model_config.examples)
+            bias = BiasData.from_json(Path(model_config.bias))
+
+            # Load pre-generated folds (per-model)
+            fold_data = None
+            shuffle_bias = interactive_config.get('shuffle_bias', False)
+            if model_config.folds_path:
+                if Path(model_config.folds_path).exists():
+                    fold_data = load_folds(model_config.folds_path)
+                    n_folds = fold_data.n_folds
+                    if verbose:
+                        print(f"  Using pre-generated folds: {model_config.folds_path} ({n_folds} folds)")
+                else:
+                    print(f"  WARNING: folds_path not found: {model_config.folds_path}")
+
+            query_mode = interactive_config.get('query_mode', 'example_only')
+
+            cv_result = n_fold_cross_validation_interactive(
+                positive_examples=[e.assignments for e in examples.positive],
+                negative_examples=[e.assignments for e in examples.negative],
+                n_folds=n_folds,
+                bias_clauses={cid: c.clauses for cid, c in bias.constraints.items()},
+                feature_ids=bias.features,
+                fm_path=model_config.oracle,
+                bias_path=model_config.bias,
+                seed=seed,
+                solver_name=solver_name,
+                max_queries=max_queries,
+                query_mode=query_mode,
+                fold_data=fold_data,
+                shuffle_bias=shuffle_bias
+            )
+
+            cv_output_file = output_dir / f"{model_name}_interactive_cv.json"
+            cv_report = generate_cv_report(cv_result, cv_output_file)
+            print(cv_report)
+
+            saved_kbs = save_cv_kb_files(cv_result, output_dir, model_name, "interactive")
+            if verbose:
+                print(f"  Saved {len(saved_kbs['fold_kbs'])} fold KB files")
+
         return result
 
     except Exception as e:
-        print(f"Error processing {model_config.path}: {e}")
+        print(f"Error processing {model_config.oracle}: {e}")
         import traceback
         traceback.print_exc()
         return InteractiveResult(
@@ -253,6 +324,9 @@ Example:
     # Determine max queries
     max_queries = args.max_queries or interactive_config.get('max_queries', 1000)
 
+    # Seed
+    seed = general.get('seed', None)
+
     models = parse_models(config)
 
     if not models:
@@ -275,6 +349,9 @@ Example:
     print(f"Max queries: {max_queries}")
     print(f"Solver: {args.solver}")
     print(f"Evaluate: {not args.no_evaluate}")
+    print(f"CV Folds: {interactive_config.get('n_folds', 0)}")
+    print(f"Query mode: {interactive_config.get('query_mode', 'example_only')}")
+    print(f"Shuffle bias: {interactive_config.get('shuffle_bias', False)}")
 
     results = []
     success_count = 0
@@ -288,7 +365,9 @@ Example:
             mode=mode,
             verbose=verbose,
             solver_name=args.solver,
-            evaluate=do_evaluate
+            evaluate=do_evaluate,
+            interactive_config=interactive_config,
+            seed=seed
         )
         results.append((model, result))
         if result.n_kb > 0 or result.convergence_reason in ['empty_bias', 'no_query']:
@@ -305,8 +384,7 @@ Example:
     print("-" * 60)
 
     for model, result in results:
-        model_name = Path(model.path).stem
-        print(f"{model_name:<30} {result.n_queries:>8} {result.n_kb:>5} {result.convergence_reason:<15}")
+        print(f"{model.name:<30} {result.n_queries:>8} {result.n_kb:>5} {result.convergence_reason:<15}")
 
     print("-" * 60)
     print(f"Completed: {success_count}/{len(models)} models")
@@ -324,7 +402,7 @@ Example:
         print("-" * 100)
 
         for model, result in results:
-            model_name = Path(model.path).stem
+            model_name = model.name
             if result.evaluation:
                 desc_acc = result.evaluation.get('description', {}).get('metrics', {}).get('accuracy', 0)
                 clause_acc = result.evaluation.get('clause', {}).get('metrics', {}).get('accuracy', 0)

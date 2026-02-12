@@ -57,18 +57,19 @@ Positive/negative example generation strategies:
 | `data_structures.py` | 217 | Configuration, Example, ExampleSet datastructures |
 | `io_utils.py` | 155 | Load/save examples in JSON format |
 
-#### acqmss/eval/ — Evaluation Framework (2,478 LOC, 13 files)
+#### acqmss/eval/ — Evaluation Framework (2,725 LOC, 14 files)
 
 Cross-validation and accuracy metrics:
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `interactive_metrics.py` | 391 | QuAcq-specific metrics (query count, convergence) |
-| `cross_validation.py` | 309 | n-fold cross-validation orchestration (pre-generated fold support) |
+| `cross_validation.py` | 440 | n-fold CV (CONGEN + Interactive) with pre-generated fold support |
 | `report.py` | 281 | Generate CSV/JSON/LaTeX/Markdown reports |
 | `evaluator.py` | 267 | Evaluation orchestrator for CONGEN/QuAcq results |
 | `accuracy.py` | 179 | Accuracy/precision/recall/F1 calculation |
 | `congen_runner.py` | 217 | CONGEN pipeline runner with profiling + bias shuffle seed support |
+| `interactive_runner.py` | 198 | QuAcq pipeline runner with metrics collection (analogous to CONGENRunner) |
 | `fold_io.py` | 146 | Shared CV fold generation/save/load for fair comparison |
 
 ### explanation/ — SAT Solver Infrastructure (7,234 LOC)
@@ -138,7 +139,7 @@ CLI applications for constraint acquisition pipeline:
 | `generate_examples.py` | 368 | Generate E+/E- examples with sampling strategies |
 | `generate_bias_files.py` | 358 | YAML bias config → JSON/CNF files |
 | `run_congen.py` | 253 | Execute CONGEN learning pipeline |
-| `run_interactive.py` | 378 | Execute QuAcq interactive learning |
+| `run_interactive.py` | 378 | Execute QuAcq interactive learning with CV support |
 | `run_evaluation.py` | 316 | Execute n-fold cross-validation (fold_data + shuffle_bias support) |
 | `generate_cv_folds.py` | 130 | CLI to pre-generate CV folds for reproducible evaluation |
 
@@ -301,6 +302,9 @@ PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml --non-in
 # Run QuAcq (interactive learning)
 PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v
 PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml --interactive
+
+# Run QuAcq with cross-validation
+PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v --cv
 
 # Evaluate results
 PYTHONPATH=. python apps/run_evaluation.py apps/conf/run_evaluation_config.toml -v

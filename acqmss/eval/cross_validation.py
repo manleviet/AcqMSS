@@ -311,6 +311,180 @@ def n_fold_cross_validation(
     )
 
 
+def n_fold_cross_validation_interactive(
+        positive_examples: List[Dict[str, bool]],
+        negative_examples: List[Dict[str, bool]],
+        n_folds: int,
+        bias_clauses: Dict[str, List[List[int]]],
+        feature_ids: Dict[str, int],
+        fm_path: str,
+        bias_path: str,
+        seed: int = None,
+        solver_name: str = 'glucose4',
+        max_queries: int = 1000,
+        query_mode: str = 'example_only',
+        shuffle_each_fold: bool = True,
+        fold_data: Optional[FoldData] = None,
+        shuffle_bias: bool = False
+) -> CrossValidationResult:
+    """
+    n-fold cross validation using interactive (QuAcq) learning.
+
+    Same CV loop as CONGEN CV but using InteractiveRunner.
+
+    Args:
+        positive_examples: List of E+ ({feature: True/False})
+        negative_examples: List of E- ({feature: True/False})
+        n_folds: Number of folds
+        bias_clauses: {constraint_id: clauses} from bias file
+        feature_ids: {feature_name: SAT_variable_id}
+        fm_path: Path to feature model (.uvl)
+        bias_path: Path to bias file (.json)
+        seed: Random seed for reproducibility
+        solver_name: SAT solver name
+        max_queries: Maximum queries per fold
+        query_mode: 'example_only' or 'example_first'
+        shuffle_each_fold: Shuffle training examples before each fold
+        fold_data: Optional pre-generated fold assignments
+        shuffle_bias: Shuffle bias ordering per fold using fold_data.shuffle_seeds
+
+    Returns:
+        CrossValidationResult with mean accuracy +/- std and KB data
+    """
+    if seed is not None:
+        random.seed(seed)
+
+    if fold_data is not None:
+        n_folds = fold_data.n_folds
+
+    logging.info('>>> n_fold_cross_validation_interactive(n=%d, |E+|=%d, |E-|=%d)',
+                 n_folds, len(positive_examples), len(negative_examples))
+
+    cv_start_time = time.perf_counter()
+
+    # Lazy import to avoid circular dependency
+    from .interactive_runner import InteractiveRunner
+
+    # Create interactive runner
+    runner = InteractiveRunner(
+        bias_clauses=bias_clauses,
+        feature_ids=feature_ids,
+        fm_path=fm_path,
+        bias_path=bias_path,
+        solver_name=solver_name,
+        max_queries=max_queries,
+        query_mode=query_mode
+    )
+
+    # Split into folds
+    if fold_data is None:
+        pos_folds = _split_into_folds(positive_examples, n_folds)
+        neg_folds = _split_into_folds(negative_examples, n_folds)
+
+    fold_accuracies: List[float] = []
+    fold_results: List[CrossValidationFoldResult] = []
+    performance_list: List[PerformanceMetrics] = []
+    fold_kbs: List[Set[str]] = []
+
+    for fold_idx in range(n_folds):
+        logging.info('=== Interactive Fold %d/%d ===', fold_idx + 1, n_folds)
+
+        if fold_data is not None:
+            train_pos, train_neg, test_pos, test_neg = apply_folds(
+                fold_data, positive_examples, negative_examples, fold_idx
+            )
+        else:
+            train_pos = [ex for i, fold in enumerate(pos_folds) for ex in fold if i != fold_idx]
+            train_neg = [ex for i, fold in enumerate(neg_folds) for ex in fold if i != fold_idx]
+            test_pos = pos_folds[fold_idx]
+            test_neg = neg_folds[fold_idx]
+
+        if shuffle_each_fold:
+            random.shuffle(train_pos)
+            random.shuffle(train_neg)
+
+        logging.debug('Fold %d: train=(%d+, %d-), test=(%d+, %d-)',
+                      fold_idx + 1, len(train_pos), len(train_neg),
+                      len(test_pos), len(test_neg))
+
+        # Determine bias shuffle seed for this fold
+        fold_shuffle_seed = None
+        if shuffle_bias and fold_data is not None:
+            fold_shuffle_seed = fold_data.shuffle_seeds[fold_idx]
+
+        # Train: run interactive learning on training set
+        interactive_result = runner.run(train_pos, train_neg,
+                                        shuffle_seed=fold_shuffle_seed)
+
+        fold_kbs.append(set(interactive_result.kb_constraints))
+
+        perf = interactive_result.get_performance_metrics()
+        performance_list.append(perf)
+
+        # Test: calculate accuracy on held-out fold
+        with AccuracyCalculator(interactive_result.kb_clauses, solver_name) as calculator:
+            accuracy_result = calculator.calculate(test_pos, test_neg, feature_ids)
+
+        fold_accuracy = accuracy_result.metrics.accuracy
+        fold_accuracies.append(fold_accuracy)
+
+        fold_results.append(CrossValidationFoldResult(
+            fold_index=fold_idx,
+            accuracy=fold_accuracy,
+            metrics=accuracy_result.metrics,
+            performance=perf,
+            kb_constraints=interactive_result.kb_constraints,
+            redundant_constraints=[],  # QuAcq has no REDUCE step
+            n_bias=interactive_result.n_bias,
+            n_mss=0,  # QuAcq has no MSS step
+            n_kb=interactive_result.n_kb,
+            n_train_pos=len(train_pos),
+            n_train_neg=len(train_neg),
+            n_test_pos=len(test_pos),
+            n_test_neg=len(test_neg)
+        ))
+
+        logging.info('Fold %d: accuracy=%.4f, queries=%d, KB=%d',
+                     fold_idx + 1, fold_accuracy,
+                     interactive_result.n_queries, interactive_result.n_kb)
+
+    # Calculate mean and std
+    mean_acc = sum(fold_accuracies) / len(fold_accuracies)
+    if len(fold_accuracies) > 1:
+        variance = sum((x - mean_acc) ** 2 for x in fold_accuracies) / (len(fold_accuracies) - 1)
+        std_acc = variance ** 0.5
+    else:
+        std_acc = 0.0
+
+    # Intersected KB
+    if fold_kbs:
+        intersected = fold_kbs[0]
+        for kb in fold_kbs[1:]:
+            intersected = intersected & kb
+        intersected_kb = sorted(list(intersected))
+    else:
+        intersected_kb = []
+
+    agg_performance = aggregate_metrics(performance_list)
+
+    cv_end_time = time.perf_counter()
+    total_runtime_ms = (cv_end_time - cv_start_time) * 1000
+
+    logging.info('Interactive CV: accuracy = %.4f +/- %.4f, total_time = %.2f ms',
+                 mean_acc, std_acc, total_runtime_ms)
+
+    return CrossValidationResult(
+        n_folds=n_folds,
+        fold_accuracies=fold_accuracies,
+        mean_accuracy=mean_acc,
+        std_accuracy=std_acc,
+        fold_results=fold_results,
+        performance=agg_performance,
+        intersected_kb=intersected_kb,
+        total_runtime_ms=total_runtime_ms
+    )
+
+
 def _split_into_folds(items: List, n_folds: int) -> List[List]:
     """
     Split items into n approximately equal folds.

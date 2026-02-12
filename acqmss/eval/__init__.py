@@ -48,9 +48,13 @@ from .performance_metrics import (
 # CONGEN runner
 from .congen_runner import CONGENRunner, CONGENRunResult
 
+# Interactive runner
+from .interactive_runner import InteractiveRunner, InteractiveRunResult
+
 # Cross-validation
 from .cross_validation import (
     n_fold_cross_validation,
+    n_fold_cross_validation_interactive,
     CrossValidationResult,
     CrossValidationFoldResult
 )
@@ -94,8 +98,13 @@ __all__ = [
     'CONGENRunner',
     'CONGENRunResult',
 
+    # Interactive runner
+    'InteractiveRunner',
+    'InteractiveRunResult',
+
     # Cross-validation
     'n_fold_cross_validation',
+    'n_fold_cross_validation_interactive',
     'CrossValidationResult',
     'CrossValidationFoldResult',
 

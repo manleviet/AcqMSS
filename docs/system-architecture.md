@@ -157,7 +157,9 @@ Feature Model ──→ Oracle (FM validator)
 **Purpose**: Measure accuracy of learned constraints against ground truth.
 
 **Components**:
-- `cross_validation.py` — n-fold CV orchestration
+- `cross_validation.py` — n-fold CV orchestration (CONGEN & Interactive modes)
+- `congen_runner.py` — CONGEN pipeline runner with metrics
+- `interactive_runner.py` — QuAcq pipeline runner (analogous to CONGENRunner)
 - `accuracy.py` — Calculate accuracy, precision, recall, F1
 - `report.py` — Generate CSV/JSON/LaTeX/Markdown reports
 - `evaluator.py` — High-level evaluation orchestrator
@@ -217,6 +219,20 @@ class InteractiveTask:
     def remove_from_bias(self, constraint_ids: List[str]):
         """Remove constraints using set subtraction (O(1) per item)."""
         self.bias -= set(constraint_ids)
+
+class InteractiveRunResult:
+    """Result of running interactive learning (from InteractiveRunner.run())."""
+    def __init__(self, kb_constraints, kb_clauses, n_bias, n_kb, n_queries,
+                 convergence_reason, runtime_ms, consistency_checks, memory_peak_mb):
+        self.kb_constraints: List[str]        # Constraint IDs in learned KB
+        self.kb_clauses: List[List[int]]      # CNF clauses of KB
+        self.n_bias: int                      # Original bias size
+        self.n_kb: int                        # Final KB size
+        self.n_queries: int                   # Membership queries asked
+        self.convergence_reason: str          # Termination reason (bias_exhausted, max_queries, etc)
+        self.runtime_ms: float                # Execution time
+        self.consistency_checks: int          # SAT solver calls
+        self.memory_peak_mb: float            # Peak memory usage
 ```
 
 **Construction**:
@@ -368,6 +384,31 @@ def feature_model_to_diagnosis_model(fm: FeatureModel) -> DiagnosisModel:
 - Read/write CNF files (standard SAT competition format)
 - Convert between variable assignments and configurations
 
+### Runner Pattern (for Evaluation Framework)
+
+Similar to CONGENRunner, InteractiveRunner provides a high-level wrapper for running acquisition algorithms:
+
+**CONGENRunner**:
+```python
+runner = CONGENRunner(bias_clauses, feature_ids, solver_name, is_incremental)
+result = runner.run(positive_examples, negative_examples, shuffle_seed)
+# → CONGENRunResult with KB + MSS info + metrics
+```
+
+**InteractiveRunner** (new, analogous):
+```python
+runner = InteractiveRunner(bias_clauses, feature_ids, fm_path, bias_path,
+                           solver_name, max_queries, query_mode)
+result = runner.run(positive_examples, negative_examples, shuffle_seed)
+# → InteractiveRunResult with KB + query count + convergence reason + metrics
+```
+
+Both runners:
+- Manage solver/profiling lifecycle
+- Collect performance metrics (runtime, consistency_checks, memory)
+- Support per-fold bias shuffling (shuffle_seed parameter)
+- Return standardized result objects for CV aggregation
+
 ### apps/ — Standalone Applications
 
 **Purpose**: Provide CLI interfaces for complete constraint acquisition pipelines.
@@ -379,7 +420,7 @@ apps/
 ├── generate_bias_files.py      ──→ YAML Config → JSON/CNF Files
 ├── generate_examples.py        ──→ Feature Model → E+/E- Examples
 ├── run_congen.py               ──→ CONGEN Learning (Passive)
-├── run_interactive.py          ──→ QuAcq Learning (Interactive)
+├── run_interactive.py          ──→ QuAcq Learning (Interactive + CV)
 ├── run_evaluation.py           ──→ n-fold Cross-validation
 ├── evaluate_congen_results.py  ──→ Post-process Results
 └── extract_results.py          ──→ Generate Reports
@@ -407,6 +448,7 @@ TOML Config ──→ App ──→ Logger (console + file)
 ### 2. QuAcq (Interactive/Active Learning)
 - **Oracle mode**: Queries user for membership (interactive)
 - **Example mode**: Uses pre-collected E+/E- (batch, no oracle)
+- **CV support**: `n_fold_cross_validation_interactive()` + `InteractiveRunner`
 - FindScope/FindC: O(|S| * log|X| + |Gamma|) queries per constraint
 - Complexity: O(|C_T| * (log|X| + |Gamma|)) total queries
 
@@ -417,6 +459,32 @@ Both paradigms use:
 - Same bias generation pipeline
 - Same evaluation framework (cross-validation, accuracy metrics)
 - Shared CV folds for fair comparison (fold_io.py)
+
+### Interactive Cross-Validation
+
+QuAcq now supports n-fold cross-validation, aligned with CONGEN's CV pipeline:
+
+```
+n_fold_cross_validation_interactive(
+    E+, E-, n_folds, bias, feature_ids, fm_path, bias_path,
+    seed, solver_name, max_queries, query_mode, fold_data, shuffle_bias
+)
+    ↓
+InteractiveRunner (per fold)
+    ├─ from_examples(): Load FM + bias + E+/E- pool
+    ├─ learn_from_examples(): Run QuAcq with metric collection
+    └─ Result: KB + queries + convergence_reason
+    ↓
+Per-fold metrics: Accuracy, precision, recall, query count
+    ↓
+CrossValidationResult: Mean accuracy ± std, per-fold KB, intersected KB
+```
+
+**Key Features**:
+- Pre-generated fold support (for reproducible evaluation across CONGEN/Interactive)
+- Per-fold bias shuffling (shuffle_seeds in FoldData)
+- Query mode control: `example_only` or `example_first`
+- Convergence tracking (query count, termination reason)
 
 ## Data Flow Diagrams
 
