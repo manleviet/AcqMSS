@@ -11,7 +11,7 @@ Also saves:
 - Intersected KB (constraints common to all folds)
 """
 
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Optional
 from dataclasses import dataclass, field
 import random
 import logging
@@ -20,6 +20,7 @@ import time
 from .metrics import EvaluationMetrics
 from .accuracy import AccuracyCalculator
 from .congen_runner import CONGENRunner
+from .fold_io import FoldData, apply_folds
 from .performance_metrics import (
     PerformanceMetrics,
     AggregatedPerformanceMetrics,
@@ -133,7 +134,9 @@ def n_fold_cross_validation(
         seed: int = None,
         solver_name: str = 'glucose4',
         is_incremental: bool = True,
-        shuffle_each_fold: bool = True
+        shuffle_each_fold: bool = True,
+        fold_data: Optional[FoldData] = None,
+        shuffle_bias: bool = False
 ) -> CrossValidationResult:
     """
     Standard n-fold cross validation according to the paper (page 6).
@@ -156,6 +159,8 @@ def n_fold_cross_validation(
         solver_name: SAT solver name
         is_incremental: Use incremental solver mode
         shuffle_each_fold: Shuffle training examples before each fold
+        fold_data: Optional pre-generated fold assignments (for shared folds)
+        shuffle_bias: Shuffle bias ordering per fold using fold_data.shuffle_seeds
 
     Returns:
         CrossValidationResult with mean accuracy ± std and KB data
@@ -163,8 +168,13 @@ def n_fold_cross_validation(
     if seed is not None:
         random.seed(seed)
 
-    logging.info('>>> n_fold_cross_validation(n=%d, |E+|=%d, |E-|=%d)',
-                 n_folds, len(positive_examples), len(negative_examples))
+    # Use pre-generated folds if provided
+    if fold_data is not None:
+        n_folds = fold_data.n_folds
+
+    logging.info('>>> n_fold_cross_validation(n=%d, |E+|=%d, |E-|=%d, shared_folds=%s)',
+                 n_folds, len(positive_examples), len(negative_examples),
+                 fold_data is not None)
 
     # Start total time measurement
     cv_start_time = time.perf_counter()
@@ -177,9 +187,10 @@ def n_fold_cross_validation(
         is_incremental=is_incremental
     )
 
-    # Shuffle and split into folds
-    pos_folds = _split_into_folds(positive_examples, n_folds)
-    neg_folds = _split_into_folds(negative_examples, n_folds)
+    # Split into folds: use pre-generated or generate on-the-fly
+    if fold_data is None:
+        pos_folds = _split_into_folds(positive_examples, n_folds)
+        neg_folds = _split_into_folds(negative_examples, n_folds)
 
     fold_accuracies: List[float] = []
     fold_results: List[CrossValidationFoldResult] = []
@@ -189,13 +200,17 @@ def n_fold_cross_validation(
     for fold_idx in range(n_folds):
         logging.info('=== Fold %d/%d ===', fold_idx + 1, n_folds)
 
-        # Train set: all folds except current
-        train_pos = [ex for i, fold in enumerate(pos_folds) for ex in fold if i != fold_idx]
-        train_neg = [ex for i, fold in enumerate(neg_folds) for ex in fold if i != fold_idx]
-
-        # Test set: current fold (held-out)
-        test_pos = pos_folds[fold_idx]
-        test_neg = neg_folds[fold_idx]
+        if fold_data is not None:
+            # Use pre-generated folds
+            train_pos, train_neg, test_pos, test_neg = apply_folds(
+                fold_data, positive_examples, negative_examples, fold_idx
+            )
+        else:
+            # On-the-fly folds (backward compat)
+            train_pos = [ex for i, fold in enumerate(pos_folds) for ex in fold if i != fold_idx]
+            train_neg = [ex for i, fold in enumerate(neg_folds) for ex in fold if i != fold_idx]
+            test_pos = pos_folds[fold_idx]
+            test_neg = neg_folds[fold_idx]
 
         # Shuffle training examples if requested
         if shuffle_each_fold:
@@ -206,8 +221,14 @@ def n_fold_cross_validation(
                       fold_idx + 1, len(train_pos), len(train_neg),
                       len(test_pos), len(test_neg))
 
+        # Determine bias shuffle seed for this fold
+        fold_shuffle_seed = None
+        if shuffle_bias and fold_data is not None:
+            fold_shuffle_seed = fold_data.shuffle_seeds[fold_idx]
+
         # Train: run CONGEN on training set
-        congen_result = runner.run(train_pos, train_neg)
+        congen_result = runner.run(train_pos, train_neg,
+                                   shuffle_seed=fold_shuffle_seed)
 
         # Collect KB for intersection
         fold_kbs.append(set(congen_result.kb_constraints))

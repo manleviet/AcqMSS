@@ -116,6 +116,32 @@ class InteractiveTask:
         """Get human-readable constraint name."""
         return constraint_id
 
+    def get_constraints_with_scope(self, scope: set) -> List[str]:
+        """Get constraint IDs from bias whose variables are subset of scope."""
+        result = []
+        for c_id in self.bias:
+            clauses = self.constraint_map.get(c_id, [])
+            # Get all variables used by this constraint
+            c_vars = set()
+            for clause in clauses:
+                for lit in clause:
+                    var = abs(lit)
+                    if var in self.id_to_feature:
+                        c_vars.add(self.id_to_feature[var])
+            if c_vars and c_vars.issubset(scope):
+                result.append(c_id)
+        return result
+
+    def partial_config_to_assumptions(self, config: Dict[str, bool],
+                                       variables: set) -> List[int]:
+        """Convert partial config (only variables in scope) to assumptions."""
+        assumptions = []
+        for name in variables:
+            if name in config and name in self.feature_ids:
+                fid = self.feature_ids[name]
+                assumptions.append(fid if config[name] else -fid)
+        return assumptions
+
     def clone(self) -> 'InteractiveTask':
         """Create a deep copy of this task."""
         return InteractiveTask(

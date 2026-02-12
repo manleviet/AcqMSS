@@ -47,10 +47,13 @@ from .user_interface import (
     InteractiveOracle,
     AutomatedOracle,
     UserPromptOracle,
-    CachedOracle
+    CachedOracle,
+    ExampleProvider
 )
 from .query_generator import QueryGenerator
 from .quacq import QuAcq
+from .findscope import find_scope
+from .findc import find_c
 from .learner import InteractiveLearner, run_interactive_learning
 
 __all__ = [
@@ -65,6 +68,10 @@ __all__ = [
     'AutomatedOracle',
     'UserPromptOracle',
     'CachedOracle',
+    'ExampleProvider',
+    # FindScope/FindC
+    'find_scope',
+    'find_c',
     # Convenience function
     'run_interactive_learning',
 ]

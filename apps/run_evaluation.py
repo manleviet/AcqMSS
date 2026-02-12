@@ -36,6 +36,7 @@ from acqmss.eval import (
     generate_accuracy_report,
     generate_cv_report,
     save_cv_kb_files,
+    load_folds,
 )
 from acqmss.testcases import ExampleIO
 
@@ -210,6 +211,14 @@ def evaluate_model(
             pos_assignments = [e.assignments for e in examples.positive]
             neg_assignments = [e.assignments for e in examples.negative]
 
+            # Load pre-generated folds if path provided
+            folds_path = eval_config.get('folds_path')
+            fold_data = None
+            shuffle_bias = eval_config.get('shuffle_bias', False)
+            if folds_path and Path(folds_path).exists():
+                fold_data = load_folds(folds_path)
+                print(f"  Using pre-generated folds: {folds_path}")
+
             for is_incremental in solver_modes:
                 mode_name = "incremental" if is_incremental else "non-incremental"
                 print(f"\n--- Mode: {mode_name.upper()} ---")
@@ -222,7 +231,9 @@ def evaluate_model(
                     feature_ids=bias.features,
                     seed=seed,
                     solver_name=solver_name,
-                    is_incremental=is_incremental
+                    is_incremental=is_incremental,
+                    fold_data=fold_data,
+                    shuffle_bias=shuffle_bias
                 )
 
                 output_file = output_dir / f"{model_name}_cv_{mode_name}.json"

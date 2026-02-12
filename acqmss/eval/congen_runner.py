@@ -6,8 +6,9 @@ Runs CONGEN directly to:
 2. Collect performance metrics (#checks, runtime, memory, n_mss, n_kb)
 """
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 from dataclasses import dataclass
+import random
 import time
 import tracemalloc
 import logging
@@ -119,7 +120,8 @@ class CONGENRunner:
             self,
             positive_examples: List[Dict[str, bool]],
             negative_examples: List[Dict[str, bool]],
-            background_clauses: List[List[int]] = None
+            background_clauses: List[List[int]] = None,
+            shuffle_seed: Optional[int] = None
     ) -> CONGENRunResult:
         """
         Run CONGEN with given examples and collect metrics.
@@ -128,6 +130,7 @@ class CONGENRunner:
             positive_examples: List of E+ (each is {feature: True/False})
             negative_examples: List of E- (each is {feature: True/False})
             background_clauses: Optional BG clauses (not used currently)
+            shuffle_seed: If provided, shuffle bias keys with this seed
 
         Returns:
             CONGENRunResult with KB and performance metrics
@@ -145,9 +148,17 @@ class CONGENRunner:
 
         checker = None
         try:
+            # Shuffle bias ordering if seed provided
+            bias_clauses = self.bias_clauses
+            if shuffle_seed is not None:
+                keys = list(bias_clauses.keys())
+                random.Random(shuffle_seed).shuffle(keys)
+                bias_clauses = {k: bias_clauses[k] for k in keys}
+                logging.debug('Shuffled bias with seed=%d', shuffle_seed)
+
             # Create model from bias and examples
             model = CONGENModel.from_bias_and_examples(
-                bias_constraints=self.bias_clauses,
+                bias_constraints=bias_clauses,
                 positive_examples=positive_examples,
                 negative_examples=negative_examples,
                 feature_ids=self.feature_ids
@@ -191,7 +202,7 @@ class CONGENRunner:
 
         runtime_ms = (end_time - start_time) * 1000
         memory_peak_mb = peak / (1024 * 1024)
-        consistency_checks = profiler.get_metric('is_consistent_calls', 0)
+        consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
 
         # Get KB clauses from result constraint IDs
         kb_clauses = []

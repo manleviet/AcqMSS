@@ -147,6 +147,7 @@ class CONGEN:
             task.set_tc,  # E+
             stop_at_first_violation=True
         )
+        self.profiler.increment("paper_consistency_checks")
 
         if len(inconsistent) > 0:
             # Step 6-7: print "examples inconsistent", return (∅)

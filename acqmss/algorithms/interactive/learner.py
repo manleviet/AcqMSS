@@ -10,12 +10,13 @@ from typing import Optional, Dict, List, Union
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from .user_interface import InteractiveOracle, AutomatedOracle, UserPromptOracle
+from .user_interface import InteractiveOracle, AutomatedOracle, UserPromptOracle, ExampleProvider
 from .quacq import QuAcq
 from acqmss.bias.bias_io import BiasIO
 from acqmss.bias.data_structures import Bias
 from acqmss.eval.evaluator import Evaluator, EvaluationStrategy
 from acqmss.eval.result_loader import CONGENResultData
+from explanation.operations.algorithms.utils import negate_cnf_tseitin
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, use_global_profiler, ProfilerPreset, AbstractProfiler
 )
@@ -136,13 +137,15 @@ class InteractiveLearner:
         constraint_map = {}
         negated_constraint_map = {}
 
+        # Compute tseitin_start from max feature variable ID
+        tseitin_var = max(f.id for f in bias.features) + 1
+
         for constraint in bias.constraints:
             c_id = constraint.id
             constraint_map[c_id] = constraint.clauses
 
-            # Build negation: ¬(c1 ∧ c2 ∧ ...) = ¬c1 ∨ ¬c2 ∨ ...
-            # For CNF, negating conjunction of clauses requires different handling
-            neg_clauses = cls._negate_constraint_clauses(constraint.clauses)
+            # Proper Tseitin negation for all constraints (single and multi-clause)
+            neg_clauses, tseitin_var = negate_cnf_tseitin(constraint.clauses, tseitin_var)
             negated_constraint_map[c_id] = neg_clauses
 
         # Create task
@@ -182,6 +185,10 @@ class InteractiveLearner:
         constraint_map = {}
         negated_constraint_map = {}
 
+        # Compute tseitin_start from max variable ID across both spaces
+        max_var = max(max(feature_ids.values()), max(f.id for f in bias.features))
+        tseitin_var = max_var + 1
+
         for constraint in bias.constraints:
             c_id = constraint.id
 
@@ -198,8 +205,8 @@ class InteractiveLearner:
 
             constraint_map[c_id] = translated_clauses
 
-            # Build negation
-            neg_clauses = InteractiveLearner._negate_constraint_clauses(translated_clauses)
+            # Proper Tseitin negation
+            neg_clauses, tseitin_var = negate_cnf_tseitin(translated_clauses, tseitin_var)
             negated_constraint_map[c_id] = neg_clauses
 
         # Create task
@@ -215,54 +222,67 @@ class InteractiveLearner:
 
         return task
 
-    @staticmethod
-    def _negate_constraint_clauses(clauses: List[List[int]]) -> List[List[int]]:
+    @classmethod
+    def from_examples(cls,
+                      fm_path: str,
+                      bias_path: str,
+                      examples: List[Dict[str, bool]],
+                      seed: int = None,
+                      solver_name: str = 'glucose4',
+                      enable_profiling: bool = True) -> 'InteractiveLearner':
         """
-        Negate a constraint given as CNF clauses.
+        Create learner for example-based mode.
 
-        If constraint is (c1 ∧ c2 ∧ ... ∧ cn) where each ci is a clause,
-        negation is ¬c1 ∨ ¬c2 ∨ ... ∨ ¬cn.
+        Args:
+            fm_path: Path to feature model file (.uvl)
+            bias_path: Path to bias file (.json)
+            examples: Mixed list of examples (no E+/E- distinction)
+            seed: Random seed for example shuffling
+            solver_name: PySAT solver name
+            enable_profiling: If True, enable benchmark profiling
 
-        For SAT solving, we need the negation as CNF.
-        ¬(clause) where clause = (l1 ∨ l2 ∨ ... ∨ lk)
-        becomes: (¬l1) ∧ (¬l2) ∧ ... ∧ (¬lk)
-
-        So ¬(c1 ∧ c2) = ¬c1 ∨ ¬c2
-        where ¬ci = ¬(l1 ∨ ... ∨ lk) = (¬l1 ∧ ... ∧ ¬lk)
-
-        For single-clause constraint: negate all literals, keep as single clause
-        For multi-clause constraint: complex - we use a simpler approach
-
-        Simple approach: Introduce auxiliary variables for each clause
-        Here we use a simpler heuristic: negate each clause separately
-        This is sound but may not be complete.
-
-        Actually, for constraint violation checking we just need:
-        ¬(c1 ∧ c2 ∧ ... ∧ cn) is SAT iff there exists some ci that is UNSAT
-
-        For query generation, we want SAT(KB ∪ BG ∪ ¬c).
-        If c = (c1 ∧ c2 ∧ ... ∧ cn), then ¬c = ¬c1 ∨ ¬c2 ∨ ... ∨ ¬cn.
-
-        To encode this in CNF, we use the Tseitin transformation:
-        aux_i ↔ ¬ci for each clause, then (aux_1 ∨ aux_2 ∨ ... ∨ aux_n)
-
-        For simplicity, if there's only one clause, just negate its literals.
-        For multiple clauses, we approximate by picking the first clause's negation.
-        This may miss some solutions but is sound for our use case.
+        Returns:
+            InteractiveLearner configured for example-based learning
         """
-        if not clauses:
-            return []
+        if enable_profiling:
+            profiler = use_global_profiler(ProfilerPreset.BENCHMARK)
+            profiler.start()
+        else:
+            profiler = get_global_profiler()
 
-        if len(clauses) == 1:
-            # Single clause: negate all literals, return as unit clauses
-            # ¬(l1 ∨ l2 ∨ ... ∨ lk) = (¬l1) ∧ (¬l2) ∧ ... ∧ (¬lk)
-            return [[-lit] for lit in clauses[0]]
+        bias = BiasIO.load_from_json(bias_path)
+        oracle = AutomatedOracle(fm_path)
+        task = cls._build_task_from_bias(bias, oracle)
 
-        # Multiple clauses: use first clause negation as approximation
-        # This is a simplification - proper Tseitin encoding would be more complete
-        # For constraint acquisition, this is usually sufficient since we only
-        # need to find *some* violating configuration, not all.
-        return [[-lit] for lit in clauses[0]]
+        learner = cls(task, oracle, solver_name, profiler, fm_path, bias_path)
+        learner._example_provider = ExampleProvider(examples, seed)
+        learner._fm_clauses = oracle.fm_oracle.cnf_clauses
+        return learner
+
+    def learn_from_examples(self,
+                            query_mode: str = 'example_only',
+                            max_queries: int = 10000) -> InteractiveResult:
+        """
+        Run example-based learning (ExampleProvider + ConsistencyChecker).
+
+        Args:
+            query_mode: 'example_only' or 'example_first'
+            max_queries: Maximum queries before stopping
+
+        Returns:
+            InteractiveResult with learned KB
+
+        Raises:
+            ValueError: If learner not created with from_examples()
+        """
+        if not hasattr(self, '_example_provider') or not hasattr(self, '_fm_clauses'):
+            raise ValueError("Use from_examples() to create learner for example-based mode")
+
+        result = self._quacq.learn_from_examples(
+            self.task, self._example_provider, self._fm_clauses,
+            query_mode=query_mode, max_queries=max_queries
+        )
+        return result
 
     def learn(self,
               mode: str = 'automated',

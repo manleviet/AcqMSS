@@ -1,11 +1,18 @@
 """
-CONGEN Constraint Acquisition Algorithms.
+Constraint Acquisition Algorithms.
 
-This package provides implementations of the CONGEN algorithm and its sub-algorithms:
+This package provides implementations of constraint acquisition algorithms:
+
+CONGEN (Passive/Batch Learning):
 - ACQMSS: Divide-and-conquer algorithm for finding MSS of bias
 - REDUCE: Redundancy elimination from acquired KB
 - GenerateNE: Negated negative examples generation using QuickXPlain
 - CONGEN: Main constraint acquisition algorithm
+
+Interactive Learning (QuAcq):
+- QuAcq: Interactive constraint acquisition via membership queries
+- QueryGenerator: SAT-based query generation
+- InteractiveLearner: High-level interface for interactive learning
 
 Task classes for both incremental and non-incremental modes.
 """
@@ -21,11 +28,25 @@ from .task_preparation import (
 )
 from .model import CONGENModel
 
+# Interactive learning components
+from .interactive import (
+    InteractiveLearner,
+    QuAcq,
+    QueryGenerator,
+    InteractiveTask,
+    InteractiveResult,
+    AutomatedOracle,
+    UserPromptOracle,
+    CachedOracle,
+    run_interactive_learning
+)
+
 # Re-export explanation module classes for convenience
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from explanation.models.task_preparation import TaskInput
 
 __all__ = [
+    # CONGEN (passive learning)
     'ACQMSS',
     'Reduce',
     'GenerateNE',
@@ -38,6 +59,16 @@ __all__ = [
     'IncrementalCONGENTaskPreparation',
     'NonIncrementalCONGENTaskPreparation',
     'CONGENModel',
+    # Interactive learning (QuAcq)
+    'InteractiveLearner',
+    'QuAcq',
+    'QueryGenerator',
+    'InteractiveTask',
+    'InteractiveResult',
+    'AutomatedOracle',
+    'UserPromptOracle',
+    'CachedOracle',
+    'run_interactive_learning',
     # Re-exports from explanation module
     'Assignment',
     'TestCase',

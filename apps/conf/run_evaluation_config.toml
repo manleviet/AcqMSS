@@ -11,13 +11,19 @@ verbose = true
 strategy = "all"
 
 # Number of folds for cross-validation (0 = no CV)
-n_folds = 5
+n_folds = 3
 
 # Solver settings
 solver_name = "glucose4"
 
 # Solver modes: "all" (both), "incremental", or "non-incremental"
-solver_mode = "all"
+solver_mode = "non-incremental"
+
+# Pre-generated folds (optional, for shared folds between CONGEN and QuAcq)
+# folds_path = "data/folds/REAL-FM-7_rs_1n_folds.json"
+
+# Shuffle bias ordering per fold (requires folds_path with shuffle_seeds)
+shuffle_bias = false
 
 # =============================================================================
 # Models to evaluate
@@ -27,12 +33,11 @@ solver_mode = "all"
 # =============================================================================
 # REAL-FM-7 (14 features, 80 valid configs)
 # =============================================================================
-#[[models]]
-#name = "REAL-FM-7_rs_1n"
-#oracle = "data/fms/REAL-FM-7.uvl"
-#bias = "data/bias/REAL-FM-7-bias.json"
-#result = "data/results/REAL-FM-7_rs_1n_kb.json"
-#examples = "data/examples/REAL-FM-7_rs_1n.json"
+[[models]]
+name = "REAL-FM-7_rs_1n"
+oracle = "data/fms/REAL-FM-7.uvl"
+bias = "data/bias/REAL-FM-7-bias.json"
+examples = "data/examples/REAL-FM-7_rs_1n.json"
 #
 #[[models]]
 #name = "REAL-FM-7_rs_2n"
@@ -145,41 +150,41 @@ solver_mode = "all"
 # =============================================================================
 # fqa (6 features)
 # =============================================================================
-[[models]]
-name = "fqa_rs_1n"
-oracle = "data/fms/fqa.uvl"
-bias = "data/bias/fqa-bias.json"
-examples = "data/examples/fqa_rs_1n.json"
-
-[[models]]
-name = "fqa_rs_2n"
-oracle = "data/fms/fqa.uvl"
-bias = "data/bias/fqa-bias.json"
-examples = "data/examples/fqa_rs_2n.json"
-
-[[models]]
-name = "fqa_rs_3n"
-oracle = "data/fms/fqa.uvl"
-bias = "data/bias/fqa-bias.json"
-examples = "data/examples/fqa_rs_3n.json"
-
-[[models]]
-name = "fqa_rs_m"
-oracle = "data/fms/fqa.uvl"
-bias = "data/bias/fqa-bias.json"
-examples = "data/examples/fqa_rs_m.json"
-
-[[models]]
-name = "fqa_2cov"
-oracle = "data/fms/fqa.uvl"
-bias = "data/bias/fqa-bias.json"
-examples = "data/examples/fqa_2cov.json"
-
-[[models]]
-name = "fqa_ff"
-oracle = "data/fms/fqa.uvl"
-bias = "data/bias/fqa-bias.json"
-examples = "data/examples/fqa_ff.json"
+#[[models]]
+#name = "fqa_rs_1n"
+#oracle = "data/fms/fqa.uvl"
+#bias = "data/bias/fqa-bias.json"
+#examples = "data/examples/fqa_rs_1n.json"
+#
+#[[models]]
+#name = "fqa_rs_2n"
+#oracle = "data/fms/fqa.uvl"
+#bias = "data/bias/fqa-bias.json"
+#examples = "data/examples/fqa_rs_2n.json"
+#
+#[[models]]
+#name = "fqa_rs_3n"
+#oracle = "data/fms/fqa.uvl"
+#bias = "data/bias/fqa-bias.json"
+#examples = "data/examples/fqa_rs_3n.json"
+#
+#[[models]]
+#name = "fqa_rs_m"
+#oracle = "data/fms/fqa.uvl"
+#bias = "data/bias/fqa-bias.json"
+#examples = "data/examples/fqa_rs_m.json"
+#
+#[[models]]
+#name = "fqa_2cov"
+#oracle = "data/fms/fqa.uvl"
+#bias = "data/bias/fqa-bias.json"
+#examples = "data/examples/fqa_2cov.json"
+#
+#[[models]]
+#name = "fqa_ff"
+#oracle = "data/fms/fqa.uvl"
+#bias = "data/bias/fqa-bias.json"
+#examples = "data/examples/fqa_ff.json"
 #
 ## =============================================================================
 ## busybox-1.18.0 (854 features) - Large model, may take longer

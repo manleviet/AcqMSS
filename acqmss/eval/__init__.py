@@ -55,6 +55,9 @@ from .cross_validation import (
     CrossValidationFoldResult
 )
 
+# Fold I/O
+from .fold_io import FoldData, generate_folds, save_folds, load_folds, apply_folds
+
 # Main evaluator
 from .evaluator import Evaluator, EvaluationStrategy, EvaluationResult
 
@@ -100,6 +103,13 @@ __all__ = [
     'Evaluator',
     'EvaluationStrategy',
     'EvaluationResult',
+
+    # Fold I/O
+    'FoldData',
+    'generate_folds',
+    'save_folds',
+    'load_folds',
+    'apply_folds',
 
     # Reports
     'generate_evaluation_report',

@@ -76,6 +76,7 @@ class ACQMSS:
             set_e_pos_p = self.checker.is_consistent_test_cases(
                 set_b + set_ne + set_bg, set_e_pos, True
             )
+            self.profiler.increment("paper_consistency_checks")
             # if E'+ = Φ then return B (all E+ are consistent with current B)
             if len(set_e_pos_p) == 0:
                 logging.debug('<<< return %s', set_b)

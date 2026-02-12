@@ -118,6 +118,7 @@ class Reduce:
             # Check inconsistent(BG ∪ (KB - {c}) ∪ {¬c})
             test_set = set_bg + kb_without_c + [neg_c]
             is_consistent = self.checker.is_consistent(test_set)
+            self.profiler.increment("paper_consistency_checks")
 
             logging.debug('Checking c=%s: consistent(BG ∪ KB-{c} ∪ {¬c}) = %s',
                           c, is_consistent)
