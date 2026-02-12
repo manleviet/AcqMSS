@@ -152,13 +152,19 @@ class BiasGenerator:
                     else:  # EXCLUDES
                         clauses = self.clause_gen.excludes(feature_a, feature_b)
 
+                    if op_type == OperatorType.EXCLUDES:
+                        excl_names = sorted([feature_a.name, feature_b.name])
+                        desc = f"{excl_names[0]} {op_type.value} {excl_names[1]}"
+                    else:
+                        desc = f"{feature_a.name} {op_type.value} {feature_b.name}"
+
                     constraints.append(Constraint(
                         id=self._next_constraint_id(),
                         operator=op_type,
                         parent=feature_a,
                         children=[feature_b],
                         clauses=clauses,
-                        description=f"{feature_a.name} {op_type.value} {feature_b.name}"
+                        description=desc
                     ))
         else:
             # Generate pairs based on cross_tree_mode
@@ -196,13 +202,14 @@ class BiasGenerator:
                     elif op_type == OperatorType.EXCLUDES:
                         # Excludes is symmetric, only one direction
                         clauses = self.clause_gen.excludes(feature_a, feature_b)
+                        excl_names = sorted([feature_a.name, feature_b.name])
                         constraints.append(Constraint(
                             id=self._next_constraint_id(),
                             operator=op_type,
                             parent=feature_a,
                             children=[feature_b],
                             clauses=clauses,
-                            description=f"{feature_a.name} excludes {feature_b.name}"
+                            description=f"{excl_names[0]} excludes {excl_names[1]}"
                         ))
 
         return constraints

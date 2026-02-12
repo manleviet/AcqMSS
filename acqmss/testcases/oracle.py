@@ -254,10 +254,10 @@ class FeatureModelOracle(Oracle):
                     for child in relation.children:
                         descriptions.add(f"{feature.name} --optional--> {child.name}")
                 elif relation.is_alternative():
-                    children_names = sorted([c.name for c in relation.children])
+                    children_names = [c.name for c in relation.children]
                     descriptions.add(f"{feature.name} --alternative--> {children_names}")
                 elif relation.is_or():
-                    children_names = sorted([c.name for c in relation.children])
+                    children_names = [c.name for c in relation.children]
                     descriptions.add(f"{feature.name} --or--> {children_names}")
 
         # Extract cross-tree constraints
@@ -302,7 +302,8 @@ class FeatureModelOracle(Oracle):
                     left_name = self._get_feature_name(left)
                     right_name = self._get_feature_name(right)
                     if left_name and right_name:
-                        return f"{left_name} excludes {right_name}"
+                        names = sorted([left_name, right_name])
+                        return f"{names[0]} excludes {names[1]}"
 
         if root.data == ASTOperation.IMPLIES:
             left = root.left
@@ -311,7 +312,29 @@ class FeatureModelOracle(Oracle):
                 left_name = self._get_feature_name(left)
                 right_name = self._get_feature_name(right.left)
                 if left_name and right_name:
-                    return f"{left_name} excludes {right_name}"
+                    names = sorted([left_name, right_name])
+                    return f"{names[0]} excludes {names[1]}"
+
+        # Handle OR patterns (flamapy UVL representation)
+        if root.data == ASTOperation.OR:
+            left = root.left
+            right = root.right
+            if left and right:
+                # OR(NOT(A), NOT(B)) == !(A & B) == A excludes B
+                if (left.data == ASTOperation.NOT and
+                        right.data == ASTOperation.NOT):
+                    left_name = self._get_feature_name(left.left)
+                    right_name = self._get_feature_name(right.left)
+                    if left_name and right_name:
+                        names = sorted([left_name, right_name])
+                        return f"{names[0]} excludes {names[1]}"
+
+                # OR(NOT(A), B) == !A | B == A => B == A requires B
+                if left.data == ASTOperation.NOT:
+                    left_name = self._get_feature_name(left.left)
+                    right_name = self._get_feature_name(right)
+                    if left_name and right_name:
+                        return f"{left_name} requires {right_name}"
 
         # Fallback: use constraint string representation
         return str(ctc)
