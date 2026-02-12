@@ -49,6 +49,7 @@ class ModelConfig:
     bias: str
     result: str = None
     examples: str = None
+    folds_path: str = None
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
@@ -66,7 +67,8 @@ def parse_models(config: Dict) -> List[ModelConfig]:
             oracle=m['oracle'],
             bias=m['bias'],
             result=m.get('result'),
-            examples=m.get('examples')
+            examples=m.get('examples'),
+            folds_path=m.get('folds_path')
         )
         for m in models_data
     ]
@@ -135,6 +137,8 @@ def evaluate_model(
                 print(f"  Result: {model_config.result}")
             if model_config.examples:
                 print(f"  Examples: {model_config.examples}")
+            if model_config.folds_path:
+                print(f"  Folds: {model_config.folds_path}")
 
         # Load bias data
         bias = BiasData.from_json(Path(model_config.bias))
@@ -211,13 +215,16 @@ def evaluate_model(
             pos_assignments = [e.assignments for e in examples.positive]
             neg_assignments = [e.assignments for e in examples.negative]
 
-            # Load pre-generated folds if path provided
-            folds_path = eval_config.get('folds_path')
+            # Load pre-generated folds if path provided (per-model)
             fold_data = None
             shuffle_bias = eval_config.get('shuffle_bias', False)
-            if folds_path and Path(folds_path).exists():
-                fold_data = load_folds(folds_path)
-                print(f"  Using pre-generated folds: {folds_path}")
+            if model_config.folds_path:
+                if Path(model_config.folds_path).exists():
+                    fold_data = load_folds(model_config.folds_path)
+                    n_folds = fold_data.n_folds  # override n_folds from fold file
+                    print(f"  Using pre-generated folds: {model_config.folds_path} ({n_folds} folds)")
+                else:
+                    print(f"  WARNING: folds_path not found: {model_config.folds_path}, using on-the-fly generation")
 
             for is_incremental in solver_modes:
                 mode_name = "incremental" if is_incremental else "non-incremental"
