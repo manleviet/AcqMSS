@@ -112,11 +112,11 @@ PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
 PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml --non-incremental
 
 # Run QuAcq (interactive learning)
-PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v
-PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml --interactive
+PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v
+PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml --interactive
 
 # Evaluate results
-PYTHONPATH=. python apps/run_evaluation.py apps/conf/run_evaluation_config.toml -v
+PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v
 ```
 
 ## Architecture

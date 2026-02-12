@@ -38,7 +38,7 @@ PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config
 PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
 
 # 4. Evaluate results
-PYTHONPATH=. python apps/run_evaluation.py apps/conf/run_evaluation_config.toml -v
+PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v
 ```
 
 ## Two Learning Paradigms

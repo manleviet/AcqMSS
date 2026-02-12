@@ -8,7 +8,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 ┌─────────────────────────────────────────────────────────────┐
 │ Application Layer (apps/)                                   │
 │ generate_bias_config.py, generate_examples.py,              │
-│ run_congen.py, run_interactive.py, run_evaluation.py        │
+│ run_congen.py, run_interactive_eval.py, run_congen_eval.py        │
 └─────────────────┬───────────────────────────────────────────┘
                   │ TOML Configuration Files
                   ▼
@@ -420,8 +420,8 @@ apps/
 ├── generate_bias_files.py      ──→ YAML Config → JSON/CNF Files
 ├── generate_examples.py        ──→ Feature Model → E+/E- Examples
 ├── run_congen.py               ──→ CONGEN Learning (Passive)
-├── run_interactive.py          ──→ QuAcq Learning (Interactive + CV)
-├── run_evaluation.py           ──→ n-fold Cross-validation
+├── run_interactive_eval.py          ──→ QuAcq Learning (Interactive + CV)
+├── run_congen_eval.py           ──→ n-fold Cross-validation
 ├── evaluate_congen_results.py  ──→ Post-process Results
 └── extract_results.py          ──→ Generate Reports
 ```

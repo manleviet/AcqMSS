@@ -131,23 +131,23 @@ Feature model to SAT conversion:
 
 CLI applications for constraint acquisition pipeline:
 
-| File | LOC | Purpose |
-|------|-----|---------|
-| `extract_results.py` | 1015 | Post-process results, generate reports |
-| `generate_bias_config.py` | 511 | Feature model → YAML bias configuration |
+| File                         | LOC | Purpose |
+|------------------------------|-----|---------|
+| `extract_results.py`         | 1015 | Post-process results, generate reports |
+| `generate_bias_config.py`    | 511 | Feature model → YAML bias configuration |
 | `evaluate_congen_results.py` | 440 | Evaluate CONGEN learning results |
-| `generate_examples.py` | 368 | Generate E+/E- examples with sampling strategies |
-| `generate_bias_files.py` | 358 | YAML bias config → JSON/CNF files |
-| `run_congen.py` | 253 | Execute CONGEN learning pipeline |
-| `run_interactive.py` | 378 | Execute QuAcq interactive learning with CV support |
-| `run_evaluation.py` | 316 | Execute n-fold cross-validation (fold_data + shuffle_bias support) |
-| `generate_cv_folds.py` | 130 | CLI to pre-generate CV folds for reproducible evaluation |
+| `generate_examples.py`       | 368 | Generate E+/E- examples with sampling strategies |
+| `generate_bias_files.py`     | 358 | YAML bias config → JSON/CNF files |
+| `run_congen.py`              | 253 | Execute CONGEN learning pipeline |
+| `run_interactive_eval.py`         | 378 | Execute QuAcq interactive learning with CV support |
+| `run_congen_eval.py`   | 316 | Execute n-fold cross-validation (fold_data + shuffle_bias support) |
+| `generate_cv_folds.py`       | 130 | CLI to pre-generate CV folds for reproducible evaluation |
 
 **Config Files** (`conf/`, 8 TOML files):
 - `generate_examples_config.toml` — Example generation settings
 - `run_congen_config.toml` — CONGEN execution settings
-- `run_interactive_config.toml` — QuAcq execution settings
-- `run_evaluation_config.toml` — Cross-validation settings
+- `run_interactive_eval_config.toml` — QuAcq execution settings
+- `run_congen_eval_config.toml` — Cross-validation settings
 - Plus 4 additional task-specific configs
 
 ### tests/ — Test Suite (3,405 LOC, 9 files)
@@ -300,14 +300,14 @@ PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
 PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml --non-incremental
 
 # Run QuAcq (interactive learning)
-PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v
-PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml --interactive
+PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v
+PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml --interactive
 
 # Run QuAcq with cross-validation
-PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v --cv
+PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v --cv
 
 # Evaluate results
-PYTHONPATH=. python apps/run_evaluation.py apps/conf/run_evaluation_config.toml -v
+PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v
 ```
 
 ## File Size Analysis

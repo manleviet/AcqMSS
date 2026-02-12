@@ -203,8 +203,8 @@ Application Layer (apps/)
   ├── generate_bias_config.py
   ├── generate_examples.py
   ├── run_congen.py
-  ├── run_interactive.py
-  └── run_evaluation.py
+  ├── run_interactive_eval.py
+  └── run_congen_eval.py
        ↓
 Core Algorithms (acqmss/)
   ├── CONGEN (GenerateNE → ACQMSS → REDUCE)

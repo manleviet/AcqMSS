@@ -124,8 +124,8 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ generate_bias_files.py — YAML config → JSON/CNF
 - ✅ generate_examples.py — FM → E+/E- examples
 - ✅ run_congen.py — Execute CONGEN learning
-- ✅ run_interactive.py — Execute QuAcq learning
-- ✅ run_evaluation.py — n-fold cross-validation
+- ✅ run_interactive_eval.py — Execute QuAcq learning
+- ✅ run_congen_eval.py — n-fold cross-validation
 - ✅ evaluate_congen_results.py — Post-process results
 - ✅ extract_results.py — Generate reports
 - ✅ TOML configuration system
@@ -165,7 +165,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ Tseitin negation support in InteractiveLearner
 - ✅ Shared CV fold generation/save/load (fold_io.py)
 - ✅ Pre-generated fold support in cross_validation.py
-- ✅ Bias shuffle seed support in congen_runner.py and run_evaluation.py
+- ✅ Bias shuffle seed support in congen_runner.py and run_congen_eval.py
 - ✅ generate_cv_folds.py CLI for reproducible fold generation
 - ✅ Two query modes: example_only and example_first (SAT fallback)
 - ✅ Scope helpers and partial config support in InteractiveTask
@@ -176,7 +176,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - `acqmss/eval/fold_io.py` — 146 LOC
 - `apps/generate_cv_folds.py` — 130 LOC
 - Modified: `quacq.py`, `learner.py`, `user_interface.py`, `task.py`
-- Modified: `cross_validation.py`, `congen_runner.py`, `run_evaluation.py`
+- Modified: `cross_validation.py`, `congen_runner.py`, `run_congen_eval.py`
 
 **Achievements**:
 - QuAcq now supports both oracle-based (interactive) and example-based (batch) modes

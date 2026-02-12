@@ -1,5 +1,5 @@
 # Test Evaluation Config - REAL-FM-7 only
-# Run with: PYTHONPATH=. python apps/run_evaluation.py apps/conf/test_eval_config.toml -v
+# Run with: PYTHONPATH=. python apps/run_congen_eval.py apps/conf/test_eval_config.toml -v
 
 [general]
 seed = 82

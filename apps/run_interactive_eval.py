@@ -4,13 +4,13 @@ Run interactive (QuAcq) constraint acquisition algorithm.
 
 Usage:
     # Automated mode (Oracle answers using feature model)
-    PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml
+    PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml
 
     # Interactive mode (human expert answers)
-    PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml --interactive
+    PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml --interactive
 
     # With query limit
-    PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml --max-queries 500
+    PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml --max-queries 500
 """
 
 import argparse
@@ -271,13 +271,13 @@ def main():
         epilog="""
 Example:
     # Automated mode
-    PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v
+    PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v
 
     # Interactive mode (human expert)
-    PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v --interactive
+    PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v --interactive
 
     # With query limit
-    PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml --max-queries 500
+    PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml --max-queries 500
         """
     )
     parser.add_argument('config', help='Path to TOML configuration file')

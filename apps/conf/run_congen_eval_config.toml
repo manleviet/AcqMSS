@@ -1,41 +1,31 @@
-# Interactive (QuAcq) Constraint Acquisition Configuration
-#
-# Usage:
-#   PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml -v
-#   PYTHONPATH=. python apps/run_interactive.py apps/conf/run_interactive_config.toml --interactive
+# Evaluation Configuration
+# Run with: PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml
 
 [general]
 seed = 82
-output_dir = "data/results/interactive"
+output_dir = "data/results"
 verbose = true
 
-[interactive]
-# Maximum number of membership queries
-max_queries = 1000
+[evaluation]
+# Evaluation strategies: "all" (both), "description", or "clause"
+strategy = "all"
 
-# Mode: "automated" (Oracle answers using FM) or "interactive" (human expert)
-mode = "automated"
+# Number of folds for cross-validation (0 = no CV)
+n_folds = 3
 
-# SAT solver name
+# Solver settings
 solver_name = "glucose4"
 
-# Cross-validation settings
-n_folds = 0
+# Solver modes: "all" (both), "incremental", or "non-incremental"
+solver_mode = "non-incremental"
+
+# Shuffle bias ordering per fold (requires per-model folds_path with shuffle_seeds)
 shuffle_bias = true
 
-# Query generation mode for example-based learning:
-#   "example_only"  - only draw queries from example pool (stops when pool empty)
-#   "example_first" - examples first, then SAT-generated queries from bias (up to max_queries)
-query_mode = "example_only"
-
-# Models to process
-# Each model needs:
-#   - oracle: Path to feature model (.uvl)
-#   - bias: Path to bias file (.json)
-# Optional per-model:
-#   - name: Display name (defaults to FM file stem)
-#   - examples: Path to examples file (.json) for CV
-#   - folds_path: Path to pre-generated folds (.json) for CV
+# =============================================================================
+# Models to evaluate
+# Sampling strategies: rs_1n, rs_2n, rs_3n, rs_m, 2cov, ff
+# =============================================================================
 
 # =============================================================================
 # REAL-FM-7 (14 features, 80 valid configs)
@@ -262,10 +252,16 @@ bias = "data/bias/busybox-1.18.0-bias.json"
 examples = "data/examples/busybox-1.18.0_ff.json"
 folds_path = "data/folds/busybox-1.18.0_ff_folds.json"
 
-# Add more models as needed:
+# =============================================================================
+# Models without examples (commented out)
+# =============================================================================
+
 # [[models]]
-# name = "REAL-FM-8"
-# oracle = "data/fms/REAL-FM-8.uvl"
-# bias = "data/bias/REAL-FM-8-bias.json"
-# examples = "data/examples/REAL-FM-8_rs_1n.json"
-# folds_path = "data/folds/REAL-FM-8_rs_1n_folds.json"
+# name = "ea2468"
+# oracle = "data/fms/ea2468.uvl"
+# bias = "data/bias/ea2468-bias.json"
+
+# [[models]]
+# name = "linux-2.6.33.3"
+# oracle = "data/fms/linux-2.6.33.3.uvl"
+# bias = "data/bias/linux-2.6.33.3-bias.json"

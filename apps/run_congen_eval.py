@@ -3,7 +3,7 @@
 Evaluate CONGEN results against Oracle FM.
 
 Usage:
-    PYTHONPATH=. python apps/run_evaluation.py apps/conf/run_evaluation_config.toml
+    PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml
 
 Features:
 - Evaluate pre-computed CONGEN results (if result file provided)
@@ -269,8 +269,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
-    PYTHONPATH=. python apps/run_evaluation.py apps/conf/run_evaluation_config.toml
-    PYTHONPATH=. python apps/run_evaluation.py apps/conf/run_evaluation_config.toml -v --debug
+    PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml
+    PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v --debug
         """
     )
     parser.add_argument('config', help='Path to TOML configuration file')
