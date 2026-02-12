@@ -2,7 +2,7 @@
   "metadata": {
     "method": "2-COV",
     "n_wise": 2,
-    "seed": 42,
+    "seed": 82,
     "total_combinations": 9,
     "strategy": "2cov",
     "model": "REAL-FM-7",

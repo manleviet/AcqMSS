@@ -2,20 +2,20 @@
   "metadata": {
     "method": "FF",
     "max_examples": 140,
-    "seed": 42,
+    "seed": 82,
     "coverage": {
       "total_needed": 56,
       "covered": 54,
       "percentage": 96.42857142857143,
       "uncovered_features": [
         {
-          "feature": "diagram_builder",
+          "feature": "jplug",
           "missing": [
             "False/pos"
           ]
         },
         {
-          "feature": "compiler",
+          "feature": "interface",
           "missing": [
             "False/pos"
           ]
@@ -24,149 +24,149 @@
     },
     "fully_covered": false,
     "pos_attempts": 1400,
-    "neg_attempts": 4,
+    "neg_attempts": 3,
     "strategy": "ff",
     "model": "REAL-FM-7",
     "fm_path": "data/fms/REAL-FM-7.uvl",
     "n_features": 14
   },
   "statistics": {
-    "total": 8,
-    "n_positive": 4,
-    "n_negative": 4,
-    "pos_ratio": 0.5,
-    "neg_ratio": 0.5
+    "total": 9,
+    "n_positive": 6,
+    "n_negative": 3,
+    "pos_ratio": 0.6666666666666666,
+    "neg_ratio": 0.3333333333333333
   },
   "positive": [
     {
       "id": "ff_1",
       "assignments": {
-        "compiler": true,
-        "diagram_builder": true,
-        "gui_builder": true,
-        "interface": false,
-        "java": false,
-        "javac": false,
-        "jplug": false,
-        "mdi": false,
-        "model_code_synch": false,
-        "mvc": false,
-        "petri_net": false,
-        "qt": true,
+        "jplug": true,
+        "interface": true,
         "sdi": true,
-        "uml": true
+        "mdi": false,
+        "gui_builder": false,
+        "java": false,
+        "qt": false,
+        "model_code_synch": false,
+        "compiler": false,
+        "javac": false,
+        "mvc": false,
+        "diagram_builder": true,
+        "uml": true,
+        "petri_net": false
       }
     },
     {
       "id": "ff_2",
       "assignments": {
-        "compiler": true,
-        "diagram_builder": true,
-        "gui_builder": true,
-        "interface": false,
-        "java": false,
-        "javac": false,
-        "jplug": false,
+        "jplug": true,
+        "interface": true,
+        "sdi": false,
         "mdi": true,
+        "gui_builder": false,
+        "java": false,
+        "qt": false,
         "model_code_synch": false,
+        "compiler": false,
+        "javac": false,
         "mvc": false,
-        "petri_net": false,
-        "qt": true,
-        "sdi": true,
-        "uml": false
+        "diagram_builder": false,
+        "uml": false,
+        "petri_net": false
       }
     },
     {
       "id": "ff_3",
       "assignments": {
-        "compiler": true,
-        "diagram_builder": true,
-        "gui_builder": false,
-        "interface": true,
-        "java": true,
-        "javac": true,
         "jplug": true,
-        "mdi": false,
-        "model_code_synch": true,
-        "mvc": true,
-        "petri_net": false,
-        "qt": false,
+        "interface": true,
         "sdi": false,
-        "uml": false
+        "mdi": true,
+        "gui_builder": true,
+        "java": true,
+        "qt": false,
+        "model_code_synch": false,
+        "compiler": true,
+        "javac": false,
+        "mvc": true,
+        "diagram_builder": false,
+        "uml": false,
+        "petri_net": false
       }
     },
     {
       "id": "ff_4",
       "assignments": {
-        "compiler": true,
-        "diagram_builder": true,
-        "gui_builder": false,
+        "jplug": true,
         "interface": true,
-        "java": false,
-        "javac": false,
-        "jplug": false,
+        "sdi": false,
         "mdi": true,
+        "gui_builder": false,
+        "java": false,
+        "qt": false,
         "model_code_synch": true,
+        "compiler": false,
+        "javac": false,
         "mvc": false,
-        "petri_net": true,
-        "qt": true,
-        "sdi": true,
-        "uml": false
+        "diagram_builder": true,
+        "uml": true,
+        "petri_net": true
       }
-    }
-  ],
-  "negative": [
+    },
     {
       "id": "ff_5",
       "assignments": {
-        "compiler": true,
-        "diagram_builder": false,
-        "gui_builder": false,
-        "interface": false,
-        "java": true,
-        "javac": false,
-        "jplug": false,
-        "mdi": true,
-        "model_code_synch": true,
-        "mvc": true,
-        "petri_net": false,
-        "qt": false,
+        "jplug": true,
+        "interface": true,
         "sdi": false,
-        "uml": true
+        "mdi": true,
+        "gui_builder": true,
+        "java": true,
+        "qt": true,
+        "model_code_synch": false,
+        "compiler": false,
+        "javac": false,
+        "mvc": false,
+        "diagram_builder": true,
+        "uml": true,
+        "petri_net": true
       }
     },
     {
       "id": "ff_6",
       "assignments": {
-        "compiler": false,
-        "diagram_builder": true,
-        "gui_builder": true,
-        "interface": false,
-        "java": false,
-        "javac": true,
         "jplug": true,
+        "interface": true,
+        "sdi": false,
         "mdi": true,
-        "model_code_synch": true,
-        "mvc": true,
-        "petri_net": false,
+        "gui_builder": true,
+        "java": true,
         "qt": false,
-        "sdi": true,
-        "uml": false
+        "model_code_synch": false,
+        "compiler": true,
+        "javac": true,
+        "mvc": true,
+        "diagram_builder": false,
+        "uml": false,
+        "petri_net": false
       }
-    },
+    }
+  ],
+  "negative": [
     {
       "id": "ff_7",
       "assignments": {
         "compiler": false,
-        "diagram_builder": true,
+        "diagram_builder": false,
         "gui_builder": true,
-        "interface": true,
-        "java": true,
-        "javac": false,
-        "jplug": true,
-        "mdi": true,
+        "interface": false,
+        "java": false,
+        "javac": true,
+        "jplug": false,
+        "mdi": false,
         "model_code_synch": false,
-        "mvc": false,
+        "mvc": true,
         "petri_net": true,
         "qt": true,
         "sdi": false,
@@ -177,19 +177,38 @@
       "id": "ff_8",
       "assignments": {
         "compiler": true,
-        "diagram_builder": true,
-        "gui_builder": true,
+        "diagram_builder": false,
+        "gui_builder": false,
         "interface": true,
-        "java": false,
+        "java": true,
         "javac": false,
         "jplug": true,
-        "mdi": false,
+        "mdi": true,
+        "model_code_synch": false,
+        "mvc": true,
+        "petri_net": false,
+        "qt": false,
+        "sdi": true,
+        "uml": true
+      }
+    },
+    {
+      "id": "ff_9",
+      "assignments": {
+        "compiler": false,
+        "diagram_builder": true,
+        "gui_builder": true,
+        "interface": false,
+        "java": false,
+        "javac": false,
+        "jplug": false,
+        "mdi": true,
         "model_code_synch": true,
         "mvc": false,
         "petri_net": false,
         "qt": false,
-        "sdi": true,
-        "uml": false
+        "sdi": false,
+        "uml": true
       }
     }
   ]
