@@ -6,7 +6,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 
 **Status**: Production-ready for research and development use
 **Version**: 1.0
-**Last Updated**: 2026-02-11
+**Last Updated**: 2026-02-12
 
 ## Development Phases
 
@@ -213,11 +213,11 @@ AcqMSS is a mature research system with core functionality fully implemented and
 
 | Component | LOC | Files | Test Coverage | Status |
 |-----------|-----|-------|---------------|--------|
-| acqmss/ | 7,931 | 41 | 85% | ✅ Complete |
-| explanation/ | 7,234 | 42 | 90% | ✅ Complete |
-| apps/ | 3,639 | 8 | 60% | ✅ Complete |
-| tests/ | 3,405 | 9 | — | ✅ Complete |
-| **Total** | **22,209** | **100** | **80%** | ✅ **Complete** |
+| acqmss/ | 9,025 | 47 | 85% | ✅ Complete |
+| explanation/ | 7,227 | 42 | 90% | ✅ Complete |
+| apps/ | 3,810 | 9 | 60% | ✅ Complete |
+| tests/ | 3,404 | 9 | — | ✅ Complete |
+| **Total** | **23,466** | **107** | **80%** | ✅ **Complete** |
 
 ### Performance Benchmarks
 
@@ -505,5 +505,5 @@ pytest tests/test_diagnosis.py -k "with_profiling" -v
 ---
 
 **Document Version**: 1.0
-**Last Updated**: 2026-02-11
+**Last Updated**: 2026-02-12
 **Maintained By**: Development Team

@@ -147,9 +147,11 @@ MIT License. See LICENSE file for details.
 
 ## Citation
 
+If you use AcqMSS in your research, please cite:
+
 ```bibtex
 @software{acqmss2026,
-  author = {Your Name},
+  author = {Leviet, Man},
   title = {AcqMSS: Constraint Acquisition With Maximum Satisfiable Subsets},
   year = {2026},
   url = {https://github.com/manleviet/AcqMSS}
@@ -158,4 +160,4 @@ MIT License. See LICENSE file for details.
 
 ---
 
-**Version**: 1.0 | **Python**: 3.13+ | **Status**: Production research system
+**Version**: 1.0 | **Python**: 3.13+ | **Status**: Production research system | **Last Updated**: 2026-02-12

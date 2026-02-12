@@ -1,7 +1,7 @@
 # AcqMSS Codebase Summary
 
-**Total Python Code**: 126,878 lines across 524 files
-**Main Packages**: acqmss (7,931 LOC) + explanation (7,234 LOC) + apps (3,639 LOC) + tests (3,405 LOC)
+**Total Python Code**: 23,466 lines across 107 files
+**Main Packages**: acqmss (9,025 LOC) + explanation (7,227 LOC) + apps (3,810 LOC) + tests (3,404 LOC)
 
 ## Package Structure
 
@@ -9,31 +9,34 @@
 
 Core acquisition logic organized into four sub-packages:
 
-#### acqmss/algorithms/ — Acquisition Algorithms (2,980 LOC, 15 files)
+#### acqmss/algorithms/ — Acquisition Algorithms (~2,400 LOC, 16 files)
 
 Primary constraint discovery algorithms:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `congen.py` | 176 | CONGEN orchestration (GenerateNE → ACQMSS → REDUCE) |
-| `acqmss.py` | 268 | ACQMSS: divide-and-conquer MSS finding |
-| `reduce.py` | 152 | REDUCE: redundancy elimination via consistency checking |
-| `generate_ne.py` | 181 | GenerateNE: negated example generation from negative examples |
-| `__init__.py` | 23 | Package initialization, exports CONGENModel, CONGEN, ACQMSS, REDUCE |
+| `congen.py` | 228 | CONGEN orchestration (GenerateNE → ACQMSS → REDUCE) |
+| `acqmss.py` | 104 | ACQMSS: divide-and-conquer MSS finding |
+| `reduce.py` | 155 | REDUCE: redundancy elimination via consistency checking |
+| `generate_ne.py` | 193 | GenerateNE: negated example generation from negative examples |
+| `task.py` | 106 | CONGENTask, IncrementalCONGENTask, NonIncrementalCONGENTask |
+| `task_preparation.py` | 329 | Tseitin encoding, incremental/non-incremental task prep |
+| `model.py` | 93 | CONGENModel - simplified model from bias+examples |
 
-**Interactive Sub-package** (`interactive/`, 9 files, ~1,900 LOC):
+**Interactive Sub-package** (`interactive/`, 8 files, ~2,045 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `quacq.py` | 439 | QuAcq algorithm: incremental KB refinement (oracle-based + example-based modes) |
-| `learner.py` | 406 | InteractiveLearner: high-level facade, supports from_examples() for batch learning |
+| `quacq.py` | 428 | QuAcq algorithm: incremental KB refinement (oracle-based + example-based modes) |
+| `learner.py` | 426 | InteractiveLearner: high-level facade, supports from_examples() for batch learning |
 | `query_generator.py` | 262 | GenerateQuery: creates discriminative queries from bias constraints |
-| `user_interface.py` | 248 | ManualOracle, AutomatedOracle, ExampleProvider: oracle + batch example interfaces |
-| `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): identify violated constraint scope via partial queries |
-| `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): identify specific constraint from scope |
-| `task.py` | 194 | Task state management, scope helpers, shared utilities (violates_clauses) |
+| `user_interface.py` | 293 | ManualOracle, AutomatedOracle, ExampleProvider: oracle + batch example interfaces |
+| `findscope.py` | 113 | FindScope (IJCAI13 Algorithm 2): identify violated constraint scope via partial queries |
+| `findc.py` | 192 | FindC (IJCAI13 Algorithm 3): identify specific constraint from scope |
+| `task.py` | 137 | Task state management, scope helpers, shared utilities (violates_clauses) |
+| `result.py` | 137 | InteractiveResult - learning outcome with metrics |
 
-#### acqmss/bias/ — Bias (Constraint) Generation (1,097 LOC, 6 files)
+#### acqmss/bias/ — Bias (Constraint) Generation (~1,100 LOC, 5 files)
 
 Feature model to constraint conversion pipeline:
 
@@ -45,7 +48,7 @@ Feature model to constraint conversion pipeline:
 | `clause_generator.py` | 199 | Convert FM constraints to CNF clauses |
 | `data_structures.py` | 160 | Constraint, BiasConfig, ConstraintType enumerations |
 
-#### acqmss/testcases/ — Example Generation (1,609 LOC, 9 files)
+#### acqmss/testcases/ — Example Generation (~1,600 LOC, 8 files)
 
 Positive/negative example generation strategies:
 
@@ -53,41 +56,47 @@ Positive/negative example generation strategies:
 |------|-----|---------|
 | `random_sampling.py` | 389 | RS sampling: uniformly random configuration selection |
 | `oracle.py` | 326 | FeatureModelOracle: validate configurations against FM |
-| `feature_frequency.py` | 308 | FF/2-COV: feature frequency and 2-coverage strategies |
+| `feature_frequency.py` | 308 | FF strategy: feature frequency-based sampling |
+| `generators/nwise_coverage.py` | 104 | 2-COV strategy: n-wise pairwise coverage |
 | `data_structures.py` | 217 | Configuration, Example, ExampleSet datastructures |
 | `io_utils.py` | 155 | Load/save examples in JSON format |
 
-#### acqmss/eval/ — Evaluation Framework (2,725 LOC, 14 files)
+#### acqmss/eval/ — Evaluation Framework (~2,600 LOC, 13 files)
 
 Cross-validation and accuracy metrics:
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `interactive_metrics.py` | 391 | QuAcq-specific metrics (query count, convergence) |
-| `cross_validation.py` | 440 | n-fold CV (CONGEN + Interactive) with pre-generated fold support |
+| `cross_validation.py` | 504 | n-fold CV (CONGEN + Interactive) with pre-generated fold support |
 | `report.py` | 281 | Generate CSV/JSON/LaTeX/Markdown reports |
 | `evaluator.py` | 267 | Evaluation orchestrator for CONGEN/QuAcq results |
-| `accuracy.py` | 179 | Accuracy/precision/recall/F1 calculation |
-| `congen_runner.py` | 217 | CONGEN pipeline runner with profiling + bias shuffle seed support |
-| `interactive_runner.py` | 198 | QuAcq pipeline runner with metrics collection (analogous to CONGENRunner) |
-| `fold_io.py` | 146 | Shared CV fold generation/save/load for fair comparison |
+| `accuracy.py` | 170 | Accuracy/precision/recall/F1 calculation |
+| `performance_metrics.py` | 140 | Runtime, SAT checks, memory metrics |
+| `congen_runner.py` | 228 | CONGEN pipeline runner with profiling + bias shuffle seed support |
+| `interactive_runner.py` | 197 | QuAcq pipeline runner with metrics collection |
+| `fold_io.py` | 145 | Shared CV fold generation/save/load for fair comparison |
+| `bias_loader.py` | 112 | Load bias constraints from files |
+| `result_loader.py` | 84 | Load evaluation results |
+| `oracle_extractor.py` | 102 | Extract oracle data for interactive learning |
 
-### explanation/ — SAT Solver Infrastructure (7,234 LOC)
+### explanation/ — SAT Solver Infrastructure (~7,227 LOC, 42 files)
 
 Diagnosis algorithms and SAT model abstraction:
 
-#### explanation/models/ — Diagnosis Models (1,809 LOC, 5 files)
+#### explanation/models/ — Diagnosis Models (~1,000 LOC, 5 files)
 
 SAT model representation and construction:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `task_preparation.py` | 952 | Task preparation: convert FM to SAT, set up solver |
-| `diagnosis_model_builder.py` | 437 | Builder pattern: construct DiagnosisModel with configuration |
-| `pysat_diagnosis_model.py` | 290 | DiagnosisModel: SAT instance + metadata (clauses, assumptions, split/diff) |
-| `testsuite.py` | 93 | TestSuite: holds test cases + their configurations |
+| `task_preparation.py` | 750 | Task preparation: convert FM to SAT, set up solver |
+| `diagnosis_model_builder.py` | 300 | Builder pattern: construct DiagnosisModel with configuration |
+| `pysat_diagnosis_model.py` | 255 | DiagnosisModel: SAT instance + metadata (clauses, assumptions) |
+| `testsuite.py` | 75 | TestSuite: holds test cases + their configurations |
+| `__init__.py` | 20 | Module initialization and exports |
 
-#### explanation/operations/ — SAT Operations (5,130 LOC, 31 files)
+#### explanation/operations/ — SAT Operations (~5,200 LOC, 31 files)
 
 Diagnosis algorithm implementations and SAT abstractions:
 
@@ -95,28 +104,29 @@ Diagnosis algorithm implementations and SAT abstractions:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `profiler.py` | 1192 | Profiling infrastructure: decorator-based execution timing, call counting |
-| `checker.py` | 494 | ConsistencyChecker ABC + implementations (Incremental, NonIncremental, SAT4J) |
-| `hsdag.py` | 353 | HSDAG tree search: optimization for multiple diagnoses/conflicts |
-| `pysat_explanation_builder.py` | 418 | Builder for diagnosis operations (FastDiag, QuickXPlain, KBDiag) |
-| `pysat_abstract_explanation.py` | 277 | Template method base for diagnosis operations |
+| `profiler.py` | 800 | Profiling infrastructure: decorator-based execution timing, call counting |
+| `checker.py` | 450 | ConsistencyChecker ABC + implementations (Incremental, NonIncremental, SAT4J) |
+| `hsdag.py` | 350 | HSDAG tree search: optimization for multiple diagnoses/conflicts |
+| `pysat_explanation_builder.py` | 330 | Builder for diagnosis operations (FastDiag, QuickXPlain, KBDiag) |
+| `pysat_abstract_explanation.py` | 250 | Template method base for diagnosis operations |
 
-**Diagnosis Algorithm Implementations**:
+**Diagnosis Algorithm Implementations** (`algorithms/` subdirectory, ~2,000 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `algorithms/fastdiag.py` | 243 | FastDiag: breadth-first minimal diagnosis finding |
-| `algorithms/fastdiagp.py` | 187 | FastDiagP: parallel FastDiag variant |
-| `algorithms/quickxplain.py` | 198 | QuickXPlain: minimal conflict finding |
-| `algorithms/kbdiag.py` | 127 | KBDiag: kernel-based diagnosis |
-| `algorithms/wipeoutr_fm.py` | 194 | WipeOutR: feature model variant |
-| `algorithms/wipeoutr_t.py` | 178 | WipeOutR_T: test case variant |
+| `algorithms/fastdiag.py` | 85 | FastDiag: breadth-first minimal diagnosis finding |
+| `algorithms/fastdiagp.py` | 150 | FastDiagP: parallel FastDiag variant |
+| `algorithms/quickxplain.py` | 80 | QuickXPlain: minimal conflict finding |
+| `algorithms/kbdiag.py` | 100 | KBDiag: kernel-based diagnosis |
+| `algorithms/wipeoutr_fm.py` | 90 | WipeOutR_FM: feature model variant |
+| `algorithms/wipeoutr_t.py` | 110 | WipeOutR_T: test case variant |
+| `algorithms/utils.py` | 120 | split, diff, negate_cnf_tseitin utilities |
 
 **Operation Wrappers** (pysat_*_*.py files, 10 files, ~1,800 LOC):
 
 Each wraps diagnosis algorithms for specific use cases (diagnosis vs conflict, PySAT vs SAT4J, various test modes).
 
-#### explanation/transformations/ — Model Converters (295 LOC, 5 files)
+#### explanation/transformations/ — Model Converters (~400 LOC, 5 files)
 
 Feature model to SAT conversion:
 
@@ -127,21 +137,21 @@ Feature model to SAT conversion:
 | `dimacs_to_configuration.py` | 59 | DIMACS variable assignments → Configuration |
 | `testsuite_reader.py` | 42 | Read test suites from files |
 
-### apps/ — Standalone Applications (3,769 LOC, 9 files)
+### apps/ — Standalone Applications (~3,810 LOC, 9 files)
 
 CLI applications for constraint acquisition pipeline:
 
 | File                         | LOC | Purpose |
 |------------------------------|-----|---------|
-| `extract_results.py`         | 1015 | Post-process results, generate reports |
-| `generate_bias_config.py`    | 511 | Feature model → YAML bias configuration |
-| `evaluate_congen_results.py` | 440 | Evaluate CONGEN learning results |
-| `generate_examples.py`       | 368 | Generate E+/E- examples with sampling strategies |
-| `generate_bias_files.py`     | 358 | YAML bias config → JSON/CNF files |
-| `run_congen.py`              | 253 | Execute CONGEN learning pipeline |
-| `run_interactive_eval.py`         | 378 | Execute QuAcq interactive learning with CV support |
-| `run_congen_eval.py`   | 316 | Execute n-fold cross-validation (fold_data + shuffle_bias support) |
-| `generate_cv_folds.py`       | 130 | CLI to pre-generate CV folds for reproducible evaluation |
+| `extract_results.py`         | 1013 | Post-process results, generate reports |
+| `generate_bias_config.py`    | 536 | Feature model → YAML bias configuration |
+| `generate_examples.py`       | 325 | Generate E+/E- examples with sampling strategies |
+| `generate_bias_files.py`     | 302 | YAML bias config → JSON/CNF files |
+| `run_congen.py`              | 217 | Execute CONGEN learning pipeline |
+| `run_interactive_eval.py`    | 337 | Execute QuAcq interactive learning with CV support |
+| `run_congen_eval.py`         | 309 | Execute n-fold cross-validation |
+| `generate_cv_folds.py`       | 68 | CLI to pre-generate CV folds for reproducible evaluation |
+| `evaluate_congen_results.py` | 524 | Post-process and analyze CONGEN results |
 
 **Config Files** (`conf/`, 8 TOML files):
 - `generate_examples_config.toml` — Example generation settings
@@ -150,17 +160,19 @@ CLI applications for constraint acquisition pipeline:
 - `run_congen_eval_config.toml` — Cross-validation settings
 - Plus 4 additional task-specific configs
 
-### tests/ — Test Suite (3,405 LOC, 9 files)
+### tests/ — Test Suite (~3,404 LOC, 9 files)
 
 Comprehensive test coverage using pytest + @parameterized.expand:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `test_diagnosis.py` | 1416 | Diagnosis algorithms (FastDiag, QuickXPlain, KBDiag, WipeOutR, HSDAG) |
-| `test_interactive.py` | 563 | QuAcq interactive learning tests |
-| `test_profiler.py` | 536 | Profiling infrastructure tests |
-| `test_evaluation.py` | 443 | Cross-validation and accuracy metric tests |
-| `test_congen.py` | 256 | CONGEN learning tests |
+| `test_diagnosis.py` | 1648 | Diagnosis algorithms (FastDiag, QuickXPlain, KBDiag, WipeOutR, HSDAG) |
+| `test_interactive.py` | 603 | QuAcq interactive learning tests |
+| `test_evaluation.py` | 392 | Cross-validation and accuracy metric tests |
+| `test_profiler.py` | 472 | Profiling infrastructure tests |
+| `test_congen.py` | 187 | CONGEN learning tests |
+| `test_bias_module.py` | 128 | Bias module demo |
+| `test_utils.py` | 35 | Utility function tests |
 
 **Key Testing Patterns**:
 - **Parameterization**: `@parameterized.expand()` combinations of incremental/non-incremental modes
@@ -258,11 +270,11 @@ CONGEN and QuAcq learning results:
 
 | Component | LOC | Files | Avg File Size |
 |-----------|-----|-------|---------------|
-| acqmss/ | 8,456 | 43 | 197 |
-| explanation/ | 7,234 | 42 | 172 |
-| apps/ | 3,769 | 9 | 419 |
-| tests/ | 3,405 | 9 | 378 |
-| **Total** | **22,864** | **103** | **222** |
+| acqmss/ | 9,025 | 47 | 192 |
+| explanation/ | 7,227 | 42 | 172 |
+| apps/ | 3,810 | 9 | 424 |
+| tests/ | 3,404 | 9 | 378 |
+| **Total** | **23,466** | **107** | **219** |
 
 (Excluding __pycache__, .pyc, __init__.py stubs)
 
