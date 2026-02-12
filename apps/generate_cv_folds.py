@@ -3,8 +3,7 @@
 Generate shared cross-validation folds for fair CONGEN vs QuAcq comparison.
 
 Usage:
-    PYTHONPATH=. python apps/generate_cv_folds.py apps/conf/run_evaluation_config.toml
-    PYTHONPATH=. python apps/generate_cv_folds.py apps/conf/run_evaluation_config.toml --n-folds 5 --seed 42
+    PYTHONPATH=. python apps/generate_cv_folds.py apps/conf/generate_cv_folds_config.toml
 """
 
 import argparse
@@ -25,9 +24,6 @@ def main():
         description="Generate shared CV folds for evaluation"
     )
     parser.add_argument('config', help='Path to TOML configuration file')
-    parser.add_argument('--n-folds', type=int, help='Override n_folds from config')
-    parser.add_argument('--seed', type=int, help='Override seed from config')
-    parser.add_argument('-o', '--output-dir', help='Output directory (default: data/folds)')
 
     args = parser.parse_args()
 
@@ -38,11 +34,10 @@ def main():
     with open(args.config, 'rb') as f:
         config = tomllib.load(f)
 
-    general = config.get('general', {})
-    eval_config = config.get('evaluation', {})
-    seed = args.seed or general.get('seed', 42)
-    n_folds = args.n_folds or eval_config.get('n_folds', 5)
-    output_dir = Path(args.output_dir or 'data/folds')
+    folds_config = config.get('folds', {})
+    seed = folds_config.get('seed', 42)
+    n_folds = folds_config.get('n_folds', 5)
+    output_dir = Path(folds_config.get('output_dir', 'data/folds'))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     models = config.get('models', [])
