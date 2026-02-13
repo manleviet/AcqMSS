@@ -1,5 +1,7 @@
 # AcqMSS Documentation
 
+**Last Updated**: 2026-02-13
+
 Welcome to the comprehensive documentation for AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets). This directory contains technical documentation for developers, researchers, and contributors.
 
 ## Quick Navigation
@@ -23,7 +25,7 @@ Welcome to the comprehensive documentation for AcqMSS (Constraint Acquisition Wi
 
 ### project-overview-pdr.md
 **Purpose**: Product definition and requirements
-**Length**: 355 LOC
+**Length**: 353 LOC
 
 Defines what AcqMSS is, why it exists, and what success looks like:
 - Executive summary
@@ -32,33 +34,36 @@ Defines what AcqMSS is, why it exists, and what success looks like:
 - 6 non-functional requirements (performance, accuracy, quality, compatibility)
 - Success criteria and key metrics
 - Development phases overview
+- Phase 5 (QuAcq Enhancement) completion with FindScope/FindC
 
 **Read when**: You need to understand the "why" and "what" of the project.
 
 ### codebase-summary.md
 **Purpose**: Code organization and inventory
-**Length**: 298 LOC
+**Length**: 354 LOC
 
 High-level overview of what code exists where:
 - Package structure (acqmss, explanation, apps, tests)
 - Detailed LOC breakdown per component
+- **NEW**: acqmss/oracle/ package (3 files, ~660 LOC)
 - File inventory by purpose
 - Data directory structure (feature models, configurations, results)
 - Dependencies (runtime, development, optional)
 - Key architectural patterns
-- Codebase statistics (126,878 total LOC, 524 files)
+- Codebase statistics (~22,000+ LOC across ~106 files)
 
 **Read when**: You need to find where something is implemented, or understand the code organization.
 
 ### code-standards.md
 **Purpose**: Development guidelines and conventions
-**Length**: 707 LOC
+**Length**: 687 LOC
 
 Comprehensive style guide and best practices:
 - Language requirements (Python 3.13+, type hints)
+- **NEW**: Module file size guidelines (~200 lines Python, max ~300)
 - Naming conventions (modules, classes, functions, variables)
 - File organization and import order
-- 5 design patterns with code examples
+- 6 design patterns with code examples (including shared utility methods)
 - Testing strategy (parameterization, coverage requirements)
 - Documentation standards (docstring formats)
 - Type hints and error handling
@@ -70,27 +75,30 @@ Comprehensive style guide and best practices:
 
 ### system-architecture.md
 **Purpose**: Technical architecture and data flows
-**Length**: 680 LOC
+**Length**: 478 LOC (trimmed from 904 to meet 800 LOC limit)
 
 Deep dive into how the system works:
 - Two-layer architecture overview
+- **NEW**: acqmss/oracle/ package architecture and feature ID consistency (CRITICAL)
+- **NEW**: Unified checker interface (assumption-based data representation)
 - Detailed package organization with API examples
 - Data flow diagrams (CONGEN learning flow, QuAcq interactive flow)
 - Solver architecture (incremental, non-incremental, SAT4J modes)
+- **UPDATED**: GenerateNE caller-invoked design with merge_ne_into_task()
 - Integration points between packages
 - Performance characteristics (algorithm complexity, optimization)
 - Testing architecture
 - Design decisions and trade-offs
-- Future architecture enhancements
 
 **Read when**: You need to understand how components interact, or you're making architectural changes.
 
 ### project-roadmap.md
 **Purpose**: Development timeline and progress
-**Length**: 468 LOC
+**Length**: 344 LOC
 
 Project status and future planning:
-- 5 development phases (4 complete, 1 in progress)
+- **Updated**: 5 development phases (Phases 1-5 complete, Phase 6 in progress)
+- **NEW**: Phase 5 (QuAcq Enhancement) completion details
 - Current metrics (code quality, performance benchmarks)
 - Completed milestones and deliverables
 - Future enhancements (short/medium/long-term)
@@ -100,6 +108,25 @@ Project status and future planning:
 - Health indicators and success criteria
 
 **Read when**: You need to understand project status, or you're planning future work.
+
+### quacq.md
+**Purpose**: QuAcq algorithm documentation (IJCAI 2013)
+**Length**: 104 LOC
+
+Paper-based implementation guide:
+- Overview of QuAcq algorithm (partial queries for active learning)
+- **UPDATED**: Two implementation modes (oracle-based + example-based)
+- **UPDATED**: FindScope (Algorithm 2) and FindC (Algorithm 3) details
+- **UPDATED**: Oracle and oracle module references (acqmss/oracle/)
+- Complexity analysis for both modes
+- Optimality discussion
+- Experimental results (from paper)
+- Key advantages
+- Query generation heuristics
+- Relation to codebase (file locations, implementation patterns)
+- Shared infrastructure with CONGEN
+
+**Read when**: You need to understand the QuAcq algorithm or integrate new oracle types.
 
 ## How These Documents Work Together
 
@@ -123,6 +150,10 @@ code-standards.md (HOW TO WRITE CODE THAT FITS)
 project-roadmap.md (WHAT'S DONE & WHAT'S NEXT)
     ↓
     Tracks progress and future directions
+
+quacq.md (ALGORITHM DETAILS)
+    ↓
+    Deep dive on QuAcq implementation
 ```
 
 ## Key Concepts
@@ -131,26 +162,44 @@ project-roadmap.md (WHAT'S DONE & WHAT'S NEXT)
 
 **CONGEN (Passive/Batch Learning)**
 - Learn from sets of valid/invalid example configurations
-- Process: GenerateNE → ACQMSS → REDUCE
+- Process: Prepare task → GenerateNE (called by caller) → Merge NE into task → ACQMSS → REDUCE
+- Callers invoke GenerateNE separately before CONGEN, then merge results via `merge_ne_into_task()`
 - Good for: Offline learning from examples
 - Time: 10-30 seconds (65 features), 30-60 minutes (6,467 features)
 
 **QuAcq (Interactive Learning)**
-- Learn through membership queries to an oracle
-- Process: Loop of GenerateQuery → Oracle → Update KB
-- Good for: Online learning with expert feedback
+- **Oracle mode** (original): Learn through membership queries with an oracle
+- **Example mode** (new): Learn from E+/E- examples using FindScope/FindC (no oracle needed)
+- Process: GenerateQuery → Oracle → Update KB (or FindScope/FindC for examples)
+- Good for: Online learning with expert feedback or batch example learning
 - Convergence: <1,000 queries (models <300 features)
+
+### Oracle Module (NEW)
+
+**Purpose**: Ground truth oracle for validating configurations and generating examples
+
+**Key Classes** (acqmss/oracle/):
+- `Oracle` — Abstract base class
+- `FeatureModelOracle` — FM-based configuration validator
+- `AutomatedOracle` — Automated oracle (FM-based or constraint-based)
+- `UserPromptOracle` — Interactive user oracle
+- `CachedOracle` — Caching wrapper
+- `ExampleProvider` — Batch example interface
+
+**Critical**: Feature ID consistency uses flamapy's variable mapping (tree traversal order) as authoritative source. Alphabetical sorting would cause critical mismatch.
 
 ### Solver Modes
 
 **Incremental (Default, ~50x faster)**
 - Persistent solver instance across calls
 - Uses assumptions for hypothesis testing
+- Checkers immutable after construction
 - Good for: CONGEN with many consistency checks
 
 **Non-Incremental (Baseline)**
 - Fresh solver per call
 - Memory-light, clear isolation
+- Same assumption-based data representation as incremental
 - Good for: Verification and comparison
 
 **SAT4J (Optional, Java-based)**
@@ -164,7 +213,7 @@ project-roadmap.md (WHAT'S DONE & WHAT'S NEXT)
 3. **Builder Pattern** — DiagnosisModelBuilder for configuration
 4. **Facade Pattern** — High-level interfaces (InteractiveLearner, CONGENRunner)
 5. **Template Method** — PySATAbstractExplanation algorithm base
-6. **Factory Pattern** — CONGENModel.from_bias_and_examples()
+6. **Shared Utility Methods** — InteractiveTask.violates_clauses() used across modules
 
 ## Common Tasks
 
@@ -177,6 +226,12 @@ project-roadmap.md (WHAT'S DONE & WHAT'S NEXT)
 → Read **code-standards.md** for naming, patterns, testing
 → Use the code review checklist before submitting
 → Follow design patterns from **system-architecture.md**
+
+### "I want to add a new oracle type"
+→ Read **quacq.md** → "Relation to Codebase" section
+→ Read **system-architecture.md** → acqmss/oracle/ section
+→ Extend Oracle ABC from acqmss/oracle/oracle.py
+→ Check feature ID consistency requirements
 
 ### "I want to add a new algorithm"
 → Read **system-architecture.md** → "Integration points between packages"
@@ -191,18 +246,19 @@ project-roadmap.md (WHAT'S DONE & WHAT'S NEXT)
 ### "I want to know what comes next"
 → Read **project-roadmap.md** → "Future Enhancements"
 → Check "Known Limitations" for workarounds
+→ Phase 6 (Documentation & Polish) in progress, Phase 7 planning
 
 ## Documentation Statistics
 
-| File | LOC | Size | Sections | Status |
-|------|-----|------|----------|--------|
-| code-standards.md | 754 | 21 KB | 16 | ✅ Complete |
-| codebase-summary.md | 329 | 13 KB | 10 | ✅ Complete |
-| project-overview-pdr.md | 355 | 16 KB | 12 | ✅ Complete |
-| system-architecture.md | 813 | 26 KB | 15 | ✅ Complete |
-| project-roadmap.md | 509 | 17 KB | 13 | ✅ Complete |
-| quacq.md | 102 | 4 KB | 7 | ✅ Complete |
-| **TOTAL** | **2,862** | **97 KB** | **73** | ✅ **Complete** |
+| File | LOC | Size | Status |
+|------|-----|------|--------|
+| code-standards.md | 687 | 23 KB | ✅ Updated 2026-02-13 |
+| codebase-summary.md | 354 | 14 KB | ✅ Updated 2026-02-13 |
+| project-overview-pdr.md | 353 | 16 KB | ✅ Updated 2026-02-13 |
+| system-architecture.md | 478 | 18 KB | ✅ Trimmed & updated 2026-02-13 |
+| project-roadmap.md | 344 | 14 KB | ✅ Updated 2026-02-13 |
+| quacq.md | 104 | 4 KB | ✅ Updated 2026-02-13 |
+| **TOTAL** | **2,320** | **89 KB** | ✅ **All under 800 LOC** |
 
 All files are within size constraints (≤800 LOC per file) and follow documentation standards.
 
@@ -226,6 +282,7 @@ All files are within size constraints (≤800 LOC per file) and follow documenta
 **Algorithms & Techniques**
 - [system-architecture.md](#system-architecture) → Diagnosis algorithms, data flows
 - [project-overview-pdr.md](#project-overview--pdr) → Functional requirements
+- [quacq.md](#quacq) → QuAcq algorithm details
 
 **Performance & Optimization**
 - [system-architecture.md](#system-architecture) → Performance characteristics, solver modes
@@ -242,8 +299,8 @@ All files are within size constraints (≤800 LOC per file) and follow documenta
 **Algorithm Researcher**
 1. [project-overview-pdr.md](#project-overview--pdr) — Algorithm requirements
 2. [system-architecture.md](#system-architecture) — Solver abstraction, diagnosis algorithms
-3. [project-roadmap.md](#project-roadmap) — Current metrics, performance targets
-4. Benchmark against metrics in [project-roadmap.md](#project-roadmap)
+3. [quacq.md](#quacq) — QuAcq implementation details
+4. [project-roadmap.md](#project-roadmap) — Current metrics, performance targets
 
 **DevOps/Maintainer**
 1. [project-roadmap.md](#project-roadmap) — Release strategy, milestones
@@ -272,6 +329,13 @@ Documentation is updated when:
 - **Requirements change** — Update overview and roadmap
 - **Performance changes** — Update metrics and benchmarks
 - **Release happens** — Update roadmap and version history
+- **New features added** — Document architecture and usage
 
-**Last Updated**: 2026-02-12
-**Documentation Version**: 1.0
+**Version History:**
+- v1.1 (2026-02-13): Comprehensive update with oracle/ package, Phase 5 completion, file size trim
+- v1.0 (2026-02-12): Initial comprehensive documentation
+
+---
+
+**Documentation Status**: Phase 6 (Documentation & Polish) — In Progress
+**All files updated**: 2026-02-13

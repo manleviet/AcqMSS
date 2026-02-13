@@ -32,7 +32,7 @@ from .interactive import (
     QueryGenerator,
     InteractiveTask,
     InteractiveResult,
-    AutomatedOracle,
+    FeatureModelOracle,
     UserPromptOracle,
     CachedOracle,
     run_interactive_learning
@@ -60,7 +60,7 @@ __all__ = [
     'QueryGenerator',
     'InteractiveTask',
     'InteractiveResult',
-    'AutomatedOracle',
+    'FeatureModelOracle',
     'UserPromptOracle',
     'CachedOracle',
     'run_interactive_learning',

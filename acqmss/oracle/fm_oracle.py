@@ -1,64 +1,18 @@
 """
-Oracle implementations for constraint acquisition.
+Feature model oracle using SAT solver for validation.
 
-The Oracle provides ground truth for classifying configurations as valid or invalid.
-FeatureModelOracle uses a feature model as the ground truth.
+Loads a feature model from .uvl file, converts to CNF, and validates
+configurations via persistent PySAT solver.
 """
 
-from abc import ABC, abstractmethod
 from typing import Dict, Set, List, Optional
 from pysat.solvers import Solver
 
-from acqmss.testcases.data_structures import Example, ExampleType
-
-
-class Oracle(ABC):
-    """
-    Abstract oracle interface for classifying examples.
-
-    An oracle answers membership queries: is this configuration valid?
-    """
-
-    @abstractmethod
-    def classify(self, example: Example) -> ExampleType:
-        """
-        Classify example as positive or negative.
-
-        Args:
-            example: Example to classify
-
-        Returns:
-            ExampleType.POSITIVE if valid, ExampleType.NEGATIVE if invalid
-        """
-        pass
-
-    @abstractmethod
-    def is_valid(self, assignments: Dict[str, bool]) -> bool:
-        """
-        Check if configuration is valid.
-
-        Args:
-            assignments: Feature assignments {feature_name: True/False}
-
-        Returns:
-            True if configuration satisfies the ground truth
-        """
-        pass
-
-    @abstractmethod
-    def get_features(self) -> Set[str]:
-        """Get all feature names in the model"""
-        pass
-
-    @abstractmethod
-    def get_feature_ids(self) -> Dict[str, int]:
-        """Get mapping from feature names to SAT variable IDs"""
-        pass
+from acqmss.oracle.base import Oracle
 
 
 class FeatureModelOracle(Oracle):
-    """
-    Oracle using feature model as ground truth.
+    """Oracle using feature model as ground truth.
 
     Loads a feature model, converts it to CNF, and uses a SAT solver
     to validate configurations.
@@ -78,8 +32,7 @@ class FeatureModelOracle(Oracle):
     """
 
     def __init__(self, fm_path: str):
-        """
-        Initialize oracle from feature model file.
+        """Initialize oracle from feature model file.
 
         Args:
             fm_path: Path to feature model (.uvl format)
@@ -103,7 +56,7 @@ class FeatureModelOracle(Oracle):
             self.solver.add_clause(clause)
 
     def _load_fm(self, fm_path: str):
-        """Load feature model using flamapy"""
+        """Load feature model using flamapy."""
         from flamapy.metamodels.fm_metamodel.transformations import UVLReader
 
         if fm_path.endswith('.uvl'):
@@ -112,11 +65,11 @@ class FeatureModelOracle(Oracle):
             raise ValueError(f"Unsupported feature model format: {fm_path}")
 
     def _extract_features(self) -> Set[str]:
-        """Extract all feature names from FM"""
+        """Extract all feature names from FM."""
         return {f.name for f in self.fm.get_features()}
 
     def _extract_leaf_features(self) -> Set[str]:
-        """Extract leaf features (features with no children)"""
+        """Extract leaf features (features with no children)."""
         return {f.name for f in self.fm.get_features() if f.is_leaf()}
 
     def _build_feature_ids(self) -> Dict[str, int]:
@@ -128,8 +81,7 @@ class FeatureModelOracle(Oracle):
         return dict(self._flamapy_variables)
 
     def _build_cnf(self) -> List[List[int]]:
-        """
-        Build CNF clauses from feature model using flamapy.
+        """Build CNF clauses from feature model using flamapy.
 
         Also stores flamapy's variable mapping as the authoritative
         source for feature-to-SAT-variable ID assignment.
@@ -151,22 +103,10 @@ class FeatureModelOracle(Oracle):
 
         return clauses
 
-    def classify(self, example: Example) -> ExampleType:
-        """
-        Classify example using SAT solver.
-
-        Args:
-            example: Example to classify
-
-        Returns:
-            ExampleType.POSITIVE if valid, ExampleType.NEGATIVE if invalid
-        """
-        is_valid = self.is_valid(example.assignments)
-        return ExampleType.POSITIVE if is_valid else ExampleType.NEGATIVE
+    # --- Oracle ABC implementation ---
 
     def is_valid(self, assignments: Dict[str, bool]) -> bool:
-        """
-        Check if configuration is valid (satisfies FM constraints).
+        """Check if configuration is valid (satisfies FM constraints).
 
         Args:
             assignments: Feature assignments {feature_name: True/False}
@@ -183,24 +123,25 @@ class FeatureModelOracle(Oracle):
         return self.solver.solve(assumptions=assumptions)
 
     def get_features(self) -> Set[str]:
-        """Get all feature names"""
+        """Get all feature names."""
         return self.features
 
     def get_feature_ids(self) -> Dict[str, int]:
-        """Get feature name to SAT variable ID mapping"""
+        """Get feature name to SAT variable ID mapping."""
         return self.feature_ids
 
+    # --- FM-specific extensions ---
+
     def get_leaf_features(self) -> Set[str]:
-        """Get leaf features (features with no children)"""
+        """Get leaf features (features with no children)."""
         return self.leaf_features
 
     def get_root_feature(self) -> str:
-        """Get root feature name"""
+        """Get root feature name."""
         return self.fm.root.name
 
     def get_valid_configuration(self, assumptions: Optional[List[int]] = None) -> Optional[Dict[str, bool]]:
-        """
-        Get a valid configuration using SAT solver.
+        """Get a valid configuration using SAT solver.
 
         Args:
             assumptions: Optional list of literals to fix
@@ -220,16 +161,15 @@ class FeatureModelOracle(Oracle):
         return None
 
     def get_cnf_clauses(self) -> List[List[int]]:
-        """Get the ground truth CNF clauses"""
+        """Get the ground truth CNF clauses."""
         return self.cnf_clauses
 
     def get_num_constraints(self) -> int:
-        """Get number of CNF clauses in ground truth"""
+        """Get number of CNF clauses in ground truth."""
         return len(self.cnf_clauses)
 
     def get_constraint_descriptions(self) -> Set[str]:
-        """
-        Extract constraint descriptions from FM.
+        """Extract constraint descriptions from FM.
 
         Returns descriptions in format matching bias:
         - "parent --mandatory--> child"
@@ -269,8 +209,7 @@ class FeatureModelOracle(Oracle):
         return descriptions
 
     def _parse_ctc_to_description(self, ctc) -> Optional[str]:
-        """
-        Parse cross-tree constraint to description format.
+        """Parse cross-tree constraint to description format.
 
         Supports requires and excludes constraints.
         """
@@ -357,6 +296,6 @@ class FeatureModelOracle(Oracle):
                f"clauses={len(self.cnf_clauses)})"
 
     def __del__(self):
-        """Clean up SAT solver"""
+        """Clean up SAT solver."""
         if hasattr(self, 'solver') and self.solver is not None:
             self.solver.delete()

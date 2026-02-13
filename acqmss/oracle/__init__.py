@@ -2,30 +2,26 @@
 Oracle package for constraint acquisition.
 
 Provides ground truth interfaces for classifying configurations:
-- Oracle: Abstract base class for configuration validation
+- Oracle: Unified abstract base class for all oracles
 - FeatureModelOracle: Validates against a feature model (SAT-based)
-- InteractiveOracle: Abstract interface for membership queries
-- AutomatedOracle: Automated oracle using FeatureModelOracle
 - UserPromptOracle: Human-in-the-loop oracle
 - CachedOracle: Wrapper caching oracle answers
 - ExampleProvider: Provides examples for example-based learning
+- OracleData: Extracted oracle data for evaluation
 """
 
-from .oracle import Oracle, FeatureModelOracle
-from .interactive import (
-    InteractiveOracle,
-    AutomatedOracle,
-    UserPromptOracle,
-    CachedOracle,
-    ExampleProvider,
-)
+from .base import Oracle
+from .fm_oracle import FeatureModelOracle
+from .user_prompt import UserPromptOracle
+from .cached import CachedOracle
+from .example_provider import ExampleProvider
+from .extractor import OracleData
 
 __all__ = [
     'Oracle',
     'FeatureModelOracle',
-    'InteractiveOracle',
-    'AutomatedOracle',
     'UserPromptOracle',
     'CachedOracle',
     'ExampleProvider',
+    'OracleData',
 ]

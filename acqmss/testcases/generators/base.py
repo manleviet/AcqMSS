@@ -8,7 +8,7 @@ from typing import Optional, Dict
 
 from pysat.solvers import Solver
 
-from ..data_structures import Example, ExampleSet
+from ..data_structures import Example, ExampleSet, ExampleType
 from acqmss.oracle import Oracle
 
 
@@ -54,7 +54,8 @@ class ExampleGenerator(ABC):
             example: Example to classify
             example_set: ExampleSet to add to
         """
-        example.example_type = self.oracle.classify(example)
+        is_valid = self.oracle.is_valid(example.assignments)
+        example.example_type = ExampleType.POSITIVE if is_valid else ExampleType.NEGATIVE
         example_set.add(example)
 
     def _generate_valid_config(self, features_list: list) -> Optional[Dict[str, bool]]:

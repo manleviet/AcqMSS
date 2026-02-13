@@ -128,11 +128,13 @@ All applications use TOML configuration files in `apps/conf/`. See [docs/codebas
 
 | Document | Focus |
 |----------|-------|
+| [docs/README.md](docs/README.md) | Documentation index and navigation |
 | [docs/project-overview-pdr.md](docs/project-overview-pdr.md) | Goals, requirements, success criteria |
 | [docs/codebase-summary.md](docs/codebase-summary.md) | Package structure, file inventory, dependencies |
 | [docs/code-standards.md](docs/code-standards.md) | Naming, patterns, testing, style guide |
 | [docs/system-architecture.md](docs/system-architecture.md) | Components, data flow, design patterns |
 | [docs/project-roadmap.md](docs/project-roadmap.md) | Phase progress, timeline, milestones |
+| [docs/quacq.md](docs/quacq.md) | QuAcq algorithm documentation (IJCAI 2013) |
 
 ## Contributing
 
@@ -160,4 +162,4 @@ If you use AcqMSS in your research, please cite:
 
 ---
 
-**Version**: 1.0 | **Python**: 3.13+ | **Status**: Production research system | **Last Updated**: 2026-02-12
+**Version**: 1.0 | **Python**: 3.13+ | **Status**: Production research system | **Last Updated**: 2026-02-13

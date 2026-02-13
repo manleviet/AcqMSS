@@ -14,7 +14,7 @@ from pysat.solvers import Solver
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from acqmss.oracle import InteractiveOracle, ExampleProvider
+from acqmss.oracle import Oracle, ExampleProvider
 from .query_generator import QueryGenerator
 from .findscope import find_scope
 from .findc import find_c
@@ -41,7 +41,7 @@ class QuAcq:
 
     @measure_time('quacq_runtime')
     @count_calls('quacq_calls')
-    def learn(self, task: InteractiveTask, oracle: InteractiveOracle,
+    def learn(self, task: InteractiveTask, oracle: Oracle,
               max_queries: int = 1000) -> InteractiveResult:
         """
         Run QuAcq with oracle-based membership queries (original mode).

@@ -10,7 +10,7 @@ from typing import Optional, Dict, List, Union
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from acqmss.oracle import InteractiveOracle, AutomatedOracle, UserPromptOracle, ExampleProvider
+from acqmss.oracle import Oracle, FeatureModelOracle, UserPromptOracle, ExampleProvider
 from .quacq import QuAcq
 from acqmss.bias.bias_io import BiasIO
 from acqmss.bias.data_structures import Bias
@@ -44,7 +44,7 @@ class InteractiveLearner:
 
     def __init__(self,
                  task: InteractiveTask,
-                 oracle: Optional[InteractiveOracle] = None,
+                 oracle: Optional[Oracle] = None,
                  solver_name: str = 'glucose4',
                  profiler: Optional[AbstractProfiler] = None,
                  fm_path: Optional[str] = None,
@@ -104,7 +104,7 @@ class InteractiveLearner:
         bias = BiasIO.load_from_json(bias_path)
 
         # Create oracle from feature model
-        oracle = AutomatedOracle(fm_path)
+        oracle = FeatureModelOracle(fm_path)
 
         # Build task from bias
         task = cls._build_task_from_bias(bias, oracle)
@@ -114,7 +114,7 @@ class InteractiveLearner:
     @classmethod
     def from_bias(cls,
                   bias: Bias,
-                  oracle: InteractiveOracle,
+                  oracle: Oracle,
                   bg_clauses: Optional[List[int]] = None,
                   solver_name: str = 'glucose4') -> 'InteractiveLearner':
         """
@@ -162,8 +162,8 @@ class InteractiveLearner:
         return cls(task, oracle, solver_name)
 
     @staticmethod
-    def _build_task_from_bias(bias: Bias, oracle: AutomatedOracle) -> InteractiveTask:
-        """Build InteractiveTask from Bias and AutomatedOracle."""
+    def _build_task_from_bias(bias: Bias, oracle: FeatureModelOracle) -> InteractiveTask:
+        """Build InteractiveTask from Bias and FeatureModelOracle."""
         feature_ids = oracle.get_feature_ids()
         id_to_feature = {v: k for k, v in feature_ids.items()}
 
@@ -224,12 +224,12 @@ class InteractiveLearner:
             profiler = get_global_profiler()
 
         bias = BiasIO.load_from_json(bias_path)
-        oracle = AutomatedOracle(fm_path)
+        oracle = FeatureModelOracle(fm_path)
         task = cls._build_task_from_bias(bias, oracle)
 
         learner = cls(task, oracle, solver_name, profiler, fm_path, bias_path)
         learner._example_provider = ExampleProvider(examples, seed)
-        learner._fm_clauses = oracle.fm_oracle.cnf_clauses
+        learner._fm_clauses = oracle.cnf_clauses
         return learner
 
     def learn_from_examples(self,

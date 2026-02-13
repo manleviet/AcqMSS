@@ -13,7 +13,7 @@ Main Components:
 - InteractiveResult: Learning result data structure
 
 Oracle Implementations:
-- AutomatedOracle: Uses FeatureModelOracle for automated experiments
+- FeatureModelOracle: FM-based oracle for automated experiments
 - UserPromptOracle: Prompts human expert for interactive mode
 - CachedOracle: Wrapper that caches oracle answers
 
@@ -44,8 +44,8 @@ Example Usage:
 from .task import InteractiveTask
 from .result import InteractiveResult
 from acqmss.oracle import (
-    InteractiveOracle,
-    AutomatedOracle,
+    Oracle,
+    FeatureModelOracle,
     UserPromptOracle,
     CachedOracle,
     ExampleProvider,
@@ -64,8 +64,8 @@ __all__ = [
     'InteractiveTask',
     'InteractiveResult',
     # Oracle implementations
-    'InteractiveOracle',
-    'AutomatedOracle',
+    'Oracle',
+    'FeatureModelOracle',
     'UserPromptOracle',
     'CachedOracle',
     'ExampleProvider',

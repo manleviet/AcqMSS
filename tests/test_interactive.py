@@ -8,7 +8,7 @@ Tests core components: QueryGenerator, QuAcq, InteractiveLearner.
 import pytest
 from pathlib import Path
 
-from acqmss.oracle import FeatureModelOracle, InteractiveOracle, AutomatedOracle, CachedOracle
+from acqmss.oracle import FeatureModelOracle, Oracle, CachedOracle
 from acqmss.bias import BiasIO
 from acqmss.algorithms.interactive import (
     InteractiveTask,
@@ -35,7 +35,7 @@ def oracle():
     """Load REAL-FM-7 feature model oracle."""
     if not FM_PATH.exists():
         pytest.skip(f"Feature model not found: {FM_PATH}")
-    return AutomatedOracle(str(FM_PATH))
+    return FeatureModelOracle(str(FM_PATH))
 
 
 @pytest.fixture
@@ -187,8 +187,8 @@ class TestInteractiveResult:
         assert loaded.kb_constraints == result.kb_constraints
 
 
-class TestAutomatedOracle:
-    """Tests for AutomatedOracle."""
+class TestFeatureModelOracle:
+    """Tests for FeatureModelOracle."""
 
     def test_oracle_creation(self, oracle):
         """Test oracle can be created."""
@@ -196,8 +196,8 @@ class TestAutomatedOracle:
 
     def test_oracle_valid_config(self, oracle):
         """Test oracle accepts valid configuration."""
-        # Get a valid configuration from the oracle's FM
-        valid_config = oracle.fm_oracle.get_valid_configuration()
+        # Get a valid configuration directly from oracle
+        valid_config = oracle.get_valid_configuration()
         if valid_config:
             assert oracle.ask(valid_config) is True
 
@@ -333,7 +333,7 @@ class TestInteractiveLearner:
         if not FM_PATH.exists() or not BIAS_PATH.exists():
             pytest.skip("Test data files not found")
 
-        oracle = AutomatedOracle(str(FM_PATH))
+        oracle = FeatureModelOracle(str(FM_PATH))
         bias = BiasIO.load_from_json(str(BIAS_PATH))
 
         task = InteractiveLearner._build_task_from_bias(bias, oracle)

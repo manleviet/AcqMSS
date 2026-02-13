@@ -1,5 +1,7 @@
 # AcqMSS Code Standards & Guidelines
 
+**Last Updated**: 2026-02-13
+
 ## Language & Environment
 
 - **Primary Language**: Python 3.13+
@@ -8,6 +10,7 @@
 - **Code Formatting**: ruff check/format
 - **Type Checking**: mypy strict mode recommended
 - **Testing**: pytest with @parameterized.expand
+- **Module File Size**: ~200 lines (max ~300 for complex modules)
 
 ## Naming Conventions
 
@@ -134,11 +137,6 @@ class ConsistencyChecker(ABC):
         """Check if clauses are satisfiable."""
         pass
 
-    @abstractmethod
-    def get_assumptions(self) -> list[int]:
-        """Return current assumptions."""
-        pass
-
 class IncrementalPySATChecker(ConsistencyChecker):
     """Persistent solver with assumptions."""
     def is_consistent(self, clauses):
@@ -168,7 +166,6 @@ class DiagnosisModelBuilder:
     def __init__(self):
         self._feature_model = None
         self._solver_name = 'glucose4'
-        self._max_diagnoses = 1
 
     def with_feature_model(self, fm: FeatureModel) -> DiagnosisModelBuilder:
         self._feature_model = fm
@@ -179,12 +176,7 @@ class DiagnosisModelBuilder:
         return self
 
     def build(self) -> DiagnosisModel:
-        """Construct final model."""
-        return DiagnosisModel(
-            feature_model=self._feature_model,
-            solver_name=self._solver_name,
-            max_diagnoses=self._max_diagnoses
-        )
+        return DiagnosisModel(self._feature_model, self._solver_name)
 
 # Usage
 model = (DiagnosisModelBuilder()
@@ -192,11 +184,6 @@ model = (DiagnosisModelBuilder()
          .with_solver('glucose4')
          .build())
 ```
-
-**Benefits**:
-- Readable configuration
-- Default values clear
-- Incremental construction
 
 ### 3. Facade Pattern
 
@@ -215,18 +202,12 @@ class InteractiveLearner:
 
     def learn(self, mode: str = 'automated', max_queries: int = 1000):
         """Learn constraints interactively."""
-        # Orchestrates GenerateQuery, Oracle, UpdateKB
         pass
 
 # Usage
 learner = InteractiveLearner.from_files('model.uvl', 'bias.json')
 result = learner.learn()
 ```
-
-**Benefits**:
-- Simple API for users
-- Hides algorithmic details
-- Easy entry point for new developers
 
 ### 4. Template Method Pattern
 
@@ -240,13 +221,8 @@ class PySATAbstractExplanation(ABC):
 
     def execute(self) -> list[Diagnosis]:
         """Execute diagnosis algorithm (template method)."""
-        # Common setup
         solver_instance = self._prepare_solver()
-
-        # Algorithm-specific step
         result = self._diagnose(solver_instance)
-
-        # Common cleanup
         self._finalize(solver_instance)
         return result
 
@@ -259,17 +235,7 @@ class FastDiag(PySATAbstractExplanation):
     def _diagnose(self, solver):
         # FastDiag-specific implementation
         pass
-
-class QuickXPlain(PySATAbstractExplanation):
-    def _diagnose(self, solver):
-        # QuickXPlain-specific implementation
-        pass
 ```
-
-**Benefits**:
-- Code reuse in base class
-- Clear extension points
-- Consistent execution flow
 
 ### 5. Dependency Injection
 
@@ -277,48 +243,48 @@ Pass dependencies as constructor parameters:
 
 ```python
 class CONGEN:
-    """Constraint acquisition via ACQMSS."""
+    """Constraint acquisition via ACQMSS (mode-agnostic)."""
 
     def __init__(
         self,
         checker: ConsistencyChecker,
         profiler: Optional[Profiler] = None
     ):
-        self.checker = checker        # Injected solver
-        self.profiler = profiler or NullProfiler()  # Optional profiling
+        self.checker = checker        # Injected (Incremental or NonIncremental)
+        self.profiler = profiler or NullProfiler()
 
     def acquire(self, task: CONGENTask) -> Result:
-        """Learn constraints using injected checker."""
+        """Learn constraints using injected checker.
+
+        Works identically with both checker types (no is_incremental branching).
+        """
         with self.profiler.measure('acqmss'):
             mss = self._acqmss(task)
         return Result(mss)
 
-# Usage
-checker = IncrementalPySATChecker(solver, profiler=None)
-congen = CONGEN(checker, profiler=profiler)
-result = congen.acquire(task)
+# Usage (both modes use same CONGEN code)
+checker_inc = IncrementalPySATChecker(set_kb, assumptions)
+congen = CONGEN(checker_inc, profiler=profiler)
+result = congen.acquire(task)  # Same code path
 ```
 
 **Benefits**:
 - Easy to test (inject mock checker)
 - Loose coupling
-- Clear dependencies
-- Profiling optional
+- **Mode-agnostic**: No `if is_incremental` branching in algorithms
 
 ### 6. Shared Utility Methods
 
-Extract duplicated logic into static/class methods to avoid code repetition:
+Extract duplicated logic into static/class methods:
 
 ```python
 @dataclass
 class InteractiveTask:
     """Task state for QuAcq."""
 
-    # ... fields ...
-
     @staticmethod
     def violates_clauses(clauses: List[List[int]],
-                         assignment: Dict[int, bool]) -> bool:
+                        assignment: Dict[int, bool]) -> bool:
         """Check if assignment violates constraint clauses.
 
         Shared utility used by QuAcq, FindScope, and FindC.
@@ -340,17 +306,99 @@ class InteractiveTask:
 class QuAcq:
     def check_violation(self, config):
         return InteractiveTask.violates_clauses(clauses, assignment)
-
-class FindScope:
-    def check_partial(self, partial_config):
-        return InteractiveTask.violates_clauses(clauses, assignment)
 ```
 
-**Benefits**:
-- Single source of truth for common logic
-- DRY principle: eliminate duplicate implementations
-- Easier testing and maintenance
-- Clear API via static methods
+### 7. Interactive Learning Patterns
+
+Guidelines for implementing QuAcq and related algorithms:
+
+```python
+class InteractiveLearner:
+    """High-level facade for QuAcq learning modes."""
+
+    def learn(self, mode: str = 'automated') -> InteractiveResult:
+        """Learn constraints using oracle or example modes.
+
+        Args:
+            mode: 'automated' (FM-based) or 'manual' (user) for oracle mode,
+                  'example' for batch learning (FindScope/FindC)
+
+        Returns:
+            InteractiveResult with learned KB and metrics
+        """
+        if mode == 'example':
+            return self.learn_from_examples()  # FindScope/FindC
+        else:
+            return self.learn_with_oracle()    # Interactive oracle
+
+class QuAcq:
+    """QuAcq algorithm (IJCAI13 paper)."""
+
+    def learn_from_examples(self, examples) -> List[Constraint]:
+        """Example-based learning using FindScope/FindC.
+
+        Process each negative example to identify violated constraints.
+        """
+        for e_minus in examples.negative:
+            scope = FindScope(self.checker).find(e_minus)
+            constraint = FindC(self.checker).find(e_minus, scope)
+            self.kb.add(constraint)
+        return self.kb
+```
+
+## Oracle Module Conventions
+
+### Unified Oracle Interface
+
+The `acqmss/oracle/` package provides a unified oracle abstraction for configuration validation:
+
+```python
+from typing import Dict
+from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle, ExampleProvider
+
+# Unified Oracle interface
+class Oracle(ABC):
+    """Abstract oracle for membership queries."""
+
+    @abstractmethod
+    def is_valid(self, assignments: Dict[str, bool]) -> bool:
+        """Check if configuration is valid."""
+        pass
+
+    @abstractmethod
+    def get_features(self) -> Set[str]:
+        """Get all feature names."""
+        pass
+
+    def ask(self, query: Dict[str, bool]) -> bool:
+        """Alias for is_valid() (interactive compatibility)."""
+        return self.is_valid(query)
+
+# FM-based oracle (most common)
+oracle = FeatureModelOracle('data/fms/model.uvl')
+is_valid = oracle.is_valid({'root': True, 'feature_a': False})
+
+# With caching for repeated queries
+cached_oracle = CachedOracle(oracle)
+result = cached_oracle.is_valid(query)
+
+# Example-based learning
+provider = ExampleProvider(oracle)
+examples = provider.generate_examples(count=100)
+```
+
+**Critical Requirement**: Feature ID consistency
+- `FeatureModelOracle._build_feature_ids()` uses flamapy's variable mapping (tree traversal order)
+- Stores `FmToPysat.variables` as the authoritative feature-to-SAT-variable source
+- All checkers and solvers must use matching variable IDs
+- **Never** sort feature IDs alphabetically — breaks consistency with SAT clause literals
+
+**Conventions**:
+- All oracles inherit from unified `Oracle` ABC (no separate hierarchies)
+- `FeatureModelOracle`: Standard implementation for FM validation
+- `UserPromptOracle`: Interactive human-in-the-loop oracle
+- `CachedOracle`: Wrapper for performance (transparent caching)
+- Use `ExampleProvider` for batch example generation
 
 ## Testing Strategy
 
@@ -383,7 +431,6 @@ class TestFastDiag(unittest.TestCase):
         if not self.ENABLED_PARAMS[name]:
             self.skipTest(f'{name} disabled')
 
-        # Test with specific checker
         result = fastdiag(self.model, checker=checker_class(self.solver))
         self.assertGreater(len(result), 0)
 ```
@@ -402,26 +449,6 @@ class TestFastDiag(unittest.TestCase):
 - Data structures: ≥80%
 - I/O utilities: ≥70% (less critical)
 - CLI applications: ≥60% (tested via integration)
-
-### Profiling in Tests
-
-Optionally measure performance:
-
-```python
-def test_fastdiag_with_profiling(self):
-    profiler = Profiler()
-    checker = IncrementalPySATChecker(solver, profiler=profiler)
-
-    result = fastdiag(model, checker=checker)
-
-    # Assertions
-    self.assertGreater(len(result), 0)
-
-    # Profiling checks (optional)
-    timing = profiler.get_timing('fastdiag')
-    solver_calls = profiler.get_count('sat_check')
-    print(f"Time: {timing:.2f}s, Solver calls: {solver_calls}")
-```
 
 ## Documentation Standards
 
@@ -594,13 +621,11 @@ All configuration via TOML files:
 # Bad
 SOLVER_NAME = 'glucose4'
 MAX_CALLS = 10000
-TIMEOUT = 300.0
 
 # Good
 config = load_config('apps/conf/run_congen_config.toml')
 solver_name = config['settings']['solver']
 max_calls = config['settings']['max_solver_calls']
-timeout = config['settings']['timeout_seconds']
 ```
 
 ### Configuration Structure
@@ -685,7 +710,7 @@ config_path = Path('apps/conf/config.toml')
 data_path = Path('data/results') / 'output.json'
 
 # Less safe
-config_path = 'apps/conf/config.toml'  # String paths less flexible
+config_path = 'apps/conf/config.toml'
 ```
 
 ## Code Review Checklist
@@ -751,4 +776,3 @@ ruff format .
 mypy .
 PYTHONPATH=. pytest tests/ -q
 ```
-

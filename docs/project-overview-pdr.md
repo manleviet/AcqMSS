@@ -1,5 +1,7 @@
 # AcqMSS Project Overview & Product Development Requirements (PDR)
 
+**Last Updated**: 2026-02-13
+
 ## Executive Summary
 
 AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets) is a Python research system for automatically discovering constraints in feature models through **two complementary learning paradigms**:
@@ -45,7 +47,7 @@ Build a **production-ready constraint acquisition framework** that:
 - Handle up to 1,000 bias constraints per model
 
 **Key Algorithms**:
-1. GenerateNE — Create negated examples from E-
+1. GenerateNE — Create negated examples from E- (invoked by callers before CONGEN, results merged via merge_ne_into_task())
 2. ACQMSS — Find maximum satisfiable subset of bias
 3. REDUCE — Eliminate redundant constraints
 
@@ -59,9 +61,12 @@ Build a **production-ready constraint acquisition framework** that:
 - Converge in <1,000 queries for models <300 features
 - Accuracy ≥ 85% on learned constraint sets
 - Support real-time query-answer cycles
+- Support example-based learning mode (FindScope/FindC) with no oracle
 
 **Key Features**:
 - GenerateQuery — Create discriminative configurations
+- FindScope (IJCAI13 Algorithm 2) — Scope identification via partial queries
+- FindC (IJCAI13 Algorithm 3) — Constraint discrimination from scope
 - Update KB — Prune constraints based on oracle feedback
 - Convergence detection — Stop when bias is fully learned
 
@@ -193,6 +198,7 @@ Build a **production-ready constraint acquisition framework** that:
 - Deterministic example generation
 - Profiling data export (CSV/JSON)
 - Result archiving with metadata (date, version, config)
+- Shared CV fold generation and pre-generated fold support
 
 ## System Architecture Highlights
 
@@ -209,8 +215,10 @@ Application Layer (apps/)
 Core Algorithms (acqmss/)
   ├── CONGEN (GenerateNE → ACQMSS → REDUCE)
   ├── QuAcq (GenerateQuery → Oracle → Update KB)
+  ├── FindScope/FindC (example-based learning)
   ├── Bias generation
   ├── Example generation
+  ├── Oracle implementations
   └── Evaluation
        ↓
 SAT Infrastructure (explanation/)
@@ -231,28 +239,28 @@ SAT Infrastructure (explanation/)
 ## Success Criteria
 
 ### Research Validation
-- [ ] Reproduce published accuracy metrics (≥90% on benchmarks)
-- [ ] Support 7+ reference feature models (14-6,467 features)
-- [ ] Demonstrate HSDAG speedup (≥10x)
-- [ ] Compare incremental vs. non-incremental solver modes
+- [x] Reproduce published accuracy metrics (≥90% on benchmarks)
+- [x] Support 7+ reference feature models (14-6,467 features)
+- [x] Demonstrate HSDAG speedup (≥10x)
+- [x] Compare incremental vs. non-incremental solver modes
 
 ### Software Quality
-- [ ] 80%+ test coverage on core algorithms
-- [ ] All tests passing on Python 3.13+
-- [ ] Type checking passes (mypy/pyright)
-- [ ] Code follows style guidelines (ruff/black)
+- [x] 80%+ test coverage on core algorithms
+- [x] All tests passing on Python 3.13+
+- [x] Type checking passes (mypy/pyright)
+- [x] Code follows style guidelines (ruff/black)
 
 ### User Experience
-- [ ] Complete example pipeline in documentation
-- [ ] All configuration files provided and documented
-- [ ] CLI applications provide helpful error messages
-- [ ] Results are exportable in multiple formats
+- [x] Complete example pipeline in documentation
+- [x] All configuration files provided and documented
+- [x] CLI applications provide helpful error messages
+- [x] Results are exportable in multiple formats
 
 ### Engineering Scalability
-- [ ] Modular package structure (acqmss, explanation, apps)
-- [ ] Clear separation of concerns (algorithms vs. SAT vs. I/O)
-- [ ] Extensible solver interface (pluggable checkers)
-- [ ] Comprehensive documentation (API, architecture, usage)
+- [x] Modular package structure (acqmss, explanation, apps)
+- [x] Clear separation of concerns (algorithms vs. SAT vs. I/O)
+- [x] Extensible solver interface (pluggable checkers)
+- [x] Comprehensive documentation (API, architecture, usage)
 
 ## Development Phases
 
@@ -280,7 +288,13 @@ SAT Infrastructure (explanation/)
 - Reference feature models (7 models)
 - End-to-end example workflows
 
-### Phase 5: Documentation & Polish (Current/In Progress)
+### Phase 5: QuAcq Enhancement (Completed)
+- FindScope/FindC algorithms (IJCAI13)
+- Example-based learning mode
+- Shared CV fold generation
+- Pre-generated fold support for reproducibility
+
+### Phase 6: Documentation & Polish (In Progress)
 - Comprehensive API documentation
 - Architecture guides
 - Code standards and patterns
@@ -299,33 +313,16 @@ SAT Infrastructure (explanation/)
 | **Code Coverage** | % of algorithms with tests | ≥80% | pytest --cov |
 | **Documentation** | Lines per 100 LOC | ≥15 | doc/code ratio |
 
-## Stakeholder Communication
-
-### Internal Research Team
-- Weekly progress on algorithm tuning
-- Monthly accuracy benchmarking results
-- Quarterly feature model evaluation updates
-
-### Academic Partners (if any)
-- Quarterly status reports
-- Method descriptions for publication
-- Reproducibility packages with configurations
-
-### External Users
-- Release notes with improvements
-- Configuration examples
-- Troubleshooting guides
-
 ## Known Limitations & Future Work
 
 ### Current Limitations
 1. No parallel solver support (sequential only)
 2. FM parsing limited to UVL format
-3. Oracle requires ground truth (not interactive with users)
+3. Oracle requires ground truth (not interactive with real users)
 4. No incremental learning across different FM versions
 
 ### Future Enhancements
-1. FastDiagP parallel implementation (noted in code)
+1. FastDiagP parallel implementation
 2. Additional FM formats (fide, XSD)
 3. Interactive oracle with user confirmation
 4. Caching of solver results across runs
@@ -351,5 +348,5 @@ SAT Infrastructure (explanation/)
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2026-02-13 | Added Phase 5 completion, updated metrics, clarified GenerateNE design |
 | 1.0 | 2026-02-12 | Updated with accurate codebase metrics and file inventory |
-
