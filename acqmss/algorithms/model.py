@@ -1,41 +1,76 @@
 """
-Model classes for CONGEN algorithm.
+Model for CONGEN algorithm.
 
 Uses existing classes from explanation module:
 - Assignment, TestCase, TestSuite from explanation.models.testsuite
-- TaskInput from explanation.models.task_preparation
+- TaskInput, DescriptionProvider from explanation.models.task_preparation
 
-CONGENModel is a simplified model for CONGEN that doesn't require
-the full DiagnosisModel infrastructure (no FM transformation needed).
+CONGENModel uses composition to delegate task preparation to CONGENTaskPreparation.
+Call prepare() before accessing task or description_provider.
 """
 
-from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
-from explanation.models.task_preparation import TaskInput
+from explanation.models.task_preparation import TaskInput, DescriptionProvider
+
+from .task import CONGENTask
 
 
-@dataclass
 class CONGENModel:
     """Model for CONGEN algorithm.
 
-    This is a simplified model specifically for CONGEN, holding:
-    - constraint_map: Bias constraints {name: clauses}
-    - negated_constraint_map: Pre-computed negated constraints (optional)
-    - variables: Feature name to variable ID mapping
-    - task_input: Test cases configuration (uses TaskInput from explanation)
-    - next_tseitin_var: Next available variable ID for Tseitin encoding
+    Uses composition to delegate task preparation to CONGENTaskPreparation.
+    Call prepare() before accessing task or description_provider.
 
-    Unlike DiagnosisModel from explanation module, this doesn't require
-    a feature model and works directly with bias constraints.
+    Unlike DiagnosisModel, this doesn't require a feature model and works
+    directly with bias constraints.
     """
-    constraint_map: Dict[str, List[List[int]]] = field(default_factory=dict)
-    negated_constraint_map: Dict[str, List[List[int]]] = field(default_factory=dict)
-    variables: Dict[str, int] = field(default_factory=dict)
-    task_input: TaskInput = field(default_factory=TaskInput)
-    next_tseitin_var: int = 1
-    root_feature_id: Optional[int] = None
+
+    def __init__(self) -> None:
+        self.constraint_map: Dict[str, List[List[int]]] = {}
+        self.negated_constraint_map: Dict[str, List[List[int]]] = {}
+        self.variables: Dict[str, int] = {}
+        self.task_input: TaskInput = TaskInput()
+        self.next_tseitin_var: int = 1
+        self.background_knowledge: List[int] = []
+
+        # Populated after prepare()
+        self._task: Optional[CONGENTask] = None
+        self._description_provider: Optional[DescriptionProvider] = None
+
+    @property
+    def task(self) -> CONGENTask:
+        """Get prepared task. Call prepare() first."""
+        if self._task is None:
+            raise RuntimeError("Call prepare() first")
+        return self._task
+
+    @property
+    def description_provider(self) -> DescriptionProvider:
+        """Get description provider. Call prepare() first."""
+        if self._description_provider is None:
+            raise RuntimeError("Call prepare() first")
+        return self._description_provider
+
+    def prepare(self, mode_name: str = "congen") -> CONGENTask:
+        """Prepare CONGEN task using CONGENTaskPreparation strategy.
+
+        Args:
+            mode_name: Mode name for logging (e.g., "incremental-congen")
+
+        Returns:
+            CONGENTask ready for GenerateNE and CONGEN.
+        """
+        from .task_preparation import CONGENTaskPreparation
+
+        preparation = CONGENTaskPreparation(mode_name)
+        output = preparation.prepare(self)
+
+        assert isinstance(output.task, CONGENTask)
+        self._task = output.task
+        self._description_provider = output.description_provider
+        return self._task
 
     @classmethod
     def from_bias_and_examples(
@@ -44,7 +79,7 @@ class CONGENModel:
             positive_examples: List[Dict[str, bool]],
             negative_examples: List[Dict[str, bool]],
             feature_ids: Dict[str, int],
-            root_feature_id: Optional[int] = None
+            background_knowledge: Optional[List[int]] = None
     ) -> 'CONGENModel':
         """Create model from bias constraints and examples.
 
@@ -53,9 +88,10 @@ class CONGENModel:
             positive_examples: List of valid configurations {feature: bool}
             negative_examples: List of invalid configurations {feature: bool}
             feature_ids: {feature_name: variable_id}
+            background_knowledge: BG literals (e.g., [root_feature_id])
 
         Returns:
-            CONGENModel ready for task preparation
+            CONGENModel ready for prepare()
         """
         # Find max variable ID for Tseitin allocation
         max_var = max(feature_ids.values()) if feature_ids else 0
@@ -64,28 +100,24 @@ class CONGENModel:
                 for lit in clause:
                     max_var = max(max_var, abs(lit))
 
-        # Convert examples to test suites using explanation module classes
+        # Convert examples to test suites
         positive_tc = cls._examples_to_testsuite(positive_examples)
         negative_tc = cls._examples_to_testsuite(negative_examples)
 
-        return cls(
-            constraint_map=bias_constraints,
-            negated_constraint_map={},
-            variables=feature_ids,
-            task_input=TaskInput(
-                positive_test_cases=positive_tc,
-                negative_test_cases=negative_tc
-            ),
-            next_tseitin_var=max_var + 1,
-            root_feature_id=root_feature_id
+        model = cls()
+        model.constraint_map = bias_constraints
+        model.variables = feature_ids
+        model.task_input = TaskInput(
+            positive_test_cases=positive_tc,
+            negative_test_cases=negative_tc
         )
+        model.next_tseitin_var = max_var + 1
+        model.background_knowledge = background_knowledge or []
+        return model
 
     @staticmethod
     def _examples_to_testsuite(examples: List[Dict[str, bool]]) -> TestSuite:
-        """Convert list of example dicts to TestSuite.
-
-        Uses TestSuite, TestCase, Assignment from explanation.models.testsuite.
-        """
+        """Convert list of example dicts to TestSuite."""
         testcases = []
         for example in examples:
             assignments = [

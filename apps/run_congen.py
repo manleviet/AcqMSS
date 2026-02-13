@@ -21,11 +21,7 @@ except ImportError:
 
 from acqmss.testcases import FeatureModelOracle, ExampleIO
 from acqmss.bias import BiasIO
-from acqmss.algorithms import (
-    CONGEN,
-    CONGENModel,
-    CONGENTaskPreparation
-)
+from acqmss.algorithms import CONGEN, CONGENModel
 from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
@@ -140,17 +136,15 @@ def process_model(model_config: ModelConfig, output_dir: Path,
             positive_examples=positive_examples,
             negative_examples=negative_examples,
             feature_ids=feature_ids,
-            root_feature_id=root_feature_id
+            background_knowledge=[root_feature_id] if root_feature_id is not None else []
         )
 
         # Prepare task based on mode
         profiler = get_global_profiler()
 
         mode = "incremental-congen" if is_incremental else "non-incremental-congen"
-        preparation = CONGENTaskPreparation(mode)
-
-        output = preparation.prepare(congen_model)
-        task = output.task
+        congen_model.prepare(mode)
+        task = congen_model.task
 
         # Run GenerateNE with temp non-incremental checker (read-only QXP calls)
         temp_checker = NonIncrementalPySATChecker(

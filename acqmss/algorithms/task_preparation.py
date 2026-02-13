@@ -72,9 +72,9 @@ class CONGENTaskPreparation(TestCaseTaskPreparationStrategy):
                 result, provider, model.variables,
                 task_input.negative_test_cases, id_assumption, is_negative=True)
 
-        # Add root constraint to background knowledge if provided
-        if model.root_feature_id is not None:
-            result.set_b.append(model.root_feature_id)
+        # Add background knowledge literals
+        if model.background_knowledge:
+            result.set_b.extend(model.background_knowledge)
 
         # Store next available assumption ID for GenerateNE
         result.next_assumption_id = id_assumption

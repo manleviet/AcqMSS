@@ -13,8 +13,7 @@ from acqmss.testcases import FeatureModelOracle, ExampleIO
 from acqmss.bias import BiasIO
 from acqmss.algorithms import (
     CONGEN, ACQMSS, Reduce, GenerateNE,
-    CONGENModel,
-    CONGENTaskPreparation
+    CONGENModel
 )
 from acqmss.algorithms.generate_ne import merge_ne_into_task
 from explanation.operations.algorithms.checker import (
@@ -93,16 +92,14 @@ def create_checker_and_task(oracle, bias, examples, is_incremental=True):
         positive_examples=positive_examples,
         negative_examples=negative_examples,
         feature_ids=oracle.get_feature_ids(),
-        root_feature_id=root_id
+        background_knowledge=[root_id]
     )
 
     profiler = get_global_profiler()
 
     mode = "incremental-congen" if is_incremental else "non-incremental-congen"
-    preparation = CONGENTaskPreparation(mode)
-
-    output = preparation.prepare(model)
-    task = output.task
+    model.prepare(mode)
+    task = model.task
 
     # Run GenerateNE with temp checker (read-only QXP calls)
     temp_checker = NonIncrementalPySATChecker(
@@ -174,7 +171,7 @@ class TestCONGEN:
         )
 
         try:
-            # Verify root in set_b (assumption ID, same as incremental)
+            # Verify root in set_b (assumption ID)
             assert root_id in task.set_b, "Root should be in set_b"
 
             congen = CONGEN(checker, profiler)

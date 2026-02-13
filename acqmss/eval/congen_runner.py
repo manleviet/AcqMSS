@@ -16,7 +16,6 @@ import logging
 from acqmss.algorithms.congen import CONGEN
 from acqmss.algorithms.model import CONGENModel
 from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
-from acqmss.algorithms.task_preparation import CONGENTaskPreparation
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
     NonIncrementalPySATChecker
@@ -164,10 +163,8 @@ class CONGENRunner:
 
             # Prepare task based on mode
             mode = "incremental-congen" if self.is_incremental else "non-incremental-congen"
-            preparation = CONGENTaskPreparation(mode)
-
-            output = preparation.prepare(model)
-            task = output.task
+            model.prepare(mode)
+            task = model.task
 
             # Run GenerateNE with temp non-incremental checker
             temp_checker = NonIncrementalPySATChecker(
