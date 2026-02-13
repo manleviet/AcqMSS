@@ -14,18 +14,15 @@ Interactive Learning (QuAcq):
 - QueryGenerator: SAT-based query generation
 - InteractiveLearner: High-level interface for interactive learning
 
-Task classes for both incremental and non-incremental modes.
+Task classes shared across incremental and non-incremental modes.
 """
 
 from .acqmss import ACQMSS
 from .reduce import Reduce
-from .generate_ne import GenerateNE, NEResult
+from .generate_ne import GenerateNE, NEResult, merge_ne_into_task
 from .congen import CONGEN, CONGENResult
-from .task import CONGENTask, IncrementalCONGENTask, NonIncrementalCONGENTask
-from .task_preparation import (
-    IncrementalCONGENTaskPreparation,
-    NonIncrementalCONGENTaskPreparation
-)
+from .task import CONGENTask
+from .task_preparation import CONGENTaskPreparation
 from .model import CONGENModel
 
 # Interactive learning components
@@ -51,13 +48,11 @@ __all__ = [
     'Reduce',
     'GenerateNE',
     'NEResult',
+    'merge_ne_into_task',
     'CONGEN',
     'CONGENResult',
     'CONGENTask',
-    'IncrementalCONGENTask',
-    'NonIncrementalCONGENTask',
-    'IncrementalCONGENTaskPreparation',
-    'NonIncrementalCONGENTaskPreparation',
+    'CONGENTaskPreparation',
     'CONGENModel',
     # Interactive learning (QuAcq)
     'InteractiveLearner',

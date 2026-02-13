@@ -24,9 +24,9 @@ from acqmss.bias import BiasIO
 from acqmss.algorithms import (
     CONGEN,
     CONGENModel,
-    IncrementalCONGENTaskPreparation,
-    NonIncrementalCONGENTaskPreparation
+    CONGENTaskPreparation
 )
+from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
     NonIncrementalPySATChecker
@@ -146,25 +146,33 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         # Prepare task based on mode
         profiler = get_global_profiler()
 
-        if is_incremental:
-            preparation = IncrementalCONGENTaskPreparation()
-            output = preparation.prepare(congen_model)
-            task = output.task
+        mode = "incremental-congen" if is_incremental else "non-incremental-congen"
+        preparation = CONGENTaskPreparation(mode)
 
-            # Create incremental checker with KB and assumptions
+        output = preparation.prepare(congen_model)
+        task = output.task
+
+        # Run GenerateNE with temp non-incremental checker (read-only QXP calls)
+        temp_checker = NonIncrementalPySATChecker(
+            task.set_kb, task.assumptions, solver_name, profiler
+        )
+        generate_ne = GenerateNE(temp_checker, profiler)
+        ne_result = generate_ne.generate(
+            set_e_neg=task.e_neg_literals,
+            set_bg=task.set_b,
+            start_assumption_id=task.next_assumption_id
+        )
+        merge_ne_into_task(task, ne_result)
+
+        # Create final checker with complete data (including NE)
+        if is_incremental:
             checker = IncrementalPySATChecker(
-                task.set_kb,
-                task.assumptions,
-                solver_name,
-                profiler
+                task.set_kb, task.assumptions, solver_name, profiler
             )
         else:
-            preparation = NonIncrementalCONGENTaskPreparation()
-            output = preparation.prepare(congen_model)
-            task = output.task
-
-            # NonIncrementalPySATChecker doesn't take KB - creates fresh solver per check
-            checker = NonIncrementalPySATChecker(solver_name, profiler)
+            checker = NonIncrementalPySATChecker(
+                task.set_kb, task.assumptions, solver_name, profiler
+            )
 
         # Run CONGEN
         congen = CONGEN(checker, profiler)

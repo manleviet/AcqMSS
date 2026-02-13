@@ -15,10 +15,8 @@ import logging
 
 from acqmss.algorithms.congen import CONGEN
 from acqmss.algorithms.model import CONGENModel
-from acqmss.algorithms.task_preparation import (
-    IncrementalCONGENTaskPreparation,
-    NonIncrementalCONGENTaskPreparation
-)
+from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
+from acqmss.algorithms.task_preparation import CONGENTaskPreparation
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
     NonIncrementalPySATChecker
@@ -165,23 +163,33 @@ class CONGENRunner:
             )
 
             # Prepare task based on mode
-            if self.is_incremental:
-                preparation = IncrementalCONGENTaskPreparation()
-                output = preparation.prepare(model)
-                task = output.task
+            mode = "incremental-congen" if self.is_incremental else "non-incremental-congen"
+            preparation = CONGENTaskPreparation(mode)
 
+            output = preparation.prepare(model)
+            task = output.task
+
+            # Run GenerateNE with temp non-incremental checker
+            temp_checker = NonIncrementalPySATChecker(
+                task.set_kb, task.assumptions, self.solver_name, profiler
+            )
+            generate_ne = GenerateNE(temp_checker, profiler)
+            ne_result = generate_ne.generate(
+                set_e_neg=task.e_neg_literals,
+                set_bg=task.set_b,
+                start_assumption_id=task.next_assumption_id
+            )
+            merge_ne_into_task(task, ne_result)
+
+            # Create final checker with complete data (including NE)
+            if self.is_incremental:
                 checker = IncrementalPySATChecker(
-                    task.set_kb,
-                    task.assumptions,
-                    self.solver_name,
-                    profiler
+                    task.set_kb, task.assumptions, self.solver_name, profiler
                 )
             else:
-                preparation = NonIncrementalCONGENTaskPreparation()
-                output = preparation.prepare(model)
-                task = output.task
-
-                checker = NonIncrementalPySATChecker(self.solver_name, profiler)
+                checker = NonIncrementalPySATChecker(
+                    task.set_kb, task.assumptions, self.solver_name, profiler
+                )
 
             # Run CONGEN
             congen = CONGEN(checker, profiler)

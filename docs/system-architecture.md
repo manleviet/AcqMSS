@@ -14,7 +14,8 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Core Acquisition Algorithms (acqmss/)                       │
-│ ├─ CONGEN: GenerateNE → ACQMSS → REDUCE                     │
+│ ├─ CONGEN: ACQMSS → REDUCE (GenerateNE pre-computed)        │
+│ ├─ GenerateNE: Create negated examples (called by caller)   │
 │ ├─ QuAcq: GenerateQuery → Oracle → Update KB                │
 │ ├─ Bias generation from feature models                      │
 │ ├─ Example generation (RS, FF, 2-COV strategies)            │
@@ -73,13 +74,14 @@ result = learner.learn(mode='automated')  # → KB + query history
 
 **Algorithms**:
 1. **CONGEN** — Passive constraint acquisition
-   - Input: Bias (candidate constraints), E+ (valid configs), E- (invalid configs)
-   - Process: GenerateNE → ACQMSS → REDUCE
+   - Input: Bias (candidate constraints), E+ (valid configs), pre-computed NE
+   - Process: ACQMSS → REDUCE (NE pre-computed by caller)
    - Output: KB (learned constraint set)
 
 2. **GenerateNE** — Create negated examples from negatives
    - Convert E- to their logical negation (for conflict detection)
-   - Required by ACQMSS to find MSS
+   - Called by callers before CONGEN; results merged into task via `merge_ne_into_task()`
+   - Immutable after caller runs it (no mutations on checker)
 
 3. **ACQMSS** — Divide-and-conquer maximum satisfiable subset finding
    - Recursively partition bias constraints
@@ -193,13 +195,30 @@ class DiagnosisModel:
         self.assumptions: list[int]      # Unit assumptions
         self.solver: Solver              # PySAT solver instance
 
-class CONGENTask:
-    """Task representation for CONGEN."""
-    def __init__(self, diagnosis_model, bias, examples):
-        self.set_kb: DiagnosisModel      # Set KB (bias)
-        self.positive_examples: list     # E+
-        self.negative_examples: list     # E-
-        self.split_diff_utils: dict      # CNF diff utilities
+class DiagnosisTask:
+    """Base task representation with assumptions.
+
+    The root class now holds the assumptions field, eliminating redundant
+    incremental/non-incremental subclasses.
+    """
+    def __init__(self, ...):
+        self.assumptions: list[int]      # Control literals (moved from subclasses)
+        self.set_kb: list[list[int]]     # CNF clauses with assumption literals
+
+class TestCaseTask(DiagnosisTask):
+    """Task with test case fields."""
+    # Inherits assumptions from DiagnosisTask
+
+class CONGENTask(TestCaseTask):
+    """Task representation for CONGEN - unified assumption-based format."""
+    def __init__(self, ...):
+        self.set_c: list[int]            # Bias constraint assumption IDs
+        self.set_tc: list[int]           # Positive example (E+) assumption IDs
+        self.set_tv: list[int]           # Negative example (E-) assumption IDs
+        self.set_ne: list[int]           # Negated example (NE) assumption IDs
+        self.set_b: list[int]            # Background (BG) assumption IDs
+        self.neg_c_map: Dict[int, int]   # Negation map: assumption_id → negated_id
+        self.e_neg_literals: list[list[int]]  # Raw E- literals for GenerateNE
 
 class InteractiveTask:
     """Task state for QuAcq interactive learning."""
@@ -238,6 +257,7 @@ class InteractiveRunResult:
 **Construction**:
 ```python
 from explanation.models import DiagnosisModelBuilder, TaskPreparation
+from acqmss.algorithms import CONGENTaskPreparation
 
 # Builder pattern
 model = (DiagnosisModelBuilder()
@@ -245,8 +265,8 @@ model = (DiagnosisModelBuilder()
          .with_solver('glucose4')
          .build())
 
-# Task preparation
-prep = IncrementalCONGENTaskPreparation()
+# Task preparation (unified for both incremental/non-incremental)
+prep = CONGENTaskPreparation()  # mode_name defaults to "congen"
 task = prep.prepare(model).task
 ```
 
@@ -256,36 +276,65 @@ task = prep.prepare(model).task
 
 ```python
 class ConsistencyChecker(ABC):
-    """Abstract SAT checker interface."""
+    """Abstract SAT checker interface (immutable after construction).
+
+    Checkers are read-only after creation. No add_clause/add_assumption mutations.
+    GenerateNE runs separately before CONGEN, results merged via merge_ne_into_task().
+    """
 
     @abstractmethod
-    def is_consistent(self, clauses) -> bool:
-        """Check satisfiability."""
+    def is_consistent(self, set_c: List[int]) -> bool:
+        """Check if set_c (assumption IDs) are consistent with KB.
+
+        All checkers use unified assumption-based data representation:
+        - set_c: List[int] - assumption IDs to enable
+        - set_kb: CNF clauses with assumption literals
+        - assumptions: List of all possible assumption IDs
+        """
         pass
 
 class IncrementalPySATChecker(ConsistencyChecker):
-    """Persistent solver with assumptions.
+    """Persistent solver with assumption-based solving.
 
     - Reuses solver instance across calls
     - Fast hypothesis testing via assumptions
     - ~50x faster than non-incremental
+
+    Note: The assumptions parameter comes from DiagnosisTask.assumptions
+    (moved to root class from 6 former subclasses).
     """
-    def is_consistent(self, clauses):
-        self.solver.add_clause(clause)
-        return self.solver.solve()
+    def __init__(self, set_kb: List[List[int]], assumptions: List[int], ...):
+        self.solver = Solver()
+        self.set_kb = set_kb
+        self.assumptions = assumptions  # From DiagnosisTask.assumptions
+
+    def is_consistent(self, set_c: List[int]):
+        # set_c: assumption IDs to enable
+        # Compute final assumptions: enable set_c, disable others
+        return self.solver.solve(assumptions=final_assumptions)
 
 class NonIncrementalPySATChecker(ConsistencyChecker):
-    """Fresh solver per call.
+    """Fresh solver per call with assumption-based data.
 
     - Create new solver instance each time
-    - Memory-light, baseline for comparison
+    - Uses same assumption-based representation as IncrementalPySATChecker
+    - Memory-light baseline for comparison
     - Slower but clearer isolation
+
+    Note: The assumptions parameter comes from DiagnosisTask.assumptions
+    (moved to root class from 6 former subclasses).
     """
-    def is_consistent(self, clauses):
-        solver = Solver()  # New instance
-        for clause in clauses:
-            solver.add_clause(clause)
-        return solver.solve()
+    def __init__(self, set_kb: List[List[int]], assumptions: List[int],
+                 solver_name: str = 'glucose3'):
+        self.set_kb = set_kb           # CNF clauses with assumption literals
+        self.assumptions = assumptions  # From DiagnosisTask.assumptions
+
+    def is_consistent(self, set_c):
+        # set_c: assumptions to enable (List[int])
+        # Compute delta: assumptions NOT in set_c
+        # Create solver with KB, then check B ∪ C
+        solver = Solver(self.solver_name, bootstrap_with=self.set_kb)
+        return solver.solve(assumptions=final_assumptions)
 
 class SAT4JChecker(ConsistencyChecker):
     """External Java SAT4J solver.
@@ -504,30 +553,42 @@ CrossValidationResult: Mean accuracy ± std, per-fold KB, intersected KB
 ```
 Feature Model (UVL)
     ↓
-    ├─→ BiasGenerator ──→ Bias Constraints (JSON)
+    ├─→ BiasGenerator ──→ Bias Constraints (JSON, as assumption IDs)
     │                     ├─ Hierarchical
     │                     └─ Cross-tree
     │
     ├─→ ExampleGenerator (RS/FF/2-COV) ──→ E+ (valid), E- (invalid)
     │
-    └─→ CONGEN Algorithm
-        ├─ GenerateNE: E- → NE (negated examples)
-        │   └─ Goal: Create conflicts for MSS finding
-        │
+    ├─→ TaskPreparation (mode-agnostic unified representation)
+    │   └─ set_kb: CNF with assumption literals
+    │   └─ set_c: Bias assumption IDs
+    │   └─ set_tc: E+ assumption IDs
+    │   └─ set_tv: E- assumption IDs
+    │
+    ├─→ GenerateNE: E- → NE (assumption IDs, called BEFORE CONGEN)
+    │   └─ Output: Negated example assumption IDs
+    │   └─ Merged into task via merge_ne_into_task()
+    │
+    └─→ CONGEN Algorithm (Incremental OR NonIncremental, same code)
         ├─ ACQMSS: Bias → MSS
-        │   ├─ Input: Bias constraints, E+, E-, NE
+        │   ├─ Input: Assumption IDs + ConsistencyChecker
         │   ├─ Process: KBDiag (divide-and-conquer)
-        │   └─ Output: Maximum satisfiable subset
+        │   └─ Output: Assumption IDs of MSS
         │
-        └─ REDUCE: MSS → KB (clean result)
+        └─ REDUCE: MSS → KB (assumption IDs)
             ├─ Iterate over MSS
-            ├─ Check necessity of each constraint
-            └─ Output: Minimal KB (no redundancy)
+            ├─ Check necessity via is_consistent()
+            └─ Output: Assumption IDs of minimal KB
 
 Result: Learned constraint set (KB)
         └─ Compare against ground truth (Bias)
             └─ Accuracy/Precision/Recall metrics
 ```
+
+**Mode-Agnostic Design**: CONGEN, ACQMSS, and REDUCE contain no
+`if is_incremental` branching. All data is assumption-based (List[int]);
+the ConsistencyChecker implementation determines solver lifecycle.
+GenerateNE is called separately by callers before CONGEN.
 
 ### QuAcq Interactive/Batch Flow
 
@@ -635,44 +696,46 @@ Result: feature_ids matches SAT variable IDs in CNF
 #### Incremental Mode (Default)
 
 ```python
-checker = IncrementalPySATChecker(solver, profiler=None)
+# Create checker with pre-built KB (immutable after construction)
+set_kb = [[1, -2, 3], [-1, 4]]  # CNF clauses with assumption literals
+assumptions = [5, 6, 7]          # Control literals for constraints
+checker = IncrementalPySATChecker(set_kb, assumptions, profiler=None)
 
-# Persistent solver
-solver = Solver('glucose4')
-solver.add_clause([1, -2])  # Add clause
-result = solver.solve()     # Solve
-result = solver.solve()     # Reuse solver (fast)
-
-# With assumptions
-result = solver.solve([3])  # Add temporary unit clause
-result = solver.solve([4])  # Reuse, different assumption (fast)
+# Persistent solver reuses state across hypothesis tests
+# Checkers are immutable: GenerateNE runs before CONGEN, results merged via merge_ne_into_task()
+result = checker.is_consistent([5, 6])     # Consistent with assumptions 5,6
+result = checker.is_consistent([5])        # Reuse solver, different assumption (fast)
 ```
 
 **Advantages**:
 - ~50x faster for repeated SAT checks
 - Persistent state across calls
-- Assumptions enable efficient hypothesis testing
+- Assumptions enable efficient hypothesis testing without solver re-initialization
+
+**Note**: Checkers are read-only after construction. No `add_clause()` or `add_assumption()` mutations. GenerateNE output is merged into task before checker creation via `merge_ne_into_task()`.
 
 **Use Case**: CONGEN with many consistency checks
 
 #### Non-Incremental Mode
 
 ```python
-checker = NonIncrementalPySATChecker(solver_factory, profiler=None)
+# Prepare once (same KB + assumptions for all checks)
+set_kb = [[1, -2, 3], [-1, 4]]  # CNF clauses with assumption literals
+assumptions = [5, 6, 7]          # Assumption IDs that control constraints
+checker = NonIncrementalPySATChecker(set_kb, assumptions, profiler=None)
 
-# Fresh solver per call
+# Fresh solver per call, but same assumption-based data
 for hypothesis in hypotheses:
-    solver = Solver('glucose4')  # New instance
-    solver.add_clause([1, -2])
-    result = solver.solve()  # Check hypothesis
+    result = checker.is_consistent(hypothesis)  # New solver, reuse KB
 ```
 
 **Advantages**:
-- Memory-light (no persistent state)
+- Memory-light (no persistent solver state)
 - Clear isolation between checks
-- Good for verification
+- Same assumption-based representation as incremental
+- Good for verification and baseline comparison
 
-**Use Case**: Baseline comparison, memory-constrained environments
+**Use Case**: Baseline comparison, memory-constrained environments, validation
 
 #### SAT4J Mode (Optional)
 

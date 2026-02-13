@@ -165,11 +165,11 @@ Tests use `@parameterized.expand` with combinations of incremental/non-increment
 
 **CONGEN usage**:
 ```python
-from acqmss.algorithms import CONGEN, CONGENModel, IncrementalCONGENTaskPreparation
+from acqmss.algorithms import CONGEN, CONGENModel, CONGENTaskPreparation
 from explanation.operations.algorithms.checker import IncrementalPySATChecker
 
 model = CONGENModel.from_bias_and_examples(bias_constraints, pos_examples, neg_examples, feature_ids)
-preparation = IncrementalCONGENTaskPreparation()
+preparation = CONGENTaskPreparation()  # mode_name defaults to "congen"
 task = preparation.prepare(model).task
 checker = IncrementalPySATChecker(task.set_kb, task.assumptions, 'glucose4', profiler)
 congen = CONGEN(checker, profiler)

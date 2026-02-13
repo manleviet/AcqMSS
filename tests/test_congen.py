@@ -14,9 +14,9 @@ from acqmss.bias import BiasIO
 from acqmss.algorithms import (
     CONGEN, ACQMSS, Reduce, GenerateNE,
     CONGENModel,
-    IncrementalCONGENTaskPreparation,
-    NonIncrementalCONGENTaskPreparation
+    CONGENTaskPreparation
 )
+from acqmss.algorithms.generate_ne import merge_ne_into_task
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
     NonIncrementalPySATChecker
@@ -98,19 +98,33 @@ def create_checker_and_task(oracle, bias, examples, is_incremental=True):
 
     profiler = get_global_profiler()
 
+    mode = "incremental-congen" if is_incremental else "non-incremental-congen"
+    preparation = CONGENTaskPreparation(mode)
+
+    output = preparation.prepare(model)
+    task = output.task
+
+    # Run GenerateNE with temp checker (read-only QXP calls)
+    temp_checker = NonIncrementalPySATChecker(
+        task.set_kb, task.assumptions, 'glucose4', profiler
+    )
+    generate_ne = GenerateNE(temp_checker, profiler)
+    ne_result = generate_ne.generate(
+        set_e_neg=task.e_neg_literals,
+        set_bg=task.set_b,
+        start_assumption_id=task.next_assumption_id
+    )
+    merge_ne_into_task(task, ne_result)
+
+    # Create final checker with complete data (including NE)
     if is_incremental:
-        preparation = IncrementalCONGENTaskPreparation()
-        output = preparation.prepare(model)
-        task = output.task
         checker = IncrementalPySATChecker(
             task.set_kb, task.assumptions, 'glucose4', profiler
         )
     else:
-        preparation = NonIncrementalCONGENTaskPreparation()
-        output = preparation.prepare(model)
-        task = output.task
-        # NonIncrementalPySATChecker doesn't take KB - creates fresh solver per check
-        checker = NonIncrementalPySATChecker('glucose4', profiler)
+        checker = NonIncrementalPySATChecker(
+            task.set_kb, task.assumptions, 'glucose4', profiler
+        )
 
     return checker, task, profiler, root_id
 
@@ -160,8 +174,8 @@ class TestCONGEN:
         )
 
         try:
-            # Verify root in set_b (non-incremental: List[List[List[int]]] clause lists)
-            assert [[root_id]] in task.set_b, "Root should be in set_b"
+            # Verify root in set_b (assumption ID, same as incremental)
+            assert root_id in task.set_b, "Root should be in set_b"
 
             congen = CONGEN(checker, profiler)
             result = congen.acquire(task)
@@ -283,9 +297,11 @@ class TestGenerateNE:
 
         try:
             generate_ne = GenerateNE(checker)
-            result = generate_ne.generate_from_examples([], [])
+            result = generate_ne.generate([], [])
 
-            assert result == []
+            assert result.assumption_ids == []
+            assert result.new_clauses == []
+            assert result.new_assumptions == []
         finally:
             checker.cleanup()
 
