@@ -413,7 +413,7 @@ class TestIntegration:
 
     def test_accuracy_with_real_examples(self):
         """Test accuracy calculation with real examples."""
-        from acqmss.testcases import ExampleIO
+        from acqmss.examples import ExampleIO
 
         bias = BiasData.from_json(BIAS_PATH)
         examples = ExampleIO.load_json(EXAMPLES_RS_1N_PATH)

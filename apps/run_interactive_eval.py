@@ -36,7 +36,7 @@ from acqmss.eval import (
     generate_cv_report,
     save_cv_kb_files,
 )
-from acqmss.testcases import ExampleIO
+from acqmss.examples import ExampleIO
 from explanation.operations.algorithms.profiler import (
     use_global_profiler,
     ProfilerPreset

@@ -73,7 +73,7 @@ class TestSuite(VariabilityModel):
         self.testcases = testcases
 
     # def get_selected_elements(self) -> list[Any]:
-    #     return [e for e in self.testcases if self.testcases[e]]
+    #     return [e for e in self.examples if self.examples[e]]
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, TestSuite):

@@ -164,15 +164,15 @@ class Resources:
     CONF_TESTCASE = os.path.join(RESOURCES_DIR, "smartwatch_testcase.csvconf")
     # for test cases
     FM_10_1 = os.path.join(RESOURCES_DIR, "FM_10_1.uvl")
-    FM_10_1_POSITIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_1.positive.testcases")
-    FM_10_1_NEGATIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_1.negative.testcases")
+    FM_10_1_POSITIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_1.positive.examples")
+    FM_10_1_NEGATIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_1.negative.examples")
     FM_10_2 = os.path.join(RESOURCES_DIR, "FM_10_2.uvl")
-    FM_10_2_POSITIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.positive.testcases")
-    FM_10_2_NEGATIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.negative.testcases")
+    FM_10_2_POSITIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.positive.examples")
+    FM_10_2_NEGATIVE_TESTCASES = os.path.join(RESOURCES_DIR, "FM_10_2.negative.examples")
     # For WipeOutR_FM tests
     FM_REDUNDANT = os.path.join(RESOURCES_DIR, "redundant_fm.uvl")
     # For WipeOutR_T tests
-    REDUNDANT_TESTSUITE = os.path.join(RESOURCES_DIR, "redundant_testsuite.testcases")
+    REDUNDANT_TESTSUITE = os.path.join(RESOURCES_DIR, "redundant_testsuite.examples")
 
 # =============================================================================
 # HELPER FUNCTIONS

@@ -22,7 +22,7 @@ except ImportError:
     import tomli as tomllib
 
 from acqmss.oracle import FeatureModelOracle
-from acqmss.testcases import (
+from acqmss.examples import (
     BalancedRandomSamplingGenerator,
     ControlledRandomSamplingGenerator,
     FeatureFrequencyGenerator,

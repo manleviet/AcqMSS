@@ -10,7 +10,7 @@ from pathlib import Path
 from parameterized import parameterized
 
 from acqmss.oracle import FeatureModelOracle
-from acqmss.testcases import ExampleIO
+from acqmss.examples import ExampleIO
 from acqmss.bias import BiasIO
 from acqmss.algorithms import (
     CONGEN, ACQMSS, Reduce, GenerateNE,

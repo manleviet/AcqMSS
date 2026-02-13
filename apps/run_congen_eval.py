@@ -39,7 +39,7 @@ from acqmss.eval import (
     load_folds,
 )
 from acqmss.oracle import FeatureModelOracle
-from acqmss.testcases import ExampleIO
+from acqmss.examples import ExampleIO
 
 
 @dataclass

@@ -231,7 +231,7 @@ class DiagnosisModelBuilder:
         return self
 
     def with_testcases(self, testcases: TestSuite) -> 'DiagnosisModelBuilder':
-        """Set testcases for redundancy detection.
+        """Set examples for redundancy detection.
 
         Args:
             testcases: TestSuite of test cases.
