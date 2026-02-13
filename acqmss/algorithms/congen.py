@@ -1,12 +1,14 @@
 """
 CONGEN Constraint Acquisition Algorithm.
 
-Main algorithm that orchestrates GenerateNE, ACQMSS and REDUCE to
-acquire a knowledge base from positive and negative examples.
+Orchestrates ACQMSS and REDUCE to acquire a knowledge base from
+positive examples and pre-computed NE constraints.
 
-Reference: Paper Algorithm 1
-    CONGEN(E+, E-, B, BG) → KB
-    1: NE ← GENERATENE(E⁻)
+NE generation is performed by callers before invoking CONGEN.
+CONGEN receives pre-computed NE via task.set_ne.
+
+Reference: Paper Algorithm 1 (steps 2-9, NE pre-computed)
+    CONGEN(E+, NE, B, BG) → KB
     2: B′ ← ∅
     3: if IsConsistent(E⁺, NE, BG) then
     4:   B′ ← ACQMSS(∅, B, NE, E⁺, BG)
@@ -16,23 +18,19 @@ Reference: Paper Algorithm 1
     8: end if
     9: return (REDUCE(B′, NE, BG))
 
-Pattern follows KBDiag from the explanation package.
+Mode-agnostic: works identically regardless of checker type.
 """
 
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 
 from .acqmss import ACQMSS
 from .reduce import Reduce
-from .generate_ne import GenerateNE, NEResult
-from .task import CONGENTask, IncrementalCONGENTask, NonIncrementalCONGENTask
-from explanation.operations.algorithms.checker import (
-    ConsistencyChecker,
-    IncrementalPySATChecker
-)
+from .task_preparation import CONGENTask
+from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
@@ -55,31 +53,8 @@ class CONGEN:
     """
     CONGEN constraint acquisition algorithm.
 
-    Pattern follows KBDiag from explanation module.
-
-    Algorithm (Paper Algorithm 1):
-        CONGEN(E+, E-, B, BG) → KB
-        1: NE ← GENERATENE(E⁻)
-        2: B′ ← ∅
-        3: if IsConsistent(E⁺, NE, BG) then
-        4:   B′ ← ACQMSS(∅, B, NE, E⁺, BG)
-        5: else
-        6:   print "examples inconsistent"
-        7:   return (∅)
-        8: end if
-        9: return (REDUCE(B′, NE, BG))
-
-    Task fields:
-    - set_c = Bias (B)
-    - set_b = Background (BG)
-    - set_tc = Positive examples (E+)
-    - e_neg_literals = E⁻ literals for GenerateNE
-    - set_neg_tv = NE (created by GenerateNE in this method)
-    - neg_c_map = Negation map for REDUCE
-
-    Args:
-        checker: ConsistencyChecker instance for SAT solving
-        profiler_instance: Optional profiler for metrics tracking
+    Mode-agnostic: all data is assumption-based (List[int]).
+    The checker implementation determines solver lifecycle.
     """
 
     def __init__(self, checker: ConsistencyChecker,
@@ -87,7 +62,6 @@ class CONGEN:
         self.checker = checker
         self.profiler = profiler_instance if profiler_instance is not None else get_global_profiler()
         self.result: Optional[CONGENResult] = None
-        self._is_incremental = isinstance(checker, IncrementalPySATChecker)
 
     @measure_time('congen_runtime')
     @count_calls('congen_calls')
@@ -95,54 +69,24 @@ class CONGEN:
         """
         Acquire knowledge base from prepared task.
 
-        Implements Paper Algorithm 1 exactly:
-        1. NE ← GENERATENE(E⁻)
+        NE must be pre-computed by caller and stored in task.set_ne.
+        Implements Paper Algorithm 1 steps 2-9:
         2. if IsConsistent(E⁺, NE, BG) then B′ ← ACQMSS(...)
         3. return REDUCE(B′, NE, BG)
 
         Args:
-            task: CONGENTask with:
-                - set_c: Bias constraints (B)
-                - set_b: Background knowledge (BG)
-                - set_tc: Positive examples (E+)
-                - e_neg_literals: E⁻ literals for GenerateNE
+            task: CONGENTask with set_c, set_b, set_tc, set_ne populated
 
         Returns:
             CONGENResult with acquired KB
         """
-        logging.debug('>>> CONGEN [B=%d, E⁻=%d, E+=%d, BG=%d]',
-                      len(task.set_c), len(task.e_neg_literals),
+        # NE is pre-computed by caller and stored in task.set_ne
+        set_ne = task.set_ne
+        logging.debug('>>> CONGEN [B=%d, NE=%d, E+=%d, BG=%d]',
+                      len(task.set_c), len(set_ne),
                       len(task.set_tc), len(task.set_b))
 
-        # Step 1: NE ← GENERATENE(E⁻)
-        # Uses QuickXPlain to find minimal conflict sets
-        generate_ne = GenerateNE(self.checker, self.profiler)
-        ne_result = generate_ne.generate(
-            set_e_neg=task.e_neg_literals,
-            set_bg=task.set_b,
-            start_assumption_id=task.next_assumption_id
-        )
-
-        # Get NE in appropriate format
-        if self._is_incremental:
-            set_ne = ne_result.assumption_ids
-            # Update task mappings for result formatting
-            for ne_id in ne_result.assumption_ids:
-                task.assumption_to_constraint[ne_id] = f"ne_{ne_id}"
-        else:
-            set_ne = ne_result.clause_lists
-            # Update task mappings for non-incremental mode
-            for ne_clauses in ne_result.clause_lists:
-                ne_key = tuple(tuple(c) for c in ne_clauses)
-                task.clauses_to_name[ne_key] = f"ne_{ne_key}"
-
-        # Merge NE neg_map into task for REDUCE
-        task.neg_c_map.update(ne_result.neg_map)
-
-        logging.debug('GENERATENE: %d NE constraints', len(set_ne))
-
         # Step 3: if IsConsistent(E⁺, NE, BG) then
-        # Check if each E+ is consistent with NE ∪ BG
         inconsistent = self.checker.is_consistent_test_cases(
             set_ne + task.set_b,  # NE ∪ BG
             task.set_tc,  # E+
@@ -151,16 +95,8 @@ class CONGEN:
         self.profiler.increment("paper_consistency_checks")
 
         if len(inconsistent) > 0:
-            # Step 6-7: print "examples inconsistent", return (∅)
             logging.debug('<<< CONGEN return Φ (E+ inconsistent with NE ∪ BG)')
-            # Extract BG clauses even for error path
-            bg = []
-            if self._is_incremental:
-                bg = [[lit] for lit in task.set_b]
-            else:
-                for clause_list in task.set_b:
-                    for clause in clause_list:
-                        bg.append(clause)
+            bg_clauses = [[lit] for lit in task.set_b]
 
             self.result = CONGENResult(
                 kb_constraints=[],
@@ -169,7 +105,7 @@ class CONGEN:
                 n_bias=len(task.set_c),
                 n_mss=0,
                 n_kb=0,
-                bg_clauses=bg,
+                bg_clauses=bg_clauses,
                 metadata={'error': 'E+ inconsistent with NE ∪ BG'}
             )
             return self.result
@@ -178,10 +114,10 @@ class CONGEN:
         acqmss = ACQMSS(self.checker, m=1, profiler_instance=self.profiler)
         b_prime = acqmss.find_mss(
             delta=[],
-            set_b=task.set_c,    # Bias B
-            set_ne=set_ne,       # NE
-            set_e_pos=task.set_tc,  # E+
-            set_bg=task.set_b    # BG
+            set_b=task.set_c,
+            set_ne=set_ne,
+            set_e_pos=task.set_tc,
+            set_bg=task.set_b
         )
         logging.debug('ACQMSS: MSS size = %d', len(b_prime))
 
@@ -199,16 +135,8 @@ class CONGEN:
         kb_names = [task.get_constraint_name(a) for a in kb]
         redundant_names = [task.get_constraint_name(a) for a in redundant]
 
-        # Extract BG clauses for evaluation
-        bg_clauses: List[List[int]] = []
-        if self._is_incremental:
-            # Incremental: set_b contains assumption IDs (ints), each is a unit clause
-            bg_clauses = [[lit] for lit in task.set_b]
-        else:
-            # Non-incremental: set_b contains clause lists (List[List[List[int]]])
-            for clause_list in task.set_b:
-                for clause in clause_list:
-                    bg_clauses.append(clause)
+        # Extract BG clauses (unified: set_b contains assumption IDs)
+        bg_clauses = [[lit] for lit in task.set_b]
 
         self.result = CONGENResult(
             kb_constraints=kb_names,
@@ -221,7 +149,6 @@ class CONGEN:
             metadata={
                 'n_ne': len(set_ne),
                 'n_e_pos': len(task.set_tc),
-                'n_e_neg': len(task.e_neg_literals),
             }
         )
 

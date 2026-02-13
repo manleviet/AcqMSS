@@ -377,31 +377,63 @@ class QuAcq:
             solver.delete()
 
     def _reduce_kb(self, task: InteractiveTask) -> List[str]:
-        """Apply REDUCE to remove redundant constraints from learned KB."""
+        """Apply REDUCE to remove redundant constraints from learned KB.
+
+        Builds assumption-based data for NonIncrementalPySATChecker,
+        runs Reduce with Dict[int, int] neg_map, then maps back to names.
+        """
         if not task.learned_kb:
             return []
 
-        checker = NonIncrementalPySATChecker(self.solver_name, self.profiler)
-        reduce = Reduce(checker, self.profiler)
-
-        set_b_prime = [task.constraint_map[c_id] for c_id in task.learned_kb
-                       if c_id in task.constraint_map]
-
         neg_map = {}
-        for c_id in task.learned_kb:
-            if c_id in task.constraint_map and c_id in task.negated_constraint_map:
-                clauses = task.constraint_map[c_id]
-                key = tuple(tuple(c) for c in clauses)
-                neg_map[key] = task.negated_constraint_map[c_id]
+        id_to_name = {}
+        set_kb = []
+        assumptions = []
+        set_b_prime = []
+        assumption_counter = 1
 
+        for c_id in task.learned_kb:
+            if c_id not in task.constraint_map:
+                continue
+            if c_id not in task.negated_constraint_map:
+                continue
+
+            clauses = task.constraint_map[c_id]
+            neg_clauses = task.negated_constraint_map[c_id]
+
+            # Embed original constraint with assumption
+            orig_id = assumption_counter
+            assumption_counter += 1
+            for clause in clauses:
+                set_kb.append(clause + [-orig_id])
+            assumptions.append(orig_id)
+            set_b_prime.append(orig_id)
+            id_to_name[orig_id] = c_id
+
+            # Embed negated constraint with assumption
+            neg_id = assumption_counter
+            assumption_counter += 1
+            for neg_clause in neg_clauses:
+                set_kb.append(neg_clause + [-neg_id])
+            assumptions.append(neg_id)
+
+            neg_map[orig_id] = neg_id
+
+        # BG as assumptions
         set_bg = []
         if task.background:
-            if task.background and isinstance(task.background[0], int):
-                set_bg = [[[lit]] for lit in task.background]
-            else:
-                set_bg = [[c] for c in task.background]
+            for lit in task.background:
+                bg_id = assumption_counter
+                assumption_counter += 1
+                set_kb.append([lit, -bg_id])
+                assumptions.append(bg_id)
+                set_bg.append(bg_id)
+
+        checker = NonIncrementalPySATChecker(
+            set_kb, assumptions, self.solver_name, self.profiler)
 
         try:
+            reduce = Reduce(checker, self.profiler)
             redundant, non_redundant = reduce.reduce(
                 set_b_prime=set_b_prime,
                 set_ne=[],
@@ -409,19 +441,8 @@ class QuAcq:
                 neg_map=neg_map
             )
 
-            non_redundant_ids = []
-            clause_to_id = {}
-            for c_id in task.learned_kb:
-                if c_id in task.constraint_map:
-                    key = tuple(tuple(c) for c in task.constraint_map[c_id])
-                    clause_to_id[key] = c_id
-
-            for clauses in non_redundant:
-                key = tuple(tuple(c) for c in clauses)
-                if key in clause_to_id:
-                    non_redundant_ids.append(clause_to_id[key])
-
-            return non_redundant_ids
+            # Map back to constraint names
+            return [id_to_name[a] for a in non_redundant if a in id_to_name]
 
         except Exception as e:
             logging.warning('REDUCE failed: %s, returning learned KB as-is', e)
