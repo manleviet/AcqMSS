@@ -47,7 +47,7 @@ class ModelConfig:
     name: str
     oracle: str
     bias: str
-    result: str = None
+    result: str = None  # TODO: necessary?
     examples: str = None
     folds_path: str = None
 
@@ -66,7 +66,7 @@ def parse_models(config: Dict) -> List[ModelConfig]:
             name=m.get('name', 'unknown'),
             oracle=m['oracle'],
             bias=m['bias'],
-            result=m.get('result'),
+            result=m.get('result'),  # TODO: necessary?
             examples=m.get('examples'),
             folds_path=m.get('folds_path')
         )
@@ -123,6 +123,7 @@ def evaluate_model(
         n_folds = eval_config.get('n_folds', 0)
         solver_name = eval_config.get('solver_name', 'glucose4')
         seed = eval_config.get('seed', 42)
+        shuffle_bias = eval_config.get('shuffle_bias', False)
 
         print(f"\n{'=' * 60}")
         print(f"Evaluating: {model_name}")
@@ -139,6 +140,7 @@ def evaluate_model(
                 print(f"  Examples: {model_config.examples}")
             if model_config.folds_path:
                 print(f"  Folds: {model_config.folds_path}")
+            print(f"  Solver: {solver_name}, Seed: {seed}, Shuffle bias: {shuffle_bias}")
 
         # Load bias data
         bias = BiasData.from_json(Path(model_config.bias))
@@ -217,7 +219,6 @@ def evaluate_model(
 
             # Load pre-generated folds if path provided (per-model)
             fold_data = None
-            shuffle_bias = eval_config.get('shuffle_bias', False)
             if model_config.folds_path:
                 if Path(model_config.folds_path).exists():
                     fold_data = load_folds(model_config.folds_path)
@@ -325,7 +326,10 @@ Example:
     print(f"Models: {len(models)}")
     print(f"Strategies: {[s.value for s in strategies]}")
     print(f"Solver modes: {['incremental' if m else 'non-incremental' for m in solver_modes]}")
+    print(f"Solver: {eval_config.get('solver_name', 'glucose4')}")
     print(f"CV Folds: {eval_config.get('n_folds', 0)}")
+    print(f"Seed: {eval_config.get('seed', 42)}")
+    print(f"Shuffle bias: {eval_config.get('shuffle_bias', False)}")
 
     # Evaluate each model
     success_count = 0
