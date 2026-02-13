@@ -145,7 +145,10 @@ class TestCONGEN:
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
             if result.kb_constraints:
-                print(f"  Constraints: {result.kb_constraints[:5]}...")
+                for c in result.kb_constraints:
+                    # print constraints by bias.get_constraint_by_id() for readability
+                    constraint = bias.get_constraint_by_id(c)
+                    print(f"  Constraint: {constraint} (ID: {c})")
 
         finally:
             checker.cleanup()
@@ -177,6 +180,12 @@ class TestCONGEN:
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
 
+            if result.kb_constraints:
+                for c in result.kb_constraints:
+                    # print constraints by bias.get_constraint_by_id() for readability
+                    constraint = bias.get_constraint_by_id(c)
+                    print(f"  Constraint: {constraint} (ID: {c})")
+
         finally:
             checker.cleanup()
 
@@ -204,6 +213,12 @@ class TestCONGEN:
             print(f"  Bias: {result.n_bias}")
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
+
+            if result.kb_constraints:
+                for c in result.kb_constraints:
+                    # print constraints by bias.get_constraint_by_id() for readability
+                    constraint = bias.get_constraint_by_id(c)
+                    print(f"  Constraint: {constraint} (ID: {c})")
 
         finally:
             checker.cleanup()

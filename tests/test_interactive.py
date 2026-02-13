@@ -266,7 +266,7 @@ class TestQuAcq:
         quacq = QuAcq()
         assert quacq.solver_name == 'glucose4'
 
-    def test_quacq_learn_with_limit(self, interactive_task, oracle):
+    def test_quacq_learn_with_limit(self, interactive_task, oracle, bias):
         """Test QuAcq learning with query limit."""
         # Use a small query limit for testing
         quacq = QuAcq()
@@ -281,6 +281,12 @@ class TestQuAcq:
         print(f"  Queries: {result.n_queries}")
         print(f"  KB size: {result.n_kb}")
         print(f"  Convergence: {result.convergence_reason}")
+
+        if result.kb_constraints:
+            for c in result.kb_constraints:
+                # print constraints by bias.get_constraint_by_id() for readability
+                constraint = bias.get_constraint_by_id(c)
+                print(f"  Constraint: {constraint} (ID: {c})")
 
     def test_quacq_empty_bias(self, oracle):
         """Test QuAcq with empty bias converges immediately."""
