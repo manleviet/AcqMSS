@@ -206,7 +206,8 @@ def print_profiler_status(profiler):
 def create_checker(use_sat4j: bool, model: DiagnosisModel):
     """Create appropriate checker based on configuration."""
     if use_sat4j:
-        return CheckerFactory.create_sat4jchecker()
+        return CheckerFactory.create_sat4jchecker(
+            set_kb=model.get_kb(), assumptions=model.get_assumptions())
     return CheckerFactory.create_from_model(model)
 
 def skip_if_disabled(test_name: str):
@@ -1172,7 +1173,7 @@ def test_wipeoutr_fm_redundancy(name, is_incremental, solver_name, use_sat4j, en
       - FeatureB (mandatory)
       - FeatureC (optional)
     - Constraint 0: RedundantFM => FeatureA (REDUNDANT - FeatureA is already mandatory)
-    - Constraint 1: FeatureC => FeatureB (NOT redundant)
+    - Constraint 1: FeatureC <=> FeatureB (NOT redundant)
     """
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
@@ -1215,8 +1216,8 @@ def test_wipeoutr_fm_redundancy(name, is_incremental, solver_name, use_sat4j, en
         profiler.print_summary(include_raw_timers=True)
 
         assert len(result) == 2, f"Expected 2 lists (redundant and non-redundant), got {len(result)}"
-        assert result[0] == 'Redundant constraints: [(Constraint 1) IMPLIES[FeatureC][FeatureB], (Constraint 0) IMPLIES[RedundantFM][FeatureA]]'
-        assert result[1] == 'Non-redundant constraints: [(optional) RedundantFM[0,1]FeatureC , (mandatory) RedundantFM[1,1]FeatureB , (mandatory) RedundantFM[1,1]FeatureA ]'
+        assert result[0] == 'Redundant constraints: [(Constraint 0) IMPLIES[RedundantFM][FeatureA]]'
+        assert result[1] == 'Non-redundant constraints: [(Constraint 1) OR[NOT[FeatureC][]][NOT[FeatureB][]], (optional) RedundantFM[0,1]FeatureC , (mandatory) RedundantFM[1,1]FeatureB , (mandatory) RedundantFM[1,1]FeatureA ]'
 
 
 @parameterized.expand(STANDARD_PARAMS)
@@ -1230,7 +1231,7 @@ def test_pysat_redundancy_constraints(name, is_incremental, solver_name, use_sat
       - FeatureB (mandatory)
       - FeatureC (optional)
     - Constraint 0: RedundantFM => FeatureA (REDUNDANT - FeatureA is already mandatory)
-    - Constraint 1: FeatureC => FeatureB (NOT redundant)
+    - Constraint 1: FeatureC <=> FeatureB (NOT redundant)
 
     This test verifies the PySATRedundancyConstraints operation wrapper.
     """
@@ -1280,8 +1281,8 @@ def test_pysat_redundancy_constraints(name, is_incremental, solver_name, use_sat
         assert len(redundant) + len(non_redundant) == len(model.get_c()), \
             "Total redundant + non-redundant should equal all constraints"
 
-        assert operation.get_result()[0] == 'Redundant constraints: [(Constraint 1) IMPLIES[FeatureC][FeatureB], (Constraint 0) IMPLIES[RedundantFM][FeatureA]]'
-        assert operation.get_result()[1] == 'Non-redundant constraints: [(optional) RedundantFM[0,1]FeatureC , (mandatory) RedundantFM[1,1]FeatureB , (mandatory) RedundantFM[1,1]FeatureA ]'
+        assert operation.get_result()[0] == 'Redundant constraints: [(Constraint 0) IMPLIES[RedundantFM][FeatureA]]'
+        assert operation.get_result()[1] == 'Non-redundant constraints: [(Constraint 1) OR[NOT[FeatureC][]][NOT[FeatureB][]], (optional) RedundantFM[0,1]FeatureC , (mandatory) RedundantFM[1,1]FeatureB , (mandatory) RedundantFM[1,1]FeatureA ]'
 
 
 # =============================================================================

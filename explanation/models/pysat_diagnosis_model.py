@@ -8,9 +8,7 @@ from .task_preparation import (
     TaskPreparationFactory,
     TaskInput,
     DiagnosisTask,
-    IncrementalDiagnosisTask,
     TestCaseTask,
-    IncrementalTestCaseTask,
     DescriptionProvider,
     DiagnosisFormatter,
 )
@@ -20,8 +18,8 @@ class DiagnosisModel(PySATModel):
     """PySATModel extension for diagnosis tasks.
 
     This class uses composition to delegate task preparation to strategies:
-    - IncrementalTaskPreparation: Uses assumptions for efficient repeated checks
-    - NonIncrementalTaskPreparation: Uses clauses for each check
+    - DiagnosisTaskPreparation: For diagnosis/conflict operations
+    - TestCaseTaskPreparation: For operations with test cases (KBDiag, WipeOutR_T)
 
     Important:
         This model should be created via transformation (FmToDiagPysat or
@@ -43,7 +41,7 @@ class DiagnosisModel(PySATModel):
     6. WipeOutR_T: prepare(positive_test_cases=ts)
        Test case redundancy detection
     7. WipeOutR_FM: prepare(include_negated_forms=True)
-       Constraint redundancy detection (CF = FM constraints + root)
+       Constraint redundancy detection (CF = FM constraints, no root)
     """
 
     @staticmethod
@@ -133,10 +131,8 @@ class DiagnosisModel(PySATModel):
         return {}
 
     def get_assumptions(self) -> List:
-        """Get the list of assumption literals (incremental mode only)."""
-        if isinstance(self._task, IncrementalDiagnosisTask):
-            return self._task.assumptions
-        if isinstance(self._task, IncrementalTestCaseTask):
+        """Get the list of assumption literals."""
+        if self._task is not None:
             return self._task.assumptions
         return []
 
@@ -262,7 +258,7 @@ class DiagnosisModel(PySATModel):
             task_input: TaskInput containing configuration, test_case, etc.
 
         Returns:
-            DiagnosisTask (IncrementalDiagnosisTask or NonIncrementalDiagnosisTask).
+            DiagnosisTask.
         """
         strategy = TaskPreparationFactory.create_diagnosis(self.use_incremental)
         output = strategy.prepare(self)

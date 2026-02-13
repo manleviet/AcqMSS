@@ -73,12 +73,11 @@ class WipeOutR_FM:
             cf_without_alpha = diff(c_delta, [c_alpha])
 
             # Get ¬cα
-            c_alpha_key = str(c_alpha) if isinstance(c_alpha, List) else c_alpha
-            if c_alpha_key not in neg_c_map:
+            if c_alpha not in neg_c_map:
                 logging.warning('No negated form for constraint %s, skipping', c_alpha)
                 continue
 
-            neg_alpha = neg_c_map[c_alpha_key]
+            neg_alpha = neg_c_map[c_alpha]
 
             # Check inconsistent(CF_Δ - {cα} ∪ {¬cα})
             test_set = cf_without_alpha + [neg_alpha]

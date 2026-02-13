@@ -52,7 +52,8 @@ class PySATConflictSAT4J(PySATAbstractExplanation):
 
     def _create_checker(self, model: DiagnosisModel) -> ConsistencyChecker:
         """Create ConsistencyChecker instance for diagnosis model."""
-        return CheckerFactory.create_sat4jchecker(self.profiler)
+        return CheckerFactory.create_sat4jchecker(
+            self.profiler, set_kb=model.get_kb(), assumptions=model.get_assumptions())
 
     def prepare_hsdag(self, model: DiagnosisModel) -> Tuple[ConsistencyChecker, HSDAG]:
         """Prepare HSDAG with QuickXPlain labeler for conflict detection.

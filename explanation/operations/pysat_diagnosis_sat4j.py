@@ -51,7 +51,8 @@ class PySATDiagnosisSAT4J(PySATAbstractExplanation):
 
     def _create_checker(self, model: DiagnosisModel) -> ConsistencyChecker:
         """Create consistency checker for diagnosis computation."""
-        return CheckerFactory.create_sat4jchecker(self.profiler)
+        return CheckerFactory.create_sat4jchecker(
+            self.profiler, set_kb=model.get_kb(), assumptions=model.get_assumptions())
 
     def prepare_hsdag(self, model: DiagnosisModel) -> Tuple[ConsistencyChecker, HSDAG]:
         """Prepare HSDAG with FastDiag labeler for diagnosis computation.

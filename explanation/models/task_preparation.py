@@ -405,9 +405,13 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
                 result.set_b = [result.assumptions[0]] + result.assumptions[start_id_test:]
                 result.set_c = [result.assumptions[i] for i in range(step, start_id_config, step)]
             else:
-                # C = FM constraints, B = root only
-                result.set_b = [result.assumptions[0]]
-                result.set_c = [result.assumptions[i] for i in range(step, len(result.assumptions), step)]
+                if has_negated_forms:
+                    # Redundancy detection: C = CF (PySATModel, no root), B = {}
+                    result.set_c = result.assumptions[2:len(result.assumptions):step]
+                else:
+                    # C = FM constraints, B = root only
+                    result.set_b = [result.assumptions[0]]
+                    result.set_c = [result.assumptions[i] for i in range(step, len(result.assumptions), step)]
 
 
 # === TEST CASE STRATEGY ===

@@ -86,14 +86,11 @@ class WipeOutR_T:
                 # Check if t_gamma is redundant w.r.t. t_alpha
                 # inconsistent(t_α ∧ ¬t_γ) means t_α |= t_γ
 
-                # Get the key for neg_t_map lookup (string for list, original for int)
-                t_gamma_key = str(t_gamma) if isinstance(t_gamma, List) else t_gamma
-
-                if t_gamma_key not in neg_t_map:
-                    logging.warning('No negated form for test case %s, skipping', t_gamma_key)
+                if t_gamma not in neg_t_map:
+                    logging.warning('No negated form for test case %s, skipping', t_gamma)
                     continue
 
-                neg_t_gamma = neg_t_map[t_gamma_key]
+                neg_t_gamma = neg_t_map[t_gamma]
 
                 # Check inconsistent(t_α ∧ ¬t_γ)
                 # Activate both t_alpha and neg_t_gamma
