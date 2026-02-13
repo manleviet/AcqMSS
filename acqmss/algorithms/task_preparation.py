@@ -1,13 +1,17 @@
 """
 Task preparation for CONGEN algorithm.
 
-Prepares CONGENTask from bias constraints and examples.
+Contains CONGENTask dataclass and CONGENTaskPreparation strategy.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Dict, List
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from explanation.models.task_preparation import (
+    TestCaseTask,
     TestCaseTaskPreparationStrategy,
     DescriptionProvider,
     PreparationOutput
@@ -15,8 +19,39 @@ from explanation.models.task_preparation import (
 from explanation.models.testsuite import TestSuite
 from explanation.operations.algorithms.utils import negate_cnf_tseitin
 
-from .task import CONGENTask
-from .model import CONGENModel
+if TYPE_CHECKING:
+    from .model import CONGENModel
+
+
+@dataclass
+class CONGENTask(TestCaseTask):
+    """Task for CONGEN algorithm.
+
+    Inherits from TestCaseTask with mapping:
+    - set_c: Bias constraints (B) - assumption IDs
+    - set_b: Background knowledge (BG) - assumption IDs
+    - set_tc: Positive examples (E+) - assumption IDs
+    - set_tv: Negative examples (E-) - assumption IDs
+    - neg_c_map: Dict[int, int] - negation map for REDUCE
+
+    Additional CONGEN-specific fields:
+    - set_ne: NE assumption IDs (pre-computed by caller via GenerateNE)
+    - e_neg_literals: Raw E⁻ literals for GenerateNE (List of [l1, l2, ...])
+    - assumption_to_constraint: Maps assumption ID to constraint name
+    - constraint_to_assumption: Maps constraint name to assumption ID
+    - next_assumption_id: Next available assumption ID for GenerateNE
+    """
+    set_ne: List[int] = field(default_factory=list)
+    e_neg_literals: List[List[int]] = field(default_factory=list)
+    assumption_to_constraint: Dict[int, str] = field(default_factory=dict)
+    constraint_to_assumption: Dict[str, int] = field(default_factory=dict)
+    next_assumption_id: int = 1000
+
+    def get_constraint_name(self, element: Any) -> str:
+        """Get constraint name from assumption ID."""
+        if isinstance(element, int):
+            return self.assumption_to_constraint.get(element, f'unknown_{element}')
+        return f'unknown_{element}'
 
 
 class CONGENTaskPreparation(TestCaseTaskPreparationStrategy):

@@ -43,12 +43,12 @@ Example Usage:
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from .user_interface import (
+from acqmss.oracle import (
     InteractiveOracle,
     AutomatedOracle,
     UserPromptOracle,
     CachedOracle,
-    ExampleProvider
+    ExampleProvider,
 )
 from .query_generator import QueryGenerator
 from .quacq import QuAcq

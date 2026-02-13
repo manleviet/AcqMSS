@@ -9,7 +9,7 @@ from typing import Optional, Dict
 from pysat.solvers import Solver
 
 from ..data_structures import Example, ExampleSet
-from ..oracle import Oracle
+from acqmss.oracle import Oracle
 
 
 class ExampleGenerator(ABC):

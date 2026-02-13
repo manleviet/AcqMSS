@@ -12,7 +12,7 @@ from pathlib import Path
 from enum import Enum
 import logging
 
-from .oracle_extractor import OracleData
+from acqmss.oracle.oracle_extractor import OracleData
 from .bias_loader import BiasData
 from .result_loader import CONGENResultData
 from .metrics import EvaluationMetrics, compute_metrics

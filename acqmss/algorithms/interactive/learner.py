@@ -10,7 +10,7 @@ from typing import Optional, Dict, List, Union
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from .user_interface import InteractiveOracle, AutomatedOracle, UserPromptOracle, ExampleProvider
+from acqmss.oracle import InteractiveOracle, AutomatedOracle, UserPromptOracle, ExampleProvider
 from .quacq import QuAcq
 from acqmss.bias.bias_io import BiasIO
 from acqmss.bias.data_structures import Bias

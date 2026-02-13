@@ -10,7 +10,7 @@ import random
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
-from acqmss.testcases.oracle import FeatureModelOracle
+from .oracle import FeatureModelOracle
 
 
 class InteractiveOracle(ABC):

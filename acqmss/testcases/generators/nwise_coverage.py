@@ -8,7 +8,7 @@ from typing import Optional, List
 from allpairspy import AllPairs
 
 from ..data_structures import Example, ExampleSet
-from ..oracle import Oracle
+from acqmss.oracle import Oracle
 from .base import ExampleGenerator
 
 

@@ -14,7 +14,7 @@ from pysat.solvers import Solver
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from .user_interface import InteractiveOracle, ExampleProvider
+from acqmss.oracle import InteractiveOracle, ExampleProvider
 from .query_generator import QueryGenerator
 from .findscope import find_scope
 from .findc import find_c

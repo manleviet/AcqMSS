@@ -33,7 +33,7 @@ from .metrics import EvaluationMetrics, compute_metrics
 # Data loaders
 from .bias_loader import BiasData, BiasConstraint
 from .result_loader import CONGENResultData
-from .oracle_extractor import OracleData
+from acqmss.oracle.oracle_extractor import OracleData
 
 # Accuracy calculation
 from .accuracy import AccuracyCalculator, AccuracyResult

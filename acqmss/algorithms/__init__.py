@@ -21,7 +21,7 @@ from .acqmss import ACQMSS
 from .reduce import Reduce
 from .generate_ne import GenerateNE, NEResult, merge_ne_into_task
 from .congen import CONGEN, CONGENResult
-from .task import CONGENTask
+from .task_preparation import CONGENTask
 from .task_preparation import CONGENTaskPreparation
 from .model import CONGENModel
 

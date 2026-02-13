@@ -38,7 +38,8 @@ from acqmss.eval import (
     save_cv_kb_files,
     load_folds,
 )
-from acqmss.testcases import FeatureModelOracle, ExampleIO
+from acqmss.oracle import FeatureModelOracle
+from acqmss.testcases import ExampleIO
 
 
 @dataclass

@@ -8,17 +8,14 @@ Tests core components: QueryGenerator, QuAcq, InteractiveLearner.
 import pytest
 from pathlib import Path
 
-from acqmss.testcases import FeatureModelOracle
+from acqmss.oracle import FeatureModelOracle, InteractiveOracle, AutomatedOracle, CachedOracle
 from acqmss.bias import BiasIO
 from acqmss.algorithms.interactive import (
     InteractiveTask,
     InteractiveResult,
-    InteractiveOracle,
-    AutomatedOracle,
-    CachedOracle,
     QueryGenerator,
     QuAcq,
-    InteractiveLearner
+    InteractiveLearner,
 )
 from explanation.operations.algorithms.profiler import (
     get_global_profiler,

@@ -19,7 +19,8 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.testcases import FeatureModelOracle, ExampleIO
+from acqmss.oracle import FeatureModelOracle
+from acqmss.testcases import ExampleIO
 from acqmss.bias import BiasIO
 from acqmss.algorithms import CONGEN, CONGENModel
 from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task

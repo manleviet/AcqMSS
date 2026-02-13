@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from explanation.models.task_preparation import TaskInput, DescriptionProvider
 
-from .task import CONGENTask
+from .task_preparation import CONGENTask
 
 
 class CONGENModel:

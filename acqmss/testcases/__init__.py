@@ -2,13 +2,11 @@
 Test case generation package for constraint acquisition.
 
 Provides:
-- Oracle: Feature model ground truth for classifying configurations
 - Generators: Various sampling methods (RS, FF, 2-COV)
 - Data structures: Example, ExampleSet
 """
 
 from .data_structures import Example, ExampleSet, ExampleType
-from .oracle import Oracle, FeatureModelOracle
 from .generators import (
     ExampleGenerator,
     RandomSamplingGenerator,
@@ -25,9 +23,6 @@ __all__ = [
     'Example',
     'ExampleSet',
     'ExampleType',
-    # Oracle
-    'Oracle',
-    'FeatureModelOracle',
     # Generators
     'ExampleGenerator',
     'RandomSamplingGenerator',

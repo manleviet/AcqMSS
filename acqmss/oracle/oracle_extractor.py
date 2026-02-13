@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import List, Set, Tuple, Dict
 from pathlib import Path
 
-from acqmss.testcases.oracle import FeatureModelOracle
+from acqmss.oracle import FeatureModelOracle
 
 
 @dataclass

@@ -13,7 +13,7 @@ from typing import Optional, List
 from pysat.solvers import Solver
 
 from .task import InteractiveTask
-from .user_interface import ExampleProvider
+from acqmss.oracle import ExampleProvider
 
 
 def find_c(

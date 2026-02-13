@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Set, List, Optional
 from pysat.solvers import Solver
 
-from .data_structures import Example, ExampleType
+from acqmss.testcases.data_structures import Example, ExampleType
 
 
 class Oracle(ABC):

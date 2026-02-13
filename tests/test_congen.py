@@ -9,7 +9,8 @@ import pytest
 from pathlib import Path
 from parameterized import parameterized
 
-from acqmss.testcases import FeatureModelOracle, ExampleIO
+from acqmss.oracle import FeatureModelOracle
+from acqmss.testcases import ExampleIO
 from acqmss.bias import BiasIO
 from acqmss.algorithms import (
     CONGEN, ACQMSS, Reduce, GenerateNE,
