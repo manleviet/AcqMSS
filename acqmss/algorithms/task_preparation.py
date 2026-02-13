@@ -20,7 +20,7 @@ from explanation.models.testsuite import TestSuite
 from explanation.operations.algorithms.utils import negate_cnf_tseitin
 
 if TYPE_CHECKING:
-    from .model import CONGENModel
+    from .congen_model import CONGENModel
 
 
 @dataclass

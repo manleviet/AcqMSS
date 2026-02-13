@@ -10,9 +10,10 @@ Complexity: O(|S| * log|X|) queries where S=scope size, X=total variables.
 import logging
 from typing import List, Set
 
-from pysat.solvers import Solver
-
 from .task import InteractiveTask
+from acqmss.oracle.oracle_model import OneShotModel
+from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.profiler import AbstractProfiler
 
 
 def find_scope(
@@ -22,7 +23,8 @@ def find_scope(
         ask_query: bool,
         fm_clauses: List[List[int]],
         task: InteractiveTask,
-        solver_name: str = 'glucose4'
+        solver_name: str = 'glucose4',
+        profiler: AbstractProfiler = None
 ) -> List[str]:
     """
     Find scope of violated constraint via partial queries.
@@ -46,7 +48,7 @@ def find_scope(
         # Check partial assignment e[R] against FM
         partial_assumptions = task.partial_config_to_assumptions(e, R)
         is_consistent = _check_partial_consistency(
-            fm_clauses, partial_assumptions, solver_name
+            fm_clauses, partial_assumptions, solver_name, profiler
         )
 
         if is_consistent:
@@ -66,8 +68,8 @@ def find_scope(
     Y1 = set(Y_list[:mid])
     Y2 = set(Y_list[mid:])
 
-    S1 = find_scope(e, R | Y1, Y2, True, fm_clauses, task, solver_name)
-    S2 = find_scope(e, R | set(S1), Y1, len(S1) > 0, fm_clauses, task, solver_name)
+    S1 = find_scope(e, R | Y1, Y2, True, fm_clauses, task, solver_name, profiler)
+    S2 = find_scope(e, R | set(S1), Y1, len(S1) > 0, fm_clauses, task, solver_name, profiler)
 
     return S1 + S2
 
@@ -75,18 +77,16 @@ def find_scope(
 def _check_partial_consistency(
         fm_clauses: List[List[int]],
         partial_assumptions: List[int],
-        solver_name: str
+        solver_name: str,
+        profiler: AbstractProfiler = None
 ) -> bool:
     """Check if partial assignment is consistent with FM."""
-    all_clauses = list(fm_clauses)
-    for lit in partial_assumptions:
-        all_clauses.append([lit])
-
-    solver = Solver(name=solver_name, bootstrap_with=all_clauses)
+    model = OneShotModel(fm_clauses, partial_assumptions)
+    checker = CheckerFactory.create_from_model(model, solver_name, profiler)
     try:
-        return solver.solve()
+        return checker.is_consistent([])
     finally:
-        solver.delete()
+        checker.cleanup()
 
 
 def _prune_rejecting_partial(task: InteractiveTask, e: dict, R: set) -> None:

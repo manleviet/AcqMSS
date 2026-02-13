@@ -149,7 +149,7 @@ class InteractiveTask:
         return c_vars
 
     def partial_config_to_assumptions(self, config: Dict[str, bool],
-                                       variables: set) -> List[int]:
+                                      variables: set) -> List[int]:
         """Convert partial config (only variables in scope) to assumptions."""
         assumptions = []
         for name in variables:

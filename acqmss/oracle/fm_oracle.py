@@ -9,6 +9,9 @@ from typing import Dict, Set, List, Optional
 from pysat.solvers import Solver
 
 from acqmss.oracle.base import Oracle
+from acqmss.oracle.oracle_model import OracleModel
+from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler
 
 
 class FeatureModelOracle(Oracle):
@@ -31,13 +34,18 @@ class FeatureModelOracle(Oracle):
         True
     """
 
-    def __init__(self, fm_path: str):
+    def __init__(self, fm_path: str, solver_name: str = 'glucose4',
+                 profiler: AbstractProfiler = None):
         """Initialize oracle from feature model file.
 
         Args:
             fm_path: Path to feature model (.uvl format)
+            solver_name: SAT solver name for checker
+            profiler: Profiler instance (uses global if None)
         """
         self.fm_path = fm_path
+        self.solver_name = solver_name
+        self.profiler = profiler if profiler is not None else get_global_profiler()
         self.fm = self._load_fm(fm_path)
         self.features = self._extract_features()
         self.leaf_features = self._extract_leaf_features()
@@ -50,10 +58,17 @@ class FeatureModelOracle(Oracle):
         assert set(self.feature_ids.values()) == set(range(1, len(self.features) + 1)), \
             "feature_ids must cover variables 1..n matching CNF clause space"
 
-        # Initialize persistent SAT solver
-        self.solver = Solver(name='glucose4')
-        for clause in self.cnf_clauses:
-            self.solver.add_clause(clause)
+        # Build OracleModel + ConsistencyChecker for is_valid()
+        constraint_map = {"fm": self.cnf_clauses}
+        max_var = max(abs(lit) for clause in self.cnf_clauses for lit in clause)
+        self._oracle_model = OracleModel.from_fm(
+            constraint_map=constraint_map,
+            variables=self.feature_ids,
+            next_tseitin_var=max_var
+        )
+        self.checker = CheckerFactory.create_from_model(
+            self._oracle_model, solver_name, self.profiler
+        )
 
     def _load_fm(self, fm_path: str):
         """Load feature model using flamapy."""
@@ -114,13 +129,10 @@ class FeatureModelOracle(Oracle):
         Returns:
             True if configuration is valid
         """
-        assumptions = []
-        for name, value in assignments.items():
-            if name in self.feature_ids:
-                fid = self.feature_ids[name]
-                assumptions.append(fid if value else -fid)
-
-        return self.solver.solve(assumptions=assumptions)
+        # Filter to known features only (backward compat: skip unknown names)
+        known = {k: v for k, v in assignments.items() if k in self.feature_ids}
+        active = self._oracle_model.config_to_active_assumptions(known)
+        return self.checker.is_consistent(active)
 
     def get_features(self) -> Set[str]:
         """Get all feature names."""
@@ -143,22 +155,25 @@ class FeatureModelOracle(Oracle):
     def get_valid_configuration(self, assumptions: Optional[List[int]] = None) -> Optional[Dict[str, bool]]:
         """Get a valid configuration using SAT solver.
 
+        Uses raw Solver (needs get_model() for assignment extraction).
+
         Args:
             assumptions: Optional list of literals to fix
 
         Returns:
             Complete valid assignment {feature: True/False}, or None if UNSAT
         """
-        if assumptions is None:
-            assumptions = []
-
-        if self.solver.solve(assumptions=assumptions):
-            model = self.solver.get_model()
-            config = {}
-            for name, fid in self.feature_ids.items():
-                config[name] = fid in model
-            return config
-        return None
+        solver = Solver(name=self.solver_name, bootstrap_with=self.cnf_clauses)
+        try:
+            if solver.solve(assumptions=assumptions or []):
+                model = solver.get_model()
+                config = {}
+                for name, fid in self.feature_ids.items():
+                    config[name] = fid in model
+                return config
+            return None
+        finally:
+            solver.delete()
 
     def get_cnf_clauses(self) -> List[List[int]]:
         """Get the ground truth CNF clauses."""
@@ -295,7 +310,11 @@ class FeatureModelOracle(Oracle):
         return f"FeatureModelOracle(features={len(self.features)}, " \
                f"clauses={len(self.cnf_clauses)})"
 
+    def cleanup(self):
+        """Release checker resources."""
+        if hasattr(self, 'checker') and self.checker is not None:
+            self.checker.cleanup()
+            self.checker = None
+
     def __del__(self):
-        """Clean up SAT solver."""
-        if hasattr(self, 'solver') and self.solver is not None:
-            self.solver.delete()
+        self.cleanup()

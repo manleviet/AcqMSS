@@ -14,7 +14,7 @@ import tracemalloc
 import logging
 
 from acqmss.algorithms.congen import CONGEN
-from acqmss.algorithms.model import CONGENModel
+from acqmss.algorithms.congen_model import CONGENModel
 from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,

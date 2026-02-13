@@ -14,6 +14,9 @@ from pysat.solvers import Solver
 
 from .task import InteractiveTask
 from acqmss.oracle import ExampleProvider
+from acqmss.oracle.oracle_model import OneShotModel
+from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.profiler import AbstractProfiler
 
 
 def find_c(
@@ -23,7 +26,8 @@ def find_c(
         fm_clauses: List[List[int]],
         example_provider: Optional[ExampleProvider],
         solver_name: str = 'glucose4',
-        query_mode: str = 'example_only'
+        query_mode: str = 'example_only',
+        profiler: AbstractProfiler = None
 ) -> Optional[str]:
     """
     Find constraint with given scope violated by e.
@@ -75,12 +79,12 @@ def find_c(
     remaining = list(rejecting)
 
     if example_provider is not None and not example_provider.is_exhausted():
-        result = _narrow_with_pool(remaining, task, fm_clauses, example_provider, solver_name)
+        result = _narrow_with_pool(remaining, task, fm_clauses, example_provider, solver_name, profiler)
         if result is not None:
             return result
 
     if query_mode == 'example_first':
-        result = _narrow_with_sat(remaining, task, fm_clauses, solver_name)
+        result = _narrow_with_sat(remaining, task, fm_clauses, solver_name, profiler)
         if result is not None:
             return result
 
@@ -94,7 +98,8 @@ def _narrow_with_pool(
         task: InteractiveTask,
         fm_clauses: List[List[int]],
         example_provider: ExampleProvider,
-        solver_name: str
+        solver_name: str,
+        profiler: AbstractProfiler = None
 ) -> Optional[str]:
     """Try to narrow candidates using examples from pool."""
     # Check remaining pool examples as discriminating queries
@@ -112,7 +117,7 @@ def _narrow_with_pool(
         non_violating = [c for c in candidates if c not in violating]
 
         # Check if disc_e is consistent with FM
-        is_valid = _check_fm_consistency(fm_clauses, disc_assumptions, solver_name)
+        is_valid = _check_fm_consistency(fm_clauses, disc_assumptions, solver_name, profiler)
         task.record_query(disc_e, is_valid)
 
         if is_valid:
@@ -137,7 +142,8 @@ def _narrow_with_sat(
         candidates: List[str],
         task: InteractiveTask,
         fm_clauses: List[List[int]],
-        solver_name: str
+        solver_name: str,
+        profiler: AbstractProfiler = None
 ) -> Optional[str]:
     """Try to narrow candidates using SAT-generated discriminating examples."""
     # Generate a query that distinguishes between candidate constraints
@@ -157,7 +163,7 @@ def _narrow_with_sat(
                     disc_assumptions = task.config_to_assumptions(disc_e)
                     disc_assignment = {abs(lit): lit > 0 for lit in disc_assumptions}
 
-                    is_valid = _check_fm_consistency(fm_clauses, disc_assumptions, solver_name)
+                    is_valid = _check_fm_consistency(fm_clauses, disc_assumptions, solver_name, profiler)
                     task.record_query(disc_e, is_valid)
 
                     if is_valid:
@@ -179,14 +185,12 @@ def _narrow_with_sat(
 
 def _check_fm_consistency(fm_clauses: List[List[int]],
                           assumptions: List[int],
-                          solver_name: str) -> bool:
+                          solver_name: str,
+                          profiler: AbstractProfiler = None) -> bool:
     """Check if example is consistent with FM."""
-    all_clauses = list(fm_clauses)
-    for lit in assumptions:
-        all_clauses.append([lit])
-
-    solver = Solver(name=solver_name, bootstrap_with=all_clauses)
+    model = OneShotModel(fm_clauses, assumptions)
+    checker = CheckerFactory.create_from_model(model, solver_name, profiler)
     try:
-        return solver.solve()
+        return checker.is_consistent([])
     finally:
-        solver.delete()
+        checker.cleanup()

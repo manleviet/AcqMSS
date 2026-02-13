@@ -11,13 +11,25 @@ import os
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Protocol, runtime_checkable
 
 from pysat.formula import CNF
 from pysat.solvers import Solver
 
 from .profiler import get_global_profiler, count_calls, AbstractProfiler
-from ...models.pysat_diagnosis_model import DiagnosisModel
+
+
+@runtime_checkable
+class CheckerModel(Protocol):
+    """Protocol for models compatible with CheckerFactory.
+
+    Any class with these attributes/methods satisfies this protocol
+    via structural subtyping (no inheritance needed).
+    """
+    use_incremental: bool
+
+    def get_kb(self) -> List[List[int]]: ...
+    def get_assumptions(self) -> List[int]: ...
 
 
 class ConsistencyChecker(ABC):
@@ -216,7 +228,7 @@ class CheckerFactory:
                             profiler_instance=profiler_instance)
 
     @staticmethod
-    def create_from_model(model: DiagnosisModel,
+    def create_from_model(model: CheckerModel,
                           solver_name: str = 'glucose3',
                           profiler_instance: AbstractProfiler = None) -> ConsistencyChecker:
         if model.use_incremental:

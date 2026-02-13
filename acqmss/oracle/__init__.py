@@ -16,6 +16,7 @@ from .user_prompt import UserPromptOracle
 from .cached import CachedOracle
 from .example_provider import ExampleProvider
 from .extractor import OracleData
+from .oracle_model import OracleModel, OneShotModel
 
 __all__ = [
     'Oracle',
@@ -24,4 +25,6 @@ __all__ = [
     'CachedOracle',
     'ExampleProvider',
     'OracleData',
+    'OracleModel',
+    'OneShotModel',
 ]

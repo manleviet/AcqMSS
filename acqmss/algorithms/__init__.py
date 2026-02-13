@@ -23,7 +23,7 @@ from .generate_ne import GenerateNE, NEResult, merge_ne_into_task
 from .congen import CONGEN, CONGENResult
 from .task_preparation import CONGENTask
 from .task_preparation import CONGENTaskPreparation
-from .model import CONGENModel
+from .congen_model import CONGENModel
 
 # Interactive learning components
 from .interactive import (

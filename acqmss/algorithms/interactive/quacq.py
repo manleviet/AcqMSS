@@ -19,7 +19,8 @@ from .query_generator import QueryGenerator
 from .findscope import find_scope
 from .findc import find_c
 from acqmss.algorithms.reduce import Reduce
-from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
+from acqmss.oracle.oracle_model import OneShotModel
+from explanation.operations.algorithms.checker import CheckerFactory, NonIncrementalPySATChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
@@ -180,7 +181,8 @@ class QuAcq:
                     ask_query=False,
                     fm_clauses=fm_clauses,
                     task=task,
-                    solver_name=self.solver_name
+                    solver_name=self.solver_name,
+                    profiler=self.profiler
                 )
 
                 scope = set(scope_vars)
@@ -192,7 +194,8 @@ class QuAcq:
                         fm_clauses=fm_clauses,
                         example_provider=example_provider,
                         solver_name=self.solver_name,
-                        query_mode=query_mode
+                        query_mode=query_mode,
+                        profiler=self.profiler
                     )
 
                     if c_id is not None:
@@ -223,19 +226,13 @@ class QuAcq:
 
     def _check_consistency_with_fm(self, fm_clauses: List[List[int]],
                                     e_assumptions: List[int]) -> bool:
-        """Check if example is consistent with FM via SAT solving."""
-        # Build FM + example as unit clauses
-        all_clauses = list(fm_clauses)
-        for lit in e_assumptions:
-            all_clauses.append([lit])
-
-        solver = Solver(name=self.solver_name, bootstrap_with=all_clauses)
+        """Check if example is consistent with FM via OneShotModel + checker."""
+        model = OneShotModel(fm_clauses, e_assumptions)
+        checker = CheckerFactory.create_from_model(model, self.solver_name, self.profiler)
         try:
-            with self.profiler.timer('fm_consistency_check'):
-                result = solver.solve()
-            return result
+            return checker.is_consistent([])
         finally:
-            solver.delete()
+            checker.cleanup()
 
     def _build_result(self, task: InteractiveTask, start_time: float,
                       convergence_reason: str) -> InteractiveResult:
