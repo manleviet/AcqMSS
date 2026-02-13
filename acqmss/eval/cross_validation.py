@@ -136,7 +136,8 @@ def n_fold_cross_validation(
         is_incremental: bool = True,
         shuffle_each_fold: bool = True,
         fold_data: Optional[FoldData] = None,
-        shuffle_bias: bool = False
+        shuffle_bias: bool = False,
+        background_knowledge: Optional[List[int]] = None
 ) -> CrossValidationResult:
     """
     Standard n-fold cross validation according to the paper (page 6).
@@ -161,6 +162,7 @@ def n_fold_cross_validation(
         shuffle_each_fold: Shuffle training examples before each fold
         fold_data: Optional pre-generated fold assignments (for shared folds)
         shuffle_bias: Shuffle bias ordering per fold using fold_data.shuffle_seeds
+        background_knowledge: BG literals (e.g., [root_feature_id])
 
     Returns:
         CrossValidationResult with mean accuracy ± std and KB data
@@ -188,7 +190,8 @@ def n_fold_cross_validation(
         bias_clauses=bias_clauses,
         feature_ids=feature_ids,
         solver_name=solver_name,
-        is_incremental=is_incremental
+        is_incremental=is_incremental,
+        background_knowledge=background_knowledge
     )
 
     fold_accuracies: List[float] = []

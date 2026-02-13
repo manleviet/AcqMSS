@@ -97,7 +97,8 @@ class CONGENRunner:
             bias_clauses: Dict[str, List[List[int]]],
             feature_ids: Dict[str, int],
             solver_name: str = 'glucose4',
-            is_incremental: bool = True
+            is_incremental: bool = True,
+            background_knowledge: Optional[List[int]] = None
     ):
         """
         Initialize runner with bias and feature mapping.
@@ -107,11 +108,13 @@ class CONGENRunner:
             feature_ids: {feature_name: SAT_variable_id}
             solver_name: SAT solver name
             is_incremental: Use incremental solver mode
+            background_knowledge: BG literals (e.g., [root_feature_id])
         """
         self.bias_clauses = bias_clauses
         self.feature_ids = feature_ids
         self.solver_name = solver_name
         self.is_incremental = is_incremental
+        self.background_knowledge = background_knowledge or []
 
     def run(
             self,
@@ -158,7 +161,8 @@ class CONGENRunner:
                 bias_constraints=bias_clauses,
                 positive_examples=positive_examples,
                 negative_examples=negative_examples,
-                feature_ids=self.feature_ids
+                feature_ids=self.feature_ids,
+                background_knowledge=self.background_knowledge
             )
 
             # Prepare task based on mode

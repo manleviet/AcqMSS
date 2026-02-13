@@ -38,7 +38,7 @@ from acqmss.eval import (
     save_cv_kb_files,
     load_folds,
 )
-from acqmss.testcases import ExampleIO
+from acqmss.testcases import FeatureModelOracle, ExampleIO
 
 
 @dataclass
@@ -146,6 +146,12 @@ def evaluate_model(
         bias = BiasData.from_json(Path(model_config.bias))
         bias_clauses = {cid: c.clauses for cid, c in bias.constraints.items()}
 
+        # Extract root feature for background knowledge
+        oracle = FeatureModelOracle(model_config.oracle)
+        root_name = oracle.get_root_feature()
+        root_id = oracle.get_feature_ids().get(root_name)
+        background_knowledge = [root_id] if root_id is not None else []
+
         # Load examples if provided
         examples = None
         if model_config.examples:
@@ -241,7 +247,8 @@ def evaluate_model(
                     solver_name=solver_name,
                     is_incremental=is_incremental,
                     fold_data=fold_data,
-                    shuffle_bias=shuffle_bias
+                    shuffle_bias=shuffle_bias,
+                    background_knowledge=background_knowledge
                 )
 
                 output_file = output_dir / f"{model_name}_cv_{mode_name}.json"

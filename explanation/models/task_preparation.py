@@ -15,7 +15,7 @@ Task hierarchy:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, TYPE_CHECKING
+from typing import Any, List, Dict, Optional, TYPE_CHECKING
 
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models.feature_model import Feature
@@ -199,10 +199,13 @@ class DiagnosisTaskPreparationStrategy(ABC):
     - Configuration + feature model diagnosis
     - Error diagnosis with test case
     - Redundancy detection (with negated_constraint_map)
+
+    The model parameter accepts any object with: constraint_map, negated_constraint_map,
+    variables, task_input, next_tseitin_var, background_knowledge (duck-typed).
     """
 
     @abstractmethod
-    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+    def prepare(self, model: Any) -> PreparationOutput:
         """Prepare diagnosis task and return result with description provider."""
         pass
 
@@ -217,11 +220,14 @@ class TestCaseTaskPreparationStrategy(ABC):
     """Abstract strategy for preparing tasks with test cases.
 
     Used for KBDiag algorithm with positive/negative test cases,
-    and WipeOutR_T for test case redundancy detection.
+    WipeOutR_T for test case redundancy detection, and CONGEN.
+
+    The model parameter accepts any object with: constraint_map, negated_constraint_map,
+    variables, task_input, next_tseitin_var, background_knowledge (duck-typed).
     """
 
     @abstractmethod
-    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+    def prepare(self, model: Any) -> PreparationOutput:
         """Prepare test case task and return result with description provider."""
         pass
 
