@@ -1,4 +1,4 @@
-"""Example generators for different sampling strategies."""
+"""Example example_generators for different sampling strategies."""
 
 from .base import ExampleGenerator
 from .random_sampling import RandomSamplingGenerator, BalancedRandomSamplingGenerator, ControlledRandomSamplingGenerator

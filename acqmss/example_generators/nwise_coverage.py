@@ -7,7 +7,7 @@ Uses allpairspy library for efficient pairwise (2-wise) test generation.
 from typing import Optional, List
 from allpairspy import AllPairs
 
-from ..data_structures import Example, ExampleSet
+from acqmss.examples.data_structures import Example, ExampleSet
 from acqmss.oracle import Oracle
 from .base import ExampleGenerator
 

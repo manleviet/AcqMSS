@@ -1,5 +1,5 @@
 """
-Base class for example generators.
+Base class for example example_generators.
 """
 
 import random
@@ -8,13 +8,13 @@ from typing import Optional, Dict
 
 from pysat.solvers import Solver
 
-from ..data_structures import Example, ExampleSet, ExampleType
+from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
 from acqmss.oracle import Oracle
 
 
 class ExampleGenerator(ABC):
     """
-    Abstract base class for example generators.
+    Abstract base class for example example_generators.
 
     Generators use an Oracle to classify generated configurations
     as positive or negative examples.

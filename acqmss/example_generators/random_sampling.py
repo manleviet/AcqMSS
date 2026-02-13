@@ -1,5 +1,5 @@
 """
-Random Sampling generators for test case generation.
+Random Sampling example_generators for test case generation.
 
 Provides:
 - RandomSamplingGenerator: Pure random configuration generation
@@ -10,7 +10,7 @@ Provides:
 import random
 from typing import Optional
 
-from ..data_structures import Example, ExampleSet, ExampleType
+from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
 from .base import ExampleGenerator
 
 

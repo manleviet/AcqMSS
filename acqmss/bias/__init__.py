@@ -2,7 +2,7 @@
 Bias module for constraint acquisition.
 
 This module provides tools for generating constraint biases from feature models,
-including data structures, clause generators, and I/O utilities.
+including data structures, clause example_generators, and I/O utilities.
 """
 
 from .data_structures import (

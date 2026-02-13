@@ -8,7 +8,7 @@ in both positive and negative examples.
 import random
 from typing import Optional, Dict, Set, List, Tuple
 from pysat.solvers import Solver
-from ..data_structures import Example, ExampleSet, ExampleType
+from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
 from .base import ExampleGenerator
 
 
