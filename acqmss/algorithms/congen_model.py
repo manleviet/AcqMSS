@@ -53,15 +53,24 @@ class ConGenModel:
             raise RuntimeError("Call prepare() first")
         return self._description_provider
 
-    def prepare(self, mode_name: str = "congen") -> ConGenTask:
+    def prepare(self, mode_name: str = "congen", task_input: Optional[TaskInput] = None) -> ConGenTask:
         """Prepare ConGen task using ConGenTaskPreparation strategy.
 
         Args:
             mode_name: Mode name for logging (e.g., "incremental-congen")
+            task_input: Optional TaskInput. If provided, updates model's task_input
+                before preparing. If None, uses existing task_input.
 
         Returns:
             ConGenTask ready for GenerateNE and ConGen.
+
+        Note:
+            After calling prepare() with new input, any existing checker instances
+            must be recreated as they hold references to the previous KB/assumptions.
         """
+        if task_input is not None:
+            self.task_input = task_input
+
         from .task_preparation import ConGenTaskPreparation
 
         preparation = ConGenTaskPreparation(mode_name)

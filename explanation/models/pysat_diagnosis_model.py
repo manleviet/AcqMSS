@@ -202,8 +202,12 @@ class DiagnosisModel(PySATModel):
         """
         return DiagnosisFormatter.format(diagnoses, self.description_provider)
 
-    def prepare(self) -> DiagnosisTask:
+    def prepare(self, task_input: Optional[TaskInput] = None) -> DiagnosisTask:
         """Unified task preparation method using TaskInput.
+
+        Args:
+            task_input: Optional TaskInput to use. If provided, updates the model's
+                task input before preparing. If None, uses existing task input.
 
         Uses _task_input (set via builder or directly) which contains:
         - configuration: Configuration to diagnose
@@ -240,16 +244,22 @@ class DiagnosisModel(PySATModel):
 
         Returns:
             DiagnosisTask or TestCaseTask based on TaskInput.
-        """
-        # Use empty TaskInput if not set
-        task_input = self._task_input or TaskInput()
 
-        if task_input.is_testcase_task():
+        Note:
+            After calling prepare() with new input, any existing checker instances
+            must be recreated as they hold references to the previous KB/assumptions.
+        """
+        if task_input is not None:
+            self._task_input = task_input
+        # Use empty TaskInput if not set
+        _task_input = self._task_input or TaskInput()
+
+        if _task_input.is_testcase_task():
             # Test case task (KBDiag, WipeOutR_T)
-            return self._prepare_testcase_task(task_input)
+            return self._prepare_testcase_task(_task_input)
         else:
             # Diagnosis task (FastDiag, QuickXPlain, WipeOutR_FM)
-            return self._prepare_diagnosis_task(task_input)
+            return self._prepare_diagnosis_task(_task_input)
 
     def _prepare_diagnosis_task(self, task_input: TaskInput) -> DiagnosisTask:
         """Internal method to prepare diagnosis task.
