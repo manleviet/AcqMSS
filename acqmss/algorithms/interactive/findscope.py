@@ -30,7 +30,7 @@ def find_scope(
     Find scope of violated constraint via partial queries.
 
     Uses SAT-based consistency checking against target FM for partial queries
-    (same infrastructure as CONGEN — no oracle needed).
+    (same infrastructure as ConGen — no oracle needed).
 
     Args:
         e: Complete negative example (config dict)

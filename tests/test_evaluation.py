@@ -11,7 +11,7 @@ from acqmss.eval import (
     EvaluationMetrics,
     compute_metrics,
     BiasData,
-    CONGENResultData,
+    ConGenResultData,
     AccuracyCalculator,
     AccuracyResult,
     PerformanceMetrics,
@@ -194,7 +194,7 @@ class TestBiasData:
 
 
 class TestCONGENResultData:
-    """Test CONGENResultData loading."""
+    """Test ConGenResultData loading."""
 
     def test_load_from_json(self, tmp_path):
         """Test loading result from JSON file."""
@@ -212,7 +212,7 @@ class TestCONGENResultData:
         }
         ''')
 
-        result = CONGENResultData.from_json(result_json)
+        result = ConGenResultData.from_json(result_json)
 
         assert len(result.kb_constraints) == 3
         assert result.n_bias == 100
@@ -220,7 +220,7 @@ class TestCONGENResultData:
 
     def test_bg_clauses_default_empty(self):
         """Verify bg_clauses defaults to empty, no impact on eval."""
-        result = CONGENResultData(kb_constraints=[], n_bias=10, n_kb=0)
+        result = ConGenResultData(kb_constraints=[], n_bias=10, n_kb=0)
         assert result.bg_clauses == []
 
     def test_kb_reduction_ratio(self, tmp_path):
@@ -234,7 +234,7 @@ class TestCONGENResultData:
         }
         ''')
 
-        result = CONGENResultData.from_json(result_json)
+        result = ConGenResultData.from_json(result_json)
 
         # reduction = 1 - (20/100) = 0.8
         assert result.kb_reduction_ratio == 0.8
@@ -370,7 +370,7 @@ class TestReportGeneration:
 
         report = generate_evaluation_report(result)
 
-        assert 'CONGEN Evaluation Report' in report
+        assert 'ConGen Evaluation Report' in report
         assert 'Accuracy' in report
         assert 'Precision' in report
         assert 'description' in report
@@ -402,7 +402,7 @@ class TestIntegration:
     def test_evaluate_real_fm_7(self):
         """Test evaluation with REAL-FM-7 data."""
         evaluator = Evaluator.from_files(FM_PATH, BIAS_PATH)
-        result = CONGENResultData.from_json(RESULT_PATH)
+        result = ConGenResultData.from_json(RESULT_PATH)
 
         eval_result = evaluator.evaluate(result, EvaluationStrategy.DESCRIPTION)
 
@@ -417,7 +417,7 @@ class TestIntegration:
 
         bias = BiasData.from_json(BIAS_PATH)
         examples = ExampleIO.load_json(EXAMPLES_RS_1N_PATH)
-        result = CONGENResultData.from_json(RESULT_PATH)
+        result = ConGenResultData.from_json(RESULT_PATH)
 
         # Build KB clauses
         kb_clauses = []
@@ -451,7 +451,7 @@ class TestIntegration:
         root_id = evaluator.oracle.feature_map[evaluator.oracle.root_feature]
 
         # Result with NO KB but WITH bg_clauses containing root
-        result_with_bg = CONGENResultData(
+        result_with_bg = ConGenResultData(
             kb_constraints=[],
             n_bias=len(evaluator.bias.constraints),
             n_kb=0,
@@ -459,7 +459,7 @@ class TestIntegration:
         )
 
         # Result with NO KB and NO bg_clauses
-        result_without_bg = CONGENResultData(
+        result_without_bg = ConGenResultData(
             kb_constraints=[],
             n_bias=len(evaluator.bias.constraints),
             n_kb=0,

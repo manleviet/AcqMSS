@@ -1,5 +1,5 @@
 """
-Performance metrics collection for CONGEN evaluation.
+Performance metrics collection for ConGen evaluation.
 
 According to Table 7-8 in the paper, collect:
 - #consistency_checks: Number of SAT solver calls
@@ -17,7 +17,7 @@ import statistics
 @dataclass
 class PerformanceMetrics:
     """
-    Performance metrics for a single CONGEN run.
+    Performance metrics for a single ConGen run.
 
     Metrics collected (Table 7-8 from paper):
     - runtime_ms: Execution time
@@ -48,7 +48,7 @@ class AggregatedPerformanceMetrics:
     """
     Aggregated performance metrics across multiple runs.
 
-    Useful for cross-validation where CONGEN runs multiple times.
+    Useful for cross-validation where ConGen runs multiple times.
     """
     n_runs: int
 

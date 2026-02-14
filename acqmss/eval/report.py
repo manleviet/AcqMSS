@@ -1,5 +1,5 @@
 """
-Report generation for CONGEN evaluation.
+Report generation for ConGen evaluation.
 
 Generates formatted reports and saves results to JSON.
 """
@@ -29,7 +29,7 @@ def generate_evaluation_report(
     """
     m = result.metrics
     report = f"""
-=== CONGEN Evaluation Report ===
+=== ConGen Evaluation Report ===
 Strategy: {result.strategy}
 
 Metrics:
@@ -150,7 +150,7 @@ Intersected KB: {len(result.intersected_kb)} constraints
 Performance:
   Total CV Runtime: {result.total_runtime_ms:.2f} ms
 
-  CONGEN Runtime (per fold):
+  ConGen Runtime (per fold):
     Mean:  {p.runtime_mean_ms:.2f} ms
     Std:   {p.runtime_std_ms:.2f} ms
     Range: [{p.runtime_min_ms:.2f}, {p.runtime_max_ms:.2f}] ms
@@ -184,7 +184,7 @@ def save_kb_result(
     """
     Save KB result to JSON file.
 
-    This saves the generated knowledge base from CONGEN in the same format
+    This saves the generated knowledge base from ConGen in the same format
     as the original run_congen.py output.
 
     Args:

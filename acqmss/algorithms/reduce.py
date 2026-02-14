@@ -49,7 +49,7 @@ class Reduce:
         All elements are assumption IDs (int). neg_map is Dict[int, int].
 
         Args:
-            set_b_prime: MSS constraints from ACQMSS (assumption IDs)
+            set_b_prime: MSS constraints from AcqMSS (assumption IDs)
             set_ne: Negated negative examples (assumption IDs)
             set_bg: Background knowledge (assumption IDs)
             neg_map: Mapping from constraint ID to its negated form ID

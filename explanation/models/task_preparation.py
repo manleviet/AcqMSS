@@ -220,7 +220,7 @@ class TestCaseTaskPreparationStrategy(ABC):
     """Abstract strategy for preparing tasks with test cases.
 
     Used for KBDiag algorithm with positive/negative test cases,
-    WipeOutR_T for test case redundancy detection, and CONGEN.
+    WipeOutR_T for test case redundancy detection, and ConGen.
 
     The model parameter accepts any object with: constraint_map, negated_constraint_map,
     variables, task_input, next_tseitin_var, background_knowledge (duck-typed).

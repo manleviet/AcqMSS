@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Evaluate CONGEN results against Oracle FM.
+Evaluate ConGen results against Oracle FM.
 
 Evaluates KB results using both description-based and clause-based strategies.
 
@@ -29,7 +29,7 @@ except ImportError:
     import tomli as tomllib
 
 from acqmss.eval.evaluator import Evaluator, EvaluationStrategy
-from acqmss.eval.result_loader import CONGENResultData
+from acqmss.eval.result_loader import ConGenResultData
 
 
 @dataclass
@@ -152,7 +152,7 @@ def evaluate_result_file(
     verbose: bool = False
 ) -> Optional[EvaluationEntry]:
     """
-    Evaluate a single CONGEN result file.
+    Evaluate a single ConGen result file.
 
     Args:
         result_path: Path to intersected_kb.json file
@@ -197,8 +197,8 @@ def evaluate_result_file(
             print(f"    Error creating evaluator: {e}")
         return None
 
-    # Create CONGENResultData
-    congen_result = CONGENResultData(
+    # Create ConGenResultData
+    congen_result = ConGenResultData(
         kb_constraints=kb_constraints,
         redundant_constraints=[],
         n_bias=len(evaluator.bias.constraints),
@@ -256,7 +256,7 @@ def print_summary_table(entries: List[EvaluationEntry]) -> str:
 
     # Header
     lines.append("=" * 120)
-    lines.append("CONGEN Evaluation Results (Both Strategies)")
+    lines.append("ConGen Evaluation Results (Both Strategies)")
     lines.append("=" * 120)
 
     header = (f"{'Model':<15} {'Strategy':<8} {'Mode':<15} {'|KB|':>5} "
@@ -296,7 +296,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate CONGEN results against Oracle FM",
+        description="Evaluate ConGen results against Oracle FM",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -370,7 +370,7 @@ Examples:
         sys.exit(1)
 
     print("=" * 80)
-    print("CONGEN Results Evaluation")
+    print("ConGen Results Evaluation")
     print("=" * 80)
     print(f"Input files: {len(result_files)}")
     print(f"FM directory: {fm_dir}")

@@ -1,5 +1,5 @@
 """
-Metrics for comparing CONGEN (passive) vs QuAcq (interactive) learning.
+Metrics for comparing ConGen (passive) vs QuAcq (interactive) learning.
 
 Provides utilities for:
 - Computing query efficiency metrics
@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .evaluator import Evaluator, EvaluationStrategy
-from .result_loader import CONGENResultData
+from .result_loader import ConGenResultData
 
 
 @dataclass
@@ -61,7 +61,7 @@ class InteractiveMetrics:
 @dataclass
 class CONGENMetrics:
     """
-    Metrics for CONGEN (passive) constraint acquisition.
+    Metrics for ConGen (passive) constraint acquisition.
 
     Attributes:
         n_examples: Total number of examples (|E+| + |E-|)
@@ -107,15 +107,15 @@ class CONGENMetrics:
 @dataclass
 class ComparisonResult:
     """
-    Comparison between CONGEN and QuAcq results.
+    Comparison between ConGen and QuAcq results.
 
     Attributes:
         model_name: Name of the model
-        congen: CONGEN metrics
+        congen: ConGen metrics
         quacq: QuAcq metrics
-        query_efficiency: Ratio of CONGEN examples to QuAcq queries
-        accuracy_diff: QuAcq accuracy - CONGEN accuracy
-        kb_size_diff: QuAcq KB size - CONGEN KB size
+        query_efficiency: Ratio of ConGen examples to QuAcq queries
+        accuracy_diff: QuAcq accuracy - ConGen accuracy
+        kb_size_diff: QuAcq KB size - ConGen KB size
     """
     model_name: str
     congen: CONGENMetrics
@@ -124,7 +124,7 @@ class ComparisonResult:
     @property
     def query_efficiency(self) -> float:
         """
-        Query efficiency = CONGEN examples / QuAcq queries.
+        Query efficiency = ConGen examples / QuAcq queries.
 
         Higher means QuAcq is more efficient (needs fewer queries).
         """
@@ -134,12 +134,12 @@ class ComparisonResult:
 
     @property
     def accuracy_diff(self) -> float:
-        """QuAcq accuracy - CONGEN accuracy."""
+        """QuAcq accuracy - ConGen accuracy."""
         return self.quacq.accuracy - self.congen.accuracy
 
     @property
     def kb_size_diff(self) -> int:
-        """QuAcq KB size - CONGEN KB size."""
+        """QuAcq KB size - ConGen KB size."""
         return self.quacq.n_kb - self.congen.n_kb
 
     def to_dict(self) -> Dict:
@@ -160,7 +160,7 @@ class InteractiveEvaluator:
     """
     Evaluator for interactive constraint acquisition.
 
-    Computes metrics for QuAcq results and compares with CONGEN.
+    Computes metrics for QuAcq results and compares with ConGen.
     """
 
     def __init__(self, oracle_path: str, bias_path: str):
@@ -196,8 +196,8 @@ class InteractiveEvaluator:
         # Get KB constraint IDs
         kb_constraints = result_data.get('kb_constraints', [])
 
-        # Create CONGENResultData-like object for evaluation
-        congen_result = CONGENResultData(
+        # Create ConGenResultData-like object for evaluation
+        congen_result = ConGenResultData(
             kb_constraints=kb_constraints,
             redundant_constraints=[],
             n_bias=len(self.evaluator.bias.constraints),
@@ -259,10 +259,10 @@ class InteractiveEvaluator:
             examples_path: str
     ) -> CONGENMetrics:
         """
-        Evaluate a CONGEN result.
+        Evaluate a ConGen result.
 
         Args:
-            result_path: Path to CONGEN result JSON
+            result_path: Path to ConGen result JSON
             examples_path: Path to examples JSON
 
         Returns:
@@ -277,8 +277,8 @@ class InteractiveEvaluator:
         # Get KB constraints
         kb_constraints = result_data.get('kb_constraints', [])
 
-        # Create CONGENResultData for evaluation
-        congen_result = CONGENResultData(
+        # Create ConGenResultData for evaluation
+        congen_result = ConGenResultData(
             kb_constraints=kb_constraints,
             redundant_constraints=result_data.get('redundant_constraints', []),
             n_bias=result_data.get('statistics', {}).get('n_bias', 0),
@@ -333,9 +333,9 @@ def generate_comparison_table(
     ]
 
     for comp in comparisons:
-        # CONGEN row
+        # ConGen row
         lines.append(
-            f"| {comp.model_name} | CONGEN | {comp.congen.n_examples} | "
+            f"| {comp.model_name} | ConGen | {comp.congen.n_examples} | "
             f"{comp.congen.n_kb} | {comp.congen.accuracy:.4f} | "
             f"{comp.congen.runtime_ms:.0f} |"
         )

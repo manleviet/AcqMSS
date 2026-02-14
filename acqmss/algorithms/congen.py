@@ -1,17 +1,17 @@
 """
-CONGEN Constraint Acquisition Algorithm.
+ConGen Constraint Acquisition Algorithm.
 
-Orchestrates ACQMSS and REDUCE to acquire a knowledge base from
+Orchestrates AcqMSS and REDUCE to acquire a knowledge base from
 positive examples and pre-computed NE constraints.
 
-NE generation is performed by callers before invoking CONGEN.
-CONGEN receives pre-computed NE via task.set_ne.
+NE generation is performed by callers before invoking ConGen.
+ConGen receives pre-computed NE via task.set_ne.
 
 Reference: Paper Algorithm 1 (steps 2-9, NE pre-computed)
-    CONGEN(E+, NE, B, BG) → KB
+    ConGen(E+, NE, B, BG) → KB
     2: B′ ← ∅
     3: if IsConsistent(E⁺, NE, BG) then
-    4:   B′ ← ACQMSS(∅, B, NE, E⁺, BG)
+    4:   B′ ← AcqMSS(∅, B, NE, E⁺, BG)
     5: else
     6:   print "examples inconsistent"
     7:   return (∅)
@@ -27,9 +27,9 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 
-from .acqmss import ACQMSS
+from .acqmss import AcqMSS
 from .reduce import Reduce
-from .task_preparation import CONGENTask
+from .task_preparation import ConGenTask
 from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
@@ -38,7 +38,7 @@ from explanation.operations.algorithms.profiler import (
 
 @dataclass
 class CONGENResult:
-    """Result of CONGEN constraint acquisition."""
+    """Result of ConGen constraint acquisition."""
     kb_constraints: List[str]  # Names of acquired constraints
     kb_assumption_ids: List[int]  # Assumption IDs of acquired constraints
     redundant_constraints: List[str]  # Names of redundant constraints removed
@@ -49,9 +49,9 @@ class CONGENResult:
     metadata: Dict = field(default_factory=dict)
 
 
-class CONGEN:
+class ConGen:
     """
-    CONGEN constraint acquisition algorithm.
+    ConGen constraint acquisition algorithm.
 
     Mode-agnostic: all data is assumption-based (List[int]).
     The checker implementation determines solver lifecycle.
@@ -65,24 +65,24 @@ class CONGEN:
 
     @measure_time('congen_runtime')
     @count_calls('congen_calls')
-    def acquire(self, task: CONGENTask) -> CONGENResult:
+    def acquire(self, task: ConGenTask) -> CONGENResult:
         """
         Acquire knowledge base from prepared task.
 
         NE must be pre-computed by caller and stored in task.set_ne.
         Implements Paper Algorithm 1 steps 2-9:
-        2. if IsConsistent(E⁺, NE, BG) then B′ ← ACQMSS(...)
+        2. if IsConsistent(E⁺, NE, BG) then B′ ← AcqMSS(...)
         3. return REDUCE(B′, NE, BG)
 
         Args:
-            task: CONGENTask with set_c, set_b, set_tc, set_ne populated
+            task: ConGenTask with set_c, set_b, set_tc, set_ne populated
 
         Returns:
             CONGENResult with acquired KB
         """
         # NE is pre-computed by caller and stored in task.set_ne
         set_ne = task.set_ne
-        logging.debug('>>> CONGEN [B=%d, NE=%d, E+=%d, BG=%d]',
+        logging.debug('>>> ConGen [B=%d, NE=%d, E+=%d, BG=%d]',
                       len(task.set_c), len(set_ne),
                       len(task.set_tc), len(task.set_b))
 
@@ -95,7 +95,7 @@ class CONGEN:
         self.profiler.increment("paper_consistency_checks")
 
         if len(inconsistent) > 0:
-            logging.debug('<<< CONGEN return Φ (E+ inconsistent with NE ∪ BG)')
+            logging.debug('<<< ConGen return Φ (E+ inconsistent with NE ∪ BG)')
             bg_clauses = [[lit] for lit in task.set_b]
 
             self.result = CONGENResult(
@@ -110,8 +110,8 @@ class CONGEN:
             )
             return self.result
 
-        # Step 4: B′ ← ACQMSS(∅, B, NE, E⁺, BG)
-        acqmss = ACQMSS(self.checker, m=1, profiler_instance=self.profiler)
+        # Step 4: B′ ← AcqMSS(∅, B, NE, E⁺, BG)
+        acqmss = AcqMSS(self.checker, m=1, profiler_instance=self.profiler)
         b_prime = acqmss.find_mss(
             delta=[],
             set_b=task.set_c,
@@ -119,7 +119,7 @@ class CONGEN:
             set_e_pos=task.set_tc,
             set_bg=task.set_b
         )
-        logging.debug('ACQMSS: MSS size = %d', len(b_prime))
+        logging.debug('AcqMSS: MSS size = %d', len(b_prime))
 
         # Step 9: return (REDUCE(B′, NE, BG))
         reduce = Reduce(self.checker, self.profiler)
@@ -152,7 +152,7 @@ class CONGEN:
             }
         )
 
-        logging.debug('<<< CONGEN return KB=%d', len(kb))
+        logging.debug('<<< ConGen return KB=%d', len(kb))
         return self.result
 
     def save_result(self, filepath: str):

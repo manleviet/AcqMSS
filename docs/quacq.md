@@ -178,7 +178,7 @@ from acqmss.eval.fold_io import generate_folds, load_folds, save_folds
 folds = generate_folds(E_plus, E_minus, n_splits=5, seed=42)
 save_folds(folds, 'data/cv_folds.json')
 
-# Load same folds for both CONGEN and QuAcq
+# Load same folds for both ConGen and QuAcq
 fold_data = load_folds('data/cv_folds.json')
 
 # Fair comparison: both algorithms use identical train/test splits

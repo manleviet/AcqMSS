@@ -5,7 +5,7 @@ Uses QuickXPlain to find minimal conflict sets from negative examples,
 then negates them to create NE constraints. Returns new clauses and
 assumptions in NEResult for the caller to merge into the task.
 
-Reference: Paper Section "CONGEN (Algorithm 1)"
+Reference: Paper Section "ConGen (Algorithm 1)"
 - GENERATENE(E⁻) activates QUICKXPLAIN once per negative example e⁻ ∈ E⁻.
 - NE is a set of constraints such that: if e⁻ᵢ ∈ E⁻ then ¬e⁻ᵢ ∈ NE
 """
@@ -124,7 +124,7 @@ class GenerateNE:
         )
 
 def merge_ne_into_task(task, ne_result: NEResult) -> None:
-    """Merge GenerateNE results into a CONGENTask.
+    """Merge GenerateNE results into a ConGenTask.
 
     Updates task in-place:
     - set_ne: NE assumption IDs
@@ -134,7 +134,7 @@ def merge_ne_into_task(task, ne_result: NEResult) -> None:
     - assumption_to_constraint: adds ne_X entries
 
     Args:
-        task: CONGENTask to update
+        task: ConGenTask to update
         ne_result: Result from GenerateNE.generate()
     """
     task.set_ne = ne_result.assumption_ids

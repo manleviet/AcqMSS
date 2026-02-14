@@ -13,7 +13,7 @@ from typing import Dict, List
 class OracleModel:
     """Model for Oracle FM validation via ConsistencyChecker.
 
-    Uses constraint_map + variables pattern (same as DiagnosisModel/CONGENModel).
+    Uses constraint_map + variables pattern (same as DiagnosisModel/ConGenModel).
     Satisfies CheckerModel Protocol after prepare().
 
     FM clauses go directly into set_kb (always active).
@@ -23,7 +23,7 @@ class OracleModel:
     """
 
     def __init__(self):
-        # Same data structure as CONGENModel/DiagnosisModel
+        # Same data structure as ConGenModel/DiagnosisModel
         self.constraint_map: Dict[str, List[List[int]]] = {}
         self.variables: Dict[str, int] = {}
         self.next_tseitin_var: int = 0

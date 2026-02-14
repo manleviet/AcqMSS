@@ -1,5 +1,5 @@
 """
-Main evaluator for CONGEN results.
+Main evaluator for ConGen results.
 
 Supports two evaluation strategies:
 1. Description-based (recommended): Compare constraint descriptions
@@ -14,7 +14,7 @@ import logging
 
 from acqmss.oracle.extractor import OracleData
 from .bias_loader import BiasData
-from .result_loader import CONGENResultData
+from .result_loader import ConGenResultData
 from .metrics import EvaluationMetrics, compute_metrics
 
 
@@ -61,7 +61,7 @@ class EvaluationResult:
 
 class Evaluator:
     """
-    Evaluate CONGEN results against Oracle FM.
+    Evaluate ConGen results against Oracle FM.
 
     Supports two strategies:
     1. Description-based (recommended): Compare constraint descriptions
@@ -83,14 +83,14 @@ class Evaluator:
 
     def evaluate(
             self,
-            result: CONGENResultData,
+            result: ConGenResultData,
             strategy: EvaluationStrategy = EvaluationStrategy.DESCRIPTION
     ) -> EvaluationResult:
         """
-        Evaluate CONGEN result against Oracle.
+        Evaluate ConGen result against Oracle.
 
         Args:
-            result: CONGENResultData with kb_constraints
+            result: ConGenResultData with kb_constraints
             strategy: DESCRIPTION (recommended) or CLAUSE
 
         Returns:
@@ -104,7 +104,7 @@ class Evaluator:
         else:
             return self._evaluate_by_clause(result)
 
-    def _evaluate_by_description(self, result: CONGENResultData) -> EvaluationResult:
+    def _evaluate_by_description(self, result: ConGenResultData) -> EvaluationResult:
         """
         Evaluate using description-based strategy.
 
@@ -161,7 +161,7 @@ class Evaluator:
 
         return eval_result
 
-    def _evaluate_by_clause(self, result: CONGENResultData) -> EvaluationResult:
+    def _evaluate_by_clause(self, result: ConGenResultData) -> EvaluationResult:
         """
         Evaluate using clause-based strategy.
 

@@ -1,7 +1,7 @@
 """
-Task preparation for CONGEN algorithm.
+Task preparation for ConGen algorithm.
 
-Contains CONGENTask dataclass and CONGENTaskPreparation strategy.
+Contains ConGenTask dataclass and ConGenTaskPreparation strategy.
 """
 
 from __future__ import annotations
@@ -20,12 +20,12 @@ from explanation.models.testsuite import TestSuite
 from explanation.operations.algorithms.utils import negate_cnf_tseitin
 
 if TYPE_CHECKING:
-    from .congen_model import CONGENModel
+    from .congen_model import ConGenModel
 
 
 @dataclass
-class CONGENTask(TestCaseTask):
-    """Task for CONGEN algorithm.
+class ConGenTask(TestCaseTask):
+    """Task for ConGen algorithm.
 
     Inherits from TestCaseTask with mapping:
     - set_c: Bias constraints (B) - assumption IDs
@@ -34,7 +34,7 @@ class CONGENTask(TestCaseTask):
     - set_tv: Negative examples (E-) - assumption IDs
     - neg_c_map: Dict[int, int] - negation map for REDUCE
 
-    Additional CONGEN-specific fields:
+    Additional ConGen-specific fields:
     - set_ne: NE assumption IDs (pre-computed by caller via GenerateNE)
     - e_neg_literals: Raw E⁻ literals for GenerateNE (List of [l1, l2, ...])
     - assumption_to_constraint: Maps assumption ID to constraint name
@@ -54,8 +54,8 @@ class CONGENTask(TestCaseTask):
         return f'unknown_{element}'
 
 
-class CONGENTaskPreparation(TestCaseTaskPreparationStrategy):
-    """Prepare CONGEN task using assumptions.
+class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
+    """Prepare ConGen task using assumptions.
 
     Data mapping:
     - set_c: Bias constraints (B) with individual assumptions
@@ -73,23 +73,23 @@ class CONGENTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: CONGENModel) -> PreparationOutput:
-        """Prepare CONGEN task from model.
+    def prepare(self, model: ConGenModel) -> PreparationOutput:
+        """Prepare ConGen task from model.
 
         Args:
-            model: CONGENModel with constraint_map, variables, task_input, etc.
+            model: ConGenModel with constraint_map, variables, task_input, etc.
 
         Returns:
-            PreparationOutput with CONGENTask
+            PreparationOutput with ConGenTask
         """
-        result = CONGENTask()
+        result = ConGenTask()
         provider = DescriptionProvider()
         task_input = model.task_input
 
         # Start assumption IDs after Tseitin variables
         id_assumption = model.next_tseitin_var
 
-        logging.debug('>>> CONGENTaskPreparation.prepare() [%s]', self._mode_name)
+        logging.debug('>>> ConGenTaskPreparation.prepare() [%s]', self._mode_name)
 
         # Step 1: Prepare bias constraints as set_c (with negated forms for REDUCE)
         id_assumption = self._prepare_bias_constraints(
@@ -114,14 +114,14 @@ class CONGENTaskPreparation(TestCaseTaskPreparationStrategy):
         # Store next available assumption ID for GenerateNE
         result.next_assumption_id = id_assumption
 
-        logging.debug('<<< CONGENTaskPreparation: set_c=%d, set_tc=%d, e_neg=%d',
+        logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, e_neg=%d',
                       len(result.set_c), len(result.set_tc), len(result.e_neg_literals))
 
         return PreparationOutput(result, provider)
 
     def _prepare_bias_constraints(
             self,
-            result: CONGENTask,
+            result: ConGenTask,
             provider: DescriptionProvider,
             constraint_map: Dict[str, List[List[int]]],
             negated_constraint_map: Dict[str, List[List[int]]],
@@ -172,7 +172,7 @@ class CONGENTaskPreparation(TestCaseTaskPreparationStrategy):
 
     def _prepare_examples(
             self,
-            result: CONGENTask,
+            result: ConGenTask,
             provider: DescriptionProvider,
             variables: Dict[str, int],
             examples: TestSuite,

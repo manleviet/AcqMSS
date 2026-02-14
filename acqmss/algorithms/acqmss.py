@@ -1,5 +1,5 @@
 """
-ACQMSS Algorithm for constraint acquisition.
+AcqMSS Algorithm for constraint acquisition.
 
 Divide-and-conquer algorithm for finding Maximum Satisfiable Subset (MSS)
 of bias constraints that are consistent with positive examples.
@@ -17,22 +17,22 @@ from explanation.operations.algorithms.profiler import (
 from explanation.operations.algorithms.utils import split, diff
 
 
-class ACQMSS:
+class AcqMSS:
     """
-    ACQMSS divide-and-conquer algorithm for finding MSS.
+    AcqMSS divide-and-conquer algorithm for finding MSS.
 
     Pattern follows KBDiag._mssDirect().
 
     Algorithm:
-        Func ACQMSS(δ, B, NE, E+, BG) : Γ
+        Func AcqMSS(δ, B, NE, E+, BG) : Γ
         E'+ <- E+
         if δ != Φ then
            E'+ <- TestC(B ∪ NE ∪ BG, E+)
            if E'+ = Φ then return B;
         if |B| <= m return Φ;
         B1, B2 = split(B)
-        Γ2 = ACQMSS(δ=B1, B1, NE, E'+, BG)
-        Γ1 = ACQMSS(δ=B1-Γ2, B2, NE, E'+, BG ∪ Γ2)
+        Γ2 = AcqMSS(δ=B1, B1, NE, E'+, BG)
+        Γ1 = AcqMSS(δ=B1-Γ2, B2, NE, E'+, BG ∪ Γ2)
         return Γ1 ∪ Γ2
 
     Args:
@@ -64,7 +64,7 @@ class ACQMSS:
         Returns:
             MSS subset of B that is consistent with all E+ and NE
         """
-        logging.debug('>>> ACQMSS [δ=%s, B=%s, NE=%s, E+=%s, BG=%s]',
+        logging.debug('>>> AcqMSS [δ=%s, B=%s, NE=%s, E+=%s, BG=%s]',
                       delta, set_b, set_ne, set_e_pos, set_bg)
 
         # E'+ <- E+
@@ -90,10 +90,10 @@ class ACQMSS:
         # B1, B2 = split(B)
         set_b1, set_b2 = split(set_b)
 
-        # Γ2 = ACQMSS(δ=B1, B1, NE, E'+, BG)
+        # Γ2 = AcqMSS(δ=B1, B1, NE, E'+, BG)
         gamma2 = self.find_mss(set_b1, set_b1, set_ne, set_e_pos, set_bg)
 
-        # Γ1 = ACQMSS(δ=B1-Γ2, B2, NE, E'+, BG ∪ Γ2)
+        # Γ1 = AcqMSS(δ=B1-Γ2, B2, NE, E'+, BG ∪ Γ2)
         b1_without_gamma2 = diff(set_b1, gamma2)
         gamma1 = self.find_mss(b1_without_gamma2, set_b2, set_ne,
                                set_e_pos, set_bg + gamma2)

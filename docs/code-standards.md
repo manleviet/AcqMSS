@@ -243,7 +243,7 @@ Pass dependencies as constructor parameters:
 
 ```python
 class CONGEN:
-    """Constraint acquisition via ACQMSS (mode-agnostic)."""
+    """Constraint acquisition via AcqMSS (mode-agnostic)."""
 
     def __init__(
         self,
@@ -262,7 +262,7 @@ class CONGEN:
             mss = self._acqmss(task)
         return Result(mss)
 
-# Usage (both modes use same CONGEN code)
+# Usage (both modes use same ConGen code)
 checker_inc = IncrementalPySATChecker(set_kb, assumptions)
 congen = CONGEN(checker_inc, profiler=profiler)
 result = congen.acquire(task)  # Same code path
@@ -461,11 +461,11 @@ constraint_acquisition.py
 
 Constraint acquisition algorithms for learning from examples.
 
-This module implements CONGEN (passive learning) and QuAcq (interactive learning)
+This module implements ConGen (passive learning) and QuAcq (interactive learning)
 paradigms for discovering constraints from feature models using SAT solvers.
 
 Classes:
-    CONGEN: Divide-and-conquer constraint acquisition
+    ConGen: Divide-and-conquer constraint acquisition
     QuAcq: Interactive query-based learning
 
 Functions:
@@ -483,7 +483,7 @@ Dependencies:
 class CONGEN:
     """Learn constraints via divide-and-conquer MSS finding.
 
-    CONGEN (Constraint Generalization) acquires constraints from positive and
+    ConGen (Constraint Generalization) acquires constraints from positive and
     negative example sets by:
     1. Generating negated examples from negative examples
     2. Finding maximum satisfiable subset of bias constraints
@@ -499,7 +499,7 @@ class CONGEN:
 
     Example:
         >>> checker = IncrementalPySATChecker(solver)
-        >>> congen = CONGEN(checker, profiler=None)
+        >>> congen = ConGen(checker, profiler=None)
         >>> result = congen.acquire(task)
         >>> print(len(result.kb))
     """

@@ -1,4 +1,4 @@
-# CONGEN Results Evaluation Configuration
+# ConGen Results Evaluation Configuration
 #
 # Usage:
 #   PYTHONPATH=. python apps/evaluate_congen_results.py apps/conf/evaluate_congen_config.toml -v

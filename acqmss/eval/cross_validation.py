@@ -1,5 +1,5 @@
 """
-n-fold cross validation with CONGEN.
+n-fold cross validation with ConGen.
 
 Standard cross-validation according to the paper (page 6):
 1. Split examples into n folds
@@ -19,7 +19,7 @@ import time
 
 from .metrics import EvaluationMetrics
 from .accuracy import AccuracyCalculator
-from .congen_runner import CONGENRunner
+from .congen_runner import ConGenRunner
 from .fold_io import FoldData, generate_folds, apply_folds
 from .performance_metrics import (
     PerformanceMetrics,
@@ -145,7 +145,7 @@ def n_fold_cross_validation(
     Process:
     1. Split examples into n folds
     2. For each fold i:
-       - Train: run CONGEN on (n-1) folds to learn KB
+       - Train: run ConGen on (n-1) folds to learn KB
        - Test: calculate accuracy on fold i (held-out)
     3. Report mean accuracy ± std
     4. Compute intersected KB (constraints common to all folds)
@@ -185,8 +185,8 @@ def n_fold_cross_validation(
     # Start total time measurement
     cv_start_time = time.perf_counter()
 
-    # Create CONGEN runner
-    runner = CONGENRunner(
+    # Create ConGen runner
+    runner = ConGenRunner(
         bias_clauses=bias_clauses,
         feature_ids=feature_ids,
         solver_name=solver_name,
@@ -219,7 +219,7 @@ def n_fold_cross_validation(
         # Determine bias shuffle seed for this fold
         fold_shuffle_seed = fold_data.shuffle_seeds[fold_idx] if shuffle_bias else None
 
-        # Train: run CONGEN on training set
+        # Train: run ConGen on training set
         congen_result = runner.run(train_pos, train_neg,
                                    shuffle_seed=fold_shuffle_seed)
 
@@ -323,7 +323,7 @@ def n_fold_cross_validation_interactive(
     """
     n-fold cross validation using interactive (QuAcq) learning.
 
-    Same CV loop as CONGEN CV but using InteractiveRunner.
+    Same CV loop as ConGen CV but using InteractiveRunner.
 
     Args:
         positive_examples: List of E+ ({feature: True/False})

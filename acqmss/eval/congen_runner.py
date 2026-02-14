@@ -1,7 +1,7 @@
 """
-Run CONGEN and collect performance metrics.
+Run ConGen and collect performance metrics.
 
-Runs CONGEN directly to:
+Runs ConGen directly to:
 1. Support cross-validation (each fold needs to train a new KB)
 2. Collect performance metrics (#checks, runtime, memory, n_mss, n_kb)
 """
@@ -13,8 +13,8 @@ import time
 import tracemalloc
 import logging
 
-from acqmss.algorithms.congen import CONGEN
-from acqmss.algorithms.congen_model import CONGENModel
+from acqmss.algorithms.congen import ConGen
+from acqmss.algorithms.congen_model import ConGenModel
 from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
@@ -26,9 +26,9 @@ from .performance_metrics import PerformanceMetrics
 
 
 @dataclass
-class CONGENRunResult:
+class ConGenRunResult:
     """
-    Result of running CONGEN with metrics.
+    Result of running ConGen with metrics.
 
     Attributes:
         kb_constraints: List of constraint IDs in learned KB
@@ -80,9 +80,9 @@ class CONGENRunResult:
         )
 
 
-class CONGENRunner:
+class ConGenRunner:
     """
-    Run CONGEN and collect performance metrics.
+    Run ConGen and collect performance metrics.
 
     Metrics collected (Table 7-8 from paper):
     - runtime_ms: Execution time
@@ -122,9 +122,9 @@ class CONGENRunner:
             negative_examples: List[Dict[str, bool]],
             background_clauses: List[List[int]] = None,
             shuffle_seed: Optional[int] = None
-    ) -> CONGENRunResult:
+    ) -> ConGenRunResult:
         """
-        Run CONGEN with given examples and collect metrics.
+        Run ConGen with given examples and collect metrics.
 
         Args:
             positive_examples: List of E+ (each is {feature: True/False})
@@ -133,9 +133,9 @@ class CONGENRunner:
             shuffle_seed: If provided, shuffle bias keys with this seed
 
         Returns:
-            CONGENRunResult with KB and performance metrics
+            ConGenRunResult with KB and performance metrics
         """
-        logging.debug('>>> CONGENRunner.run(E+=%d, E-=%d)',
+        logging.debug('>>> ConGenRunner.run(E+=%d, E-=%d)',
                       len(positive_examples), len(negative_examples))
 
         # Create profiler to collect metrics
@@ -157,7 +157,7 @@ class CONGENRunner:
                 logging.debug('Shuffled bias with seed=%d', shuffle_seed)
 
             # Create model from bias and examples
-            model = CONGENModel.from_bias_and_examples(
+            model = ConGenModel.from_bias_and_examples(
                 bias_constraints=bias_clauses,
                 positive_examples=positive_examples,
                 negative_examples=negative_examples,
@@ -192,8 +192,8 @@ class CONGENRunner:
                     task.set_kb, task.assumptions, self.solver_name, profiler
                 )
 
-            # Run CONGEN
-            congen = CONGEN(checker, profiler)
+            # Run ConGen
+            congen = ConGen(checker, profiler)
             result = congen.acquire(task)
 
         finally:
@@ -219,7 +219,7 @@ class CONGENRunner:
             if cid in self.bias_clauses:
                 kb_clauses.extend(self.bias_clauses[cid])
 
-        run_result = CONGENRunResult(
+        run_result = ConGenRunResult(
             kb_constraints=result.kb_constraints,
             kb_clauses=kb_clauses,
             redundant_constraints=result.redundant_constraints,
@@ -231,7 +231,7 @@ class CONGENRunner:
             memory_peak_mb=memory_peak_mb
         )
 
-        logging.debug('<<< CONGENRunner: KB=%d, runtime=%.2fms, checks=%d',
+        logging.debug('<<< ConGenRunner: KB=%d, runtime=%.2fms, checks=%d',
                       result.n_kb, runtime_ms, consistency_checks)
 
         return run_result

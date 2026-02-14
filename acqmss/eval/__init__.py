@@ -1,14 +1,14 @@
 """
-Evaluation module for CONGEN constraint acquisition.
+Evaluation module for ConGen constraint acquisition.
 
 This module provides tools to evaluate the quality of learned KBs by comparing
 with the Oracle (original Feature Model) and calculating accuracy metrics.
 
 Main components:
-- Evaluator: Main class for evaluating CONGEN results
+- Evaluator: Main class for evaluating ConGen results
 - AccuracyCalculator: Calculate accuracy of KB against test examples
 - n_fold_cross_validation: Cross-validation for generalizability assessment
-- CONGENRunner: Run CONGEN with performance metrics collection
+- ConGenRunner: Run ConGen with performance metrics collection
 
 Evaluation strategies:
 1. Description-based (recommended): Compare constraint descriptions
@@ -32,7 +32,7 @@ from .metrics import EvaluationMetrics, compute_metrics
 
 # Data loaders
 from .bias_loader import BiasData, BiasConstraint
-from .result_loader import CONGENResultData
+from .result_loader import ConGenResultData
 from acqmss.oracle.extractor import OracleData
 
 # Accuracy calculation
@@ -45,8 +45,8 @@ from .performance_metrics import (
     aggregate_metrics
 )
 
-# CONGEN runner
-from .congen_runner import CONGENRunner, CONGENRunResult
+# ConGen runner
+from .congen_runner import ConGenRunner, ConGenRunResult
 
 # Interactive runner
 from .interactive_runner import InteractiveRunner, InteractiveRunResult
@@ -82,7 +82,7 @@ __all__ = [
     # Data loaders
     'BiasData',
     'BiasConstraint',
-    'CONGENResultData',
+    'ConGenResultData',
     'OracleData',
 
     # Accuracy
@@ -94,9 +94,9 @@ __all__ = [
     'AggregatedPerformanceMetrics',
     'aggregate_metrics',
 
-    # CONGEN runner
-    'CONGENRunner',
-    'CONGENRunResult',
+    # ConGen runner
+    'ConGenRunner',
+    'ConGenRunResult',
 
     # Interactive runner
     'InteractiveRunner',

@@ -1,5 +1,5 @@
 """
-Tests for CONGEN constraint acquisition algorithm.
+Tests for ConGen constraint acquisition algorithm.
 
 Uses REAL-FM-7 feature model with generated bias and examples.
 Supports both incremental and non-incremental solver modes.
@@ -13,8 +13,8 @@ from acqmss.oracle import FeatureModelOracle
 from acqmss.examples import ExampleIO
 from acqmss.bias import BiasIO
 from acqmss.algorithms import (
-    CONGEN, ACQMSS, Reduce, GenerateNE,
-    CONGENModel
+    ConGen, AcqMSS, Reduce, GenerateNE,
+    ConGenModel
 )
 from acqmss.algorithms.generate_ne import merge_ne_into_task
 from explanation.operations.algorithms.checker import (
@@ -88,7 +88,7 @@ def create_checker_and_task(oracle, bias, examples, is_incremental=True):
     root_id = oracle.get_feature_ids()[root_name]
 
     # Create model
-    model = CONGENModel.from_bias_and_examples(
+    model = ConGenModel.from_bias_and_examples(
         bias_constraints=bias_constraints,
         positive_examples=positive_examples,
         negative_examples=negative_examples,
@@ -128,10 +128,10 @@ def create_checker_and_task(oracle, bias, examples, is_incremental=True):
 
 
 class TestCONGEN:
-    """Tests for main CONGEN algorithm."""
+    """Tests for main ConGen algorithm."""
 
     def test_congen_incremental_with_rs_examples(self, oracle, bias, examples_rs):
-        """Test CONGEN incremental mode with random sampling examples."""
+        """Test ConGen incremental mode with random sampling examples."""
         checker, task, profiler, root_id = create_checker_and_task(
             oracle, bias, examples_rs, is_incremental=True
         )
@@ -140,7 +140,7 @@ class TestCONGEN:
             # Verify root in set_b (incremental: List[int] of assumption IDs)
             assert root_id in task.set_b, "Root should be in set_b"
 
-            congen = CONGEN(checker, profiler)
+            congen = ConGen(checker, profiler)
             result = congen.acquire(task)
 
             # Verify result
@@ -152,7 +152,7 @@ class TestCONGEN:
             # Verify bg_clauses contains root clause
             assert [root_id] in result.bg_clauses, "Root clause should be in bg_clauses"
 
-            print(f"\nCONGEN Incremental Result (RS 1n):")
+            print(f"\nConGen Incremental Result (RS 1n):")
             print(f"  Bias: {result.n_bias}")
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
@@ -166,7 +166,7 @@ class TestCONGEN:
             checker.cleanup()
 
     def test_congen_non_incremental_with_rs_examples(self, oracle, bias, examples_rs):
-        """Test CONGEN non-incremental mode with random sampling examples."""
+        """Test ConGen non-incremental mode with random sampling examples."""
         checker, task, profiler, root_id = create_checker_and_task(
             oracle, bias, examples_rs, is_incremental=False
         )
@@ -175,7 +175,7 @@ class TestCONGEN:
             # Verify root in set_b (assumption ID)
             assert root_id in task.set_b, "Root should be in set_b"
 
-            congen = CONGEN(checker, profiler)
+            congen = ConGen(checker, profiler)
             result = congen.acquire(task)
 
             # Verify result
@@ -187,7 +187,7 @@ class TestCONGEN:
             # Verify bg_clauses contains root clause
             assert [root_id] in result.bg_clauses, "Root clause should be in bg_clauses"
 
-            print(f"\nCONGEN Non-Incremental Result (RS 1n):")
+            print(f"\nConGen Non-Incremental Result (RS 1n):")
             print(f"  Bias: {result.n_bias}")
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
@@ -202,7 +202,7 @@ class TestCONGEN:
             checker.cleanup()
 
     def test_congen_incremental_with_ff_examples(self, oracle, bias, examples_ff):
-        """Test CONGEN incremental mode with feature frequency examples."""
+        """Test ConGen incremental mode with feature frequency examples."""
         checker, task, profiler, root_id = create_checker_and_task(
             oracle, bias, examples_ff, is_incremental=True
         )
@@ -211,7 +211,7 @@ class TestCONGEN:
             # Verify root in set_b (incremental: List[int] of assumption IDs)
             assert root_id in task.set_b, "Root should be in set_b"
 
-            congen = CONGEN(checker, profiler)
+            congen = ConGen(checker, profiler)
             result = congen.acquire(task)
 
             # Verify result
@@ -221,7 +221,7 @@ class TestCONGEN:
             # Verify bg_clauses contains root clause
             assert [root_id] in result.bg_clauses, "Root clause should be in bg_clauses"
 
-            print(f"\nCONGEN Incremental Result (FF):")
+            print(f"\nConGen Incremental Result (FF):")
             print(f"  Bias: {result.n_bias}")
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
@@ -237,15 +237,15 @@ class TestCONGEN:
 
 
 class TestACQMSS:
-    """Tests for ACQMSS algorithm."""
+    """Tests for AcqMSS algorithm."""
 
     def test_acqmss_empty_bias(self):
-        """Test ACQMSS with empty bias returns empty."""
+        """Test AcqMSS with empty bias returns empty."""
         # Create simple checker
         checker = IncrementalPySATChecker([[1]], [1], 'glucose4')
 
         try:
-            acqmss = ACQMSS(checker)
+            acqmss = AcqMSS(checker)
             result = acqmss.find_mss([], [], [], [1], [])
 
             assert result == []
@@ -253,14 +253,14 @@ class TestACQMSS:
             checker.cleanup()
 
     def test_acqmss_single_constraint(self):
-        """Test ACQMSS with single constraint."""
+        """Test AcqMSS with single constraint."""
         # Create checker with simple clauses
         # Clause: (1 ∨ a) where a is assumption
         kb = [[1, 2]]  # 2 is assumption
         checker = IncrementalPySATChecker(kb, [2], 'glucose4')
 
         try:
-            acqmss = ACQMSS(checker, m=1)
+            acqmss = AcqMSS(checker, m=1)
             # B = [2], should return [] since |B| <= m
             result = acqmss.find_mss([], [2], [], [1], [])
 

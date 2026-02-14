@@ -3,11 +3,11 @@ Constraint Acquisition Algorithms.
 
 This package provides implementations of constraint acquisition algorithms:
 
-CONGEN (Passive/Batch Learning):
-- ACQMSS: Divide-and-conquer algorithm for finding MSS of bias
+ConGen (Passive/Batch Learning):
+- AcqMSS: Divide-and-conquer algorithm for finding MSS of bias
 - REDUCE: Redundancy elimination from acquired KB
 - GenerateNE: Negated negative examples generation using QuickXPlain
-- CONGEN: Main constraint acquisition algorithm
+- ConGen: Main constraint acquisition algorithm
 
 Interactive Learning (QuAcq):
 - QuAcq: Interactive constraint acquisition via membership queries
@@ -17,13 +17,13 @@ Interactive Learning (QuAcq):
 Task classes shared across incremental and non-incremental modes.
 """
 
-from .acqmss import ACQMSS
+from .acqmss import AcqMSS
 from .reduce import Reduce
 from .generate_ne import GenerateNE, NEResult, merge_ne_into_task
-from .congen import CONGEN, CONGENResult
-from .task_preparation import CONGENTask
-from .task_preparation import CONGENTaskPreparation
-from .congen_model import CONGENModel
+from .congen import ConGen, CONGENResult
+from .task_preparation import ConGenTask
+from .task_preparation import ConGenTaskPreparation
+from .congen_model import ConGenModel
 
 # Interactive learning components
 from .interactive import (
@@ -42,17 +42,17 @@ from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from explanation.models.task_preparation import TaskInput
 
 __all__ = [
-    # CONGEN (passive learning)
-    'ACQMSS',
+    # ConGen (passive learning)
+    'AcqMSS',
     'Reduce',
     'GenerateNE',
     'NEResult',
     'merge_ne_into_task',
-    'CONGEN',
+    'ConGen',
     'CONGENResult',
-    'CONGENTask',
-    'CONGENTaskPreparation',
-    'CONGENModel',
+    'ConGenTask',
+    'ConGenTaskPreparation',
+    'ConGenModel',
     # Interactive learning (QuAcq)
     'InteractiveLearner',
     'QuAcq',

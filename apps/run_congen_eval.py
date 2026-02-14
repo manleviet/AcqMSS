@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """
-Evaluate CONGEN results against Oracle FM.
+Evaluate ConGen results against Oracle FM.
 
 Usage:
     PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml
 
 Features:
-- Evaluate pre-computed CONGEN results (if result file provided)
-- Run cross-validation with CONGEN (if n_folds > 0)
+- Evaluate pre-computed ConGen results (if result file provided)
+- Run cross-validation with ConGen (if n_folds > 0)
 - Calculate accuracy against test examples
 - Support both description-based and clause-based evaluation strategies
 - Support both incremental and non-incremental solver modes
@@ -30,7 +30,7 @@ from acqmss.eval import (
     EvaluationStrategy,
     AccuracyCalculator,
     BiasData,
-    CONGENResultData,
+    ConGenResultData,
     n_fold_cross_validation,
     generate_evaluation_report,
     generate_accuracy_report,
@@ -175,7 +175,7 @@ def evaluate_model(
             )
 
             # Load result
-            result = CONGENResultData.from_json(Path(model_config.result))
+            result = ConGenResultData.from_json(Path(model_config.result))
 
             # Evaluate with each strategy
             for strategy in strategies:
@@ -274,7 +274,7 @@ def evaluate_model(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate CONGEN constraint acquisition results",
+        description="Evaluate ConGen constraint acquisition results",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
@@ -327,7 +327,7 @@ Example:
     solver_modes = get_solver_modes(eval_config.get('solver_mode', 'all'))
 
     print("=" * 60)
-    print("CONGEN Evaluation")
+    print("ConGen Evaluation")
     print("=" * 60)
     print(f"Config: {args.config}")
     print(f"Output: {output_dir}")

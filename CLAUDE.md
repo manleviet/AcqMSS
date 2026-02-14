@@ -107,7 +107,7 @@ PYTHONPATH=. python apps/generate_bias_files.py data/bias-config/model.yaml
 # Generate test examples
 PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml
 
-# Run CONGEN (passive learning)
+# Run ConGen (passive learning)
 PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
 PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml --non-incremental
 
@@ -164,15 +164,16 @@ Tests use `@parameterized.expand` with combinations of incremental/non-increment
 ## Key API Patterns
 
 **CONGEN usage**:
+
 ```python
-from acqmss.algorithms import CONGEN, CONGENModel, CONGENTaskPreparation
+from acqmss.algorithms import ConGen, ConGenModel, ConGenTaskPreparation
 from explanation.operations.algorithms.checker import IncrementalPySATChecker
 
-model = CONGENModel.from_bias_and_examples(bias_constraints, pos_examples, neg_examples, feature_ids)
-preparation = CONGENTaskPreparation()  # mode_name defaults to "congen"
+model = ConGenModel.from_bias_and_examples(bias_constraints, pos_examples, neg_examples, feature_ids)
+preparation = ConGenTaskPreparation()  # mode_name defaults to "congen"
 task = preparation.prepare(model).task
 checker = IncrementalPySATChecker(task.set_kb, task.assumptions, 'glucose4', profiler)
-congen = CONGEN(checker, profiler)
+congen = ConGen(checker, profiler)
 result = congen.acquire(task)
 ```
 

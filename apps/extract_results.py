@@ -573,7 +573,7 @@ def generate_accuracy_compact_md(results: Dict, mode: str = 'incremental') -> st
 
 def generate_table7_md(results: Dict, mode: str = 'incremental') -> str:
     """
-    Generate Table 7: ACQMSS #consistency checks and runtime (in msec).
+    Generate Table 7: AcqMSS #consistency checks and runtime (in msec).
 
     Format from paper:
     | Strategy | |E+| | |E-| | KB1 | KB2 | KB3 | KB4 |
@@ -581,7 +581,7 @@ def generate_table7_md(results: Dict, mode: str = 'incremental') -> str:
     Values: #checks / runtime(ms)
     """
     lines = []
-    lines.append("## Table 7: ACQMSS #consistency checks and runtime (msec) - {} Mode".format(mode.capitalize()))
+    lines.append("## Table 7: AcqMSS #consistency checks and runtime (msec) - {} Mode".format(mode.capitalize()))
     lines.append("")
     lines.append("| Strategy | |E+| | |E-| | KB1 | KB2 | KB3 | KB4 |")
     lines.append("|:---|---:|---:|:---:|:---:|:---:|:---:|")
@@ -617,10 +617,10 @@ def generate_table7_latex(results: Dict, mode: str = 'incremental') -> str:
     Generate Table 7 in LaTeX format.
     """
     lines = []
-    lines.append("% Table 7: ACQMSS #consistency checks and runtime (msec)")
+    lines.append("% Table 7: AcqMSS #consistency checks and runtime (msec)")
     lines.append("\\begin{table}[htbp]")
     lines.append("\\centering")
-    lines.append("\\caption{ACQMSS \\#consistency checks and runtime (msec) - " + mode.capitalize() + "}")
+    lines.append("\\caption{AcqMSS \\#consistency checks and runtime (msec) - " + mode.capitalize() + "}")
     lines.append("\\label{tab:table7_" + mode + "}")
     lines.append("\\begin{tabular}{lrrcccc}")
     lines.append("\\toprule")
@@ -951,7 +951,7 @@ def main():
         # =====================================================================
         md_content.append("\n# Paper Tables ({})".format(mode.capitalize()))
 
-        # Table 7: ACQMSS #consistency checks and runtime
+        # Table 7: AcqMSS #consistency checks and runtime
         md_content.append("\n" + generate_table7_md(results, mode))
         latex_content.append("\n" + generate_table7_latex(results, mode))
 

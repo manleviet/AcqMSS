@@ -73,7 +73,7 @@ from acqmss.bias import BiasIO
 # Load bias
 B = BiasIO.load_from_json('data/bias.json')
 
-# Use in ACQMSS
+# Use in AcqMSS
 B_prime = acqmss(set(), B.constraints, NE, E_plus, BG)
 ```
 

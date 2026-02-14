@@ -52,17 +52,18 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 #### acqmss/algorithms/ — Acquisition Algorithms
 
 **Core API**:
+
 ```python
-from acqmss.algorithms import CONGEN, CONGENModel, ACQMSS, REDUCE
+from acqmss.algorithms import ConGen, ConGenModel, AcqMSS, REDUCE
 from acqmss.algorithms.interactive import QuAcq, InteractiveLearner
 from acqmss.example_generators import QueryGenerator, ExampleProvider
 
 # Passive learning
-model = CONGENModel.from_bias_and_examples(bias, e_plus, e_minus, features)
+model = ConGenModel.from_bias_and_examples(bias, e_plus, e_minus, features)
 preparation = CONGENTaskPreparation()  # mode_name defaults to "congen"
 task = preparation.prepare(model).task
 checker = IncrementalPySATChecker(task.set_kb, task.assumptions, 'glucose4')
-congen = CONGEN(checker, profiler)
+congen = ConGen(checker, profiler)
 result = congen.acquire(task)  # → KB + metadata
 
 # Interactive learning
@@ -200,7 +201,7 @@ class DiagnosisTask:
     set_kb: list[list[int]]     # CNF with assumption literals
 
 class CONGENTask(TestCaseTask):
-    """Task for CONGEN - unified assumption-based format."""
+    """Task for ConGen - unified assumption-based format."""
     set_c: list[int]            # Bias assumption IDs
     set_tc: list[int]           # E+ assumption IDs
     set_tv: list[int]           # E- assumption IDs
@@ -230,7 +231,7 @@ class ConsistencyChecker(ABC):
 class IncrementalPySATChecker(ConsistencyChecker):
     """Persistent solver with assumption-based solving.
     - ~50x faster than non-incremental
-    - Use case: CONGEN with many consistency checks
+    - Use case: ConGen with many consistency checks
     """
 
 class NonIncrementalPySATChecker(ConsistencyChecker):

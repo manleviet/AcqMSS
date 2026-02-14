@@ -34,7 +34,7 @@ PYTHONPATH=. python apps/generate_bias_files.py data/bias-config/arcade-game.yam
 # 2. Generate test examples (E+/E-)
 PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml -v
 
-# 3. Learn constraints (CONGEN passive learning)
+# 3. Learn constraints (ConGen passive learning)
 PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
 
 # 4. Evaluate results
@@ -48,15 +48,15 @@ PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.tom
 Learn constraints from positive (valid) and negative (invalid) example configurations:
 
 ```python
-from acqmss.algorithms import CONGEN, CONGENModel
+from acqmss.algorithms import ConGen, ConGenModel
 from explanation.operations.algorithms.checker import IncrementalPySATChecker
 
-model = CONGENModel.from_bias_and_examples(
+model = ConGenModel.from_bias_and_examples(
     bias_constraints=bias, positive_examples=E_plus,
     negative_examples=E_minus, feature_ids=features
 )
 checker = IncrementalPySATChecker(model.solver, profiler=None)
-congen = CONGEN(checker, profiler=None)
+congen = ConGen(checker, profiler=None)
 result = congen.acquire(task)
 ```
 

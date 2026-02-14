@@ -16,7 +16,7 @@ from .quacq import QuAcq
 from acqmss.bias.bias_io import BiasIO
 from acqmss.bias.data_structures import Bias
 from acqmss.eval.evaluator import Evaluator, EvaluationStrategy
-from acqmss.eval.result_loader import CONGENResultData
+from acqmss.eval.result_loader import ConGenResultData
 from explanation.operations.algorithms.utils import negate_cnf_tseitin
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, use_global_profiler, ProfilerPreset, AbstractProfiler
@@ -327,7 +327,7 @@ class InteractiveLearner:
         # Create a result-like object for the evaluator
         # Wrap background assumptions as unit clauses for clause-based eval
         bg_clauses = [[lit] for lit in self.task.background] if self.task.background else []
-        congen_result = CONGENResultData(
+        congen_result = ConGenResultData(
             kb_constraints=result.kb_constraints,
             redundant_constraints=[],
             n_bias=len(self.task.bias) + len(result.kb_constraints),  # Original bias size

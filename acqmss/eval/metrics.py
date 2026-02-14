@@ -1,5 +1,5 @@
 """
-Evaluation metrics for CONGEN.
+Evaluation metrics for ConGen.
 
 According to Formula 1 in the paper (page 6), the primary metric is Accuracy:
     accuracy(KB) = (TP + TN) / (TP + TN + FP + FN)

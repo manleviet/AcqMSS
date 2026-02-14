@@ -3,7 +3,7 @@ QuAcq algorithm for interactive constraint acquisition.
 
 Supports two modes:
 - Oracle-based: traditional QuAcq with oracle membership queries
-- Example-based: ExampleProvider + ConsistencyChecker (fair comparison with CONGEN)
+- Example-based: ExampleProvider + ConsistencyChecker (fair comparison with ConGen)
 """
 
 import logging

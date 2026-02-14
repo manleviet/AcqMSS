@@ -1,7 +1,7 @@
 """
 Run interactive (QuAcq) learning and collect performance metrics.
 
-Analogous to CONGENRunner but uses InteractiveLearner.from_examples()
+Analogous to ConGenRunner but uses InteractiveLearner.from_examples()
 for example-based interactive constraint acquisition.
 """
 
@@ -73,7 +73,7 @@ class InteractiveRunner:
     """
     Run interactive (QuAcq) learning and collect performance metrics.
 
-    Analogous to CONGENRunner. Uses InteractiveLearner.from_examples()
+    Analogous to ConGenRunner. Uses InteractiveLearner.from_examples()
     to learn from a pool of examples with per-fold bias shuffling support.
     """
 

@@ -1,11 +1,11 @@
 """
-Model for CONGEN algorithm.
+Model for ConGen algorithm.
 
 Uses existing classes from explanation module:
 - Assignment, TestCase, TestSuite from explanation.models.testsuite
 - TaskInput, DescriptionProvider from explanation.models.task_preparation
 
-CONGENModel uses composition to delegate task preparation to CONGENTaskPreparation.
+ConGenModel uses composition to delegate task preparation to ConGenTaskPreparation.
 Call prepare() before accessing task or description_provider.
 """
 
@@ -14,13 +14,13 @@ from typing import Dict, List, Optional
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from explanation.models.task_preparation import TaskInput, DescriptionProvider
 
-from .task_preparation import CONGENTask
+from .task_preparation import ConGenTask
 
 
-class CONGENModel:
-    """Model for CONGEN algorithm.
+class ConGenModel:
+    """Model for ConGen algorithm.
 
-    Uses composition to delegate task preparation to CONGENTaskPreparation.
+    Uses composition to delegate task preparation to ConGenTaskPreparation.
     Call prepare() before accessing task or description_provider.
 
     Unlike DiagnosisModel, this doesn't require a feature model and works
@@ -36,11 +36,11 @@ class CONGENModel:
         self.background_knowledge: List[int] = []
 
         # Populated after prepare()
-        self._task: Optional[CONGENTask] = None
+        self._task: Optional[ConGenTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
 
     @property
-    def task(self) -> CONGENTask:
+    def task(self) -> ConGenTask:
         """Get prepared task. Call prepare() first."""
         if self._task is None:
             raise RuntimeError("Call prepare() first")
@@ -53,21 +53,21 @@ class CONGENModel:
             raise RuntimeError("Call prepare() first")
         return self._description_provider
 
-    def prepare(self, mode_name: str = "congen") -> CONGENTask:
-        """Prepare CONGEN task using CONGENTaskPreparation strategy.
+    def prepare(self, mode_name: str = "congen") -> ConGenTask:
+        """Prepare ConGen task using ConGenTaskPreparation strategy.
 
         Args:
             mode_name: Mode name for logging (e.g., "incremental-congen")
 
         Returns:
-            CONGENTask ready for GenerateNE and CONGEN.
+            ConGenTask ready for GenerateNE and ConGen.
         """
-        from .task_preparation import CONGENTaskPreparation
+        from .task_preparation import ConGenTaskPreparation
 
-        preparation = CONGENTaskPreparation(mode_name)
+        preparation = ConGenTaskPreparation(mode_name)
         output = preparation.prepare(self)
 
-        assert isinstance(output.task, CONGENTask)
+        assert isinstance(output.task, ConGenTask)
         self._task = output.task
         self._description_provider = output.description_provider
         return self._task
@@ -80,7 +80,7 @@ class CONGENModel:
             negative_examples: List[Dict[str, bool]],
             feature_ids: Dict[str, int],
             background_knowledge: Optional[List[int]] = None
-    ) -> 'CONGENModel':
+    ) -> 'ConGenModel':
         """Create model from bias constraints and examples.
 
         Args:
@@ -91,7 +91,7 @@ class CONGENModel:
             background_knowledge: BG literals (e.g., [root_feature_id])
 
         Returns:
-            CONGENModel ready for prepare()
+            ConGenModel ready for prepare()
         """
         # Find max variable ID for Tseitin allocation
         max_var = max(feature_ids.values()) if feature_ids else 0

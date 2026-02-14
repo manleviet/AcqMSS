@@ -1,7 +1,7 @@
 """
 Fold I/O for shared cross-validation.
 
-Generate, save, and load pre-generated CV folds so both CONGEN
+Generate, save, and load pre-generated CV folds so both ConGen
 and QuAcq evaluation use identical train/test splits.
 """
 

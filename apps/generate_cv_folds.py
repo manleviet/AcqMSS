@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Generate shared cross-validation folds for fair CONGEN vs QuAcq comparison.
+Generate shared cross-validation folds for fair ConGen vs QuAcq comparison.
 
 Usage:
     PYTHONPATH=. python apps/generate_cv_folds.py apps/conf/generate_cv_folds_config.toml

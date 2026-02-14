@@ -1,7 +1,7 @@
 """
-CONGEN result loader for evaluation.
+ConGen result loader for evaluation.
 
-Loads result JSON files produced by CONGEN algorithm.
+Loads result JSON files produced by ConGen algorithm.
 """
 
 from dataclasses import dataclass, field
@@ -11,9 +11,9 @@ import json
 
 
 @dataclass
-class CONGENResultData:
+class ConGenResultData:
     """
-    CONGEN result loaded from JSON.
+    ConGen result loaded from JSON.
 
     Attributes:
         kb_constraints: List of constraint IDs in learned KB
@@ -33,7 +33,7 @@ class CONGENResultData:
     metadata: Dict = field(default_factory=dict)
 
     @classmethod
-    def from_json(cls, json_path: Path) -> 'CONGENResultData':
+    def from_json(cls, json_path: Path) -> 'ConGenResultData':
         """
         Load result from JSON file.
 
@@ -41,7 +41,7 @@ class CONGENResultData:
             json_path: Path to result JSON file
 
         Returns:
-            CONGENResultData instance
+            ConGenResultData instance
         """
         json_path = Path(json_path)
         with open(json_path, 'r') as f:
@@ -85,4 +85,4 @@ class CONGENResultData:
         }
 
     def __repr__(self) -> str:
-        return f"CONGENResultData(kb={self.n_kb}, redundant={len(self.redundant_constraints)})"
+        return f"ConGenResultData(kb={self.n_kb}, redundant={len(self.redundant_constraints)})"

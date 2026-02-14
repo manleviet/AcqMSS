@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Run CONGEN constraint acquisition algorithm.
+Run ConGen constraint acquisition algorithm.
 
 Usage:
     PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml
@@ -22,7 +22,7 @@ except ImportError:
 from acqmss.oracle import FeatureModelOracle
 from acqmss.examples import ExampleIO
 from acqmss.bias import BiasIO
-from acqmss.algorithms import CONGEN, CONGENModel
+from acqmss.algorithms import ConGen, ConGenModel
 from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
@@ -82,7 +82,7 @@ def extract_sampling_type(examples_path: str) -> str:
 def process_model(model_config: ModelConfig, output_dir: Path,
                   seed: int, verbose: bool, is_incremental: bool = True,
                   solver_name: str = 'glucose4') -> bool:
-    """Process a single model with CONGEN.
+    """Process a single model with ConGen.
 
     Args:
         model_config: Model configuration
@@ -131,8 +131,8 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         root_name = oracle.get_root_feature()
         root_feature_id = feature_ids.get(root_name)
 
-        # Create CONGEN model
-        congen_model = CONGENModel.from_bias_and_examples(
+        # Create ConGen model
+        congen_model = ConGenModel.from_bias_and_examples(
             bias_constraints=bias_constraints,
             positive_examples=positive_examples,
             negative_examples=negative_examples,
@@ -169,8 +169,8 @@ def process_model(model_config: ModelConfig, output_dir: Path,
                 task.set_kb, task.assumptions, solver_name, profiler
             )
 
-        # Run CONGEN
-        congen = CONGEN(checker, profiler)
+        # Run ConGen
+        congen = ConGen(checker, profiler)
         result = congen.acquire(task)
 
         if verbose:
@@ -206,7 +206,7 @@ def process_model(model_config: ModelConfig, output_dir: Path,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run CONGEN constraint acquisition",
+        description="Run ConGen constraint acquisition",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
@@ -254,7 +254,7 @@ Example:
     mode_str = "incremental" if is_incremental else "non-incremental"
 
     print("=" * 60)
-    print("CONGEN Constraint Acquisition")
+    print("ConGen Constraint Acquisition")
     print("=" * 60)
     print(f"Config: {args.config}")
     print(f"Output: {output_dir}")
