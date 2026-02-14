@@ -55,6 +55,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 ```python
 from acqmss.algorithms import CONGEN, CONGENModel, ACQMSS, REDUCE
 from acqmss.algorithms.interactive import QuAcq, InteractiveLearner
+from acqmss.example_generators import QueryGenerator, ExampleProvider
 
 # Passive learning
 model = CONGENModel.from_bias_and_examples(bias, e_plus, e_minus, features)
@@ -67,6 +68,10 @@ result = congen.acquire(task)  # → KB + metadata
 # Interactive learning
 learner = InteractiveLearner.from_files(fm_path='model.uvl', bias_path='bias.json')
 result = learner.learn(mode='automated')  # → KB + query history
+
+# Query generation and example provision
+query = QueryGenerator.generate_discriminative_query(...)  # Canonical import
+examples = ExampleProvider(...)  # Canonical import
 ```
 
 **Key Algorithms**:
@@ -104,18 +109,33 @@ result = learner.learn(mode='automated')  # → KB + query history
 - `bias_io.py` — Load/save bias in JSON/YAML formats
 - `config_loader.py` — TOML configuration for bias generation
 
-#### acqmss/testcases/ — Example Generation
+#### acqmss/example_generators/ — Example & Query Generation
 
-**Purpose**: Generate diverse positive/negative configurations for training.
+**Purpose**: Generate diverse positive/negative configurations and discriminative queries for learning.
 
-**Strategies**:
+**Components**:
+
+**Example Generation Strategies**:
 1. **RandomSampling (RS)** — Uniform random configuration selection
 2. **FeatureFrequency (FF)** — Weight by feature occurrence patterns
 3. **TwoCoverage (2-COV)** — Ensure feature pairs appear together
+4. **ExampleProvider** — Batch example interface for learning (moved from oracle/)
+
+**Query Generation**:
+- **QueryGenerator** — Discriminative query generation for interactive learning (moved from algorithms/interactive/)
+  - Implements greedy selection of queries that maximize constraint distinction
+  - Supports priority strategies: `clause_count_priority`, `literal_count_priority`
+  - Lazy-loaded via `__getattr__` to avoid circular dependencies
+
+**Import Notes**:
+- Canonical imports: `from acqmss.example_generators import QueryGenerator, ExampleProvider`
+- QueryGenerator uses lazy loading to resolve circular dependency:
+  - `example_generators/__init__` → `query_generator` → `algorithms.interactive.task`
+  - Lazy loading defers import until first access via `__getattr__`
 
 #### acqmss/oracle/ — Oracle Implementations
 
-**Purpose**: Unified oracle interface for configuration validation and example generation.
+**Purpose**: Unified oracle interface for configuration validation.
 
 **Architecture**:
 - `Oracle` (base.py) — Unified abstract base class for all oracle implementations
@@ -126,8 +146,9 @@ result = learner.learn(mode='automated')  # → KB + query history
 - `FeatureModelOracle` (fm_oracle.py) — Validates against SAT-based feature model ground truth
 - `UserPromptOracle` (user_prompt.py) — Interactive human-in-the-loop oracle
 - `CachedOracle` (cached.py) — Wrapper caching query results
-- `ExampleProvider` (example_provider.py) — Batch example interface for learning
 - `OracleData` (extractor.py) — Extracted oracle data for evaluation
+
+**Note**: `ExampleProvider` moved to `acqmss.example_generators` (see acqmss/example_generators/)
 
 **Critical Detail**: Feature ID consistency
 - `FeatureModelOracle._build_feature_ids()` uses flamapy's variable mapping from `FmToPysat.variables`

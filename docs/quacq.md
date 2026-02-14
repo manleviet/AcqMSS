@@ -24,8 +24,8 @@ Interactive learning through membership queries:
 
 **Implementation**:
 - `acqmss/algorithms/interactive/quacq.py` — Main QuAcq algorithm (oracle mode)
-- `acqmss/algorithms/interactive/query_generator.py` — GenerateQuery heuristics
-- `acqmss/oracle/interactive.py` — AutomatedOracle, UserPromptOracle
+- `acqmss/example_generators/query_generator.py` — GenerateQuery heuristics (moved from interactive/)
+- `acqmss/oracle/` — Oracle implementations (FeatureModelOracle, UserPromptOracle, CachedOracle)
 
 ### 2. Example-Based Mode (New — Batch Learning with FindScope/FindC)
 
@@ -43,7 +43,7 @@ Learn from pre-collected positive/negative examples without an interactive oracl
 - `acqmss/algorithms/interactive/findscope.py` — FindScope (Algorithm 2, 134 LOC)
 - `acqmss/algorithms/interactive/findc.py` — FindC (Algorithm 3, 208 LOC)
 - `acqmss/algorithms/interactive/learner.py` — InteractiveLearner facade (from_examples() API)
-- `acqmss/oracle/interactive.py` — ExampleProvider for batch examples
+- `acqmss/example_generators/example_provider.py` — ExampleProvider for batch examples (moved from oracle/)
 
 ## FindScope (Algorithm 2)
 
@@ -117,8 +117,8 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 - `acqmss/algorithms/interactive/findscope.py` — FindScope (Algorithm 2, 134 LOC)
 - `acqmss/algorithms/interactive/findc.py` — FindC (Algorithm 3, 208 LOC)
 - `acqmss/algorithms/interactive/learner.py` — InteractiveLearner facade (426 LOC, from_examples() API)
-- `acqmss/oracle/oracle.py` — Oracle, FeatureModelOracle base classes (362 LOC)
-- `acqmss/oracle/interactive.py` — InteractiveOracle, AutomatedOracle, UserPromptOracle, ExampleProvider (297 LOC)
+- `acqmss/oracle/` — Oracle implementations: FeatureModelOracle, UserPromptOracle, CachedOracle (base.py, fm_oracle.py, user_prompt.py, cached.py)
+- `acqmss/example_generators/` — Query generation and batch examples (query_generator.py, example_provider.py)
 
 **Evaluation Support**:
 - `acqmss/eval/fold_io.py` — Shared CV fold generation for CONGEN/QuAcq comparison (145 LOC)
@@ -149,15 +149,17 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 
 ## Oracle Implementations
 
-**Base Classes** (acqmss/oracle/oracle.py):
+**Base Classes** (acqmss/oracle/base.py):
 - `Oracle` — Abstract base class for configuration validators
-- `FeatureModelOracle` — FM-based oracle using flamapy
 
-**Concrete Oracles** (acqmss/oracle/interactive.py):
-- `AutomatedOracle` — Automated oracle for both modes (FM-based or constraint-based)
-- `UserPromptOracle` — Interactive user oracle (prompts on command line)
-- `CachedOracle` — Caching wrapper to avoid re-asking same query
-- `ExampleProvider` — Batch example interface for FindC algorithm
+**Concrete Oracles** (acqmss/oracle/):
+- `FeatureModelOracle` — FM-based oracle using flamapy (fm_oracle.py)
+- `UserPromptOracle` — Interactive user oracle (prompts on command line) (user_prompt.py)
+- `CachedOracle` — Caching wrapper to avoid re-asking same query (cached.py)
+
+**Query & Example Generation** (acqmss/example_generators/):
+- `QueryGenerator` — Discriminative query generation (moved from algorithms/interactive/) (query_generator.py)
+- `ExampleProvider` — Batch example interface for FindC algorithm (moved from oracle/) (example_provider.py)
 
 **Critical**: Feature ID consistency
 - Uses flamapy's variable mapping (tree traversal order) as authoritative source

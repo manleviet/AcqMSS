@@ -48,9 +48,7 @@ from acqmss.oracle import (
     FeatureModelOracle,
     UserPromptOracle,
     CachedOracle,
-    ExampleProvider,
 )
-from .query_generator import QueryGenerator
 from .quacq import QuAcq
 from .findscope import find_scope
 from .findc import find_c
@@ -60,7 +58,6 @@ __all__ = [
     # Core classes
     'InteractiveLearner',
     'QuAcq',
-    'QueryGenerator',
     'InteractiveTask',
     'InteractiveResult',
     # Oracle implementations
@@ -68,7 +65,6 @@ __all__ = [
     'FeatureModelOracle',
     'UserPromptOracle',
     'CachedOracle',
-    'ExampleProvider',
     # FindScope/FindC
     'find_scope',
     'find_c',

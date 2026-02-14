@@ -14,8 +14,8 @@ from pysat.solvers import Solver
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from acqmss.oracle import Oracle, ExampleProvider
-from .query_generator import QueryGenerator
+from acqmss.oracle import Oracle
+from acqmss.example_generators import QueryGenerator, ExampleProvider
 from .findscope import find_scope
 from .findc import find_c
 from acqmss.algorithms.reduce import Reduce

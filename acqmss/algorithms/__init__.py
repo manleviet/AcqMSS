@@ -29,7 +29,6 @@ from .congen_model import CONGENModel
 from .interactive import (
     InteractiveLearner,
     QuAcq,
-    QueryGenerator,
     InteractiveTask,
     InteractiveResult,
     FeatureModelOracle,
@@ -57,7 +56,6 @@ __all__ = [
     # Interactive learning (QuAcq)
     'InteractiveLearner',
     'QuAcq',
-    'QueryGenerator',
     'InteractiveTask',
     'InteractiveResult',
     'FeatureModelOracle',

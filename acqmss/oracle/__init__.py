@@ -6,7 +6,6 @@ Provides ground truth interfaces for classifying configurations:
 - FeatureModelOracle: Validates against a feature model (SAT-based)
 - UserPromptOracle: Human-in-the-loop oracle
 - CachedOracle: Wrapper caching oracle answers
-- ExampleProvider: Provides examples for example-based learning
 - OracleData: Extracted oracle data for evaluation
 """
 
@@ -14,7 +13,6 @@ from .base import Oracle
 from .fm_oracle import FeatureModelOracle
 from .user_prompt import UserPromptOracle
 from .cached import CachedOracle
-from .example_provider import ExampleProvider
 from .extractor import OracleData
 from .oracle_model import OracleModel, OneShotModel
 
@@ -23,7 +21,6 @@ __all__ = [
     'FeatureModelOracle',
     'UserPromptOracle',
     'CachedOracle',
-    'ExampleProvider',
     'OracleData',
     'OracleModel',
     'OneShotModel',

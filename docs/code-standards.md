@@ -354,7 +354,8 @@ The `acqmss/oracle/` package provides a unified oracle abstraction for configura
 
 ```python
 from typing import Dict
-from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle, ExampleProvider
+from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle
+from acqmss.example_generators import ExampleProvider
 
 # Unified Oracle interface
 class Oracle(ABC):

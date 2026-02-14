@@ -13,10 +13,10 @@ from acqmss.bias import BiasIO
 from acqmss.algorithms.interactive import (
     InteractiveTask,
     InteractiveResult,
-    QueryGenerator,
     QuAcq,
     InteractiveLearner,
 )
+from acqmss.example_generators import QueryGenerator
 from explanation.operations.algorithms.profiler import (
     get_global_profiler,
     use_global_profiler,

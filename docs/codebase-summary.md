@@ -23,13 +23,12 @@ Primary constraint discovery algorithms:
 | `task_preparation.py` | 435 | Task hierarchy (DiagnosisTask → TestCaseTask → CONGENTask) + unified prep (mode-agnostic) |
 | `model.py` | 93 | CONGENModel - self-preparing model from bias+examples |
 
-**Interactive Sub-package** (`interactive/`, 7 files, ~2,200 LOC):
+**Interactive Sub-package** (`interactive/`, 6 files, ~1,950 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `quacq.py` | 439 | QuAcq: oracle-based + example-based learning modes |
 | `learner.py` | 426 | InteractiveLearner: high-level facade (from_examples(), from_files()) |
-| `query_generator.py` | 262 | GenerateQuery: discriminative query generation |
 | `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): scope identification via partial queries |
 | `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): constraint discrimination from scope |
 | `task.py` | 137 | Task state, scope helpers, shared utilities (violates_clauses) |
@@ -47,19 +46,21 @@ Feature model to constraint conversion pipeline:
 | `clause_generator.py` | 199 | Convert FM constraints to CNF clauses |
 | `data_structures.py` | 160 | Constraint, BiasConfig, ConstraintType enumerations |
 
-#### acqmss/testcases/ — Example Generation (~1,015 LOC, 5 files)
+#### acqmss/example_generators/ — Example & Query Generation (~1,285 LOC, 7 files)
 
-Positive/negative example generation strategies:
+Sampling strategies, example generation, and query generation for learning:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `generators/base.py` | 245 | Base strategy class for example generation |
-| `generators/nwise_coverage.py` | 136 | 2-COV strategy: n-wise pairwise coverage |
+| `base.py` | 245 | Base strategy class for example generation |
 | `random_sampling.py` | 245 | RS sampling: uniformly random configuration selection |
 | `feature_frequency.py` | 197 | FF strategy: feature frequency-based sampling |
-| `io_utils.py` | 155 | Load/save examples in JSON format |
+| `nwise_coverage.py` | 136 | 2-COV strategy: n-wise pairwise coverage |
+| `query_generator.py` | 262 | QueryGenerator: discriminative query generation (moved from interactive/) |
+| `example_provider.py` | 120+ | ExampleProvider: batch example interface for learning (moved from oracle/) |
+| `__init__.py` | 1 | Package exports with lazy-loaded QueryGenerator |
 
-**Oracle Sub-package** (`acqmss/oracle/`, 7 files, ~750 LOC):
+**Oracle Sub-package** (`acqmss/oracle/`, 6 files, ~630 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
@@ -67,7 +68,6 @@ Positive/negative example generation strategies:
 | `fm_oracle.py` | 150+ | FeatureModelOracle: ground truth validation via SAT solver |
 | `user_prompt.py` | 100+ | UserPromptOracle: interactive human-in-the-loop oracle |
 | `cached.py` | 80+ | CachedOracle: wrapper with query result caching |
-| `example_provider.py` | 120+ | ExampleProvider: batch example interface for learning |
 | `extractor.py` | 100+ | OracleData: extract oracle data for evaluation |
 | `__init__.py` | 1 | Package exports |
 
@@ -292,7 +292,12 @@ CONGEN and QuAcq learning results:
 | explanation/ | 6,580 | 42 | 157 | ✅ SAT infrastructure |
 | apps/ | 3,765 | 9 | 418 | ✅ CLI applications |
 | tests/ | ~3,500+ | 8 | 437 | ✅ Comprehensive coverage |
-| **Total** | **~22,500+** | **~106** | **~212** | ✅ **Production ready** |
+| **Total** | **~22,540+** | **~106** | **~212** | ✅ **Production ready** |
+
+**Recent Changes**:
+- QueryGenerator moved from `acqmss/algorithms/interactive/` to `acqmss/example_generators/`
+- ExampleProvider moved from `acqmss/oracle/` to `acqmss/example_generators/`
+- Both classes now have canonical imports from `acqmss.example_generators`
 
 ## Build & Test Commands
 
