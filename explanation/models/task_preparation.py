@@ -407,7 +407,7 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
             else:
                 if has_negated_forms:
                     # Redundancy detection: C = CF (PySATModel, no root), B = {}
-                    result.set_c = result.assumptions[2:len(result.assumptions):step]
+                    result.set_c = result.assumptions[step:len(result.assumptions):step]
                 else:
                     # C = FM constraints, B = root only
                     result.set_b = [result.assumptions[0]]
