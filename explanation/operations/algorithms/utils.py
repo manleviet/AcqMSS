@@ -103,13 +103,13 @@ def negate_cnf_tseitin(clauses: List[List[int]],
     # ¬(c1 ∧ c2 ∧ ... ∧ cm) = ¬c1 ∨ ¬c2 ∨ ... ∨ ¬cm
     result_clauses = []
     tseitin_vars = []
-    tseitin_var = tseitin_start
+    next_tseitin_var = tseitin_start
 
     for clause in clauses:
         # Create Tseitin variable ti representing ¬ci
-        ti = tseitin_var
+        ti = next_tseitin_var
         tseitin_vars.append(ti)
-        tseitin_var += 1
+        next_tseitin_var += 1
 
         # ti → (¬l1 ∧ ¬l2 ∧ ... ∧ ¬ln)
         # CNF: (¬ti ∨ ¬l1) ∧ (¬ti ∨ ¬l2) ∧ ... ∧ (¬ti ∨ ¬ln)
@@ -124,4 +124,4 @@ def negate_cnf_tseitin(clauses: List[List[int]],
     # At least one ti must be true
     result_clauses.append(tseitin_vars)
 
-    return result_clauses, tseitin_var
+    return result_clauses, next_tseitin_var

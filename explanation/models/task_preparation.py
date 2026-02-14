@@ -416,12 +416,12 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
 
 # === TEST CASE STRATEGY ===
 
-def _prepare_testsuite_with_negation(result: TestCaseTask,
-                                     provider: DescriptionProvider,
-                                     variables: Dict[str, int],
-                                     testsuite: TestSuite,
-                                     id_assumption: int,
-                                     is_negative: bool) -> int:
+def prepare_testsuite_with_negation(result: TestCaseTask,
+                                    provider: DescriptionProvider,
+                                    variables: Dict[str, int],
+                                    testsuite: TestSuite,
+                                    id_assumption: int,
+                                    is_negative: bool) -> int:
     """Prepare test cases with assumptions and their negated forms.
 
     Each test case gets two assumption IDs: original and negated.
@@ -503,13 +503,13 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
 
         # Prepare positive test cases with negated forms
         start_id_tc = len(result.assumptions)
-        id_assumption = _prepare_testsuite_with_negation(
+        id_assumption = prepare_testsuite_with_negation(
             result, provider, model.variables, task_input.positive_test_cases, id_assumption, is_negative=False)
 
         # Prepare negative test cases with negated forms if provided
         start_id_tv = len(result.assumptions)
         if task_input.negative_test_cases is not None:
-            _prepare_testsuite_with_negation(
+            prepare_testsuite_with_negation(
                 result, provider, model.variables, task_input.negative_test_cases, id_assumption, is_negative=True)
 
         self._assign_sets(result, start_id_tc, start_id_tv, task_input.negative_test_cases is not None)

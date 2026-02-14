@@ -94,6 +94,14 @@ class Bias:
         return clauses
 
     @property
+    def root_feature(self) -> Optional[str]:
+        """Assume the root feature is the one with ID 1 (if exists)"""
+        for f in self.features:
+            if f.id == 1:
+                return f.name
+        return self.features[0].name if self.features else None
+
+    @property
     def feature_ids(self) -> Dict[str, int]:
         """Feature name to SAT variable ID mapping."""
         return {f.name: f.id for f in self.features}
@@ -127,16 +135,16 @@ class Bias:
 
         constraint_map = {}
         negated_constraint_map = {}
-        tseitin_var = self.max_variable_id + 1
+        next_tseitin_var = self.max_variable_id + 1
 
         for c in self.constraints:
             constraint_map[c.id] = c.clauses
-            neg_clauses, tseitin_var = negate_cnf_tseitin(c.clauses, tseitin_var)
+            neg_clauses, next_tseitin_var = negate_cnf_tseitin(c.clauses, next_tseitin_var)
 
             negated_key = f"NOT({c.id})"
             negated_constraint_map[negated_key] = neg_clauses
 
-        return constraint_map, negated_constraint_map, tseitin_var
+        return constraint_map, negated_constraint_map, next_tseitin_var
 
     def __len__(self):
         return len(self.constraints)

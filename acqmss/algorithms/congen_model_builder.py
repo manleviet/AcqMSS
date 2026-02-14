@@ -106,6 +106,7 @@ class ConGenModelBuilder:
         model.constraint_map, model.negated_constraint_map, model.next_tseitin_var \
             = bias.to_constraint_maps_with_negation()
         model.variables = bias.feature_ids
+        model.root_feature = bias.root_feature
         model.use_incremental = self._use_incremental
 
         # Set examples + prepare only if examples provided
