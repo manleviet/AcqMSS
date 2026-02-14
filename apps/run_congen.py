@@ -19,15 +19,8 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.oracle import FeatureModelOracle
-from acqmss.examples import ExampleIO
-from acqmss.bias import BiasIO
-from acqmss.algorithms import ConGen, ConGenModel
-from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
-from explanation.operations.algorithms.checker import (
-    IncrementalPySATChecker,
-    NonIncrementalPySATChecker
-)
+from acqmss.algorithms import ConGen, ConGenModelBuilder
+from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import get_global_profiler
 
 
@@ -97,8 +90,6 @@ def process_model(model_config: ModelConfig, output_dir: Path,
     """
     checker = None
     try:
-        # Load feature model for feature IDs
-        oracle = FeatureModelOracle(model_config.path)
         model_name = Path(model_config.path).stem
         sampling_type = extract_sampling_type(model_config.examples)
 
@@ -109,69 +100,36 @@ def process_model(model_config: ModelConfig, output_dir: Path,
             print(f"  Examples: {model_config.examples}")
             print(f"  Mode: {'incremental' if is_incremental else 'non-incremental'}")
 
-        # Load bias and examples
-        bias = BiasIO.load_from_json(model_config.bias)
-        examples = ExampleIO.load_json(model_config.examples)
+        # Build model via builder (loads bias, FM, examples, runs prepare)
+        profiler = get_global_profiler()
+        congen_model = (ConGenModelBuilder
+                        .from_bias_and_fm_uvl(model_config.bias, model_config.path)
+                        .with_examples(model_config.examples)
+                        .use_incremental(is_incremental)
+                        .with_solver(solver_name)
+                        .with_profiler(profiler)
+                        .build())
 
         if verbose:
-            print(f"  Bias constraints: {len(bias.constraints)}")
-            print(f"  E+: {len(examples.positive)}, E-: {len(examples.negative)}")
+            print(f"  Bias constraints: {len(congen_model.constraint_map)}")
+            print(f"  E+: {len(congen_model.task_input.positive_test_cases.testcases)}, "
+                  f"E-: {len(congen_model.task_input.negative_test_cases.testcases)}")
 
-        # Convert bias to constraint dict
-        bias_constraints = {}
-        for c in bias.constraints:
-            bias_constraints[c.id] = c.clauses
-
-        # Convert examples to dict format
-        positive_examples = [e.assignments for e in examples.positive]
-        negative_examples = [e.assignments for e in examples.negative]
-
-        # Extract root feature ID from oracle
-        feature_ids = oracle.get_feature_ids()
-        root_name = oracle.get_root_feature()
-        root_feature_id = feature_ids.get(root_name)
-
-        # Create ConGen model
-        congen_model = ConGenModel.from_bias_and_examples(
-            bias_constraints=bias_constraints,
-            positive_examples=positive_examples,
-            negative_examples=negative_examples,
-            feature_ids=feature_ids,
-            background_knowledge=[root_feature_id] if root_feature_id is not None else []
-        )
-
-        # Prepare task based on mode
-        profiler = get_global_profiler()
-
-        mode = "incremental-congen" if is_incremental else "non-incremental-congen"
-        congen_model.prepare(mode)
         task = congen_model.task
 
-        # Run GenerateNE with temp non-incremental checker (read-only QXP calls)
-        temp_checker = NonIncrementalPySATChecker(
-            task.set_kb, task.assumptions, solver_name, profiler
-        )
-        generate_ne = GenerateNE(temp_checker, profiler)
-        ne_result = generate_ne.generate(
-            set_e_neg=task.e_neg_literals,
-            set_bg=task.set_b,
-            start_assumption_id=task.next_assumption_id
-        )
-        merge_ne_into_task(task, ne_result)
-
-        # Create final checker with complete data (including NE)
-        if is_incremental:
-            checker = IncrementalPySATChecker(
-                task.set_kb, task.assumptions, solver_name, profiler
-            )
-        else:
-            checker = NonIncrementalPySATChecker(
-                task.set_kb, task.assumptions, solver_name, profiler
-            )
+        # Create checker via factory
+        checker = CheckerFactory.create_from_model(congen_model, solver_name, profiler)
 
         # Run ConGen
         congen = ConGen(checker, profiler)
-        result = congen.acquire(task)
+        result = congen.acquire(
+            set_b=task.set_c,
+            set_bg=task.set_b,
+            set_tc=task.set_tc,
+            set_neg_tv=task.set_neg_tv,
+            neg_c_map=task.neg_c_map,
+            assumption_to_constraint=task.assumption_to_constraint
+        )
 
         if verbose:
             print(f"  MSS size: {result.n_mss}")

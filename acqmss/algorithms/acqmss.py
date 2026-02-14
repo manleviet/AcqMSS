@@ -49,7 +49,7 @@ class AcqMSS:
 
     @measure_time('acqmss_runtime')
     @count_calls('acqmss_calls')
-    def find_mss(self, delta: List, set_b: List, set_ne: List,
+    def find_mss(self, delta: List, set_b: List, set_neg_tv: List,
                  set_e_pos: List, set_bg: List) -> List:
         """
         Find maximum satisfiable subset of B.
@@ -57,7 +57,7 @@ class AcqMSS:
         Args:
             delta: Previously identified satisfiable constraints (for optimization)
             set_b: Candidate constraints (bias assumption IDs)
-            set_ne: Negated negative examples (assumption IDs)
+            set_neg_tv: Negated negative examples (assumption IDs)
             set_e_pos: Positive examples (list of assumption IDs)
             set_bg: Background knowledge (assumption IDs)
 
@@ -65,7 +65,7 @@ class AcqMSS:
             MSS subset of B that is consistent with all E+ and NE
         """
         logging.debug('>>> AcqMSS [δ=%s, B=%s, NE=%s, E+=%s, BG=%s]',
-                      delta, set_b, set_ne, set_e_pos, set_bg)
+                      delta, set_b, set_neg_tv, set_e_pos, set_bg)
 
         # E'+ <- E+
         # set_e_pos_p = set_e_pos.copy()
@@ -74,7 +74,7 @@ class AcqMSS:
         if len(delta) != 0:
             # Check which E+ are inconsistent with B ∪ NE ∪ BG
             set_e_pos_p = self.checker.is_consistent_test_cases(
-                set_b + set_ne + set_bg, set_e_pos, True
+                set_b + set_neg_tv + set_bg, set_e_pos, True
             )
             self.profiler.increment("paper_consistency_checks")
             # if E'+ = Φ then return B (all E+ are consistent with current B)
@@ -91,11 +91,11 @@ class AcqMSS:
         set_b1, set_b2 = split(set_b)
 
         # Γ2 = AcqMSS(δ=B1, B1, NE, E'+, BG)
-        gamma2 = self.find_mss(set_b1, set_b1, set_ne, set_e_pos, set_bg)
+        gamma2 = self.find_mss(set_b1, set_b1, set_neg_tv, set_e_pos, set_bg)
 
         # Γ1 = AcqMSS(δ=B1-Γ2, B2, NE, E'+, BG ∪ Γ2)
         b1_without_gamma2 = diff(set_b1, gamma2)
-        gamma1 = self.find_mss(b1_without_gamma2, set_b2, set_ne,
+        gamma1 = self.find_mss(b1_without_gamma2, set_b2, set_neg_tv,
                                set_e_pos, set_bg + gamma2)
 
         logging.debug('<<< return [Γ1=%s ∪ Γ2=%s]', gamma1, gamma2)

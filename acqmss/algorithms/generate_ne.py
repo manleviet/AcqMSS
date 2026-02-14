@@ -42,15 +42,13 @@ class GenerateNE:
     NE = {¬(minimal_conflict(e⁻)) | e⁻ ∈ E⁻}
     """
 
-    def __init__(self, checker: ConsistencyChecker,
-                 profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, checker: ConsistencyChecker) -> None:
         self.checker = checker
-        self.profiler = profiler_instance if profiler_instance is not None else get_global_profiler()
-        self.quickxplain = QuickXPlain(checker, self.profiler)
+        self.quickxplain = QuickXPlain(checker)
 
     @measure_time('generate_ne_runtime')
     @count_calls('generate_ne_calls')
-    def generate(self, set_e_neg: List[List[int]], set_bg: List[int],
+    def generate(self, set_tv: List[List[int]], set_bg: List[int],
                  start_assumption_id: int = 1000) -> NEResult:
         """
         Generate NE from negative examples using QuickXPlain.
@@ -59,14 +57,14 @@ class GenerateNE:
         conflict set with respect to BG, then creates a blocking clause.
 
         Args:
-            set_e_neg: List of negative examples, each is a list of literals
+            set_tv: List of negative examples, each is a list of literals
             set_bg: Background knowledge (assumption IDs)
             start_assumption_id: Starting ID for new assumptions
 
         Returns:
             NEResult with assumption IDs and neg_map
         """
-        logging.debug('>>> GenerateNE [%d E⁻, BG=%s]', len(set_e_neg), set_bg)
+        logging.debug('>>> GenerateNE [%d E⁻, BG=%s]', len(set_tv), set_bg)
 
         assumption_ids = []
         neg_map = {}
@@ -75,19 +73,20 @@ class GenerateNE:
         new_assumptions = []
         current_id = start_assumption_id
 
-        for e_neg in set_e_neg:
-            if not e_neg:
+        # Iterates examples; creates blocking clauses and negated forms
+        for tv in set_tv:
+            if not tv:
                 continue
 
             # Use QuickXPlain to find minimal conflict
             # Pass literals directly as assumption IDs
-            minimal_conflict = self.quickxplain.find_conflict(e_neg, set_bg)
+            minimal_conflict = self.quickxplain.find_conflict(tv, set_bg)
 
             if len(minimal_conflict) == 0:
-                minimal_conflict = e_neg
-                logging.debug('E⁻=%s consistent with BG, using full example', e_neg)
+                minimal_conflict = tv
+                logging.debug('E⁻=%s consistent with BG, using full example', tv)
             else:
-                logging.debug('E⁻=%s -> minimal conflict=%s', e_neg, minimal_conflict)
+                logging.debug('E⁻=%s -> minimal conflict=%s', tv, minimal_conflict)
 
             original_literals.append(minimal_conflict)
 
@@ -127,7 +126,7 @@ def merge_ne_into_task(task, ne_result: NEResult) -> None:
     """Merge GenerateNE results into a ConGenTask.
 
     Updates task in-place:
-    - set_ne: NE assumption IDs
+    - set_neg_tv: NE assumption IDs
     - set_kb: appends new clauses
     - assumptions: appends new assumption IDs
     - neg_c_map: merges NE negation map
@@ -137,7 +136,7 @@ def merge_ne_into_task(task, ne_result: NEResult) -> None:
         task: ConGenTask to update
         ne_result: Result from GenerateNE.generate()
     """
-    task.set_ne = ne_result.assumption_ids
+    task.set_neg_tv = ne_result.assumption_ids
     task.set_kb.extend(ne_result.new_clauses)
     task.assumptions.extend(ne_result.new_assumptions)
     task.neg_c_map.update(ne_result.neg_map)

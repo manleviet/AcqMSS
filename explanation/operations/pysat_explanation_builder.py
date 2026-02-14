@@ -301,7 +301,6 @@ class PySATRedundancyTestCasesBuilder:
 
     Example:
         >>> operation = (PySATRedundancyTestCasesBuilder.for_redundancy_test_cases()
-        ...     .with_solver('glucose3')
         ...     .build())
         >>> result = operation.execute(model)
         >>> redundant = result.get_redundant()

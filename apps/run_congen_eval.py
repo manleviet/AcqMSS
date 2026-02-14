@@ -38,7 +38,6 @@ from acqmss.eval import (
     save_cv_kb_files,
     load_folds,
 )
-from acqmss.oracle import FeatureModelOracle
 from acqmss.examples import ExampleIO
 
 
@@ -143,15 +142,9 @@ def evaluate_model(
                 print(f"  Folds: {model_config.folds_path}")
             print(f"  Solver: {solver_name}, Seed: {seed}, Shuffle bias: {shuffle_bias}")
 
-        # Load bias data
+        # Load bias data (for pre-computed result evaluation + accuracy)
         bias = BiasData.from_json(Path(model_config.bias))
         bias_clauses = {cid: c.clauses for cid, c in bias.constraints.items()}
-
-        # Extract root feature for background knowledge
-        oracle = FeatureModelOracle(model_config.oracle)
-        root_name = oracle.get_root_feature()
-        root_id = oracle.get_feature_ids().get(root_name)
-        background_knowledge = [root_id] if root_id is not None else []
 
         # Load examples if provided
         examples = None
@@ -242,14 +235,13 @@ def evaluate_model(
                     positive_examples=pos_assignments,
                     negative_examples=neg_assignments,
                     n_folds=n_folds,
-                    bias_clauses=bias_clauses,
-                    feature_ids=bias.features,
+                    bias_path=model_config.bias,
+                    fm_path=model_config.oracle,
                     seed=seed,
                     solver_name=solver_name,
                     is_incremental=is_incremental,
                     fold_data=fold_data,
-                    shuffle_bias=shuffle_bias,
-                    background_knowledge=background_knowledge
+                    shuffle_bias=shuffle_bias
                 )
 
                 output_file = output_dir / f"{model_name}_cv_{mode_name}.json"

@@ -65,8 +65,6 @@ class DiagnosisModelBuilder:
 
         # Solver configuration
         self._use_incremental: bool = True
-        self._use_sat4j: bool = False
-        self._solver_name: str = 'glucose3'
 
         # Diagnosis inputs
         self._configuration: Optional[Configuration] = None
@@ -283,32 +281,6 @@ class DiagnosisModelBuilder:
         self._use_incremental = enabled
         return self
 
-    def use_sat4j(self, enabled: bool = True) -> 'DiagnosisModelBuilder':
-        """Use SAT4J external solver.
-
-        Args:
-            enabled: Whether to use SAT4J solver.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._use_sat4j = enabled
-        if enabled:
-            self._use_incremental = False  # SAT4J is non-incremental
-        return self
-
-    def with_solver(self, solver_name: str) -> 'DiagnosisModelBuilder':
-        """Set specific PySAT solver name.
-
-        Args:
-            solver_name: Name of solver (e.g., 'glucose3', 'minisat22').
-
-        Returns:
-            Self for method chaining.
-        """
-        self._solver_name = solver_name
-        return self
-
     # === Build ===
 
     def build(self) -> DiagnosisModel:
@@ -337,7 +309,7 @@ class DiagnosisModelBuilder:
         model.use_incremental = self._use_incremental
 
         # Create and assign TaskInput
-        model._task_input = TaskInput(
+        model.task_input = TaskInput(
             configuration=self._configuration,
             test_case=self._test_case,
             with_cf_in_c=self._with_cf_in_c,

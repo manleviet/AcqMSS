@@ -56,7 +56,7 @@ class DiagnosisModel(PySATModel):
         self.negated_constraint_map: Dict[str, List[List]] = {}
         # Next available variable ID after Tseitin variables (set by transformation).
         # Used as starting ID for assumption literals to avoid conflicts.
-        self.next_tseitin_var: int = 0
+        self.next_tseitin_var: int = 1000
 
         # Solver configuration
         self.use_incremental: bool = True  # default to use incremental solver
@@ -79,6 +79,10 @@ class DiagnosisModel(PySATModel):
     @property
     def task_input(self):
         return self._task_input
+
+    @task_input.setter
+    def task_input(self, value):
+        self._task_input = value
 
     @property
     def task(self) -> DiagnosisTask:
@@ -111,9 +115,7 @@ class DiagnosisModel(PySATModel):
         Returns:
             List of all constraint IDs (set_c + set_b).
         """
-        if self._task is not None:
-            return self._task.get_cf()
-        return []
+        return self.task.get_cf()
 
     def get_kb(self) -> List[List]:
         """Get the full knowledge base with assumptions."""
@@ -126,15 +128,11 @@ class DiagnosisModel(PySATModel):
             Dict mapping original constraint ID to negated constraint ID,
             or empty dict if no negated forms.
         """
-        if self._task is not None:
-            return self._task.neg_c_map
-        return {}
+        return self.task.neg_c_map
 
     def get_assumptions(self) -> List:
         """Get the list of assumption literals."""
-        if self._task is not None:
-            return self._task.assumptions
-        return []
+        return self.task.assumptions
 
     def get_tc(self) -> List:
         """Get the positive test cases (debugging task only).
@@ -142,8 +140,8 @@ class DiagnosisModel(PySATModel):
         Returns:
             List of positive test case assumptions, or empty list if not debugging task.
         """
-        if isinstance(self._task, TestCaseTask):
-            return self._task.set_tc
+        if isinstance(self.task, TestCaseTask):
+            return self.task.set_tc
         return []
 
     def get_tv(self) -> List:
@@ -152,8 +150,8 @@ class DiagnosisModel(PySATModel):
         Returns:
             List of negative test case assumptions, or empty list if not debugging task.
         """
-        if isinstance(self._task, TestCaseTask):
-            return self._task.set_tv
+        if isinstance(self.task, TestCaseTask):
+            return self.task.set_tv
         return []
 
     def get_neg_tv(self) -> List:
@@ -164,8 +162,8 @@ class DiagnosisModel(PySATModel):
         Returns:
             List of negated negative test case assumptions, or empty list if not debugging task.
         """
-        if isinstance(self._task, TestCaseTask):
-            return self._task.set_neg_tv
+        if isinstance(self.task, TestCaseTask):
+            return self.task.set_neg_tv
         return []
 
     def get_neg_tc(self) -> List:
@@ -176,8 +174,8 @@ class DiagnosisModel(PySATModel):
         Returns:
             List of negated positive test case assumptions, or empty list if not debugging task.
         """
-        if isinstance(self._task, TestCaseTask):
-            return self._task.set_neg_tc
+        if isinstance(self.task, TestCaseTask):
+            return self.task.set_neg_tc
         return []
 
     def get_neg_tc_map(self) -> dict:
@@ -187,8 +185,8 @@ class DiagnosisModel(PySATModel):
             Dict mapping original test case ID to negated test case ID,
             or empty dict if not debugging task.
         """
-        if isinstance(self._task, TestCaseTask):
-            return self._task.neg_tc_map
+        if isinstance(self.task, TestCaseTask):
+            return self.task.neg_tc_map
         return {}
 
     def format_diagnoses(self, diagnoses: List[List]) -> str:
@@ -209,7 +207,7 @@ class DiagnosisModel(PySATModel):
             task_input: Optional TaskInput to use. If provided, updates the model's
                 task input before preparing. If None, uses existing task input.
 
-        Uses _task_input (set via builder or directly) which contains:
+        Uses task_input (set via builder or directly) which contains:
         - configuration: Configuration to diagnose
         - test_case: Test case for error diagnosis
         - positive_test_cases: TestSuite of positive test cases
@@ -292,5 +290,3 @@ class DiagnosisModel(PySATModel):
         self._task = output.task
         self._description_provider = output.description_provider
         return self._task
-
-

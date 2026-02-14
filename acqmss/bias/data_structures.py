@@ -9,7 +9,7 @@ This module defines the core data structures used in constraint acquisition:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from enum import Enum
 
 
@@ -92,6 +92,51 @@ class Bias:
         for c in self.constraints:
             clauses.extend(c.clauses)
         return clauses
+
+    @property
+    def feature_ids(self) -> Dict[str, int]:
+        """Feature name to SAT variable ID mapping."""
+        return {f.name: f.id for f in self.features}
+
+    @property
+    def id_to_feature(self) -> Dict[int, str]:
+        """SAT variable ID to feature name mapping."""
+        return {f.id: f.name for f in self.features}
+
+    def to_constraint_map(self) -> Dict[str, List[List[int]]]:
+        """Convert bias constraints to {constraint_id: clauses} mapping."""
+        return {c.id: c.clauses for c in self.constraints}
+
+    @property
+    def max_variable_id(self) -> int:
+        """Max absolute literal value across all constraint clauses and feature IDs."""
+        max_var = max((f.id for f in self.features), default=0)
+        for c in self.constraints:
+            for clause in c.clauses:
+                for lit in clause:
+                    max_var = max(max_var, abs(lit))
+        return max_var
+
+    def to_constraint_maps_with_negation(self) -> Tuple[Dict[str, List[List[int]]], Dict[str, List[List[int]]], int]:
+        """Convert bias to constraint map and negated constraint map.
+
+        Returns:
+            Tuple of (constraint_map, negated_constraint_map, next_tseitin_var)
+        """
+        from explanation.operations.algorithms.utils import negate_cnf_tseitin
+
+        constraint_map = {}
+        negated_constraint_map = {}
+        tseitin_var = self.max_variable_id + 1
+
+        for c in self.constraints:
+            constraint_map[c.id] = c.clauses
+            neg_clauses, tseitin_var = negate_cnf_tseitin(c.clauses, tseitin_var)
+
+            negated_key = f"NOT({c.id})"
+            negated_constraint_map[negated_key] = neg_clauses
+
+        return constraint_map, negated_constraint_map, tseitin_var
 
     def __len__(self):
         return len(self.constraints)

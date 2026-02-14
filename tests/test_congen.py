@@ -7,19 +7,15 @@ Supports both incremental and non-incremental solver modes.
 
 import pytest
 from pathlib import Path
-from parameterized import parameterized
-
 from acqmss.oracle import FeatureModelOracle
-from acqmss.examples import ExampleIO
 from acqmss.bias import BiasIO
 from acqmss.algorithms import (
     ConGen, AcqMSS, Reduce, GenerateNE,
-    ConGenModel
+    ConGenModelBuilder
 )
-from acqmss.algorithms.generate_ne import merge_ne_into_task
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
-    NonIncrementalPySATChecker
+    CheckerFactory
 )
 from explanation.operations.algorithms.profiler import get_global_profiler
 
@@ -33,14 +29,6 @@ EXAMPLES_FF_PATH = DATA_DIR / "examples" / "REAL-FM-7_ff.json"
 
 
 @pytest.fixture
-def oracle():
-    """Load REAL-FM-7 feature model oracle."""
-    if not FM_PATH.exists():
-        pytest.skip(f"Feature model not found: {FM_PATH}")
-    return FeatureModelOracle(str(FM_PATH))
-
-
-@pytest.fixture
 def bias():
     """Load REAL-FM-7 bias."""
     if not BIAS_PATH.exists():
@@ -48,81 +36,33 @@ def bias():
     return BiasIO.load_from_json(str(BIAS_PATH))
 
 
-@pytest.fixture
-def examples_rs():
-    """Load REAL-FM-7 examples (RS 1n)."""
-    if not EXAMPLES_RS_1N_PATH.exists():
-        pytest.skip(f"Examples file not found: {EXAMPLES_RS_1N_PATH}")
-    return ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
-
-
-@pytest.fixture
-def examples_ff():
-    """Load REAL-FM-7 examples (FF)."""
-    if not EXAMPLES_FF_PATH.exists():
-        pytest.skip(f"Examples file not found: {EXAMPLES_FF_PATH}")
-    return ExampleIO.load_json(str(EXAMPLES_FF_PATH))
-
-
-def create_checker_and_task(oracle, bias, examples, is_incremental=True):
+def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=True):
     """Helper to create checker and task for tests.
 
     Args:
-        oracle: FeatureModelOracle
-        bias: Bias from BiasIO
-        examples: Examples from ExampleIO
+        bias_path: Path to bias JSON file
+        fm_path: Path to feature model (.uvl) file
+        examples_path: Path to examples JSON file
         is_incremental: Use incremental mode
 
     Returns:
         Tuple of (checker, task, profiler, root_id)
     """
-    # Convert bias to constraint dict
-    bias_constraints = {c.id: c.clauses for c in bias.constraints}
-
-    # Convert examples to dict format
-    positive_examples = [e.assignments for e in examples.positive]
-    negative_examples = [e.assignments for e in examples.negative]
-
-    # Extract root feature ID for background knowledge
-    root_name = oracle.get_root_feature()
-    root_id = oracle.get_feature_ids()[root_name]
-
-    # Create model
-    model = ConGenModel.from_bias_and_examples(
-        bias_constraints=bias_constraints,
-        positive_examples=positive_examples,
-        negative_examples=negative_examples,
-        feature_ids=oracle.get_feature_ids(),
-        background_knowledge=[root_id]
-    )
-
     profiler = get_global_profiler()
+    model = (ConGenModelBuilder
+             .from_bias_and_fm_uvl(bias_path, fm_path)
+             .with_examples(examples_path)
+             .use_incremental(is_incremental)
+             .with_profiler(profiler)
+             .build())
 
-    mode = "incremental-congen" if is_incremental else "non-incremental-congen"
-    model.prepare(mode)
+    # Get root_id from model for test assertions
+    oracle = FeatureModelOracle(fm_path)
+    root_name = oracle.get_root_feature()
+    root_id = model.variables[root_name]
+
     task = model.task
-
-    # Run GenerateNE with temp checker (read-only QXP calls)
-    temp_checker = NonIncrementalPySATChecker(
-        task.set_kb, task.assumptions, 'glucose4', profiler
-    )
-    generate_ne = GenerateNE(temp_checker, profiler)
-    ne_result = generate_ne.generate(
-        set_e_neg=task.e_neg_literals,
-        set_bg=task.set_b,
-        start_assumption_id=task.next_assumption_id
-    )
-    merge_ne_into_task(task, ne_result)
-
-    # Create final checker with complete data (including NE)
-    if is_incremental:
-        checker = IncrementalPySATChecker(
-            task.set_kb, task.assumptions, 'glucose4', profiler
-        )
-    else:
-        checker = NonIncrementalPySATChecker(
-            task.set_kb, task.assumptions, 'glucose4', profiler
-        )
+    checker = CheckerFactory.create_from_model(model, 'glucose4', profiler)
 
     return checker, task, profiler, root_id
 
@@ -130,10 +70,12 @@ def create_checker_and_task(oracle, bias, examples, is_incremental=True):
 class TestCONGEN:
     """Tests for main ConGen algorithm."""
 
-    def test_congen_incremental_with_rs_examples(self, oracle, bias, examples_rs):
+    def test_congen_incremental_with_rs_examples(self, bias):
         """Test ConGen incremental mode with random sampling examples."""
+        if not FM_PATH.exists() or not EXAMPLES_RS_1N_PATH.exists():
+            pytest.skip("Test data files not found")
         checker, task, profiler, root_id = create_checker_and_task(
-            oracle, bias, examples_rs, is_incremental=True
+            str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=True
         )
 
         try:
@@ -141,7 +83,14 @@ class TestCONGEN:
             assert root_id in task.set_b, "Root should be in set_b"
 
             congen = ConGen(checker, profiler)
-            result = congen.acquire(task)
+            result = congen.acquire(
+                set_b=task.set_c,
+                set_bg=task.set_b,
+                set_tc=task.set_tc,
+                set_neg_tv=task.set_neg_tv,
+                neg_c_map=task.neg_c_map,
+                assumption_to_constraint=task.assumption_to_constraint
+            )
 
             # Verify result
             assert result is not None
@@ -165,10 +114,12 @@ class TestCONGEN:
         finally:
             checker.cleanup()
 
-    def test_congen_non_incremental_with_rs_examples(self, oracle, bias, examples_rs):
+    def test_congen_non_incremental_with_rs_examples(self, bias):
         """Test ConGen non-incremental mode with random sampling examples."""
+        if not FM_PATH.exists() or not EXAMPLES_RS_1N_PATH.exists():
+            pytest.skip("Test data files not found")
         checker, task, profiler, root_id = create_checker_and_task(
-            oracle, bias, examples_rs, is_incremental=False
+            str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=False
         )
 
         try:
@@ -176,7 +127,14 @@ class TestCONGEN:
             assert root_id in task.set_b, "Root should be in set_b"
 
             congen = ConGen(checker, profiler)
-            result = congen.acquire(task)
+            result = congen.acquire(
+                set_b=task.set_c,
+                set_bg=task.set_b,
+                set_tc=task.set_tc,
+                set_neg_tv=task.set_neg_tv,
+                neg_c_map=task.neg_c_map,
+                assumption_to_constraint=task.assumption_to_constraint
+            )
 
             # Verify result
             assert result is not None
@@ -201,10 +159,12 @@ class TestCONGEN:
         finally:
             checker.cleanup()
 
-    def test_congen_incremental_with_ff_examples(self, oracle, bias, examples_ff):
+    def test_congen_incremental_with_ff_examples(self, bias):
         """Test ConGen incremental mode with feature frequency examples."""
+        if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
+            pytest.skip("Test data files not found")
         checker, task, profiler, root_id = create_checker_and_task(
-            oracle, bias, examples_ff, is_incremental=True
+            str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_FF_PATH), is_incremental=True
         )
 
         try:
@@ -212,7 +172,14 @@ class TestCONGEN:
             assert root_id in task.set_b, "Root should be in set_b"
 
             congen = ConGen(checker, profiler)
-            result = congen.acquire(task)
+            result = congen.acquire(
+                set_b=task.set_c,
+                set_bg=task.set_b,
+                set_tc=task.set_tc,
+                set_neg_tv=task.set_neg_tv,
+                neg_c_map=task.neg_c_map,
+                assumption_to_constraint=task.assumption_to_constraint
+            )
 
             # Verify result
             assert result is not None
@@ -338,7 +305,7 @@ class TestOracleFeatureIds:
 
         oracle = FeatureModelOracle(fm_path)
         bias = BiasIO.load_from_json(bias_path)
-        bias_ids = {f.name: f.id for f in bias.features}
+        bias_ids = bias.feature_ids
 
         assert oracle.feature_ids == bias_ids, \
             f"{name}: Oracle IDs don't match bias"

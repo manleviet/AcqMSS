@@ -163,18 +163,54 @@ Tests use `@parameterized.expand` with combinations of incremental/non-increment
 
 ## Key API Patterns
 
-**CONGEN usage**:
+**ConGen usage** (recommended pattern with builder):
 
 ```python
-from acqmss.algorithms import ConGen, ConGenModel, ConGenTaskPreparation
-from explanation.operations.algorithms.checker import IncrementalPySATChecker
+from acqmss.algorithms import ConGen, ConGenModelBuilder
+from explanation.operations.algorithms.checker_factory import CheckerFactory
 
-model = ConGenModel.from_bias_and_examples(bias_constraints, pos_examples, neg_examples, feature_ids)
-preparation = ConGenTaskPreparation()  # mode_name defaults to "congen"
-task = preparation.prepare(model).task
-checker = IncrementalPySATChecker(task.set_kb, task.assumptions, 'glucose4', profiler)
+# Build model (includes prepare() with GenerateNE)
+model = (ConGenModelBuilder
+         .from_bias_and_fm_fide('data/bias/model.json', 'data/fms/model.uvl')
+         .with_examples('data/examples/examples.json')
+         .use_incremental(True)
+         .with_solver('glucose4')
+         .build())  # Calls prepare() internally
+
+# Create checker from model (CheckerModel protocol)
+checker = CheckerFactory.create_from_model(model, profiler)
+
+# Run ConGen with direct params
 congen = ConGen(checker, profiler)
-result = congen.acquire(task)
+result = congen.acquire(
+    set_b=model.task.set_c,  # Bias assumption IDs
+    set_bg=model.task.set_b,  # Background assumption IDs
+    set_tc=model.task.set_tc,  # E+ assumption IDs
+    set_neg_tv=model.task.set_neg_tv,  # NE assumption IDs (from prepare())
+    neg_c_map=model.task.neg_c_map,
+    assumption_to_constraint=model.task.assumption_to_constraint
+)
+```
+
+**CV folds** (build once, prepare per fold):
+
+```python
+from acqmss.algorithms import ConGenModelBuilder
+
+# Build model without examples (unprepared)
+model = (ConGenModelBuilder
+    .from_bias_and_fm_uvl('data/bias/model.json', 'data/fms/model.uvl')
+    .use_incremental(True)
+    .with_solver('glucose4')
+    .build())
+
+# Per fold: prepare with fold-specific examples
+model.prepare(
+    positive_examples=fold_pos,
+    negative_examples=fold_neg,
+    profiler=profiler
+)
+# Continue as above with CheckerFactory and ConGen.acquire()
 ```
 
 **QuAcq usage**:

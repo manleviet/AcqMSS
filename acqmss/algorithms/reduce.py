@@ -41,7 +41,7 @@ class Reduce:
 
     @measure_time('reduce_runtime')
     @count_calls('reduce_calls')
-    def reduce(self, set_b_prime: List[int], set_ne: List[int],
+    def reduce(self, set_b_prime: List[int], set_neg_tv: List[int],
                set_bg: List[int], neg_map: Dict[int, int]) -> Tuple[List[int], List[int]]:
         """
         Remove redundant constraints from KB.
@@ -50,17 +50,17 @@ class Reduce:
 
         Args:
             set_b_prime: MSS constraints from AcqMSS (assumption IDs)
-            set_ne: Negated negative examples (assumption IDs)
+            set_neg_tv: Negated negative examples (assumption IDs)
             set_bg: Background knowledge (assumption IDs)
             neg_map: Mapping from constraint ID to its negated form ID
 
         Returns:
             Tuple of (redundant IDs, non-redundant KB IDs)
         """
-        logging.debug('REDUCE [B\'=%s, NE=%s, BG=%s]', set_b_prime, set_ne, set_bg)
+        logging.debug('REDUCE [B\'=%s, NE=%s, BG=%s]', set_b_prime, set_neg_tv, set_bg)
 
         # KB ← B' ∪ NE
-        kb = list(set(set_b_prime) | set(set_ne))
+        kb = list(set(set_b_prime) | set(set_neg_tv))
         kb_delta = kb.copy()
         redundant = []
 
@@ -94,8 +94,8 @@ class Reduce:
         return redundant, kb_delta
 
     @measure_time('reduce_nonredundant_runtime')
-    def find_non_redundant(self, set_b_prime: List[int], set_ne: List[int],
+    def find_non_redundant(self, set_b_prime: List[int], set_neg_tv: List[int],
                            set_bg: List[int], neg_map: Dict[int, int]) -> List[int]:
         """Find non-redundant constraints in KB."""
-        _, non_redundant = self.reduce(set_b_prime, set_ne, set_bg, neg_map)
+        _, non_redundant = self.reduce(set_b_prime, set_neg_tv, set_bg, neg_map)
         return non_redundant

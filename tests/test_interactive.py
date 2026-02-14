@@ -52,16 +52,11 @@ def interactive_task(oracle, bias):
     feature_ids = oracle.get_feature_ids()
     id_to_feature = {v: k for k, v in feature_ids.items()}
 
-    constraint_map = {}
+    constraint_map = bias.to_constraint_map()
     negated_constraint_map = {}
-
     for constraint in bias.constraints:
-        c_id = constraint.id
-        constraint_map[c_id] = constraint.clauses
-
-        # Build negation (simple: negate first clause literals)
         if constraint.clauses:
-            negated_constraint_map[c_id] = [[-lit] for lit in constraint.clauses[0]]
+            negated_constraint_map[constraint.id] = [[-lit] for lit in constraint.clauses[0]]
 
     task = InteractiveTask(
         bias=[c.id for c in bias.constraints],

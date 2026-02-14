@@ -54,17 +54,28 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 **Core API**:
 
 ```python
-from acqmss.algorithms import ConGen, ConGenModel, AcqMSS, REDUCE
+from acqmss.algorithms import ConGen, ConGenModelBuilder
 from acqmss.algorithms.interactive import QuAcq, InteractiveLearner
 from acqmss.example_generators import QueryGenerator, ExampleProvider
+from explanation.operations.algorithms.checker_factory import CheckerFactory
 
-# Passive learning
-model = ConGenModel.from_bias_and_examples(bias, e_plus, e_minus, features)
-preparation = CONGENTaskPreparation()  # mode_name defaults to "congen"
-task = preparation.prepare(model).task
-checker = IncrementalPySATChecker(task.set_kb, task.assumptions, 'glucose4')
+# Passive learning (recommended pattern)
+model = (ConGenModelBuilder
+         .from_bias_and_fm_fide('data/bias/model.json', 'data/fms/model.uvl')
+         .with_examples('data/examples/examples.json')
+         .use_incremental(True)
+         .build())  # Calls prepare() internally (includes GenerateNE)
+
+checker = CheckerFactory.create_from_model(model, profiler)
 congen = ConGen(checker, profiler)
-result = congen.acquire(task)  # → KB + metadata
+result = congen.acquire(
+   set_b=model.task.set_c,
+   set_bg=model.task.set_b,
+   set_tc=model.task.set_tc,
+   set_neg_tv=model.task.set_neg_tv,
+   neg_c_map=model.task.neg_c_map,
+   assumption_to_constraint=model.task.assumption_to_constraint
+)
 
 # Interactive learning
 learner = InteractiveLearner.from_files(fm_path='model.uvl', bias_path='bias.json')
@@ -76,15 +87,16 @@ examples = ExampleProvider(...)  # Canonical import
 ```
 
 **Key Algorithms**:
-1. **CONGEN** — Passive constraint acquisition
-   - Input: Bias (candidate constraints), E+ (valid configs), pre-computed NE
-   - Process: GenerateNE invoked by caller, merged via `merge_ne_into_task()`, then ACQMSS → REDUCE
-   - Output: KB (learned constraint set)
+1. **ConGen** — Passive constraint acquisition
+   - Input: Bias (B), E+ (set_tc), NE (set_neg_tv), BG (set_bg) as assumption IDs
+   - Process: Check consistency → ACQMSS → REDUCE
+   - Output: CONGENResult with KB constraint names and assumption IDs
+   - GenerateNE called internally by `ConGenModel.prepare()`
 
-2. **GenerateNE** — Create negated examples (caller-invoked, immutable)
+2. **GenerateNE** — Create negated examples (model-invoked)
    - Convert E- to logical negation for conflict detection
-   - Called BEFORE CONGEN; results merged into task via `merge_ne_into_task()`
-   - Checkers immutable after construction (no mutations)
+   - Called by `ConGenModel.prepare()` before task is ready
+   - Results merged into task via `merge_ne_into_task()`
 
 3. **ACQMSS** — Divide-and-conquer maximum satisfiable subset finding
    - Recursively partition bias constraints
@@ -205,7 +217,7 @@ class CONGENTask(TestCaseTask):
     set_c: list[int]            # Bias assumption IDs
     set_tc: list[int]           # E+ assumption IDs
     set_tv: list[int]           # E- assumption IDs
-    set_ne: list[int]           # Negated example assumption IDs
+    set_neg_tv: list[int]           # Negated example assumption IDs
     set_b: list[int]            # Background assumption IDs
     neg_c_map: Dict[int, int]   # Negation map: assumption_id → negated_id
 ```
@@ -273,10 +285,11 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
 
 ## Two Learning Paradigms
 
-### 1. CONGEN (Passive/Batch Learning)
+### 1. ConGen (Passive/Batch Learning)
 - Input: Pre-collected E+/E- examples
 - No user interaction required
-- Learns constraint KB in one pass (GenerateNE called by caller, merged via merge_ne_into_task(), then ACQMSS → REDUCE)
+- Learns constraint KB in one pass (GenerateNE called by `ConGenModel.prepare()`, then ACQMSS → REDUCE)
+- ConGenModel satisfies CheckerModel protocol (`get_kb()`, `get_assumptions()`, solver config)
 - Complexity: O(|B| * SAT checks)
 
 ### 2. QuAcq (Interactive/Active Learning)
@@ -296,30 +309,39 @@ Both paradigms use:
 
 ## Data Flow Diagrams
 
-### CONGEN Learning Flow
+### ConGen Learning Flow
 ```
-Feature Model (UVL)
-    ├─→ BiasGenerator ──→ Bias Constraints
-    ├─→ ExampleGenerator (RS/FF/2-COV) ──→ E+, E-
-    └─→ TaskPreparation (unified representation)
-        └─ set_kb: CNF with assumption literals
-        └─ set_c: Bias assumption IDs
-        └─ set_tc: E+ assumption IDs
-        └─ set_tv: E- assumption IDs
+Feature Model (UVL) + Bias + Examples
+    └─→ ConGenModelBuilder (fluent pattern)
+        ├─ from_files(bias_path, fm_path)
+        ├─ with_examples(examples_path)
+        ├─ use_incremental(True/False)
+        └─ build() → ConGenModel
+            ├─ ConGenTaskPreparation: Create unified task structure
+            │   └─ set_kb: CNF with assumption literals
+            │   └─ set_c: Bias assumption IDs
+            │   └─ set_tc: E+ assumption IDs
+            │   └─ e_neg_literals: E- literals
+            └─ ConGenModel.prepare() (called internally)
+                ├─ GenerateNE: E- → NE (assumption IDs)
+                └─ merge_ne_into_task() → set_neg_tv populated
 
-    └─→ GenerateNE: E- → NE (assumption IDs, called BEFORE CONGEN)
-        └─ Merged into task via merge_ne_into_task()
+    └─→ CheckerFactory.create_from_model(model)
+        └─ Returns Incremental or NonIncremental checker
 
-    └─→ CONGEN Algorithm (mode-agnostic, no is_incremental branching)
+    └─→ ConGen Algorithm (mode-agnostic)
+        ├─ acquire(set_b, set_bg, set_tc, set_neg_tv, ...)
         ├─ ACQMSS: Bias → MSS via KBDiag
         └─ REDUCE: MSS → KB (assumption IDs)
 
-Result: Learned constraint set (KB)
+Result: CONGENResult (KB constraint names + assumption IDs)
     └─ Compare against ground truth (Bias)
         └─ Accuracy/Precision/Recall metrics
 ```
 
-**Mode-Agnostic Design**: CONGEN, ACQMSS, and REDUCE contain no `if is_incremental` branching. All data is assumption-based (List[int]); the ConsistencyChecker implementation determines solver lifecycle.
+**Mode-Agnostic Design**: ConGen, ACQMSS, and REDUCE contain no `if is_incremental` branching. All data is assumption-based (List[int]); the ConsistencyChecker implementation determines solver lifecycle.
+
+**Builder Pattern**: ConGenModelBuilder encapsulates file loading, model construction, and prepare() invocation. Mirrors DiagnosisModelBuilder pattern.
 
 ### QuAcq Interactive/Batch Flow
 

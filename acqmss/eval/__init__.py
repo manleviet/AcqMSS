@@ -22,7 +22,7 @@ Metrics (Formula 1 from paper):
 
 Example usage:
     >>> from acqmss.eval import Evaluator, EvaluationStrategy
-    >>> evaluator = Evaluator.from_files('model.uvl', 'bias.json')
+    >>> evaluator = Evaluator.from_bias_and_fm_fide('model.uvl', 'bias.json')
     >>> result = evaluator.evaluate(congen_result, EvaluationStrategy.DESCRIPTION)
     >>> print(f"Accuracy: {result.metrics.accuracy:.4f}")
 """

@@ -242,30 +242,58 @@ class FastDiag(PySATAbstractExplanation):
 Pass dependencies as constructor parameters:
 
 ```python
-class CONGEN:
+class ConGen:
     """Constraint acquisition via AcqMSS (mode-agnostic)."""
 
     def __init__(
-        self,
-        checker: ConsistencyChecker,
-        profiler: Optional[Profiler] = None
+            self,
+            checker: ConsistencyChecker,
+            profiler: Optional[Profiler] = None
     ):
-        self.checker = checker        # Injected (Incremental or NonIncremental)
+        self.checker = checker  # Injected (Incremental or NonIncremental)
         self.profiler = profiler or NullProfiler()
 
-    def acquire(self, task: CONGENTask) -> Result:
+    def acquire(
+            self,
+            set_b: List[int],  # Bias assumption IDs
+            set_bg: List[int],  # Background assumption IDs
+            set_tc: List[int],  # E+ assumption IDs
+            set_neg_tv: List[int],  # NE assumption IDs
+            neg_c_map: Dict[int, int],  # Negation map
+            assumption_to_constraint: Dict[int, str]
+    ) -> CONGENResult:
         """Learn constraints using injected checker.
 
         Works identically with both checker types (no is_incremental branching).
         """
         with self.profiler.measure('acqmss'):
-            mss = self._acqmss(task)
+            mss = self._acqmss(set_b, set_neg_tv, set_tc, set_bg)
         return Result(mss)
 
-# Usage (both modes use same ConGen code)
-checker_inc = IncrementalPySATChecker(set_kb, assumptions)
-congen = CONGEN(checker_inc, profiler=profiler)
-result = congen.acquire(task)  # Same code path
+
+# Usage with ConGenModelBuilder (fluent pattern)
+model = (ConGenModelBuilder
+         .from_bias_and_fm_fide('data/bias/model.json', 'data/fms/model.uvl')
+         .with_examples('data/examples/examples.json')
+         .use_incremental(True)
+         .with_solver('glucose4')
+         .build())  # Calls prepare() internally (includes GenerateNE)
+
+# Create checker from model (CheckerModel protocol)
+from explanation.operations.algorithms.checker_factory import CheckerFactory
+
+checker = CheckerFactory.create_from_model(model, profiler)
+
+# Run ConGen with direct params
+congen = ConGen(checker, profiler)
+result = congen.acquire(
+    set_b=model.task.set_c,
+    set_bg=model.task.set_b,
+    set_tc=model.task.set_tc,
+    set_neg_tv=model.task.set_neg_tv,
+    neg_c_map=model.task.neg_c_map,
+    assumption_to_constraint=model.task.assumption_to_constraint
+)
 ```
 
 **Benefits**:

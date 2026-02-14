@@ -14,13 +14,9 @@ import tracemalloc
 import logging
 
 from acqmss.algorithms.congen import ConGen
-from acqmss.algorithms.congen_model import ConGenModel
-from acqmss.algorithms.generate_ne import GenerateNE, merge_ne_into_task
-from explanation.operations.algorithms.checker import (
-    IncrementalPySATChecker,
-    NonIncrementalPySATChecker
-)
-from explanation.operations.algorithms.profiler import Profiler, get_global_profiler
+from acqmss.algorithms.congen_model_builder import ConGenModelBuilder
+from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.profiler import Profiler
 
 from .performance_metrics import PerformanceMetrics
 
@@ -84,6 +80,8 @@ class ConGenRunner:
     """
     Run ConGen and collect performance metrics.
 
+    Builds model once from file paths, reuses via prepare() per fold.
+
     Metrics collected (Table 7-8 from paper):
     - runtime_ms: Execution time
     - consistency_checks: Number of SAT solver calls
@@ -94,33 +92,37 @@ class ConGenRunner:
 
     def __init__(
             self,
-            bias_clauses: Dict[str, List[List[int]]],
-            feature_ids: Dict[str, int],
+            bias_path: str,
+            fm_path: str,
             solver_name: str = 'glucose4',
-            is_incremental: bool = True,
-            background_knowledge: Optional[List[int]] = None
+            is_incremental: bool = True
     ):
         """
-        Initialize runner with bias and feature mapping.
+        Initialize runner with file paths. Builds model once (without examples).
 
         Args:
-            bias_clauses: {constraint_id: clauses} from bias file
-            feature_ids: {feature_name: SAT_variable_id}
+            bias_path: Path to bias JSON file
+            fm_path: Path to feature model (.uvl) file
             solver_name: SAT solver name
             is_incremental: Use incremental solver mode
-            background_knowledge: BG literals (e.g., [root_feature_id])
         """
-        self.bias_clauses = bias_clauses
-        self.feature_ids = feature_ids
         self.solver_name = solver_name
         self.is_incremental = is_incremental
-        self.background_knowledge = background_knowledge or []
+
+        # Build model once (without examples — will use prepare() per fold)
+        self.model = (ConGenModelBuilder
+                      .from_bias_and_fm_uvl(bias_path, fm_path)
+                      .use_incremental(is_incremental)
+                      .with_solver(solver_name)
+                      .build())
+
+        # Keep original bias order for shuffle restore
+        self._original_constraint_order = list(self.model.constraint_map.keys())
 
     def run(
             self,
             positive_examples: List[Dict[str, bool]],
             negative_examples: List[Dict[str, bool]],
-            background_clauses: List[List[int]] = None,
             shuffle_seed: Optional[int] = None
     ) -> ConGenRunResult:
         """
@@ -129,7 +131,6 @@ class ConGenRunner:
         Args:
             positive_examples: List of E+ (each is {feature: True/False})
             negative_examples: List of E- (each is {feature: True/False})
-            background_clauses: Optional BG clauses (not used currently)
             shuffle_seed: If provided, shuffle bias keys with this seed
 
         Returns:
@@ -149,52 +150,34 @@ class ConGenRunner:
         checker = None
         try:
             # Shuffle bias ordering if seed provided
-            bias_clauses = self.bias_clauses
             if shuffle_seed is not None:
-                keys = list(bias_clauses.keys())
+                keys = list(self._original_constraint_order)
                 random.Random(shuffle_seed).shuffle(keys)
-                bias_clauses = {k: bias_clauses[k] for k in keys}
+                self.model.constraint_map = {k: self.model.constraint_map[k] for k in keys}
                 logging.debug('Shuffled bias with seed=%d', shuffle_seed)
 
-            # Create model from bias and examples
-            model = ConGenModel.from_bias_and_examples(
-                bias_constraints=bias_clauses,
+            # Prepare for this fold's examples (runs GenerateNE)
+            self.model.prepare(
                 positive_examples=positive_examples,
-                negative_examples=negative_examples,
-                feature_ids=self.feature_ids,
-                background_knowledge=self.background_knowledge
+                negative_examples=negative_examples
             )
+            task = self.model.task
 
-            # Prepare task based on mode
-            mode = "incremental-congen" if self.is_incremental else "non-incremental-congen"
-            model.prepare(mode)
-            task = model.task
-
-            # Run GenerateNE with temp non-incremental checker
-            temp_checker = NonIncrementalPySATChecker(
-                task.set_kb, task.assumptions, self.solver_name, profiler
+            # Create checker via factory
+            checker = CheckerFactory.create_from_model(
+                self.model, self.solver_name, profiler
             )
-            generate_ne = GenerateNE(temp_checker, profiler)
-            ne_result = generate_ne.generate(
-                set_e_neg=task.e_neg_literals,
-                set_bg=task.set_b,
-                start_assumption_id=task.next_assumption_id
-            )
-            merge_ne_into_task(task, ne_result)
-
-            # Create final checker with complete data (including NE)
-            if self.is_incremental:
-                checker = IncrementalPySATChecker(
-                    task.set_kb, task.assumptions, self.solver_name, profiler
-                )
-            else:
-                checker = NonIncrementalPySATChecker(
-                    task.set_kb, task.assumptions, self.solver_name, profiler
-                )
 
             # Run ConGen
             congen = ConGen(checker, profiler)
-            result = congen.acquire(task)
+            result = congen.acquire(
+                set_b=task.set_c,
+                set_bg=task.set_b,
+                set_tc=task.set_tc,
+                set_neg_tv=task.set_neg_tv,
+                neg_c_map=task.neg_c_map,
+                assumption_to_constraint=task.assumption_to_constraint
+            )
 
         finally:
             # Stop timing and memory tracking
@@ -216,8 +199,8 @@ class ConGenRunner:
         # Get KB clauses from result constraint IDs
         kb_clauses = []
         for cid in result.kb_constraints:
-            if cid in self.bias_clauses:
-                kb_clauses.extend(self.bias_clauses[cid])
+            if cid in self.model.constraint_map:
+                kb_clauses.extend(self.model.constraint_map[cid])
 
         run_result = ConGenRunResult(
             kb_constraints=result.kb_constraints,

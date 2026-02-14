@@ -30,18 +30,23 @@ class ConGenTask(TestCaseTask):
     Inherits from TestCaseTask with mapping:
     - set_c: Bias constraints (B) - assumption IDs
     - set_b: Background knowledge (BG) - assumption IDs
+    - set_kb: Full KB with assumptions (clauses with assumption literals)
+    - neg_c_map: Dict[int, int] - negation map for REDUCE
+    - assumptions: List of all assumption IDs (for reference)
     - set_tc: Positive examples (E+) - assumption IDs
     - set_tv: Negative examples (E-) - assumption IDs
-    - neg_c_map: Dict[int, int] - negation map for REDUCE
+    - set_neg_tv: Negated negative examples (NE) - populated by GenerateNE
+    Inherited from TestCaseTask (unused by ConGen):
+    - set_neg_tc
+    
+    - neg_tc_map
 
     Additional ConGen-specific fields:
-    - set_ne: NE assumption IDs (pre-computed by caller via GenerateNE)
     - e_neg_literals: Raw E⁻ literals for GenerateNE (List of [l1, l2, ...])
     - assumption_to_constraint: Maps assumption ID to constraint name
     - constraint_to_assumption: Maps constraint name to assumption ID
     - next_assumption_id: Next available assumption ID for GenerateNE
     """
-    set_ne: List[int] = field(default_factory=list)
     e_neg_literals: List[List[int]] = field(default_factory=list)
     assumption_to_constraint: Dict[int, str] = field(default_factory=dict)
     constraint_to_assumption: Dict[str, int] = field(default_factory=dict)
@@ -52,6 +57,101 @@ class ConGenTask(TestCaseTask):
         if isinstance(element, int):
             return self.assumption_to_constraint.get(element, f'unknown_{element}')
         return f'unknown_{element}'
+
+
+def _prepare_bias_constraints(
+        result: ConGenTask,
+        provider: DescriptionProvider,
+        constraint_map: Dict[str, List[List[int]]],
+        negated_constraint_map: Dict[str, List[List[int]]],
+        id_assumption: int
+) -> int:
+    """Prepare bias constraints with assumptions.
+
+    Each bias constraint gets an assumption ID. Negated forms are also
+    prepared for REDUCE algorithm.
+    """
+    for name, clauses in constraint_map.items():
+        original_id = id_assumption
+
+        # Add clauses with assumption: (clause ∨ ¬a)
+        for clause in clauses:
+            # assumption => clause (i.e., -assumption v clause)
+            result.set_kb.append(clause + [-original_id])
+
+        result.assumptions.append(original_id)
+
+        result.set_c.append(original_id)
+        result.constraint_to_assumption[name] = original_id
+        result.assumption_to_constraint[original_id] = name
+
+        provider.add_constraint_description(original_id, name)
+        id_assumption += 1
+
+        # Prepare negated form for REDUCE
+        negated_id = id_assumption
+        negated_key = f"NOT({name})"
+
+        if negated_constraint_map and negated_key in negated_constraint_map:
+            negated_clauses = negated_constraint_map[negated_key]
+            # else:
+            #     # Generate negated form using Tseitin
+            #     negated_clauses, id_assumption = negate_cnf_tseitin(clauses, id_assumption)
+            #     negated_id = id_assumption
+            #     id_assumption += 1
+
+            for neg_clause in negated_clauses:
+                result.set_kb.append(neg_clause + [-negated_id])
+
+            result.assumptions.append(negated_id)
+            result.neg_c_map[original_id] = negated_id
+            provider.add_constraint_description(negated_id, negated_key)
+            id_assumption += 1
+
+    return id_assumption
+
+
+def _prepare_examples(
+        result: ConGenTask,
+        provider: DescriptionProvider,
+        variables: Dict[str, int],
+        examples: TestSuite,
+        id_assumption: int,
+        is_negative: bool
+) -> int:
+    """Prepare examples with assumptions.
+
+    Each example gets an assumption ID. For negative examples,
+    stores literals in e_neg_literals for GenerateNE.
+    """
+    for testcase in examples.testcases:
+        # --- Original form ---
+        original_id = id_assumption
+        desc_parts = []
+        literals = []
+
+        for assignment in testcase.assignments:
+            if assignment.feature not in variables:
+                raise KeyError(f'Feature {assignment.feature} is not in the model.')
+
+            desc_parts.append(f'{assignment.feature}={"true" if assignment.value else "false"}')
+            var = variables[assignment.feature] if assignment.value else -variables[assignment.feature]
+            literals.append(var)
+            result.set_kb.append([var, -original_id])
+
+        result.assumptions.append(original_id)
+        desc = ' & '.join(desc_parts)
+        provider.add_test_case_description(original_id, desc)
+
+        if is_negative:
+            result.set_tv.append(original_id)
+            result.e_neg_literals.append(literals)
+        else:
+            result.set_tc.append(original_id)
+
+        id_assumption += 1
+
+    return id_assumption
 
 
 class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
@@ -73,7 +173,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel) -> PreparationOutput:
+    def prepare(self, model: 'ConGenModel') -> PreparationOutput:
         """Prepare ConGen task from model.
 
         Args:
@@ -84,26 +184,25 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         """
         result = ConGenTask()
         provider = DescriptionProvider()
+
         task_input = model.task_input
 
         # Start assumption IDs after Tseitin variables
         id_assumption = model.next_tseitin_var
 
-        logging.debug('>>> ConGenTaskPreparation.prepare() [%s]', self._mode_name)
-
         # Step 1: Prepare bias constraints as set_c (with negated forms for REDUCE)
-        id_assumption = self._prepare_bias_constraints(
+        id_assumption = _prepare_bias_constraints(
             result, provider, model.constraint_map,
             model.negated_constraint_map, id_assumption)
 
         # Step 2: Prepare E+ as set_tc
-        id_assumption = self._prepare_examples(
+        id_assumption = _prepare_examples(
             result, provider, model.variables,
             task_input.positive_test_cases, id_assumption, is_negative=False)
 
         # Step 3: Prepare E- (store literals in e_neg_literals)
         if task_input.negative_test_cases is not None:
-            id_assumption = self._prepare_examples(
+            id_assumption = _prepare_examples(
                 result, provider, model.variables,
                 task_input.negative_test_cases, id_assumption, is_negative=True)
 
@@ -118,96 +217,3 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
                       len(result.set_c), len(result.set_tc), len(result.e_neg_literals))
 
         return PreparationOutput(result, provider)
-
-    def _prepare_bias_constraints(
-            self,
-            result: ConGenTask,
-            provider: DescriptionProvider,
-            constraint_map: Dict[str, List[List[int]]],
-            negated_constraint_map: Dict[str, List[List[int]]],
-            id_assumption: int
-    ) -> int:
-        """Prepare bias constraints with assumptions.
-
-        Each bias constraint gets an assumption ID. Negated forms are also
-        prepared for REDUCE algorithm.
-        """
-        for name, clauses in constraint_map.items():
-            original_id = id_assumption
-
-            # Add clauses with assumption: (clause ∨ ¬a)
-            for clause in clauses:
-                result.set_kb.append(clause + [-original_id])
-
-            result.assumptions.append(original_id)
-            result.set_c.append(original_id)
-            result.constraint_to_assumption[name] = original_id
-            result.assumption_to_constraint[original_id] = name
-            provider.add_constraint_description(original_id, name)
-
-            id_assumption += 1
-
-            # Prepare negated form for REDUCE
-            negated_id = id_assumption
-            negated_key = f"NOT({name})"
-
-            if negated_constraint_map and negated_key in negated_constraint_map:
-                negated_clauses = negated_constraint_map[negated_key]
-            else:
-                # Generate negated form using Tseitin
-                negated_clauses, id_assumption = negate_cnf_tseitin(clauses, id_assumption)
-                negated_id = id_assumption
-                id_assumption += 1
-
-            for neg_clause in negated_clauses:
-                result.set_kb.append(neg_clause + [-negated_id])
-
-            result.assumptions.append(negated_id)
-            result.neg_c_map[original_id] = negated_id
-            provider.add_constraint_description(negated_id, negated_key)
-
-            id_assumption += 1
-
-        return id_assumption
-
-    def _prepare_examples(
-            self,
-            result: ConGenTask,
-            provider: DescriptionProvider,
-            variables: Dict[str, int],
-            examples: TestSuite,
-            id_assumption: int,
-            is_negative: bool
-    ) -> int:
-        """Prepare examples with assumptions.
-
-        Each example gets an assumption ID. For negative examples,
-        stores literals in e_neg_literals for GenerateNE.
-        """
-        for testcase in examples.testcases:
-            original_id = id_assumption
-            desc_parts = []
-            literals = []
-
-            for assignment in testcase.assignments:
-                if assignment.feature not in variables:
-                    raise KeyError(f'Feature {assignment.feature} is not in the model.')
-
-                desc_parts.append(f'{assignment.feature}={"true" if assignment.value else "false"}')
-                var = variables[assignment.feature] if assignment.value else -variables[assignment.feature]
-                literals.append(var)
-                result.set_kb.append([var, -original_id])
-
-            result.assumptions.append(original_id)
-            desc = ' & '.join(desc_parts)
-            provider.add_test_case_description(original_id, desc)
-
-            if is_negative:
-                result.set_tv.append(original_id)
-                result.e_neg_literals.append(literals)
-            else:
-                result.set_tc.append(original_id)
-
-            id_assumption += 1
-
-        return id_assumption

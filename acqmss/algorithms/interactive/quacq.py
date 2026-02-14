@@ -433,7 +433,7 @@ class QuAcq:
             reduce = Reduce(checker, self.profiler)
             redundant, non_redundant = reduce.reduce(
                 set_b_prime=set_b_prime,
-                set_ne=[],
+                set_neg_tv=[],
                 set_bg=set_bg,
                 neg_map=neg_map
             )

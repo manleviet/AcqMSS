@@ -5,7 +5,7 @@ Orchestrates AcqMSS and REDUCE to acquire a knowledge base from
 positive examples and pre-computed NE constraints.
 
 NE generation is performed by callers before invoking ConGen.
-ConGen receives pre-computed NE via task.set_ne.
+ConGen receives pre-computed NE via task.set_neg_tv.
 
 Reference: Paper Algorithm 1 (steps 2-9, NE pre-computed)
     ConGen(E+, NE, B, BG) → KB
@@ -29,7 +29,6 @@ from dataclasses import dataclass, field
 
 from .acqmss import AcqMSS
 from .reduce import Reduce
-from .task_preparation import ConGenTask
 from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
@@ -65,44 +64,55 @@ class ConGen:
 
     @measure_time('congen_runtime')
     @count_calls('congen_calls')
-    def acquire(self, task: ConGenTask) -> CONGENResult:
-        """
-        Acquire knowledge base from prepared task.
+    def acquire(
+        self,
+        set_b: List[int],
+        set_bg: List[int],
+        set_tc: List[int],
+        set_neg_tv: Optional[List[int]] = None,
+        neg_c_map: Optional[Dict[int, int]] = None,
+        assumption_to_constraint: Optional[Dict[int, str]] = None
+    ) -> CONGENResult:
+        """Acquire knowledge base from bias constraints.
 
-        NE must be pre-computed by caller and stored in task.set_ne.
-        Implements Paper Algorithm 1 steps 2-9:
-        2. if IsConsistent(E⁺, NE, BG) then B′ ← AcqMSS(...)
-        3. return REDUCE(B′, NE, BG)
+        Paper Algorithm 1 (steps 2-9, NE pre-computed):
+        2. if IsConsistent(E+, NE, BG) then B' <- AcqMSS(...)
+        3. return REDUCE(B', NE, BG)
 
         Args:
-            task: ConGenTask with set_c, set_b, set_tc, set_ne populated
+            set_b: Bias constraint assumption IDs (B)
+            set_bg: Background knowledge assumption IDs (BG)
+            set_tc: Positive example assumption IDs (E+)
+            set_neg_tv: Negated example assumption IDs (NE)
+            neg_c_map: Mapping constraint ID -> negated ID (for REDUCE)
+            assumption_to_constraint: Mapping assumption ID -> constraint name
 
         Returns:
             CONGENResult with acquired KB
         """
-        # NE is pre-computed by caller and stored in task.set_ne
-        set_ne = task.set_ne
+        set_neg_tv = set_neg_tv or []
+        neg_c_map = neg_c_map or {}
+        assumption_to_constraint = assumption_to_constraint or {}
+
         logging.debug('>>> ConGen [B=%d, NE=%d, E+=%d, BG=%d]',
-                      len(task.set_c), len(set_ne),
-                      len(task.set_tc), len(task.set_b))
+                      len(set_b), len(set_neg_tv), len(set_tc), len(set_bg))
 
         # Step 3: if IsConsistent(E⁺, NE, BG) then
         inconsistent = self.checker.is_consistent_test_cases(
-            set_ne + task.set_b,  # NE ∪ BG
-            task.set_tc,  # E+
+            set_neg_tv + set_bg,  # NE ∪ BG
+            set_tc,           # E+
             stop_at_first_violation=True
         )
         self.profiler.increment("paper_consistency_checks")
 
         if len(inconsistent) > 0:
-            logging.debug('<<< ConGen return Φ (E+ inconsistent with NE ∪ BG)')
-            bg_clauses = [[lit] for lit in task.set_b]
-
+            logging.debug('<<< ConGen return Phi (E+ inconsistent with NE ∪ BG)')
+            bg_clauses = [[lit] for lit in set_bg]
             self.result = CONGENResult(
                 kb_constraints=[],
                 kb_assumption_ids=[],
                 redundant_constraints=[],
-                n_bias=len(task.set_c),
+                n_bias=len(set_b),
                 n_mss=0,
                 n_kb=0,
                 bg_clauses=bg_clauses,
@@ -114,41 +124,43 @@ class ConGen:
         acqmss = AcqMSS(self.checker, m=1, profiler_instance=self.profiler)
         b_prime = acqmss.find_mss(
             delta=[],
-            set_b=task.set_c,
-            set_ne=set_ne,
-            set_e_pos=task.set_tc,
-            set_bg=task.set_b
+            set_b=set_b,
+            set_neg_tv=set_neg_tv,
+            set_e_pos=set_tc,
+            set_bg=set_bg
         )
         logging.debug('AcqMSS: MSS size = %d', len(b_prime))
 
-        # Step 9: return (REDUCE(B′, NE, BG))
+        # Step 9: return REDUCE(B′, NE, BG)
         reduce = Reduce(self.checker, self.profiler)
         redundant, kb = reduce.reduce(
             set_b_prime=b_prime,
-            set_ne=set_ne,
-            set_bg=task.set_b,
-            neg_map=task.neg_c_map
+            set_neg_tv=set_neg_tv,
+            set_bg=set_bg,
+            neg_map=neg_c_map
         )
         logging.debug('REDUCE: %d redundant, %d in final KB', len(redundant), len(kb))
 
         # Map back to constraint names
-        kb_names = [task.get_constraint_name(a) for a in kb]
-        redundant_names = [task.get_constraint_name(a) for a in redundant]
+        def _get_name(a):
+            return assumption_to_constraint.get(a, f'unknown_{a}')
 
-        # Extract BG clauses (unified: set_b contains assumption IDs)
-        bg_clauses = [[lit] for lit in task.set_b]
+        kb_names = [_get_name(a) for a in kb]
+        redundant_names = [_get_name(a) for a in redundant]
+
+        bg_clauses = [[lit] for lit in set_bg]
 
         self.result = CONGENResult(
             kb_constraints=kb_names,
             kb_assumption_ids=kb,
             redundant_constraints=redundant_names,
-            n_bias=len(task.set_c),
+            n_bias=len(set_b),
             n_mss=len(b_prime),
             n_kb=len(kb),
             bg_clauses=bg_clauses,
             metadata={
-                'n_ne': len(set_ne),
-                'n_e_pos': len(task.set_tc),
+                'n_neg_tv': len(set_neg_tv),
+                'n_e_pos': len(set_tc),
             }
         )
 

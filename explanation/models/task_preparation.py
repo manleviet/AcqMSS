@@ -416,6 +416,57 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
 
 # === TEST CASE STRATEGY ===
 
+def _prepare_testsuite_with_negation(result: TestCaseTask,
+                                     provider: DescriptionProvider,
+                                     variables: Dict[str, int],
+                                     testsuite: TestSuite,
+                                     id_assumption: int,
+                                     is_negative: bool) -> int:
+    """Prepare test cases with assumptions and their negated forms.
+
+    Each test case gets two assumption IDs: original and negated.
+    The negated form is a single clause with all literals negated.
+    """
+    for testcase in testsuite.testcases:
+        # --- Original form ---
+        original_id = id_assumption
+        desc_parts = []
+        literals = []
+
+        for assignment in testcase.assignments:
+            if assignment.feature not in variables:
+                raise KeyError(f'Feature {assignment.feature} is not in the model.')
+
+            desc_parts.append(f'{assignment.feature}={"true" if assignment.value else "false"}')
+            var = variables[assignment.feature] if assignment.value else -variables[assignment.feature]
+            literals.append(var)
+            result.set_kb.append([var, -original_id])
+
+        result.assumptions.append(original_id)
+        desc = ' & '.join(desc_parts)
+        provider.add_test_case_description(original_id, desc)
+        id_assumption += 1
+
+        # --- Negated form ---
+        negated_id = id_assumption
+        negated_clause = [-lit for lit in literals]
+        negated_clause.append(-negated_id)
+        result.set_kb.append(negated_clause)
+
+        result.assumptions.append(negated_id)
+        provider.add_test_case_description(negated_id, f"NOT({' & '.join(desc_parts)})")
+
+        if is_negative:
+            result.set_neg_tv.append(negated_id)
+        else:
+            result.set_neg_tc.append(negated_id)
+
+        result.neg_tc_map[original_id] = negated_id
+        id_assumption += 1
+
+    return id_assumption
+
+
 class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
     """Prepare test case task using assumptions.
 
@@ -440,8 +491,10 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
     def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
         result = TestCaseTask()
         provider = DescriptionProvider()
+
         task_input = model.task_input
 
+        # Start assumption IDs after Tseitin variables
         id_assumption = model.next_tseitin_var
 
         # Prepare KB (no negated forms needed for TestCaseTask)
@@ -450,68 +503,18 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
 
         # Prepare positive test cases with negated forms
         start_id_tc = len(result.assumptions)
-        id_assumption = self._prepare_testsuite_with_negation(
+        id_assumption = _prepare_testsuite_with_negation(
             result, provider, model.variables, task_input.positive_test_cases, id_assumption, is_negative=False)
 
         # Prepare negative test cases with negated forms if provided
         start_id_tv = len(result.assumptions)
         if task_input.negative_test_cases is not None:
-            self._prepare_testsuite_with_negation(
+            _prepare_testsuite_with_negation(
                 result, provider, model.variables, task_input.negative_test_cases, id_assumption, is_negative=True)
 
         self._assign_sets(result, start_id_tc, start_id_tv, task_input.negative_test_cases is not None)
 
         return PreparationOutput(result, provider)
-
-    def _prepare_testsuite_with_negation(self, result: TestCaseTask,
-                                         provider: DescriptionProvider,
-                                         variables: Dict[str, int],
-                                         testsuite: TestSuite,
-                                         id_assumption: int,
-                                         is_negative: bool) -> int:
-        """Prepare test cases with assumptions and their negated forms.
-
-        Each test case gets two assumption IDs: original and negated.
-        The negated form is a single clause with all literals negated.
-        """
-        for testcase in testsuite.testcases:
-            # --- Original form ---
-            original_id = id_assumption
-            desc_parts = []
-            literals = []
-
-            for assignment in testcase.assignments:
-                if assignment.feature not in variables:
-                    raise KeyError(f'Feature {assignment.feature} is not in the model.')
-
-                desc_parts.append(f'{assignment.feature}={"true" if assignment.value else "false"}')
-                var = variables[assignment.feature] if assignment.value else -1 * variables[assignment.feature]
-                literals.append(var)
-                clause = [var, -original_id]
-                result.set_kb.append(clause)
-
-            result.assumptions.append(original_id)
-            provider.add_test_case_description(original_id, ' & '.join(desc_parts))
-            id_assumption += 1
-
-            # --- Negated form ---
-            negated_id = id_assumption
-            negated_clause = [-lit for lit in literals]
-            negated_clause.append(-negated_id)
-            result.set_kb.append(negated_clause)
-
-            result.assumptions.append(negated_id)
-            provider.add_test_case_description(negated_id, f"NOT({' & '.join(desc_parts)})")
-
-            if is_negative:
-                result.set_neg_tv.append(negated_id)
-            else:
-                result.set_neg_tc.append(negated_id)
-
-            result.neg_tc_map[original_id] = negated_id
-            id_assumption += 1
-
-        return id_assumption
 
     def _assign_sets(self, result: TestCaseTask,
                      start_id_tc: int, start_id_tv: int,

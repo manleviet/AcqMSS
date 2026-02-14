@@ -16,12 +16,13 @@ Primary constraint discovery algorithms:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `congen.py` | 228 | CONGEN orchestration (GenerateNE pre-computed, caller invokes before CONGEN, results merged via merge_ne_into_task()) |
+| `congen.py` | 228 | ConGen orchestration (direct params, no task object) |
 | `acqmss.py` | 104 | ACQMSS: divide-and-conquer MSS finding |
 | `reduce.py` | 155 | REDUCE: redundancy elimination via consistency checking |
-| `generate_ne.py` | 193 | GenerateNE: negated example generation (caller-invoked, immutable after merge) |
-| `task_preparation.py` | 435 | Task hierarchy (DiagnosisTask → TestCaseTask → CONGENTask) + unified prep (mode-agnostic) |
-| `model.py` | 93 | CONGENModel - self-preparing model from bias+examples |
+| `generate_ne.py` | 193 | GenerateNE: negated example generation (called by ConGenModel.prepare()) |
+| `task_preparation.py` | 435 | Task hierarchy (DiagnosisTask → TestCaseTask → ConGenTask) + unified prep |
+| `congen_model.py` | 186 | ConGenModel - CheckerModel protocol, self-preparing with prepare() |
+| `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern (mirrors DiagnosisModelBuilder) |
 
 **Interactive Sub-package** (`interactive/`, 6 files, ~1,950 LOC):
 
@@ -77,7 +78,11 @@ Sampling strategies, example generation, and query generation for learning:
 
 2. **Assumption-Based Representation**: All checkers (Incremental and NonIncremental) use identical assumption-based data: `Dict[int, int]` mapping assumption IDs to their negation counterparts, used uniformly in REDUCE and other algorithms.
 
-3. **GenerateNE Design**: GenerateNE is invoked by callers BEFORE CONGEN runs. Results are merged into task via `merge_ne_into_task()`. Checkers are immutable after construction (no mutations).
+3. **GenerateNE Design**: GenerateNE is invoked internally by `ConGenModel.prepare()`. Results are merged into task via `merge_ne_into_task()`. Checkers are immutable after construction.
+
+4. **CheckerModel Protocol**: ConGenModel implements `get_kb()`, `get_assumptions()`, `use_incremental`, `solver_name` for compatibility with CheckerFactory.
+
+5. **Builder Pattern**: ConGenModelBuilder encapsulates file loading, model construction, and prepare() invocation (mirrors DiagnosisModelBuilder).
 
 #### acqmss/eval/ — Evaluation Framework (~3,700 LOC, 13 files)
 
@@ -280,8 +285,8 @@ CONGEN and QuAcq learning results:
 - `CONGENRunner` — High-level CONGEN pipeline
 - `Evaluator` — High-level evaluation orchestration
 
-### 6. Factory Pattern
-- `CONGENModel.from_bias_and_examples()` — Task preparation factory
+### 6. Builder Pattern
+- `ConGenModelBuilder.from_bias_and_fm_uvl()` / `from_bias_and_fm_fide()` — Builder-pattern model construction
 - Solver instantiation via consistent factories
 
 ## Codebase Statistics

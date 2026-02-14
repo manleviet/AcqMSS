@@ -48,16 +48,16 @@ PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.tom
 Learn constraints from positive (valid) and negative (invalid) example configurations:
 
 ```python
-from acqmss.algorithms import ConGen, ConGenModel
-from explanation.operations.algorithms.checker import IncrementalPySATChecker
+from acqmss.algorithms import ConGen, ConGenModelBuilder
+from explanation.operations.algorithms.checker import CheckerFactory
 
-model = ConGenModel.from_bias_and_examples(
-    bias_constraints=bias, positive_examples=E_plus,
-    negative_examples=E_minus, feature_ids=features
-)
-checker = IncrementalPySATChecker(model.solver, profiler=None)
-congen = ConGen(checker, profiler=None)
-result = congen.acquire(task)
+model = (ConGenModelBuilder
+    .from_bias_and_fm_uvl('data/bias/model.json', 'data/fms/model.uvl')
+    .with_examples('data/examples/examples.json')
+    .build())
+checker = CheckerFactory.create_from_model(model, 'glucose4')
+congen = ConGen(checker)
+result = congen.acquire(task=model.task)
 ```
 
 **Process**: GenerateNE → ACQMSS (MSS finding) → REDUCE (redundancy elimination)

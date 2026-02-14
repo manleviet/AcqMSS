@@ -12,7 +12,8 @@ Call prepare() before accessing task or description_provider.
 from typing import Dict, List, Optional
 
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
-from explanation.models.task_preparation import TaskInput, DescriptionProvider
+from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask
+from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler
 
 from .task_preparation import ConGenTask
 
@@ -28,16 +29,37 @@ class ConGenModel:
     """
 
     def __init__(self) -> None:
+        # map clauses to relationships/constraint
         self.constraint_map: Dict[str, List[List[int]]] = {}
+        # map negated clauses to relationships/constraint (for redundancy detection)
         self.negated_constraint_map: Dict[str, List[List[int]]] = {}
+        # map feature names to IDs (for debugging and description generation)
         self.variables: Dict[str, int] = {}
-        self.task_input: TaskInput = TaskInput()
-        self.next_tseitin_var: int = 1
+        # Used as starting ID for assumption literals to avoid conflicts.
+        self.next_tseitin_var: int = 1000
+
+        # CheckerModel protocol attributes
+        self.use_incremental: bool = True
+
+        # Task input populated by builder or caller before prepare()
+        self._task_input: TaskInput = TaskInput()
+
+        # Background knowledge (e.g., root feature IDs) to include in set_b
         self.background_knowledge: List[int] = []
 
         # Populated after prepare()
         self._task: Optional[ConGenTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
+
+    @property
+    def task_input(self) -> TaskInput:
+        """Get task input."""
+        return self._task_input
+
+    @task_input.setter
+    def task_input(self, value: TaskInput) -> None:
+        """Set task input."""
+        self._task_input = value
 
     @property
     def task(self) -> ConGenTask:
@@ -53,76 +75,148 @@ class ConGenModel:
             raise RuntimeError("Call prepare() first")
         return self._description_provider
 
-    def prepare(self, mode_name: str = "congen", task_input: Optional[TaskInput] = None) -> ConGenTask:
-        """Prepare ConGen task using ConGenTaskPreparation strategy.
+    # Convenience getters (delegate to result)
+    def get_c(self) -> List:
+        """Get the set of potentially faulty constraints."""
+        return self.task.set_c
 
-        Args:
-            mode_name: Mode name for logging (e.g., "incremental-congen")
-            task_input: Optional TaskInput. If provided, updates model's task_input
-                before preparing. If None, uses existing task_input.
+    def get_b(self) -> List:
+        """Get the background knowledge."""
+        return self.task.set_b
+
+    def get_cf(self) -> List:
+        """Get all constraints (C ∪ B) for redundancy detection.
 
         Returns:
-            ConGenTask ready for GenerateNE and ConGen.
-
-        Note:
-            After calling prepare() with new input, any existing checker instances
-            must be recreated as they hold references to the previous KB/assumptions.
+            List of all constraint IDs (set_c + set_b).
         """
-        if task_input is not None:
-            self.task_input = task_input
+        return self.task.get_cf()
 
+    def get_kb(self) -> List[List]:
+        """Get the full knowledge base with assumptions."""
+        return self.task.set_kb
+
+    def get_neg_c_map(self) -> dict:
+        """Get the mapping from constraint to negated constraint IDs.
+
+        Returns:
+            Dict mapping original constraint ID to negated constraint ID,
+            or empty dict if no negated forms.
+        """
+        return self.task.neg_c_map
+
+    def get_assumptions(self) -> List:
+        """Get the list of assumption literals."""
+        return self.task.assumptions
+
+    def get_tc(self) -> List:
+        """Get the positive test cases (debugging task only).
+
+        Returns:
+            List of positive test case assumptions, or empty list if not debugging task.
+        """
+        if isinstance(self.task, TestCaseTask):
+            return self.task.set_tc
+        return []
+
+    def get_tv(self) -> List:
+        """Get the negative test cases (debugging task only).
+
+        Returns:
+            List of negative test case assumptions, or empty list if not debugging task.
+        """
+        if isinstance(self.task, TestCaseTask):
+            return self.task.set_tv
+        return []
+
+    def get_neg_tv(self) -> List:
+        """Get the negated negative test cases (debugging task only).
+
+        Used by KBDiag for B = B ∪ neg_Tν.
+
+        Returns:
+            List of negated negative test case assumptions, or empty list if not debugging task.
+        """
+        if isinstance(self.task, TestCaseTask):
+            return self.task.set_neg_tv
+        return []
+
+    def get_neg_tc(self) -> List:
+        """Get the negated positive test cases (debugging task only).
+
+        Used for WipeOutR algorithm.
+
+        Returns:
+            List of negated positive test case assumptions, or empty list if not debugging task.
+        """
+        if isinstance(self.task, TestCaseTask):
+            return self.task.set_neg_tc
+        return []
+
+    def get_neg_tc_map(self) -> dict:
+        """Get the mapping from test case to negated test case IDs.
+
+        Returns:
+            Dict mapping original test case ID to negated test case ID,
+            or empty dict if not debugging task.
+        """
+        if isinstance(self.task, TestCaseTask):
+            return self.task.neg_tc_map
+        return {}
+
+    def prepare(
+            self,
+            positive_examples: Optional[List[Dict[str, bool]]] = None,
+            negative_examples: Optional[List[Dict[str, bool]]] = None
+    ) -> ConGenTask:
+        """Prepare ConGen task including GenerateNE.
+
+        If examples provided, updates task_input before preparing.
+        Runs GenerateNE internally (callers no longer need to).
+        Can be called multiple times (e.g., for CV folds) — each call
+        overwrites the previous task state.
+
+        Args:
+            positive_examples: Optional new E+ (for fold reuse)
+            negative_examples: Optional new E- (for fold reuse)
+
+        Returns:
+            ConGenTask with set_neg_tv already populated.
+        """
+        # Update task_input if new examples provided
+        if positive_examples is not None or negative_examples is not None:
+            pos_tc = self._examples_to_testsuite(positive_examples or [])
+            neg_tc = self._examples_to_testsuite(negative_examples or [])
+            self.task_input = TaskInput(
+                positive_test_cases=pos_tc,
+                negative_test_cases=neg_tc,
+                for_redundancy=True
+            )
+
+        # Step 1: Run ConGenTaskPreparation
         from .task_preparation import ConGenTaskPreparation
-
-        preparation = ConGenTaskPreparation(mode_name)
+        preparation = ConGenTaskPreparation()
         output = preparation.prepare(self)
 
         assert isinstance(output.task, ConGenTask)
         self._task = output.task
         self._description_provider = output.description_provider
-        return self._task
 
-    @classmethod
-    def from_bias_and_examples(
-            cls,
-            bias_constraints: Dict[str, List[List[int]]],
-            positive_examples: List[Dict[str, bool]],
-            negative_examples: List[Dict[str, bool]],
-            feature_ids: Dict[str, int],
-            background_knowledge: Optional[List[int]] = None
-    ) -> 'ConGenModel':
-        """Create model from bias constraints and examples.
+        # Step 2: Run GenerateNE with temp non-incremental checker
+        from .generate_ne import GenerateNE, merge_ne_into_task
+        from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
 
-        Args:
-            bias_constraints: {constraint_name: [clauses]} from bias
-            positive_examples: List of valid configurations {feature: bool}
-            negative_examples: List of invalid configurations {feature: bool}
-            feature_ids: {feature_name: variable_id}
-            background_knowledge: BG literals (e.g., [root_feature_id])
+        temp_checker = NonIncrementalPySATChecker(self._task.set_kb, self._task.assumptions)
 
-        Returns:
-            ConGenModel ready for prepare()
-        """
-        # Find max variable ID for Tseitin allocation
-        max_var = max(feature_ids.values()) if feature_ids else 0
-        for clauses in bias_constraints.values():
-            for clause in clauses:
-                for lit in clause:
-                    max_var = max(max_var, abs(lit))
-
-        # Convert examples to test suites
-        positive_tc = cls._examples_to_testsuite(positive_examples)
-        negative_tc = cls._examples_to_testsuite(negative_examples)
-
-        model = cls()
-        model.constraint_map = bias_constraints
-        model.variables = feature_ids
-        model.task_input = TaskInput(
-            positive_test_cases=positive_tc,
-            negative_test_cases=negative_tc
+        generate_ne = GenerateNE(temp_checker)
+        ne_result = generate_ne.generate(
+            set_tv=self._task.e_neg_literals,
+            set_bg=self._task.set_b,
+            start_assumption_id=self._task.next_assumption_id
         )
-        model.next_tseitin_var = max_var + 1
-        model.background_knowledge = background_knowledge or []
-        return model
+        merge_ne_into_task(self._task, ne_result)
+
+        return self._task
 
     @staticmethod
     def _examples_to_testsuite(examples: List[Dict[str, bool]]) -> TestSuite:

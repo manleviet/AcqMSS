@@ -24,6 +24,7 @@ from .congen import ConGen, CONGENResult
 from .task_preparation import ConGenTask
 from .task_preparation import ConGenTaskPreparation
 from .congen_model import ConGenModel
+from .congen_model_builder import ConGenModelBuilder
 
 # Interactive learning components
 from .interactive import (
@@ -53,6 +54,7 @@ __all__ = [
     'ConGenTask',
     'ConGenTaskPreparation',
     'ConGenModel',
+    'ConGenModelBuilder',
     # Interactive learning (QuAcq)
     'InteractiveLearner',
     'QuAcq',

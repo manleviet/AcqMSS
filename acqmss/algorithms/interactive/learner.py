@@ -17,7 +17,6 @@ from acqmss.bias.bias_io import BiasIO
 from acqmss.bias.data_structures import Bias
 from acqmss.eval.evaluator import Evaluator, EvaluationStrategy
 from acqmss.eval.result_loader import ConGenResultData
-from explanation.operations.algorithms.utils import negate_cnf_tseitin
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, use_global_profiler, ProfilerPreset, AbstractProfiler
 )
@@ -89,7 +88,7 @@ class InteractiveLearner:
             InteractiveLearner instance ready to learn
 
         Example:
-            >>> learner = InteractiveLearner.from_files(
+            >>> learner = InteractiveLearner.from_bias_and_fm_fide(
             ...     'data/fms/REAL-FM-7.uvl',
             ...     'data/bias/REAL-FM-7-bias.json'
             ... )
@@ -131,23 +130,12 @@ class InteractiveLearner:
             InteractiveLearner instance
         """
         # Build feature ID mapping from bias
-        feature_ids = {f.name: f.id for f in bias.features}
-        id_to_feature = {f.id: f.name for f in bias.features}
+        feature_ids = bias.feature_ids
+        id_to_feature = bias.id_to_feature
 
         # Build constraint and negation maps
-        constraint_map = {}
-        negated_constraint_map = {}
-
-        # Compute tseitin_start from max feature variable ID
-        tseitin_var = max(f.id for f in bias.features) + 1
-
-        for constraint in bias.constraints:
-            c_id = constraint.id
-            constraint_map[c_id] = constraint.clauses
-
-            # Proper Tseitin negation for all constraints (single and multi-clause)
-            neg_clauses, tseitin_var = negate_cnf_tseitin(constraint.clauses, tseitin_var)
-            negated_constraint_map[c_id] = neg_clauses
+        tseitin_start = bias.max_variable_id + 1
+        constraint_map, negated_constraint_map, _ = bias.to_constraint_maps_with_negation()
 
         # Create task
         task = InteractiveTask(
@@ -173,16 +161,8 @@ class InteractiveLearner:
         root_feature_id = feature_ids.get(root_name)
         background = [root_feature_id] if root_feature_id is not None else []
 
-        constraint_map = {}
-        negated_constraint_map = {}
-        tseitin_var = max(feature_ids.values()) + 1
-
-        for constraint in bias.constraints:
-            c_id = constraint.id
-            constraint_map[c_id] = constraint.clauses
-
-            neg_clauses, tseitin_var = negate_cnf_tseitin(constraint.clauses, tseitin_var)
-            negated_constraint_map[c_id] = neg_clauses
+        tseitin_start = max(feature_ids.values()) + 1
+        constraint_map, negated_constraint_map, _ = bias.to_constraint_maps_with_negation()
 
         task = InteractiveTask(
             bias=[c.id for c in bias.constraints],

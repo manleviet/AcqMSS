@@ -129,15 +129,14 @@ def n_fold_cross_validation(
         positive_examples: List[Dict[str, bool]],
         negative_examples: List[Dict[str, bool]],
         n_folds: int,
-        bias_clauses: Dict[str, List[List[int]]],
-        feature_ids: Dict[str, int],
+        bias_path: str,
+        fm_path: str,
         seed: int,
         solver_name: str = 'glucose4',
         is_incremental: bool = True,
         shuffle_each_fold: bool = True,
         fold_data: Optional[FoldData] = None,
-        shuffle_bias: bool = False,
-        background_knowledge: Optional[List[int]] = None
+        shuffle_bias: bool = False
 ) -> CrossValidationResult:
     """
     Standard n-fold cross validation according to the paper (page 6).
@@ -154,15 +153,14 @@ def n_fold_cross_validation(
         positive_examples: List of E+ ({feature: True/False})
         negative_examples: List of E- ({feature: True/False})
         n_folds: Number of folds (e.g., 5 or 10)
-        bias_clauses: {constraint_id: clauses} from bias file
-        feature_ids: {feature_name: SAT_variable_id}
+        bias_path: Path to bias JSON file
+        fm_path: Path to feature model (.uvl) file
         seed: Random seed for fold generation and training shuffle (required)
         solver_name: SAT solver name
         is_incremental: Use incremental solver mode
         shuffle_each_fold: Shuffle training examples before each fold
         fold_data: Optional pre-generated fold assignments (for shared folds)
         shuffle_bias: Shuffle bias ordering per fold using fold_data.shuffle_seeds
-        background_knowledge: BG literals (e.g., [root_feature_id])
 
     Returns:
         CrossValidationResult with mean accuracy ± std and KB data
@@ -185,13 +183,12 @@ def n_fold_cross_validation(
     # Start total time measurement
     cv_start_time = time.perf_counter()
 
-    # Create ConGen runner
+    # Create ConGen runner (builds model once from paths)
     runner = ConGenRunner(
-        bias_clauses=bias_clauses,
-        feature_ids=feature_ids,
+        bias_path=bias_path,
+        fm_path=fm_path,
         solver_name=solver_name,
-        is_incremental=is_incremental,
-        background_knowledge=background_knowledge
+        is_incremental=is_incremental
     )
 
     fold_accuracies: List[float] = []
@@ -232,7 +229,7 @@ def n_fold_cross_validation(
 
         # Test: calculate accuracy on held-out fold
         with AccuracyCalculator(congen_result.kb_clauses, solver_name) as calculator:
-            accuracy_result = calculator.calculate(test_pos, test_neg, feature_ids)
+            accuracy_result = calculator.calculate(test_pos, test_neg, runner.model.variables)
 
         fold_accuracy = accuracy_result.metrics.accuracy
         fold_accuracies.append(fold_accuracy)
