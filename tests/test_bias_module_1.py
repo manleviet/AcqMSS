@@ -1,10 +1,10 @@
-from acqmss.bias import ConfigLoader, BiasGenerator, BiasIO
+from acqmss.bias import BiasConfigLoader, BiasGenerator, BiasIO
 
 # 1. Load config
-config = ConfigLoader.load("./data/bias-config/REAL-FM-7.yaml")
+config = BiasConfigLoader.load("./data/bias-config/REAL-FM-7.yaml")
 
 # 2. Validate
-result = ConfigLoader.validate_config(config)
+result = BiasConfigLoader.validate_config(config)
 if not result['valid']:
     print(result['errors'])
 

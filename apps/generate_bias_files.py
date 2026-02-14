@@ -33,7 +33,7 @@ ROOT_PROJECT_FOLDER = Path(__file__).resolve().parent.parent
 os.chdir(ROOT_PROJECT_FOLDER)
 sys.path.insert(0, str(ROOT_PROJECT_FOLDER))
 
-from acqmss.bias import ConfigLoader, BiasGenerator, BiasIO
+from acqmss.bias import BiasConfigLoader, BiasGenerator, BiasIO
 
 
 @dataclass
@@ -155,10 +155,10 @@ class BatchBiasGenerator:
             if self.config.verbose:
                 print(f"  Loading config: {model_config.config_path}")
 
-            yaml_config = ConfigLoader.load(model_config.config_path)
+            yaml_config = BiasConfigLoader.load(model_config.config_path)
 
             # 2. Validate
-            validation = ConfigLoader.validate_config(yaml_config)
+            validation = BiasConfigLoader.validate_config(yaml_config)
             if not validation['valid']:
                 result['error'] = f"Validation failed: {validation['errors']}"
                 return result

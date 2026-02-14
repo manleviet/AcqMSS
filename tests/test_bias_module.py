@@ -10,7 +10,7 @@ This script demonstrates how to:
 """
 
 from acqmss.bias import (
-    ConfigLoader,
+    BiasConfigLoader,
     BiasGenerator,
     BiasIO,
 )
@@ -25,7 +25,7 @@ def main():
     # Step 1: Load configuration
     print("Step 1: Loading configuration from YAML...")
     config_path = '../data/bias-config/survey_example.yaml'
-    config = ConfigLoader.load(config_path)
+    config = BiasConfigLoader.load(config_path)
     print(f"  Config name: {config.name}")
     print(f"  Features: {len(config.features)}")
     print(f"  Hierarchical candidates: {len(config.hierarchical_candidates)}")
@@ -33,7 +33,7 @@ def main():
 
     # Step 2: Validate configuration
     print("Step 2: Validating configuration...")
-    validation = ConfigLoader.validate_config(config)
+    validation = BiasConfigLoader.validate_config(config)
     if validation['valid']:
         print("  ✓ Configuration is valid")
     else:

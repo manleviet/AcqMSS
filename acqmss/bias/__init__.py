@@ -16,7 +16,7 @@ from .data_structures import (
     BiasConfig,
 )
 from .clause_generator import ConstraintClauseGenerator
-from .config_loader import ConfigLoader
+from .config_loader import BiasConfigLoader
 from .bias_generator import BiasGenerator
 from .bias_io import BiasIO
 
@@ -32,7 +32,7 @@ __all__ = [
     'BiasConfig',
     # Generators and utilities
     'ConstraintClauseGenerator',
-    'ConfigLoader',
+    'BiasConfigLoader',
     'BiasGenerator',
     'BiasIO',
 ]

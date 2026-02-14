@@ -20,7 +20,7 @@ from .data_structures import (
 )
 
 
-class ConfigLoader:
+class BiasConfigLoader:
     """Load YAML configuration for bias generation"""
 
     @staticmethod

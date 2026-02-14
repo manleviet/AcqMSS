@@ -51,10 +51,10 @@ cross_tree_candidates:
 ### 2. Sinh bias
 
 ```python
-from acqmss.bias import ConfigLoader, BiasGenerator, BiasIO
+from acqmss.bias import BiasConfigLoader, BiasGenerator, BiasIO
 
 # Load config
-config = ConfigLoader.load('configs/survey.yaml')
+config = BiasConfigLoader.load('configs/survey.yaml')
 
 # Generate bias
 generator = BiasGenerator(config)
