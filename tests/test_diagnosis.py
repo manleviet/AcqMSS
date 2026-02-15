@@ -50,7 +50,7 @@ ENABLED_TESTS = {
     'kbdiag_1diag_2': True,
     'kbdiag_1diag_2_neg': True,
     'quickxplainwithtestcases_1cs_1': True,
-    'quickxplainwithtestcases_1cs_1_neg': True,
+    'quickxplainwithtestcases_1diag_1_neg': True,
 
     # HSDAG with FastDiag
     'hsdag_fastdiag_1diag': True,
@@ -439,7 +439,7 @@ def test_quickxplainwithtestcases_1cs_1(name, is_incremental, solver_name, use_s
         assert cs_mess == 'Conflict: [(mandatory) CheckR[1,1]SDC , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]]]'
 
 @parameterized.expand(STANDARD_PARAMS)
-@skip_if_disabled('quickxplainwithtestcases_1cs_1_neg')
+@skip_if_disabled('quickxplainwithtestcases_1diag_1_neg')
 def test_quickxplainwithtestcases_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
@@ -1356,7 +1356,7 @@ def run_all_tests():
         ("KBDiag 1 Diagnosis 2", 'kbdiag_1diag_2', test_kbdiag_1diag_2),
         ("KBDiag 1 Diagnosis 2 neg", 'kbdiag_1diag_2_neg', test_kbdiag_1diag_2_neg),
         ("QuickXPlainWithTestCases 1 CS 1", 'quickxplainwithtestcases_1cs_1', test_quickxplainwithtestcases_1cs_1),
-        ("QuickXPlainWithTestCases 1 CS 1 neg", 'quickxplainwithtestcases_1cs_1_neg', test_quickxplainwithtestcases_1cs_1_neg),
+        ("QuickXPlainWithTestCases 1 Diag 1 neg", 'quickxplainwithtestcases_1diag_1_neg', test_quickxplainwithtestcases_1diag_1_neg),
         ("HS-DAG FastDiag 1 Diagnosis", 'hsdag_fastdiag_1diag', test_hsdag_fastdiag_1diag),
         ("HS-DAG FastDiag 2 Diagnoses", 'hsdag_fastdiag_2diag', test_hsdag_fastdiag_2diag),
         ("HS-DAG FastDiag All Diagnoses", 'hsdag_fastdiag_all', test_hsdag_fastdiag_all),

@@ -14,6 +14,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import List, Dict
 
+from acqmss.oracle import FeatureModelOracle
+from explanation.models import TestSuite
 from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.profiler import (
     measure_time, count_calls
@@ -43,13 +45,14 @@ class GenerateNE:
     NE = {¬(minimal_conflict(e⁻)) | e⁻ ∈ E⁻}
     """
 
-    def __init__(self, checker: ConsistencyChecker) -> None:
+    def __init__(self, checker: ConsistencyChecker, oracle: FeatureModelOracle) -> None:
         self.checker = checker
         self.quickxplain = QuickXPlain(checker)
+        self.oracle = oracle
 
     @measure_time('generate_ne_runtime')
     @count_calls('generate_ne_calls')
-    def generate(self, set_tv: List[List[int]], set_bg: List[int],
+    def generate(self, testsuite: TestSuite, set_bg: List[int],
                  start_assumption_id: int = 1000) -> NEResult:
         """
         Generate NE from negative examples using QuickXPlain.
@@ -65,20 +68,29 @@ class GenerateNE:
         Returns:
             NEResult with assumption IDs and neg_map
         """
-        logging.debug('>>> GenerateNE [%d E⁻, BG=%s]', len(set_tv), set_bg)
+        logging.debug('>>> GenerateNE [%d E⁻, BG=%s]', len(testsuite.testcases), set_bg)
 
         new_clauses = []
         set_neg_tv = []
         current_id = start_assumption_id
 
         # Iterates examples; creates blocking clauses and negated forms
-        for tv in set_tv:
-            if not tv:
-                continue
+        for testcase in testsuite.testcases:
+            active_assumptions = []
+            for feat, value in items:
+                assumption = self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[
+                    feat]
+                active_assumptions.append(assumption)
+
+            step = 2
+            set_c = [self._task.assumptions[i] for i in range(0, self.start_id_assignments, step)]
+            set_c += active_assumptions
 
             # Use QuickXPlain to find minimal conflict
             # Wrap single assumption ID in list for find_conflict API
             tv_list = tv if isinstance(tv, list) else [tv]
+
+
             minimal_conflict = self.quickxplain.find_conflict(tv_list, set_bg)
 
             if len(minimal_conflict) == 0:

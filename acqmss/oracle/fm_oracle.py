@@ -66,8 +66,8 @@ class FeatureModelOracle(Oracle):
         self._checker = CheckerFactory.create_from_model(self._oracle_model, solver_name, self.profiler)
 
         # Load FM for constraint description extraction (used by evaluation)
-        from flamapy.metamodels.fm_metamodel.transformations import UVLReader
-        self.fm = UVLReader(fm_path).transform()
+        # from flamapy.metamodels.fm_metamodel.transformations import UVLReader
+        # self.fm = UVLReader(fm_path).transform()
         #
         # # Build ground truth CNF (also extracts flamapy variable mapping)
         # self.cnf_clauses = self._build_cnf()

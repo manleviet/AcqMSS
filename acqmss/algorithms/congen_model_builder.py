@@ -10,6 +10,7 @@ from flamapy.metamodels.pysat_metamodel.models import PySATModel
 
 from explanation.models import DiagnosisModel
 from .congen_model import ConGenModel
+from ..oracle import FeatureModelOracle
 
 
 class ConGenModelBuilder:
@@ -104,15 +105,20 @@ class ConGenModelBuilder:
 
         bias = BiasIO.load_from_json(self._bias_path)
         fm_model = self._load_model()
+        oracle = FeatureModelOracle(self._fm_path, use_incremental=False)
 
         # Build model
         model = ConGenModel()
         model._fm_path = self._fm_path
+        model._oracle = oracle
 
-        model.constraint_map, model.negated_constraint_map, model.next_tseitin_var \
-            = bias.to_constraint_maps_with_negation()
+        # model.constraint_map, model.negated_constraint_map, model.next_tseitin_var \
+        #     = bias.to_constraint_maps_with_negation()
+        model.constraint_map = bias.to_constraint_map()
+        model.next_tseitin_var = fm_model.next_tseitin_var
+
         model.variables = bias.feature_ids
-        model.num_fm_constraints = len(fm_model.constraint_map)
+        model.num_fm_constraints = len(fm_model.constraint_map) - 1
         model.root_feature = bias.root_feature
         model._use_incremental = self._use_incremental
 
@@ -160,14 +166,14 @@ class ConGenModelBuilder:
             from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 
             fm = FeatureIDEReader(self._fm_path).transform()
-            return FmToDiagPysat(fm).transform()
+            return FmToDiagPysat(fm, create_negation=True).transform()
 
         elif self._fm_source_type == 'uvl':
             from flamapy.metamodels.fm_metamodel.transformations import UVLReader
             from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 
             fm = UVLReader(self._fm_path).transform()
-            return FmToDiagPysat(fm).transform()
+            return FmToDiagPysat(fm, create_negation=True).transform()
 
         raise ValueError(f"Unknown source type: {self._fm_source_type}")
     
