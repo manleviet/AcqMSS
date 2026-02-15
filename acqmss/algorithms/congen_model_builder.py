@@ -118,7 +118,7 @@ class ConGenModelBuilder:
         model.next_tseitin_var = fm_model.next_tseitin_var
 
         model.variables = bias.feature_ids
-        model.num_fm_constraints = len(fm_model.constraint_map) - 1
+        model.num_fm_constraints = len(fm_model.constraint_map)
         model.root_feature = bias.root_feature
         model._use_incremental = self._use_incremental
 

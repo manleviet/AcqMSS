@@ -19,7 +19,7 @@ Task classes shared across incremental and non-incremental modes.
 
 from .acqmss import AcqMSS
 from .reduce import Reduce
-from .generate_ne import GenerateNE, NEResult, merge_ne_into_task
+from .generate_ne import GenerateNE, NEPerTestcase
 from .congen import ConGen, CONGENResult
 from .task_preparation import ConGenTask
 from .task_preparation import ConGenTaskPreparation
@@ -47,8 +47,7 @@ __all__ = [
     'AcqMSS',
     'Reduce',
     'GenerateNE',
-    'NEResult',
-    'merge_ne_into_task',
+    'NEPerTestcase',
     'ConGen',
     'CONGENResult',
     'ConGenTask',

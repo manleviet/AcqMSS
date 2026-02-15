@@ -113,7 +113,6 @@ class ConGenRunner:
         self.model = (ConGenModelBuilder
                       .from_bias_and_fm_uvl(bias_path, fm_path)
                       .use_incremental(is_incremental)
-                      .with_solver(solver_name)
                       .build())
 
         # Keep original bias order for shuffle restore

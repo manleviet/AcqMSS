@@ -54,6 +54,7 @@ class ConsistencyChecker(ABC):
     def is_consistent_test_cases(self, set_c: List, set_tc: List, stop_at_first_violation: bool) -> List:
         """Check consistency against multiple test cases, returning inconsistent ones."""
         set_tcp = []
+        # Accumulates test cases inconsistent with CNF formula
         for tc in set_tc:
             if not self.is_consistent(set_c + [tc]):
                 set_tcp.append(tc)

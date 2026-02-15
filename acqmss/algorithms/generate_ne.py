@@ -2,141 +2,137 @@
 GenerateNE Algorithm for generating negated negative examples.
 
 Uses QuickXPlain to find minimal conflict sets from negative examples,
-then negates them to create NE constraints. Returns new clauses and
-assumptions in NEResult for the caller to merge into the task.
+then negates them to create NE constraints.
 
 Reference: Paper Section "ConGen (Algorithm 1)"
-- GENERATENE(E⁻) activates QUICKXPLAIN once per negative example e⁻ ∈ E⁻.
-- NE is a set of constraints such that: if e⁻ᵢ ∈ E⁻ then ¬e⁻ᵢ ∈ NE
+- GENERATENE(E-) activates QUICKXPLAIN once per negative example e- in E-.
+- NE is a set of constraints such that: if e-_i in E- then not(e-_i) in NE
 """
 
-import logging
-from dataclasses import dataclass, field
-from typing import List, Dict
+from __future__ import annotations
 
-from acqmss.oracle import FeatureModelOracle
-from explanation.models import TestSuite
-from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.profiler import (
-    measure_time, count_calls
-)
+import logging
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Dict, List, Tuple
+
+from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
 from explanation.operations.algorithms.quickxplain import QuickXPlain
+
+if TYPE_CHECKING:
+    from acqmss.oracle import FeatureModelOracle
+    from explanation.models.testsuite import TestCase, TestSuite
 
 
 @dataclass
-class NEResult:
-    """Result of NE generation."""
-    # assumption_ids: List[int]
-    # neg_map: Dict[int, int]
-    # original_literals: List[List[int]]
-    new_clauses: List[List[int]] = field(default_factory=list)
-    set_neg_tv: List[int] = field(default_factory=list)
-    next_tseitin_var: int = 1000
+class NEPerTestcase:
+    """Result of NE generation for a single testcase."""
+    ne_id: int  # assumption ID for this NE
+    ne_clause: List[int]  # blocking clause with assumption literal
+    desc: str  # description string
 
 
 class GenerateNE:
-    """
-    Generate negated negative examples using QuickXPlain.
+    """Generate negated negative examples using QuickXPlain.
 
-    For each negative example e⁻, uses QuickXPlain to find the minimal
-    conflict set, then creates a constraint that blocks that configuration.
-    Returns new clauses and assumptions in NEResult for the caller to merge.
-
-    NE = {¬(minimal_conflict(e⁻)) | e⁻ ∈ E⁻}
+    For each negative example e-, finds the minimal conflict set
+    and creates a blocking clause. NE clauses are appended to the
+    result KB so subsequent testcases see previous NEs.
     """
 
-    def __init__(self, checker: ConsistencyChecker, oracle: FeatureModelOracle) -> None:
-        self.checker = checker
-        self.quickxplain = QuickXPlain(checker)
+    def __init__(self, oracle: FeatureModelOracle) -> None:
         self.oracle = oracle
 
-    @measure_time('generate_ne_runtime')
-    @count_calls('generate_ne_calls')
-    def generate(self, testsuite: TestSuite, set_bg: List[int],
-                 start_assumption_id: int = 1000) -> NEResult:
-        """
-        Generate NE from negative examples using QuickXPlain.
+    def generate(
+            self,
+            testsuite: TestSuite,
+            variables: Dict[str, int],
+            result_set_kb: List[List[int]],
+            result_assumptions: List[int],
+            start_id: int
+    ) -> Tuple[List[NEPerTestcase], int]:
+        """Generate NE from negative examples using QuickXPlain.
 
-        For each e⁻ (list of literals), uses QuickXPlain to find the minimal
-        conflict set with respect to BG, then creates a blocking clause.
+        Per testcase: merges oracle KB with result KB, creates assignment
+        clauses, runs QuickXPlain for minimal conflict, creates blocking clause.
 
         Args:
-            set_tv: List of negative examples, each is a list of literals
-            set_bg: Background knowledge (assumption IDs)
-            start_assumption_id: Starting ID for new assumptions
+            testsuite: Negative test cases
+            variables: Feature name -> SAT variable mapping
+            result_set_kb: Task KB (mutated: NE clauses appended)
+            result_assumptions: Task assumptions (read-only snapshot per iteration)
+            start_id: Starting assumption ID
 
         Returns:
-            NEResult with assumption IDs and neg_map
+            (per_testcase_results, next_id_assumption)
         """
-        logging.debug('>>> GenerateNE [%d E⁻, BG=%s]', len(testsuite.testcases), set_bg)
+        if not testsuite.testcases:
+            return [], start_id
 
-        new_clauses = []
-        set_neg_tv = []
-        current_id = start_assumption_id
+        set_bg = self.oracle.get_c()
+        results: List[NEPerTestcase] = []
+        id_assumption = start_id
 
-        # Iterates examples; creates blocking clauses and negated forms
         for testcase in testsuite.testcases:
-            active_assumptions = []
-            for feat, value in items:
-                assumption = self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[
-                    feat]
-                active_assumptions.append(assumption)
+            ne, id_assumption = self._process_testcase(
+                testcase, variables, result_set_kb, result_assumptions,
+                set_bg, id_assumption)
+            results.append(ne)
 
-            step = 2
-            set_c = [self._task.assumptions[i] for i in range(0, self.start_id_assignments, step)]
-            set_c += active_assumptions
+        logging.debug('<<< GenerateNE: %d NE constraints', len(results))
+        return results, id_assumption
 
-            # Use QuickXPlain to find minimal conflict
-            # Wrap single assumption ID in list for find_conflict API
-            tv_list = tv if isinstance(tv, list) else [tv]
+    def _process_testcase(
+            self,
+            testcase: TestCase,
+            variables: Dict[str, int],
+            result_set_kb: List[List[int]],
+            result_assumptions: List[int],
+            set_bg: List[int],
+            id_assumption: int
+    ) -> Tuple[NEPerTestcase, int]:
+        """Process single testcase: merge KBs, QuickXPlain, create NE clause."""
+        # Merge oracle KB with current result KB (creates new list)
+        set_kb = self.oracle.get_kb() + result_set_kb
+        assumptions = self.oracle.get_assumptions() + result_assumptions
 
+        # Create per-assignment clauses
+        set_tv, assumption_to_var, assumption_to_desc = [], {}, {}
+        for assignment in testcase.assignments:
+            if assignment.feature not in variables:
+                raise KeyError(f'Feature {assignment.feature} is not in the model.')
 
-            minimal_conflict = self.quickxplain.find_conflict(tv_list, set_bg)
+            desc = f'{assignment.feature} = {"true" if assignment.value else "false"}'
+            var = variables[assignment.feature] if assignment.value else -variables[assignment.feature]
 
-            if len(minimal_conflict) == 0:
-                new_tv = tv_list
-                logging.debug('E⁻=%s consistent with BG, using full example', tv)
-            else:
-                new_tv = minimal_conflict
-                logging.debug('E⁻=%s -> minimal conflict=%s', tv, minimal_conflict)
+            set_tv.append(id_assumption)
+            assumptions.append(id_assumption)
+            set_kb.append([var, -1 * id_assumption])
+            assumption_to_var[id_assumption] = var
+            assumption_to_desc[id_assumption] = desc
+            id_assumption += 1
 
-            # Create blocking clause: ¬(l1 ∧ l2 ∧ ...) = (¬l1 ∨ ¬l2 ∨ ...)
-            blocking_clause = [-lit for lit in new_tv]
+        # QuickXPlain for minimal conflict
+        checker = NonIncrementalPySATChecker(set_kb, assumptions)
+        quickxplain = QuickXPlain(checker)
+        minimal_conflict = quickxplain.find_conflict(set_tv, set_bg)
+        if len(minimal_conflict) > 0:
+            set_tv = minimal_conflict
 
-            # Collect clause and assumption (caller will merge into task)
-            assumption_id = current_id
-            current_id += 1
-            new_clauses.append([-assumption_id] + blocking_clause)
-            set_neg_tv.append(assumption_id)
+        # Filter literals from minimal conflict
+        literals, desc_parts = [], []
+        for lit in set_tv:
+            if lit in assumption_to_var:
+                literals.append(assumption_to_var[lit])
+                desc_parts.append(assumption_to_desc[lit])
 
-            logging.debug('NE assumption=%d, clause=%s',
-                          assumption_id, blocking_clause)
+        # Create NE clause: not(e) = (not(l1) or not(l2) or ... or not(ne_id))
+        ne_id = id_assumption
+        ne_clause = [-lit for lit in literals]
+        ne_clause.append(-ne_id)
+        result_set_kb.append(ne_clause)  # mutate for subsequent testcases
 
-        logging.debug('<<< GenerateNE: %d NE constraints', len(set_neg_tv))
-
-        return NEResult(
-            new_clauses=new_clauses,
-            set_neg_tv=set_neg_tv,
-            next_tseitin_var=current_id
-        )
-
-def merge_ne_into_task(task, ne_result: NEResult) -> None:
-    """Merge GenerateNE results into a ConGenTask.
-
-    Updates task in-place:
-    - set_neg_tv: NE assumption IDs
-    - set_kb: appends new clauses
-    - assumptions: appends new assumption IDs
-    - neg_c_map: merges NE negation map
-    - assumption_to_constraint: adds ne_X entries
-
-    Args:
-        task: ConGenTask to update
-        ne_result: Result from GenerateNE.generate()
-    """
-    task.set_neg_tv = ne_result.set_neg_tv
-    task.set_kb.extend(ne_result.new_clauses)
-    task.assumptions.extend(ne_result.set_neg_tv)
-    # task.neg_c_map.update(ne_result.neg_map)
-    # for ne_id in ne_result.assumption_ids:
-    #     task.assumption_to_constraint[ne_id] = f"ne_{ne_id}"
+        id_assumption += 1
+        return NEPerTestcase(
+            ne_id=ne_id, ne_clause=ne_clause,
+            desc=f"NOT({' & '.join(desc_parts)})"
+        ), id_assumption

@@ -126,7 +126,7 @@ class ConGen:
             delta=[],
             set_b=set_b,
             set_neg_tv=set_neg_tv,
-            set_e_pos=set_tc,
+            set_tc=set_tc,
             set_bg=set_bg
         )
         logging.debug('AcqMSS: MSS size = %d', len(b_prime))

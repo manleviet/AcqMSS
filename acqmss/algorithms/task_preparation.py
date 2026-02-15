@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from explanation.models.task_preparation import (
     TestCaseTask,
@@ -17,10 +17,11 @@ from explanation.models.task_preparation import (
     PreparationOutput, prepare_testsuite_with_negation,
     prepare_kb,
 )
-from explanation.operations.algorithms.quickxplain import QuickXPlain
 from explanation.operations.algorithms.utils import negate_cnf_tseitin
+from .generate_ne import GenerateNE
 
 if TYPE_CHECKING:
+    from explanation.models.testsuite import TestSuite
     from .congen_model import ConGenModel
 
 
@@ -42,15 +43,11 @@ class ConGenTask(TestCaseTask):
     - set_neg_tc
 
     Additional ConGen-specific fields:
-    - e_neg_literals: Raw E⁻ literals for GenerateNE (List of [l1, l2, ...])
     - assumption_to_constraint: Maps assumption ID to constraint name
     - constraint_to_assumption: Maps constraint name to assumption ID
-    - next_assumption_id: Next available assumption ID for GenerateNE
     """
-    # e_neg_literals: List[List[int]] = field(default_factory=list)
     assumption_to_constraint: Dict[int, str] = field(default_factory=dict)
     constraint_to_assumption: Dict[str, int] = field(default_factory=dict)
-    # next_assumption_id: int = 1000
 
     def get_constraint_name(self, element: Any) -> str:
         """Get constraint name from assumption ID."""
@@ -135,18 +132,10 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: 'ConGenModel') -> PreparationOutput:
-        """Prepare ConGen task from model.
-
-        Args:
-            model: ConGenModel with constraint_map, variables, task_input, etc.
-
-        Returns:
-            PreparationOutput with ConGenTask
-        """
+    def prepare(self, model: ConGenModel) -> PreparationOutput:
+        """Prepare ConGen task from model."""
         result = ConGenTask()
         provider = DescriptionProvider()
-
         task_input = model.task_input
 
         # Start assumption IDs after Tseitin variables
@@ -155,23 +144,17 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         # Step 0: Prepare background knowledge (BG) - root constraints
         id_assumption = _prepare_bg(result, provider, model.variables, model.root_feature, id_assumption)
 
-        # Reserve IDs for fm constraints and their negations
-        id_assumption = id_assumption + model.num_fm_constraints * 2
-        # Reserve IDs for all possible variable assignments
+        # Reserve IDs for fm constraints and their negations + variable assignments
+        id_assumption = id_assumption + (model.num_fm_constraints - 1) * 2
         id_assumption = id_assumption + len(model.variables) * 2
 
         # Step 1: Prepare bias constraints as set_c (with negated forms for REDUCE)
-        bias_start_id = len(result.assumptions)
-
-        # negate bias constraints
+        bias_start_pos = len(result.assumptions)
         next_tseitin_var = id_assumption
         for key, c in model.constraint_map.items():
             neg_clauses, next_tseitin_var = negate_cnf_tseitin(c, next_tseitin_var)
+            model.negated_constraint_map[f"NOT({key})"] = neg_clauses
 
-            negated_key = f"NOT({key})"
-            model.negated_constraint_map[negated_key] = neg_clauses
-
-        # id_assumption = next_tseitin_var
         id_assumption_first_bias = id_assumption = next_tseitin_var
         id_assumption = prepare_kb(
             result, provider, model.constraint_map,
@@ -181,154 +164,119 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             model.negated_constraint_map, id_assumption_first_bias)
 
         # Step 2: Prepare E+ as set_tc
-        start_id_tc = len(result.assumptions)
+        tc_start_pos = len(result.assumptions)
         id_assumption = prepare_testsuite_with_negation(
             result, provider, model.variables, task_input.positive_test_cases, id_assumption, is_negative=False)
 
-        start_id_tv = len(result.assumptions)
-        self._assign_sets(result, bias_start_id, start_id_tc, start_id_tv, task_input.negative_test_cases is not None)
+        tv_start_pos = len(result.assumptions)
+        self._assign_sets(result, bias_start_pos, tc_start_pos, tv_start_pos, task_input.negative_test_cases is not None)
 
-        # Step 3: Prepare E- as set_tv
+        # Step 3: Prepare E- as NE via GenerateNE
         testsuite = task_input.negative_test_cases
         if testsuite is not None and len(testsuite.testcases) > 0:
-            # id_assumption = prepare_testsuite_with_negation(
-            #     result, provider, model.variables, task_input.negative_test_cases, id_assumption, is_negative=True)
-            # Run GenerateNE with temp non-incremental checker
-            from .generate_ne import GenerateNE, merge_ne_into_task
-            from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
+            id_assumption = self._prepare_negative_examples(
+                result, provider, model, testsuite, id_assumption)
 
-            # Need oracle
-            oracle = model.oracle
-
-            # prepare negative test cases
-            negated_nes = []
-            neg_tv = []
-            desc_testcases = []
-            for testcase in testsuite.testcases:
-                # prepare set_kb and assumptions
-                set_kb = oracle.get_kb() + result.set_kb  # merge two kbs and assumptions without skipping
-                assumptions = oracle.get_assumptions() + result.assumptions
-
-                set_tv = []
-                assumption_to_var = {}
-                assumption_to_desc = {}
-                # for each test case
-                for assignment in testcase.assignments:
-                    if assignment.feature not in model.variables:
-                        raise KeyError(f'Feature {assignment.feature} is not in the model.')
-
-                    desc = f'{assignment.feature} = {"true" if assignment.value else "false"}'
-                    var = model.variables[assignment.feature] if assignment.value else -model.variables[assignment.feature]
-                    clause = [var, -1 * id_assumption]
-
-                    set_tv.append(id_assumption)
-                    assumptions.append(id_assumption)
-                    set_kb.append(clause)
-
-                    assumption_to_var[id_assumption] = var
-                    assumption_to_desc[id_assumption] = desc
-
-                    id_assumption += 1
-
-                set_bg = oracle.get_c()  # root + FM constraints as background knowledge for NE generation
-
-                # create checker
-                checker = NonIncrementalPySATChecker(set_kb, assumptions)
-                quickxplain = QuickXPlain(checker)
-
-                minimal_conflict = quickxplain.find_conflict(set_tv, set_bg)
-                if len(minimal_conflict) > 0:
-                    set_tv = minimal_conflict
-
-                # negated_ne_id = id_assumption
-                # filter assignments part of minimal conflict
-                literals = []
-                desc_parts = []
-                for lit in set_tv:
-                    if lit in assumption_to_var:
-                        var = assumption_to_var[lit]
-                        desc = assumption_to_desc[lit]
-                        literals.append(var)
-                        desc_parts.append(desc)
-
-                        # result.set_kb.append([var, -negated_ne_id])
-
-                # result.assumptions.append(negated_ne_id)
-                # desc = ' & '.join(desc_parts)
-                # provider.add_test_case_description(negated_ne_id, desc)
-                # id_assumption += 1
-
-                # Create NE: ¬e1 ∧ ¬e2 ∧ ..., where ¬e1 = (¬l1 ∨ ¬l2 ∨ ...)
-                ne_id = id_assumption
-                ne_clause = [-lit for lit in literals]
-                ne_clause.append(-ne_id)
-                result.set_kb.append(ne_clause)
-
-                # result.assumptions.append(ne_id)
-                # provider.add_test_case_description(ne_id, f"NOT({' & '.join(desc_parts)})")
-                desc_testcases.append(f"NOT({' & '.join(desc_parts)})")
-
-                neg_tv.append(ne_id)
-                # result.set_neg_tv.append(ne_id)
-                # result.neg_tc_map[ne_id] = negated_ne_id
-
-                id_assumption += 1
-
-                # # prepare negated form for REDUCE: ¬(¬e1 ∧ ¬e2 ∧ ...) = (e1 ∨ e2 ∨ ...)
-                # negated_nes.append(literals)
-
-            # Persists negated test case as disjunction of positive forms
-            if len(neg_tv) > 1:
-                ne_id = id_assumption
-                # ¬e1 ∧ ¬e2 ∧ ... =
-                # clause1: (¬e1 ∨ ¬ne_id)
-                # clause2: (¬e2 ∨ ¬ne_id)
-                # ...
-                for neg_tv_id in neg_tv:
-                    result.set_kb.append([neg_tv_id, -ne_id])
-                result.assumptions.append(ne_id)
-                provider.add_test_case_description(ne_id, f"({' AND '.join(desc_testcases)})")
-                result.set_neg_tv.append(ne_id)
-
-                id_assumption += 1
-            else:
-                ne_id = neg_tv[0]
-                result.assumptions.append(ne_id)
-                provider.add_test_case_description(ne_id, desc_testcases[0])
-                result.set_neg_tv.append(ne_id)
-
-            # Negated form of NE: ¬(¬e1 ∧ ¬e2 ∧ ...) = (e1 ∨ e2 ∨ ...)
-            if len(neg_tv) > 1:
-                negated_ne_ids = []
-                for neg_tv_id in neg_tv:
-                    negated_ne_id = id_assumption
-                    result.set_kb.append([-neg_tv_id, -negated_ne_id])
-                    # result.assumptions.append(negated_ne_id)
-                    # provider.add_test_case_description(negated_ne_id, f"NOT({provider.get_description(ne_id)})")
-                    negated_ne_ids.append(negated_ne_id)
-
-                    id_assumption += 1
-                negated_ne_id = id_assumption
-                result.set_kb.append(negated_ne_ids + [-negated_ne_id])
-                # result.assumptions.append(negated_ne_id)
-                # provider.add_test_case_description(negated_ne_id, f"NOT({provider.get_description(ne_id)})")
-                # id_assumption += 1
-            else:
-                negated_ne_id = id_assumption
-                result.set_kb.append([-ne_id, -negated_ne_id])
-            result.assumptions.append(negated_ne_id)
-            provider.add_test_case_description(negated_ne_id, f"NOT({provider.get_description(ne_id)})")
-            id_assumption += 1
-
-            result.neg_tc_map[ne_id] = negated_ne_id
-
-        # Store next available assumption ID for GenerateNE
+        # Store next available assumption ID
         model.next_tseitin_var = id_assumption
 
         logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, set_tv=%d',
                       len(result.set_c), len(result.set_tc), len(result.set_tv))
 
         return PreparationOutput(result, provider)
+
+    def _prepare_negative_examples(
+            self,
+            result: ConGenTask,
+            provider: DescriptionProvider,
+            model: ConGenModel,
+            testsuite: TestSuite,
+            id_assumption: int
+    ) -> int:
+        """Step 3: Generate NE from negative examples.
+
+        Orchestrates: GenerateNE -> combine -> negate -> populate task.
+        """
+        oracle = model.oracle
+        if oracle is None:
+            raise ValueError("Oracle required for NE generation from negative examples")
+
+        generate_ne = GenerateNE(oracle)
+        ne_results, id_assumption = generate_ne.generate(
+            testsuite, model.variables, result.set_kb, result.assumptions, id_assumption)
+
+        neg_tv_ids = [ne.ne_id for ne in ne_results]
+        descs = [ne.desc for ne in ne_results]
+
+        ne_id, id_assumption = self._combine_ne_constraints(
+            result, provider, neg_tv_ids, descs, id_assumption)
+
+        negated_ne_id, id_assumption = self._create_negated_ne(
+            result, provider, ne_id, neg_tv_ids, id_assumption)
+
+        result.neg_tc_map[ne_id] = negated_ne_id
+        return id_assumption
+
+    @staticmethod
+    def _combine_ne_constraints(
+            result: ConGenTask,
+            provider: DescriptionProvider,
+            neg_tv_ids: List[int],
+            descs: List[str],
+            id_assumption: int
+    ) -> Tuple[int, int]:
+        """Combine NEs into single assumption for set_neg_tv.
+
+        Single NE: use directly. Multiple NEs: conjunction via implication clauses.
+        Returns: (ne_id, id_assumption)
+        """
+        if len(neg_tv_ids) > 1:
+            ne_id = id_assumption
+            for neg_tv_id in neg_tv_ids:
+                result.set_kb.append([neg_tv_id, -ne_id])
+            result.assumptions.append(ne_id)
+            provider.add_test_case_description(ne_id, f"({' AND '.join(descs)})")
+            result.set_neg_tv.append(ne_id)
+            id_assumption += 1
+        else:
+            ne_id = neg_tv_ids[0]
+            result.assumptions.append(ne_id)
+            provider.add_test_case_description(ne_id, descs[0])
+            result.set_neg_tv.append(ne_id)
+
+        return ne_id, id_assumption
+
+    @staticmethod
+    def _create_negated_ne(
+            result: ConGenTask,
+            provider: DescriptionProvider,
+            ne_id: int,
+            neg_tv_ids: List[int],
+            id_assumption: int
+    ) -> Tuple[int, int]:
+        """Create negated form of NE for REDUCE.
+
+        not(not(e1) and not(e2) and ...) = (e1 or e2 or ...)
+        Returns: (negated_ne_id, id_assumption)
+        """
+        if len(neg_tv_ids) > 1:
+            negated_ne_ids = []
+            for neg_tv_id in neg_tv_ids:
+                negated_ne_id = id_assumption
+                result.set_kb.append([-neg_tv_id, -negated_ne_id])
+                negated_ne_ids.append(negated_ne_id)
+                id_assumption += 1
+            negated_ne_id = id_assumption
+            result.set_kb.append(negated_ne_ids + [-negated_ne_id])
+        else:
+            negated_ne_id = id_assumption
+            result.set_kb.append([-ne_id, -negated_ne_id])
+
+        result.assumptions.append(negated_ne_id)
+        provider.add_test_case_description(negated_ne_id, f"NOT({provider.get_description(ne_id)})")
+        id_assumption += 1
+
+        return negated_ne_id, id_assumption
 
     def _assign_sets(self, result: ConGenTask,
                      bias_start_id: int,

@@ -10,7 +10,7 @@ from pathlib import Path
 from acqmss.oracle import FeatureModelOracle
 from acqmss.bias import BiasIO
 from acqmss.algorithms import (
-    ConGen, AcqMSS, Reduce, GenerateNE,
+    ConGen, AcqMSS, Reduce,
     ConGenModelBuilder
 )
 from explanation.operations.algorithms.checker import (
@@ -87,7 +87,7 @@ class TestCONGEN:
                 set_bg=task.set_b,
                 set_tc=task.set_tc,
                 set_neg_tv=task.set_neg_tv,
-                neg_c_map=task.neg_c_map,
+                neg_c_map=task.neg_c_map + task.neg_tc_map,
                 assumption_to_constraint=task.assumption_to_constraint
             )
 
@@ -258,18 +258,22 @@ class TestReduce:
 class TestGenerateNE:
     """Tests for GenerateNE algorithm."""
 
-    def test_generate_ne_empty(self):
-        """Test GenerateNE with empty input returns empty."""
-        checker = IncrementalPySATChecker([[1]], [1], 'glucose4')
+    def test_generate_ne_empty_testsuite(self):
+        """Test GenerateNE with empty testsuite returns empty."""
+        if not FM_PATH.exists():
+            pytest.skip("FM file not found")
 
-        try:
-            generate_ne = GenerateNE(checker)
-            result = generate_ne.generate([], [])
+        from acqmss.algorithms.generate_ne import GenerateNE
+        from explanation.models.testsuite import TestSuite
 
-            assert result.new_clauses == []
-            assert result.set_neg_tv == []
-        finally:
-            checker.cleanup()
+        oracle = FeatureModelOracle(str(FM_PATH))
+        generate_ne = GenerateNE(oracle)
+        empty_ts = TestSuite(testcases=[])
+        results, next_id = generate_ne.generate(empty_ts, {}, [], [], start_id=1000)
+
+        assert results == []
+        assert next_id == 1000
+        del oracle
 
 
 class TestOracleFeatureIds:

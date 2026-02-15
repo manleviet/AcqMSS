@@ -110,7 +110,9 @@ class KBDiag:
 
         # if δ != Φ and TestC(B U C, Tπ) return C;
         if len(delta) != 0:
-            set_tcp = self.checker.is_consistent_test_cases(set_b + set_c, set_tc, False)
+            set_tcp = self.checker.is_consistent_test_cases(
+                set_b + set_c, set_tc, False
+            )
 
             if len(set_tcp) == 0:
                 logging.debug('<<< return %s', set_c)

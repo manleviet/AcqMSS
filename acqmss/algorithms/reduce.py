@@ -70,12 +70,14 @@ class Reduce:
 
             kb_without_c = diff(kb_delta, [c])
 
+            # Get ¬c
             if c not in neg_map:
                 logging.warning('No negated form for constraint %s, skipping', c)
                 continue
             neg_c = neg_map[c]
 
             # Check inconsistent(BG ∪ (KB - {c}) ∪ {¬c})
+            # TODO: try removing root
             test_set = set_bg + kb_without_c + [neg_c]
             is_consistent = self.checker.is_consistent(test_set)
             self.profiler.increment("paper_consistency_checks")
@@ -84,6 +86,7 @@ class Reduce:
                           c, is_consistent)
 
             if not is_consistent:
+                # c is redundant: KB - {cα} |= cα
                 kb_delta.remove(c)
                 redundant.append(c)
                 logging.debug('Constraint %s is redundant', c)
