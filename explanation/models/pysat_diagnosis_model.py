@@ -59,7 +59,7 @@ class DiagnosisModel(PySATModel):
         self.next_tseitin_var: int = 1000
 
         # Solver configuration
-        self.use_incremental: bool = True  # default to use incremental solver
+        self._use_incremental: bool = True  # default to use incremental solver
 
         # Task input (set by builder or directly before calling prepare())
         self._task_input: Optional[TaskInput] = None

@@ -14,7 +14,7 @@ from .fm_oracle import FeatureModelOracle
 from .user_prompt import UserPromptOracle
 from .cached import CachedOracle
 from .extractor import OracleData
-from .oracle_model import OracleModel, OneShotModel
+from .fm_oracle_model import FMOracleModel, OneShotModel
 
 __all__ = [
     'Oracle',
@@ -22,6 +22,6 @@ __all__ = [
     'UserPromptOracle',
     'CachedOracle',
     'OracleData',
-    'OracleModel',
+    'FMOracleModel',
     'OneShotModel',
 ]

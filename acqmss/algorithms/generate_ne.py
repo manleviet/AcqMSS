@@ -15,20 +15,21 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 
 from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.quickxplain import QuickXPlain
 from explanation.operations.algorithms.profiler import (
-    get_global_profiler, measure_time, count_calls, AbstractProfiler
+    measure_time, count_calls
 )
+from explanation.operations.algorithms.quickxplain import QuickXPlain
 
 
 @dataclass
 class NEResult:
     """Result of NE generation."""
-    assumption_ids: List[int]
-    neg_map: Dict[int, int]
-    original_literals: List[List[int]]
+    # assumption_ids: List[int]
+    # neg_map: Dict[int, int]
+    # original_literals: List[List[int]]
     new_clauses: List[List[int]] = field(default_factory=list)
-    new_assumptions: List[int] = field(default_factory=list)
+    set_neg_tv: List[int] = field(default_factory=list)
+    next_tseitin_var: int = 1000
 
 
 class GenerateNE:
@@ -70,7 +71,7 @@ class GenerateNE:
         neg_map = {}
         original_literals = []
         new_clauses = []
-        new_assumptions = []
+        set_neg_tv = []
         current_id = start_assumption_id
 
         # Iterates examples; creates blocking clauses and negated forms
@@ -83,43 +84,35 @@ class GenerateNE:
             minimal_conflict = self.quickxplain.find_conflict(tv, set_bg)
 
             if len(minimal_conflict) == 0:
-                minimal_conflict = tv
+                new_tv = tv
                 logging.debug('E⁻=%s consistent with BG, using full example', tv)
             else:
+                new_tv = minimal_conflict
                 logging.debug('E⁻=%s -> minimal conflict=%s', tv, minimal_conflict)
 
-            original_literals.append(minimal_conflict)
+            # original_literals.append(minimal_conflict)
 
             # Create blocking clause: ¬(l1 ∧ l2 ∧ ...) = (¬l1 ∨ ¬l2 ∨ ...)
-            blocking_clause = [-lit for lit in minimal_conflict]
+            blocking_clause = [-lit for lit in new_tv]
 
             # Collect clause and assumption (caller will merge into task)
             assumption_id = current_id
             current_id += 1
             new_clauses.append([-assumption_id] + blocking_clause)
-            new_assumptions.append(assumption_id)
+            set_neg_tv.append(assumption_id)
 
-            # Create negated form for REDUCE: ¬(¬l1 ∨ ¬l2 ∨ ...) = (l1 ∧ l2 ∧ ...)
-            neg_assumption_id = current_id
-            current_id += 1
-            for lit in minimal_conflict:
-                new_clauses.append([-neg_assumption_id, lit])
-            new_assumptions.append(neg_assumption_id)
-
-            assumption_ids.append(assumption_id)
-            neg_map[assumption_id] = neg_assumption_id
-
-            logging.debug('NE assumption=%d, neg=%d, clause=%s',
-                          assumption_id, neg_assumption_id, blocking_clause)
+            logging.debug('NE assumption=%d, clause=%s',
+                          assumption_id, blocking_clause)
 
         logging.debug('<<< GenerateNE: %d NE constraints', len(assumption_ids))
 
         return NEResult(
-            assumption_ids=assumption_ids,
-            neg_map=neg_map,
-            original_literals=original_literals,
+            # assumption_ids=assumption_ids,
+            # neg_map=neg_map,
+            # original_literals=original_literals,
             new_clauses=new_clauses,
-            new_assumptions=new_assumptions
+            set_neg_tv=set_neg_tv,
+            next_tseitin_var=current_id
         )
 
 def merge_ne_into_task(task, ne_result: NEResult) -> None:
@@ -136,9 +129,9 @@ def merge_ne_into_task(task, ne_result: NEResult) -> None:
         task: ConGenTask to update
         ne_result: Result from GenerateNE.generate()
     """
-    task.set_neg_tv = ne_result.assumption_ids
+    task.set_neg_tv = ne_result.set_neg_tv
     task.set_kb.extend(ne_result.new_clauses)
-    task.assumptions.extend(ne_result.new_assumptions)
-    task.neg_c_map.update(ne_result.neg_map)
-    for ne_id in ne_result.assumption_ids:
-        task.assumption_to_constraint[ne_id] = f"ne_{ne_id}"
+    task.assumptions.extend(ne_result.set_neg_tv)
+    # task.neg_c_map.update(ne_result.neg_map)
+    # for ne_id in ne_result.assumption_ids:
+    #     task.assumption_to_constraint[ne_id] = f"ne_{ne_id}"

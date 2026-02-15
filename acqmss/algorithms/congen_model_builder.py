@@ -6,6 +6,9 @@ model creation, and prepare() invocation.
 
 from typing import Dict, List, Optional, Tuple
 
+from flamapy.metamodels.pysat_metamodel.models import PySATModel
+
+from explanation.models import DiagnosisModel
 from .congen_model import ConGenModel
 
 
@@ -100,14 +103,18 @@ class ConGenModelBuilder:
         from acqmss.bias import BiasIO
 
         bias = BiasIO.load_from_json(self._bias_path)
+        fm_model = self._load_model()
 
         # Build model
         model = ConGenModel()
+        model._fm_path = self._fm_path
+
         model.constraint_map, model.negated_constraint_map, model.next_tseitin_var \
             = bias.to_constraint_maps_with_negation()
         model.variables = bias.feature_ids
+        model.num_fm_constraints = len(fm_model.constraint_map)
         model.root_feature = bias.root_feature
-        model.use_incremental = self._use_incremental
+        model._use_incremental = self._use_incremental
 
         # Set examples + prepare only if examples provided
         if self._has_examples():
@@ -142,3 +149,25 @@ class ConGenModelBuilder:
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]
         return pos, neg
+
+    def _load_model(self) -> DiagnosisModel:
+        """Load DiagnosisModel from source.
+
+        Uses lazy imports to avoid circular dependencies.
+        """
+        if self._fm_source_type == 'fide':
+            from flamapy.metamodels.fm_metamodel.transformations import FeatureIDEReader
+            from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
+
+            fm = FeatureIDEReader(self._fm_path).transform()
+            return FmToDiagPysat(fm).transform()
+
+        elif self._fm_source_type == 'uvl':
+            from flamapy.metamodels.fm_metamodel.transformations import UVLReader
+            from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
+
+            fm = UVLReader(self._fm_path).transform()
+            return FmToDiagPysat(fm).transform()
+
+        raise ValueError(f"Unknown source type: {self._fm_source_type}")
+    

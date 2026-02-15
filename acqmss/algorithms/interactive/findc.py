@@ -14,7 +14,7 @@ from pysat.solvers import Solver
 
 from .task import InteractiveTask
 from acqmss.example_generators import ExampleProvider
-from acqmss.oracle.oracle_model import OneShotModel
+from acqmss.oracle.fm_oracle_model import OneShotModel
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import AbstractProfiler
 

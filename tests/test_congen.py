@@ -265,7 +265,7 @@ class TestGenerateNE:
 
             assert result.assumption_ids == []
             assert result.new_clauses == []
-            assert result.new_assumptions == []
+            assert result.set_neg_tv == []
         finally:
             checker.cleanup()
 

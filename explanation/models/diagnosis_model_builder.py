@@ -306,7 +306,7 @@ class DiagnosisModelBuilder:
         model = self._create_model()
 
         # Configure solver mode
-        model.use_incremental = self._use_incremental
+        model._use_incremental = self._use_incremental
 
         # Create and assign TaskInput
         model.task_input = TaskInput(

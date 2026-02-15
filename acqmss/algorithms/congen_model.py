@@ -11,11 +11,10 @@ Call prepare() before accessing task or description_provider.
 
 from typing import Dict, List, Optional
 
-from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask
-from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler
-
+from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
+from ..oracle import FeatureModelOracle
 
 
 class ConGenModel:
@@ -29,23 +28,28 @@ class ConGenModel:
     """
 
     def __init__(self) -> None:
-        # map clauses to relationships/constraint
+        self._fm_path: Optional[str] = None
+
+        # map clauses to bias relationships/constraint
         self.constraint_map: Dict[str, List[List[int]]] = {}
-        # map negated clauses to relationships/constraint (for redundancy detection)
+        # map negated clauses to bias relationships/constraint (for redundancy detection)
         self.negated_constraint_map: Dict[str, List[List[int]]] = {}
         # map feature names to IDs (for debugging and description generation)
         self.variables: Dict[str, int] = {}
+        # number of fm constraints
+        self.num_fm_constraints: int = 0
         # Used as starting ID for assumption literals to avoid conflicts.
         self.next_tseitin_var: int = 1000
 
         # CheckerModel protocol attributes
-        self.use_incremental: bool = True
+        self._use_incremental: bool = True
 
         # Task input populated by builder or caller before prepare()
         self._task_input: TaskInput = TaskInput()
 
         # Background knowledge (e.g., root feature IDs) to include in set_b
-        self.background_knowledge: List[int] = []
+        self.root_feature: Optional[str] = None
+        # self.background_knowledge: List[int] = []
 
         # Populated after prepare()
         self._task: Optional[ConGenTask] = None
@@ -206,15 +210,31 @@ class ConGenModel:
         from .generate_ne import GenerateNE, merge_ne_into_task
         from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
 
-        temp_checker = NonIncrementalPySATChecker(self._task.set_kb, self._task.assumptions)
+        # Need oracle
+        oracle = FeatureModelOracle(self._fm_path, use_incremental=False)
 
-        generate_ne = GenerateNE(temp_checker)
+        # prepare set_kb and assumptions
+        set_kb = oracle.get_kb() + self._task.set_kb[2:]  # root + FM + Assignments + bias + test cases
+        assumptions = oracle.get_assumptions() + self._task.assumptions[2:]
+        # create checker
+        checker = NonIncrementalPySATChecker(set_kb, assumptions)
+
+        # prepare set_c and set_b for GenerateNE
+        set_tv = self._task.set_tv  # already prepared by ConGenTaskPreparation
+        set_bg = oracle.get_c()  # root + FM constraints as background knowledge for NE generation
+
+        generate_ne = GenerateNE(checker)
         ne_result = generate_ne.generate(
-            set_tv=self._task.e_neg_literals,
-            set_bg=self._task.set_b,
-            start_assumption_id=self._task.next_assumption_id
+            set_tv=set_tv,
+            set_bg=set_bg,
+            start_assumption_id=self.next_tseitin_var
         )
-        merge_ne_into_task(self._task, ne_result)
+        
+        # merge_ne_into_task(self._task, ne_result)
+        self._task.set_neg_tv = ne_result.set_neg_tv
+        self._task.set_kb.extend(ne_result.new_clauses)
+        self._task.assumptions.extend(ne_result.set_neg_tv)
+        self.next_tseitin_var = ne_result.next_tseitin_var
 
         return self._task
 

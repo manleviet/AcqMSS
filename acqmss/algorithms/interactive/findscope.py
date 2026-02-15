@@ -11,7 +11,7 @@ import logging
 from typing import List, Set
 
 from .task import InteractiveTask
-from acqmss.oracle.oracle_model import OneShotModel
+from acqmss.oracle.fm_oracle_model import OneShotModel
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import AbstractProfiler
 

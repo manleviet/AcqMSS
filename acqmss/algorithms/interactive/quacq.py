@@ -19,7 +19,7 @@ from acqmss.example_generators import QueryGenerator, ExampleProvider
 from .findscope import find_scope
 from .findc import find_c
 from acqmss.algorithms.reduce import Reduce
-from acqmss.oracle.oracle_model import OneShotModel
+from acqmss.oracle.fm_oracle_model import OneShotModel
 from explanation.operations.algorithms.checker import CheckerFactory, NonIncrementalPySATChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler

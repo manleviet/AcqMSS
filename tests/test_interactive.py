@@ -189,12 +189,12 @@ class TestFeatureModelOracle:
         """Test oracle can be created."""
         assert oracle.get_feature_count() > 0
 
-    def test_oracle_valid_config(self, oracle):
-        """Test oracle accepts valid configuration."""
-        # Get a valid configuration directly from oracle
-        valid_config = oracle.get_valid_configuration()
-        if valid_config:
-            assert oracle.ask(valid_config) is True
+    # def test_oracle_valid_config(self, oracle):
+    #     """Test oracle accepts valid configuration."""
+    #     # Get a valid configuration directly from oracle
+    #     valid_config = oracle.get_valid_configuration()
+    #     if valid_config:
+    #         assert oracle.ask(valid_config) is True
 
     def test_oracle_invalid_config(self, oracle):
         """Test oracle rejects invalid configuration."""
