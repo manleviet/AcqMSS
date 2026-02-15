@@ -377,12 +377,12 @@ class QuAcq:
         """Apply REDUCE to remove redundant constraints from learned KB.
 
         Builds assumption-based data for NonIncrementalPySATChecker,
-        runs Reduce with Dict[int, int] neg_map, then maps back to names.
+        runs Reduce with Dict[int, int] negation_map, then maps back to names.
         """
         if not task.learned_kb:
             return []
 
-        neg_map = {}
+        negation_map = {}
         id_to_name = {}
         set_kb = []
         assumptions = []
@@ -414,7 +414,7 @@ class QuAcq:
                 set_kb.append(neg_clause + [-neg_id])
             assumptions.append(neg_id)
 
-            neg_map[orig_id] = neg_id
+            negation_map[orig_id] = neg_id
 
         # BG as assumptions
         set_bg = []
@@ -435,7 +435,7 @@ class QuAcq:
                 set_b_prime=set_b_prime,
                 set_neg_tv=[],
                 set_bg=set_bg,
-                neg_map=neg_map
+                negation_map=negation_map
             )
 
             # Map back to constraint names

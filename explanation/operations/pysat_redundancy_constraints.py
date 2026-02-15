@@ -61,7 +61,7 @@ class PySATRedundancyConstraints(PySATDiagnosis):
             wipeoutr = WipeOutR_FM(checker, self.profiler)
             c = list(reversed(model.get_c()))
             self.redundant, self.non_redundant = wipeoutr.find_redundancies(
-                c, model.get_neg_c_map())
+                c, model.get_negation_map())
 
             # Format result messages
             self._format_result_messages(model)

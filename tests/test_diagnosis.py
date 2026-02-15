@@ -1194,12 +1194,12 @@ def test_wipeoutr_fm_redundancy(name, is_incremental, solver_name, use_sat4j, en
 
         # Get constraint IDs and negation map
         set_cf = model.get_cf()
-        neg_cf_map = model.get_neg_c_map()
+        negation_map = model.get_negation_map()
 
         print(f"CF (constraint IDs): {set_cf}")
-        print(f"neg_cf_map: {neg_cf_map}")
+        print(f"negation_map: {negation_map}")
         assert len(set_cf) > 0, "Should have constraints"
-        assert len(neg_cf_map) > 0, "Should have negated forms"
+        assert len(negation_map) > 0, "Should have negated forms"
 
         builder = None if use_sat4j else PySATRedundancyConstraintsBuilder.for_redundancy_constraints(profiler)
         if builder is None:

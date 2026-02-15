@@ -110,14 +110,14 @@ class ConGenModel:
         """Get the full knowledge base with assumptions."""
         return self.task.set_kb
 
-    def get_neg_c_map(self) -> dict:
-        """Get the mapping from constraint to negated constraint IDs.
+    def get_negation_map(self) -> dict:
+        """Get the mapping from original to negated assumption IDs.
 
         Returns:
-            Dict mapping original constraint ID to negated constraint ID,
+            Dict mapping original assumption ID to negated assumption ID,
             or empty dict if no negated forms.
         """
-        return self.task.neg_c_map
+        return self.task.negation_map
 
     def get_assumptions(self) -> List:
         """Get the list of assumption literals."""
@@ -166,17 +166,6 @@ class ConGenModel:
         if isinstance(self.task, TestCaseTask):
             return self.task.set_neg_tc
         return []
-
-    def get_neg_tc_map(self) -> dict:
-        """Get the mapping from test case to negated test case IDs.
-
-        Returns:
-            Dict mapping original test case ID to negated test case ID,
-            or empty dict if not debugging task.
-        """
-        if isinstance(self.task, TestCaseTask):
-            return self.task.neg_tc_map
-        return {}
 
     def prepare(
             self,

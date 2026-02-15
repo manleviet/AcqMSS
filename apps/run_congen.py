@@ -19,7 +19,7 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.algorithms import ConGen, ConGenModelBuilder
+from acqmss.algorithms import ConGen, ConGenModelBuilder, resolve_congen_names
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import get_global_profiler
 
@@ -127,24 +127,24 @@ def process_model(model_config: ModelConfig, output_dir: Path,
             set_bg=task.set_b,
             set_tc=task.set_tc,
             set_neg_tv=task.set_neg_tv,
-            neg_c_map=task.neg_c_map,
-            assumption_to_constraint=task.assumption_to_constraint
+            negation_map=task.negation_map,
         )
 
         if verbose:
             print(f"  MSS size: {result.n_mss}")
             print(f"  Acquired KB: {result.n_kb} constraints")
-            if result.kb_constraints:
+            if result.kb_assumption_ids:
+                names = resolve_congen_names(result, congen_model.description_provider)
                 print(f"  Constraints:")
-                for c in result.kb_constraints[:10]:  # Show first 10
+                for c in names['kb'][:10]:  # Show first 10
                     print(f"    - {c}")
-                if len(result.kb_constraints) > 10:
-                    print(f"    ... and {len(result.kb_constraints) - 10} more")
+                if len(names['kb']) > 10:
+                    print(f"    ... and {len(names['kb']) - 10} more")
 
         # Save result with sampling type in filename
         # Format: {model_name}_{sampling_type}_kb.json
         output_file = output_dir / f"{model_name}_{sampling_type}_kb.json"
-        congen.save_result(str(output_file))
+        congen.save_result(str(output_file), congen_model.description_provider)
 
         if verbose:
             print(f"  Saved: {output_file}")

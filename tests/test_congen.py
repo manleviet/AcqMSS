@@ -46,7 +46,7 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
         is_incremental: Use incremental mode
 
     Returns:
-        Tuple of (checker, task, profiler, root_id)
+        Tuple of (checker, task, model, profiler, root_id)
     """
     profiler = get_global_profiler()
     model = (ConGenModelBuilder
@@ -63,7 +63,7 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     task = model.task
     checker = CheckerFactory.create_from_model(model, 'glucose4', profiler)
 
-    return checker, task, profiler, root_id
+    return checker, task, model, profiler, root_id
 
 
 class TestCONGEN:
@@ -73,7 +73,7 @@ class TestCONGEN:
         """Test ConGen incremental mode with random sampling examples."""
         if not FM_PATH.exists() or not EXAMPLES_RS_1N_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, profiler, root_id = create_checker_and_task(
+        checker, task, congen_model, profiler, root_id = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=True
         )
 
@@ -87,8 +87,7 @@ class TestCONGEN:
                 set_bg=task.set_b,
                 set_tc=task.set_tc,
                 set_neg_tv=task.set_neg_tv,
-                neg_c_map=task.neg_c_map + task.neg_tc_map,
-                assumption_to_constraint=task.assumption_to_constraint
+                negation_map=task.negation_map,
             )
 
             # Verify result
@@ -96,7 +95,7 @@ class TestCONGEN:
             # n_bias excludes FM constraints (moved to BG in migration)
             assert result.n_bias > 0
             assert result.n_kb >= 0
-            assert isinstance(result.kb_constraints, list)
+            assert isinstance(result.kb_assumption_ids, list)
 
             # Verify bg_clauses is not empty (contains background knowledge)
             assert len(result.bg_clauses) > 0, "Background knowledge should not be empty"
@@ -105,8 +104,8 @@ class TestCONGEN:
             print(f"  Bias: {result.n_bias}")
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
-            if result.kb_constraints:
-                for c in result.kb_constraints:
+            if result.kb_assumption_ids:
+                for c in result.kb_assumption_ids:
                     # print constraints by bias.get_constraint_by_id() for readability
                     constraint = bias.get_constraint_by_id(c)
                     print(f"  Constraint: {constraint} (ID: {c})")
@@ -118,7 +117,7 @@ class TestCONGEN:
         """Test ConGen non-incremental mode with random sampling examples."""
         if not FM_PATH.exists() or not EXAMPLES_RS_1N_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, profiler, root_id = create_checker_and_task(
+        checker, task, congen_model, profiler, root_id = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=False
         )
 
@@ -132,8 +131,7 @@ class TestCONGEN:
                 set_bg=task.set_b,
                 set_tc=task.set_tc,
                 set_neg_tv=task.set_neg_tv,
-                neg_c_map=task.neg_c_map,
-                assumption_to_constraint=task.assumption_to_constraint
+                negation_map=task.negation_map,
             )
 
             # Verify result
@@ -141,7 +139,7 @@ class TestCONGEN:
             # n_bias excludes FM constraints (moved to BG in migration)
             assert result.n_bias > 0
             assert result.n_kb >= 0
-            assert isinstance(result.kb_constraints, list)
+            assert isinstance(result.kb_assumption_ids, list)
 
             # Verify bg_clauses is not empty (contains background knowledge)
             assert len(result.bg_clauses) > 0, "Background knowledge should not be empty"
@@ -151,8 +149,8 @@ class TestCONGEN:
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
 
-            if result.kb_constraints:
-                for c in result.kb_constraints:
+            if result.kb_assumption_ids:
+                for c in result.kb_assumption_ids:
                     # print constraints by bias.get_constraint_by_id() for readability
                     constraint = bias.get_constraint_by_id(c)
                     print(f"  Constraint: {constraint} (ID: {c})")
@@ -164,7 +162,7 @@ class TestCONGEN:
         """Test ConGen incremental mode with feature frequency examples."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, profiler, root_id = create_checker_and_task(
+        checker, task, congen_model, profiler, root_id = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_FF_PATH), is_incremental=True
         )
 
@@ -178,8 +176,7 @@ class TestCONGEN:
                 set_bg=task.set_b,
                 set_tc=task.set_tc,
                 set_neg_tv=task.set_neg_tv,
-                neg_c_map=task.neg_c_map,
-                assumption_to_constraint=task.assumption_to_constraint
+                negation_map=task.negation_map,
             )
 
             # Verify result
@@ -195,8 +192,8 @@ class TestCONGEN:
             print(f"  MSS: {result.n_mss}")
             print(f"  KB: {result.n_kb}")
 
-            if result.kb_constraints:
-                for c in result.kb_constraints:
+            if result.kb_assumption_ids:
+                for c in result.kb_assumption_ids:
                     # print constraints by bias.get_constraint_by_id() for readability
                     constraint = bias.get_constraint_by_id(c)
                     print(f"  Constraint: {constraint} (ID: {c})")

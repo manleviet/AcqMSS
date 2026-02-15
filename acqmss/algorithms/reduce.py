@@ -4,7 +4,7 @@ REDUCE Algorithm for redundancy elimination.
 Removes redundant constraints from the acquired knowledge base.
 Pattern follows WipeOutR_FM.find_redundancies() from the explanation package.
 
-Mode-agnostic: all elements are assumption IDs (int), neg_map is Dict[int, int].
+Mode-agnostic: all elements are assumption IDs (int), negation_map is Dict[int, int].
 """
 
 import logging
@@ -42,17 +42,17 @@ class Reduce:
     @measure_time('reduce_runtime')
     @count_calls('reduce_calls')
     def reduce(self, set_b_prime: List[int], set_neg_tv: List[int],
-               set_bg: List[int], neg_map: Dict[int, int]) -> Tuple[List[int], List[int]]:
+               set_bg: List[int], negation_map: Dict[int, int]) -> Tuple[List[int], List[int]]:
         """
         Remove redundant constraints from KB.
 
-        All elements are assumption IDs (int). neg_map is Dict[int, int].
+        All elements are assumption IDs (int). negation_map is Dict[int, int].
 
         Args:
             set_b_prime: MSS constraints from AcqMSS (assumption IDs)
             set_neg_tv: Negated negative examples (assumption IDs)
             set_bg: Background knowledge (assumption IDs)
-            neg_map: Mapping from constraint ID to its negated form ID
+            negation_map: Mapping from assumption ID to its negated form ID
 
         Returns:
             Tuple of (redundant IDs, non-redundant KB IDs)
@@ -71,10 +71,10 @@ class Reduce:
             kb_without_c = diff(kb_delta, [c])
 
             # Get ¬c
-            if c not in neg_map:
+            if c not in negation_map:
                 logging.warning('No negated form for constraint %s, skipping', c)
                 continue
-            neg_c = neg_map[c]
+            neg_c = negation_map[c]
 
             # Check inconsistent(BG ∪ (KB - {c}) ∪ {¬c})
             # TODO: try removing root
@@ -98,7 +98,7 @@ class Reduce:
 
     @measure_time('reduce_nonredundant_runtime')
     def find_non_redundant(self, set_b_prime: List[int], set_neg_tv: List[int],
-                           set_bg: List[int], neg_map: Dict[int, int]) -> List[int]:
+                           set_bg: List[int], negation_map: Dict[int, int]) -> List[int]:
         """Find non-redundant constraints in KB."""
-        _, non_redundant = self.reduce(set_b_prime, set_neg_tv, set_bg, neg_map)
+        _, non_redundant = self.reduce(set_b_prime, set_neg_tv, set_bg, negation_map)
         return non_redundant

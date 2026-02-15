@@ -59,7 +59,7 @@ class PySATRedundancyTestCases(PySATTestCase):
             # Use WipeOutR_T instead of HSDAG
             wipeoutr = WipeOutR_T(checker, self.profiler)
             redundant, non_redundant = wipeoutr.find_redundant_testcases(
-                model.get_tc(), model.get_neg_tc_map())
+                model.get_tc(), model.get_negation_map())
 
             # Format result messages
             self._format_result_messages(model, redundant, non_redundant)

@@ -174,8 +174,7 @@ class ConGenRunner:
                 set_bg=task.set_b,
                 set_tc=task.set_tc,
                 set_neg_tv=task.set_neg_tv,
-                neg_c_map=task.neg_c_map,
-                assumption_to_constraint=task.assumption_to_constraint
+                negation_map=task.negation_map,
             )
 
         finally:
@@ -195,16 +194,23 @@ class ConGenRunner:
         memory_peak_mb = peak / (1024 * 1024)
         consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
 
-        # Get KB clauses from result constraint IDs
+        # Get KB clauses: assumption_id → name → clauses
+        provider = self.model.description_provider
         kb_clauses = []
-        for cid in result.kb_constraints:
-            if cid in self.model.constraint_map:
-                kb_clauses.extend(self.model.constraint_map[cid])
+        kb_names = []
+        redundant_names = []
+        for aid in result.kb_assumption_ids:
+            cname = provider.get_description(aid)
+            kb_names.append(cname)
+            if cname in self.model.constraint_map:
+                kb_clauses.extend(self.model.constraint_map[cname])
+        for aid in result.redundant_ids:
+            redundant_names.append(provider.get_description(aid))
 
         run_result = ConGenRunResult(
-            kb_constraints=result.kb_constraints,
+            kb_constraints=kb_names,
             kb_clauses=kb_clauses,
-            redundant_constraints=result.redundant_constraints,
+            redundant_constraints=redundant_names,
             n_bias=result.n_bias,
             n_mss=result.n_mss,
             n_kb=result.n_kb,

@@ -43,7 +43,7 @@ class WipeOutR_FM:
     @measure_time('wipeoutr_fm_runtime')
     @count_calls('wipeoutr_fm_calls')
     def find_redundancies(self, set_c: List,
-                          neg_c_map: Dict[int, int]) -> Tuple[List, List]:
+                          negation_map: Dict[int, int]) -> Tuple[List, List]:
         """
         Find redundant constraints in CF.
 
@@ -53,12 +53,12 @@ class WipeOutR_FM:
 
         Args:
             set_c: List of constraint assumption IDs (original forms)
-            neg_c_map: Mapping from original to negated assumption IDs
+            negation_map: Mapping from original to negated assumption IDs
 
         Returns:
             List of redundant constraint IDs that can be removed
         """
-        logging.debug('WipeOutR_FM [CF=%s, neg_c_map=%s]', set_c, neg_c_map)
+        logging.debug('WipeOutR_FM [CF=%s, negation_map=%s]', set_c, negation_map)
 
         # CF_Δ ← CF (working copy that will be reduced)
         c_delta = set_c.copy()
@@ -73,11 +73,11 @@ class WipeOutR_FM:
             cf_without_alpha = diff(c_delta, [c_alpha])
 
             # Get ¬cα
-            if c_alpha not in neg_c_map:
+            if c_alpha not in negation_map:
                 logging.warning('No negated form for constraint %s, skipping', c_alpha)
                 continue
 
-            neg_alpha = neg_c_map[c_alpha]
+            neg_alpha = negation_map[c_alpha]
 
             # Check inconsistent(CF_Δ - {cα} ∪ {¬cα})
             test_set = cf_without_alpha + [neg_alpha]
@@ -99,7 +99,7 @@ class WipeOutR_FM:
 
     @measure_time('wipeoutr_fm_nonredundant_runtime')
     def find_non_redundant(self, set_cf: List,
-                           neg_cf_map: Dict[int, int]) -> List:
+                           negation_map: Dict[int, int]) -> List:
         """
         Find non-redundant constraints in CF.
 
@@ -107,10 +107,10 @@ class WipeOutR_FM:
 
         Args:
             set_cf: List of constraint assumption IDs (original forms)
-            neg_cf_map: Mapping from original to negated assumption IDs
+            negation_map: Mapping from original to negated assumption IDs
 
         Returns:
             List of non-redundant constraint IDs (CF_Δ)
         """
-        _, non_redundant = self.find_redundancies(set_cf, neg_cf_map)
+        _, non_redundant = self.find_redundancies(set_cf, negation_map)
         return non_redundant

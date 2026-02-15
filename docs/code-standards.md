@@ -259,8 +259,7 @@ class ConGen:
             set_bg: List[int],  # Background assumption IDs
             set_tc: List[int],  # E+ assumption IDs
             set_neg_tv: List[int],  # NE assumption IDs
-            neg_c_map: Dict[int, int],  # Negation map
-            assumption_to_constraint: Dict[int, str]
+            negation_map: Dict[int, int]  # Maps assumption ID → negated ID for REDUCE
     ) -> CONGENResult:
         """Learn constraints using injected checker.
 
@@ -291,8 +290,7 @@ result = congen.acquire(
     set_bg=model.task.set_b,
     set_tc=model.task.set_tc,
     set_neg_tv=model.task.set_neg_tv,
-    neg_c_map=model.task.neg_c_map,
-    assumption_to_constraint=model.task.assumption_to_constraint
+    negation_map=model.task.neg_c_map  # Maps assumption ID → negated ID for REDUCE
 )
 ```
 

@@ -50,7 +50,7 @@ class WipeOutR_T:
     @measure_time('wipeoutr_t_runtime')
     @count_calls('wipeoutr_t_calls')
     def find_redundant_testcases(self, set_t: List,
-                                 neg_t_map: Dict) -> Tuple[List, List]:
+                                 negation_map: Dict) -> Tuple[List, List]:
         """
         Find redundant test cases in a test suite.
 
@@ -59,12 +59,12 @@ class WipeOutR_T:
 
         Args:
             set_t: List of test case assumption IDs (original forms)
-            neg_t_map: Mapping from original to negated assumption IDs
+            negation_map: Mapping from original to negated assumption IDs
 
         Returns:
             Tuple of (redundant test cases, non-redundant test cases)
         """
-        logging.debug('WipeOutR_T [T=%s, neg_t_map=%s]', set_t, neg_t_map)
+        logging.debug('WipeOutR_T [T=%s, negation_map=%s]', set_t, negation_map)
 
         if len(set_t) <= 1:
             # No redundancy possible with 0 or 1 test cases
@@ -86,11 +86,11 @@ class WipeOutR_T:
                 # Check if t_gamma is redundant w.r.t. t_alpha
                 # inconsistent(t_α ∧ ¬t_γ) means t_α |= t_γ
 
-                if t_gamma not in neg_t_map:
+                if t_gamma not in negation_map:
                     logging.warning('No negated form for test case %s, skipping', t_gamma)
                     continue
 
-                neg_t_gamma = neg_t_map[t_gamma]
+                neg_t_gamma = negation_map[t_gamma]
 
                 # Check inconsistent(t_α ∧ ¬t_γ)
                 # Activate both t_alpha and neg_t_gamma
@@ -117,7 +117,7 @@ class WipeOutR_T:
 
     @measure_time('wipeoutr_t_nonredundant_runtime')
     def find_non_redundant_testcases(self, set_t: List,
-                                     neg_map: Dict) -> List:
+                                     negation_map: Dict) -> List:
         """
         Find non-redundant test cases in a test suite.
 
@@ -125,10 +125,10 @@ class WipeOutR_T:
 
         Args:
             set_t: List of test case assumption IDs (original forms)
-            neg_map: Mapping from original to negated assumption IDs
+            negation_map: Mapping from original to negated assumption IDs
 
         Returns:
             List of non-redundant test case IDs
         """
-        _, non_redundant = self.find_redundant_testcases(set_t, neg_map)
+        _, non_redundant = self.find_redundant_testcases(set_t, negation_map)
         return non_redundant

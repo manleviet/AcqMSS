@@ -7,8 +7,8 @@ Contains ConGenTask dataclass and ConGenTaskPreparation strategy.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from explanation.models.task_preparation import (
     TestCaseTask,
@@ -33,49 +33,18 @@ class ConGenTask(TestCaseTask):
     - set_c: Bias constraints (B) - assumption IDs
     - set_b: Background knowledge (BG) - assumption IDs
     - set_kb: Full KB with assumptions (clauses with assumption literals)
-    - neg_c_map: Dict[int, int] - negation map for REDUCE
+    - negation_map: Dict[int, int] - negation map for REDUCE
     - assumptions: List of all assumption IDs (for reference)
     - set_tc: Positive examples (E+) - assumption IDs
     - set_tv: Negative examples (E-) - assumption IDs
     - set_neg_tv: Negated negative examples (NE) - populated by GenerateNE
-    - neg_tc_map: Dict[int, int] - negation map for examples
     Inherited from TestCaseTask (unused by ConGen):
     - set_neg_tc
 
-    Additional ConGen-specific fields:
-    - assumption_to_constraint: Maps assumption ID to constraint name
-    - constraint_to_assumption: Maps constraint name to assumption ID
+    Naming: Use DescriptionProvider (from PreparationOutput) to map assumption IDs
+    to human-readable names. It covers all assumptions (bias, root, test cases, NE).
     """
-    assumption_to_constraint: Dict[int, str] = field(default_factory=dict)
-    constraint_to_assumption: Dict[str, int] = field(default_factory=dict)
-
-    def get_constraint_name(self, element: Any) -> str:
-        """Get constraint name from assumption ID."""
-        if isinstance(element, int):
-            return self.assumption_to_constraint.get(element, f'unknown_{element}')
-        return f'unknown_{element}'
-
-
-def _build_constraint_maps(
-        result: ConGenTask,
-        constraint_map: Dict[str, List[List[int]]],
-        negated_constraint_map: Optional[Dict[str, List[List[int]]]],
-        start_id: int
-) -> None:
-    """Build bidirectional constraint-assumption maps from sequential IDs.
-
-    Must mirror prepare_kb's ID assignment: +1 per constraint, +1 per negated form.
-    """
-    aid = start_id
-    for name in constraint_map:
-        result.constraint_to_assumption[name] = aid
-        result.assumption_to_constraint[aid] = name
-        aid += 1
-        # Skip negated form's ID if it exists
-        if negated_constraint_map is not None:
-            negated_key = f"NOT({name})"
-            if negated_key in negated_constraint_map:
-                aid += 1
+    pass  # No additional fields needed
 
 
 def _prepare_bg(
@@ -106,7 +75,7 @@ def _prepare_bg(
         result.set_kb.append([-root_id, -negated_id])
 
         result.assumptions.append(negated_id)
-        result.neg_c_map[original_id] = negated_id
+        result.negation_map[original_id] = negated_id
         provider.add_constraint_description(negated_id, negated_key)
         id_assumption += 1
 
@@ -122,7 +91,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     - set_tc: Positive examples (E+) with assumptions
     - set_tv: Negative examples (E-) with assumptions
     - set_neg_tv: Negated negative examples (NE)
-    - neg_c_map: Negation map for REDUCE
+    - negation_map: Negation map for REDUCE
     """
 
     def __init__(self, mode_name: str = "congen"):
@@ -159,10 +128,6 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         id_assumption = prepare_kb(
             result, provider, model.constraint_map,
             id_assumption, model.negated_constraint_map)
-        _build_constraint_maps(
-            result, model.constraint_map,
-            model.negated_constraint_map, id_assumption_first_bias)
-
         # Step 2: Prepare E+ as set_tc
         tc_start_pos = len(result.assumptions)
         id_assumption = prepare_testsuite_with_negation(
@@ -214,7 +179,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         negated_ne_id, id_assumption = self._create_negated_ne(
             result, provider, ne_id, neg_tv_ids, id_assumption)
 
-        result.neg_tc_map[ne_id] = negated_ne_id
+        result.negation_map[ne_id] = negated_ne_id
         return id_assumption
 
     @staticmethod

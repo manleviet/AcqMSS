@@ -92,9 +92,9 @@ class DiagnosisTask:
     set_b: List = field(default_factory=list)
     # set of all CNF with added assumptions
     set_kb: List = field(default_factory=list)
-    # mapping: (for redundancy detection)
-    # constraint ID -> negated constraint ID
-    neg_c_map: Dict = field(default_factory=dict)
+    # mapping: original assumption ID -> negated assumption ID
+    # Used by WipeOutR_FM (constraints) and WipeOutR_T (test cases)
+    negation_map: Dict = field(default_factory=dict)
     # list of assumptions for solver
     assumptions: List = field(default_factory=list)
 
@@ -119,9 +119,6 @@ class TestCaseTask(DiagnosisTask):
     set_neg_tv: List = field(default_factory=list)
     # negated positive test cases (for WipeOutR)
     set_neg_tc: List = field(default_factory=list)
-    # mapping: (for WipeOutR_T)
-    # test case ID -> negated test case ID
-    neg_tc_map: Dict = field(default_factory=dict)
 
 
 # === DESCRIPTION PROVIDERS (For formatting only) ===
@@ -281,7 +278,7 @@ def prepare_kb(result: DiagnosisTask,
                     result.set_kb.append(new_neg_clause)
 
                 result.assumptions.append(negated_id)
-                result.neg_c_map[original_id] = negated_id
+                result.negation_map[original_id] = negated_id
                 provider.add_constraint_description(negated_id, negated_key)
                 id_assumption += 1
 
@@ -461,7 +458,7 @@ def prepare_testsuite_with_negation(result: TestCaseTask,
         else:
             result.set_neg_tc.append(negated_id)
 
-        result.neg_tc_map[original_id] = negated_id
+        result.negation_map[original_id] = negated_id
         id_assumption += 1
 
     return id_assumption

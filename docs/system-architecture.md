@@ -73,8 +73,7 @@ result = congen.acquire(
    set_bg=model.task.set_b,
    set_tc=model.task.set_tc,
    set_neg_tv=model.task.set_neg_tv,
-   neg_c_map=model.task.neg_c_map,
-   assumption_to_constraint=model.task.assumption_to_constraint
+   negation_map=model.task.neg_c_map  # Maps assumption ID → negated ID for REDUCE
 )
 
 # Interactive learning

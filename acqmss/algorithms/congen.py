@@ -38,14 +38,29 @@ from explanation.operations.algorithms.profiler import (
 @dataclass
 class CONGENResult:
     """Result of ConGen constraint acquisition."""
-    kb_constraints: List[str]  # Names of acquired constraints
     kb_assumption_ids: List[int]  # Assumption IDs of acquired constraints
-    redundant_constraints: List[str]  # Names of redundant constraints removed
+    redundant_ids: List[int]  # Assumption IDs of redundant constraints removed
     n_bias: int  # Number of bias constraints
     n_mss: int  # Size of MSS before REDUCE
     n_kb: int  # Size of final KB
     bg_clauses: List[List[int]] = field(default_factory=list)  # BG clauses (e.g., [[1]])
     metadata: Dict = field(default_factory=dict)
+
+
+def resolve_congen_names(result: CONGENResult, provider) -> Dict[str, List[str]]:
+    """Resolve assumption IDs to human-readable names.
+
+    Args:
+        result: CONGENResult with raw assumption IDs
+        provider: Object with get_description(assumption_id) method
+
+    Returns:
+        Dict with 'kb' and 'redundant' name lists
+    """
+    return {
+        'kb': [provider.get_description(a) for a in result.kb_assumption_ids],
+        'redundant': [provider.get_description(a) for a in result.redundant_ids],
+    }
 
 
 class ConGen:
@@ -70,8 +85,7 @@ class ConGen:
             set_bg: List[int],
             set_tc: List[int],
             set_neg_tv: Optional[List[int]] = None,
-            neg_c_map: Optional[Dict[int, int]] = None,
-            assumption_to_constraint: Optional[Dict[int, str]] = None
+            negation_map: Optional[Dict[int, int]] = None,
     ) -> CONGENResult:
         """Acquire knowledge base from bias constraints.
 
@@ -84,15 +98,13 @@ class ConGen:
             set_bg: Background knowledge assumption IDs (BG)
             set_tc: Positive example assumption IDs (E+)
             set_neg_tv: Negated example assumption IDs (NE)
-            neg_c_map: Mapping constraint ID -> negated ID (for REDUCE)
-            assumption_to_constraint: Mapping assumption ID -> constraint name
+            negation_map: Mapping assumption ID -> negated ID (for REDUCE)
 
         Returns:
             CONGENResult with acquired KB
         """
         set_neg_tv = set_neg_tv or []
-        neg_c_map = neg_c_map or {}
-        assumption_to_constraint = assumption_to_constraint or {}
+        negation_map = negation_map or {}
 
         logging.debug('>>> ConGen [B=%d, NE=%d, E+=%d, BG=%d]',
                       len(set_b), len(set_neg_tv), len(set_tc), len(set_bg))
@@ -109,9 +121,8 @@ class ConGen:
             logging.debug('<<< ConGen return Phi (E+ inconsistent with NE ∪ BG)')
             bg_clauses = [[lit] for lit in set_bg]
             self.result = CONGENResult(
-                kb_constraints=[],
                 kb_assumption_ids=[],
-                redundant_constraints=[],
+                redundant_ids=[],
                 n_bias=len(set_b),
                 n_mss=0,
                 n_kb=0,
@@ -137,23 +148,15 @@ class ConGen:
             set_b_prime=b_prime,
             set_neg_tv=set_neg_tv,
             set_bg=set_bg,
-            neg_map=neg_c_map
+            negation_map=negation_map
         )
         logging.debug('REDUCE: %d redundant, %d in final KB', len(redundant), len(kb))
-
-        # Map back to constraint names
-        def _get_name(a):
-            return assumption_to_constraint.get(a, f'unknown_{a}')
-
-        kb_names = [_get_name(a) for a in kb]
-        redundant_names = [_get_name(a) for a in redundant]
 
         bg_clauses = [[lit] for lit in set_bg]
 
         self.result = CONGENResult(
-            kb_constraints=kb_names,
             kb_assumption_ids=kb,
-            redundant_constraints=redundant_names,
+            redundant_ids=redundant,
             n_bias=len(set_b),
             n_mss=len(b_prime),
             n_kb=len(kb),
@@ -167,14 +170,28 @@ class ConGen:
         logging.debug('<<< ConGen return KB=%d', len(kb))
         return self.result
 
-    def save_result(self, filepath: str):
-        """Save result to JSON file."""
+    def save_result(self, filepath: str, description_provider=None):
+        """Save result to JSON file.
+
+        Args:
+            filepath: Output file path
+            description_provider: Optional provider to resolve names for output.
+                If None, raw assumption IDs are serialized.
+        """
         if self.result is None:
             raise ValueError("No result to save. Run acquire() first.")
 
+        if description_provider is not None:
+            names = resolve_congen_names(self.result, description_provider)
+            kb_output = names['kb']
+            redundant_output = names['redundant']
+        else:
+            kb_output = self.result.kb_assumption_ids
+            redundant_output = self.result.redundant_ids
+
         data = {
-            'kb_constraints': self.result.kb_constraints,
-            'redundant_constraints': self.result.redundant_constraints,
+            'kb_constraints': kb_output,
+            'redundant_constraints': redundant_output,
             'statistics': {
                 'n_bias': self.result.n_bias,
                 'n_mss': self.result.n_mss,
