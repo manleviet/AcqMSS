@@ -70,8 +70,13 @@ class FMOracleModel:
     def start_id_assignments(self):
         return self._start_id_assignments
 
-    def use_incremental(self, enabled: bool = True) -> 'FMOracleModel':
-        """Set incremental solver mode."""
+    @property
+    def use_incremental(self) -> bool:
+        """Whether to use incremental solver."""
+        return self._use_incremental
+
+    def set_incremental(self, enabled: bool = True) -> 'FMOracleModel':
+        """Set incremental solver mode (builder pattern)."""
         self._use_incremental = enabled
         return self
 
@@ -88,12 +93,33 @@ class FMOracleModel:
         """Get the list of assumption literals."""
         return self.task.assumptions
 
-    def with_configuration(self, configuration: Configuration) -> 'FMOracleModel':
-        """Convert feature config to list of assumption IDs to activate."""
-        active_assumptions = []
-        for feat, value in configuration.elements.items():
-            assumption = self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[feat]
+    def get_raw_fm_clauses(self) -> List[List[int]]:
+        """Get raw FM CNF clauses (without assumption guards).
 
+        Returns the original clauses from constraint_map, not the
+        assumption-guarded versions stored in task.set_kb.
+        """
+        return [clause for clauses in self.constraint_map.values()
+                for clause in clauses]
+
+    def with_configuration(self, configuration) -> list:
+        """Convert feature config to list of assumption IDs to activate.
+
+        Args:
+            configuration: Dict[str, bool] or Configuration object
+
+        Returns:
+            List of active assumption IDs (set_c is also updated in-place)
+        """
+        # Accept both dict and Configuration objects
+        if hasattr(configuration, 'elements'):
+            items = configuration.elements.items()
+        else:
+            items = configuration.items()
+
+        active_assumptions = []
+        for feat, value in items:
+            assumption = self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[feat]
             active_assumptions.append(assumption)
 
         step = 2
@@ -101,7 +127,7 @@ class FMOracleModel:
         set_c += active_assumptions
 
         self._task.set_c = set_c
-        return self
+        return set_c
 
     def prepare(self) -> DiagnosisTask:
         """Build set_kb + assumptions from constraint_map and variables."""
@@ -112,7 +138,6 @@ class FMOracleModel:
 
         return self._task
 
-    # TODO: remove
     @classmethod
     def from_fm_data(cls, constraint_map: Dict[str, List[List[int]]],
                      variables: Dict[str, int],
@@ -122,7 +147,7 @@ class FMOracleModel:
         model.constraint_map = constraint_map
         model.variables = variables
         model.next_tseitin_var = next_tseitin_var
-        # return model.prepare()
+        model.prepare()
         return model
 
     @classmethod

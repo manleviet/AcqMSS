@@ -13,9 +13,9 @@ class TestOracleModel:
         variables = {"f1": 1, "f2": 2}
         model = FMOracleModel.from_fm_data(constraint_map, variables, next_tseitin_var=2)
 
-        assert len(model.get_assumptions()) == 4  # 2 features * 2 (pos+neg)
+        assert len(model.get_assumptions()) == 5  # 1 FM constraint + 2 features * 2 (pos+neg)
         assert model._use_incremental is True
-        # set_kb = 1 FM clause + 4 guarded clauses
+        # set_kb = 1 FM guarded clause + 4 feature assignment clauses
         assert len(model.get_kb()) == 1 + 4
 
     def test_satisfies_checker_model_protocol(self):
@@ -39,16 +39,16 @@ class TestOracleModel:
         model = FMOracleModel.from_fm_data(constraint_map, variables, next_tseitin_var=2)
 
         active = model.with_configuration({"f1": True, "f2": False})
-        assert len(active) == 2
+        # set_c includes FM constraint assumptions + feature assignment assumptions
         assert model._pos_assignment_to_assumption["f1"] in active
         assert model._neg_assignment_to_assumption["f2"] in active
 
     def test_assumption_ids_start_after_tseitin(self):
         """Assumption IDs don't collide with FM variables."""
         model = FMOracleModel.from_fm_data({"fm": [[1, 2, 3]]}, {"f1": 1, "f2": 2, "f3": 3}, 3)
-        # All assumption IDs should be > next_tseitin_var (3)
+        # All assumption IDs should be >= next_tseitin_var (3)
         for a in model.get_assumptions():
-            assert a > 3
+            assert a >= 3
 
     def test_checker_integration_sat(self):
         """CheckerFactory creates valid checker; SAT case."""

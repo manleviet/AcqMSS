@@ -7,7 +7,6 @@ configurations via persistent PySAT solver.
 
 from typing import Dict, Set, List, Optional
 
-from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models import FeatureModel
 from pysat.solvers import Solver
 
@@ -63,12 +62,12 @@ class FeatureModelOracle(Oracle):
         self.profiler = profiler if profiler is not None else get_global_profiler()
 
         # Prepares the model and checker
-        self._oracle_model = FMOracleModel.from_fm(fm_path).use_incremental(use_incremental).build()
+        self._oracle_model = FMOracleModel.from_fm(fm_path).set_incremental(use_incremental).build()
         self._checker = CheckerFactory.create_from_model(self._oracle_model, solver_name, self.profiler)
 
-        # self.fm = _load_fm(fm_path)
-        # self.features = self._extract_features()
-        # self.leaf_features = self._extract_leaf_features()
+        # Load FM for constraint description extraction (used by evaluation)
+        from flamapy.metamodels.fm_metamodel.transformations import UVLReader
+        self.fm = UVLReader(fm_path).transform()
         #
         # # Build ground truth CNF (also extracts flamapy variable mapping)
         # self.cnf_clauses = self._build_cnf()
@@ -144,38 +143,36 @@ class FeatureModelOracle(Oracle):
         """Get the list of assumption literals."""
         return self._oracle_model.task.assumptions
 
-    def is_valid(self, configuration: Configuration) -> bool:
+    def is_valid(self, assignments: Dict[str, bool]) -> bool:
         """Check if configuration is valid (satisfies FM constraints).
 
         Args:
-            configuration: Feature assignments {feature_name: True/False}
+            assignments: Feature assignments {feature_name: True/False}
 
         Returns:
             True if configuration is valid
         """
         # If any unknown features are assigned, we consider it invalid (backward compatibility)
-        if any(name not in self._oracle_model.variables for name in configuration):
-            raise KeyError(f"Unknown features in assignment: {set(configuration) - set(self._oracle_model.variables)}")
+        if any(name not in self._oracle_model.variables for name in assignments):
+            raise KeyError(f"Unknown features in assignment: {set(assignments) - set(self._oracle_model.variables)}")
 
-        self._oracle_model.with_configuration(configuration)
+        self._oracle_model.with_configuration(assignments)
 
-        return self.checker.is_consistent(self._oracle_model.get_c())
+        return self._checker.is_consistent(self._oracle_model.get_c())
 
     def get_features(self) -> Set[str]:
         """Get all feature names."""
-        # return self.features
-        pass
+        return set(self._oracle_model.variables.keys())
 
     def get_feature_ids(self) -> Dict[str, int]:
         """Get feature name to SAT variable ID mapping."""
-        # return self.feature_ids
-        pass
+        return dict(self._oracle_model.variables)
 
     # --- FM-specific extensions ---
 
     def get_leaf_features(self) -> Set[str]:
         """Get leaf features (features with no children)."""
-        return self.leaf_features
+        return {f.name for f in self.fm.get_features() if f.is_leaf()}
 
     def get_root_feature(self) -> str:
         """Get root feature name."""
@@ -205,12 +202,12 @@ class FeatureModelOracle(Oracle):
     #         solver.delete()
 
     def get_cnf_clauses(self) -> List[List[int]]:
-        """Get the ground truth CNF clauses."""
-        return self.cnf_clauses
+        """Get the raw ground truth CNF clauses (without assumption guards)."""
+        return self._oracle_model.get_raw_fm_clauses()
 
     def get_num_constraints(self) -> int:
-        """Get number of CNF clauses in ground truth."""
-        return len(self.cnf_clauses)
+        """Get number of FM constraints in ground truth."""
+        return len(self._oracle_model.constraint_map)
 
     def get_constraint_descriptions(self) -> Set[str]:
         """Extract constraint descriptions from FM.
@@ -336,14 +333,13 @@ class FeatureModelOracle(Oracle):
         return None
 
     def __repr__(self):
-        return f"FeatureModelOracle(features={len(self.features)}, " \
-               f"clauses={len(self.cnf_clauses)})"
+        return f"FeatureModelOracle(features={self.get_feature_count()})"
 
     def cleanup(self):
         """Release checker resources."""
-        if hasattr(self, 'checker') and self.checker is not None:
-            self.checker.cleanup()
-            self.checker = None
+        if hasattr(self, '_checker') and self._checker is not None:
+            self._checker.cleanup()
+            self._checker = None
 
     def __del__(self):
         self.cleanup()

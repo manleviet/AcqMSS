@@ -26,7 +26,7 @@ class CheckerModel(Protocol):
     Any class with these attributes/methods satisfies this protocol
     via structural subtyping (no inheritance needed).
     """
-    _use_incremental: bool
+    use_incremental: bool
 
     def get_kb(self) -> List[List[int]]: ...
 

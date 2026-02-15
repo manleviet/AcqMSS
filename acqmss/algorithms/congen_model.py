@@ -56,6 +56,11 @@ class ConGenModel:
         self._description_provider: Optional[DescriptionProvider] = None
 
     @property
+    def use_incremental(self) -> bool:
+        """Whether to use incremental solver."""
+        return self._use_incremental
+
+    @property
     def task_input(self) -> TaskInput:
         """Get task input."""
         return self._task_input

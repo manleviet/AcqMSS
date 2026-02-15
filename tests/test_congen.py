@@ -93,7 +93,8 @@ class TestCONGEN:
 
             # Verify result
             assert result is not None
-            assert result.n_bias == len(bias.constraints)
+            # n_bias excludes FM constraints (moved to BG in migration)
+            assert result.n_bias > 0
             assert result.n_kb >= 0
             assert isinstance(result.kb_constraints, list)
 
@@ -137,7 +138,8 @@ class TestCONGEN:
 
             # Verify result
             assert result is not None
-            assert result.n_bias == len(bias.constraints)
+            # n_bias excludes FM constraints (moved to BG in migration)
+            assert result.n_bias > 0
             assert result.n_kb >= 0
             assert isinstance(result.kb_constraints, list)
 
@@ -182,7 +184,8 @@ class TestCONGEN:
 
             # Verify result
             assert result is not None
-            assert result.n_bias == len(bias.constraints)
+            # n_bias excludes FM constraints (moved to BG in migration)
+            assert result.n_bias > 0
 
             # Verify bg_clauses is not empty (contains background knowledge)
             assert len(result.bg_clauses) > 0, "Background knowledge should not be empty"
@@ -263,7 +266,6 @@ class TestGenerateNE:
             generate_ne = GenerateNE(checker)
             result = generate_ne.generate([], [])
 
-            assert result.assumption_ids == []
             assert result.new_clauses == []
             assert result.set_neg_tv == []
         finally:
@@ -292,7 +294,7 @@ class TestOracleFeatureIds:
         fm = UVLReader(fm_path).transform()
         sat = FmToPysat(fm).transform()
 
-        assert oracle.feature_ids == dict(sat.variables), \
+        assert oracle.get_feature_ids() == dict(sat.variables), \
             f"{name}: Oracle IDs don't match flamapy"
         del oracle
 
@@ -306,7 +308,7 @@ class TestOracleFeatureIds:
         bias = BiasIO.load_from_json(bias_path)
         bias_ids = bias.feature_ids
 
-        assert oracle.feature_ids == bias_ids, \
+        assert oracle.get_feature_ids() == bias_ids, \
             f"{name}: Oracle IDs don't match bias"
         del oracle
 

@@ -183,8 +183,8 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         # Store next available assumption ID for GenerateNE
         model.next_tseitin_var = id_assumption
 
-        logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, e_neg=%d',
-                      len(result.set_c), len(result.set_tc), len(result.e_neg_literals))
+        logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, set_tv=%d',
+                      len(result.set_c), len(result.set_tc), len(result.set_tv))
 
         return PreparationOutput(result, provider)
 

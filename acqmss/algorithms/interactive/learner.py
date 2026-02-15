@@ -210,7 +210,7 @@ class InteractiveLearner:
 
         learner = cls(task, oracle, solver_name, profiler, fm_path, bias_path)
         learner._example_provider = ExampleProvider(examples, seed)
-        learner._fm_clauses = oracle.cnf_clauses
+        learner._fm_clauses = oracle.get_cnf_clauses()
         return learner
 
     def learn_from_examples(self,

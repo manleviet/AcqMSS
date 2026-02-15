@@ -67,9 +67,6 @@ class GenerateNE:
         """
         logging.debug('>>> GenerateNE [%d E⁻, BG=%s]', len(set_tv), set_bg)
 
-        assumption_ids = []
-        neg_map = {}
-        original_literals = []
         new_clauses = []
         set_neg_tv = []
         current_id = start_assumption_id
@@ -80,17 +77,16 @@ class GenerateNE:
                 continue
 
             # Use QuickXPlain to find minimal conflict
-            # Pass literals directly as assumption IDs
-            minimal_conflict = self.quickxplain.find_conflict(tv, set_bg)
+            # Wrap single assumption ID in list for find_conflict API
+            tv_list = tv if isinstance(tv, list) else [tv]
+            minimal_conflict = self.quickxplain.find_conflict(tv_list, set_bg)
 
             if len(minimal_conflict) == 0:
-                new_tv = tv
+                new_tv = tv_list
                 logging.debug('E⁻=%s consistent with BG, using full example', tv)
             else:
                 new_tv = minimal_conflict
                 logging.debug('E⁻=%s -> minimal conflict=%s', tv, minimal_conflict)
-
-            # original_literals.append(minimal_conflict)
 
             # Create blocking clause: ¬(l1 ∧ l2 ∧ ...) = (¬l1 ∨ ¬l2 ∨ ...)
             blocking_clause = [-lit for lit in new_tv]
@@ -104,12 +100,9 @@ class GenerateNE:
             logging.debug('NE assumption=%d, clause=%s',
                           assumption_id, blocking_clause)
 
-        logging.debug('<<< GenerateNE: %d NE constraints', len(assumption_ids))
+        logging.debug('<<< GenerateNE: %d NE constraints', len(set_neg_tv))
 
         return NEResult(
-            # assumption_ids=assumption_ids,
-            # neg_map=neg_map,
-            # original_literals=original_literals,
             new_clauses=new_clauses,
             set_neg_tv=set_neg_tv,
             next_tseitin_var=current_id

@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-15
 
 ## High-Level Overview
 
@@ -91,12 +91,14 @@ examples = ExampleProvider(...)  # Canonical import
    - Input: Bias (B), E+ (set_tc), NE (set_neg_tv), BG (set_bg) as assumption IDs
    - Process: Check consistency → ACQMSS → REDUCE
    - Output: CONGENResult with KB constraint names and assumption IDs
-   - GenerateNE called internally by `ConGenModel.prepare()`
+   - **GenerateNE now called internally by `ConGenModel.prepare()`** (callers no longer invoke directly)
+   - Can be reused across CV folds: `model.prepare(fold_pos_examples, fold_neg_examples)`
 
-2. **GenerateNE** — Create negated examples (model-invoked)
-   - Convert E- to logical negation for conflict detection
-   - Called by `ConGenModel.prepare()` before task is ready
-   - Results merged into task via `merge_ne_into_task()`
+2. **GenerateNE** — Create negated examples (model-invoked, simplified API)
+   - **Now invoked internally by `ConGenModel.prepare()`** (no longer caller-invoked)
+   - Uses QuickXPlain to find minimal conflicts from E⁻
+   - Simplified result: `NEResult(new_clauses, set_neg_tv, next_tseitin_var)` (removed `assumption_ids`, `neg_map`)
+   - Results merged in-place via inline code in `ConGenModel.prepare()`
 
 3. **ACQMSS** — Divide-and-conquer maximum satisfiable subset finding
    - Recursively partition bias constraints
@@ -152,21 +154,31 @@ examples = ExampleProvider(...)  # Canonical import
 
 **Architecture**:
 - `Oracle` (base.py) — Unified abstract base class for all oracle implementations
-  - Implements: `is_valid()`, `get_features()`, `get_feature_ids()`, `ask()` (alias)
+  - Implements: `is_valid(assignments: Dict[str, bool])`, `get_features()`, `get_feature_ids()`, `ask()` (alias)
   - No separate oracle hierarchies (AutomatedOracle merged into implementations)
 
 **Concrete Implementations**:
-- `FeatureModelOracle` (fm_oracle.py) — Validates against SAT-based feature model ground truth
+- `FeatureModelOracle` (fm_oracle.py) — Validates against SAT-based FM via `FMOracleModel`
+  - Delegates to `FMOracleModel.from_fm()` for consistency checking
+  - Uses incremental solver by default for performance
+  - Provides FM-specific methods: `get_leaf_features()`, `get_root_feature()`, `get_constraint_descriptions()`
+  - **Note**: Uses raw FM clauses only (no assumption guards) for `get_cnf_clauses()`
 - `UserPromptOracle` (user_prompt.py) — Interactive human-in-the-loop oracle
 - `CachedOracle` (cached.py) — Wrapper caching query results
 - `OracleData` (extractor.py) — Extracted oracle data for evaluation
+- `FMOracleModel` (fm_oracle_model.py) — Assumption-guarded FM validation model
+  - FM clauses stored directly in `set_kb` (always active)
+  - Feature assignments become assumption-guarded unit clauses: `[-a_pos_i, fid]` and `[-a_neg_i, -fid]`
+  - Satisfies `CheckerModel` protocol for integration with `CheckerFactory`
+  - Prepared via `OracleTaskPreparation` which handles constraint/variable mapping
 
 **Note**: `ExampleProvider` moved to `acqmss.example_generators` (see acqmss/example_generators/)
 
 **Critical Detail**: Feature ID consistency
-- `FeatureModelOracle._build_feature_ids()` uses flamapy's variable mapping from `FmToPysat.variables`
+- `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)
 - Ensures feature_ids match SAT variable IDs in CNF clauses
 - Alphabetical sorting would cause critical mismatch with clause literals
+- Source of truth: `FmToPysat.variables` from FM→SAT conversion
 
 #### acqmss/eval/ — Evaluation Framework
 

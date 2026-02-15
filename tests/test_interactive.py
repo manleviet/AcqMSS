@@ -211,8 +211,9 @@ class TestCachedOracle:
         """Test cached oracle caches results."""
         cached = CachedOracle(oracle)
 
-        # First query
-        config = {'A': True}
+        # First query — use a real feature name from the FM
+        features = list(oracle.get_features())
+        config = {features[0]: True}
         result1 = cached.ask(config)
         stats1 = cached.get_cache_stats()
 

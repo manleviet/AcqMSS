@@ -2,7 +2,7 @@
 
 **Total Python Code**: ~22,000+ lines across ~106 files
 **Main Packages**: acqmss (8,695 LOC) + explanation (6,580 LOC) + apps (3,765 LOC) + tests (~3,000+ LOC)
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-15
 
 ## Package Structure
 
@@ -61,12 +61,13 @@ Sampling strategies, example generation, and query generation for learning:
 | `example_provider.py` | 120+ | ExampleProvider: batch example interface for learning (moved from oracle/) |
 | `__init__.py` | 1 | Package exports with lazy-loaded QueryGenerator |
 
-**Oracle Sub-package** (`acqmss/oracle/`, 6 files, ~630 LOC):
+**Oracle Sub-package** (`acqmss/oracle/`, 7 files, ~1,000 LOC):
 
 | File | LOC | Purpose |
-|------|-----|---------|
+|------|-----|---------| 
 | `base.py` | 47 | Oracle ABC: unified oracle interface for membership queries |
-| `fm_oracle.py` | 150+ | FeatureModelOracle: ground truth validation via SAT solver |
+| `fm_oracle.py` | 200+ | FeatureModelOracle: delegates to FMOracleModel for SAT-based validation |
+| `fm_oracle_model.py` | 280+ | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol |
 | `user_prompt.py` | 100+ | UserPromptOracle: interactive human-in-the-loop oracle |
 | `cached.py` | 80+ | CachedOracle: wrapper with query result caching |
 | `extractor.py` | 100+ | OracleData: extract oracle data for evaluation |
@@ -74,15 +75,17 @@ Sampling strategies, example generation, and query generation for learning:
 
 **Critical Implementation Details**:
 
-1. **Feature ID Consistency**: The `FeatureModelOracle`'s `_build_feature_ids()` method uses flamapy's variable mapping (tree traversal order) stored in `FmToPysat.variables` as the authoritative source. This ensures feature_ids match SAT variable IDs in CNF clauses. Using alphabetical sorting would cause critical mismatch with clause variable references.
+1. **FMOracleModel Architecture**: FM clauses stored directly in `set_kb` (always active). Feature assignments become assumption-guarded unit clauses: `[-a_pos_i, fid]` and `[-a_neg_i, -fid]`. Satisfies `CheckerModel` protocol for `CheckerFactory` integration. Prepared via `OracleTaskPreparation` class.
 
-2. **Assumption-Based Representation**: All checkers (Incremental and NonIncremental) use identical assumption-based data: `Dict[int, int]` mapping assumption IDs to their negation counterparts, used uniformly in REDUCE and other algorithms.
+2. **Feature ID Consistency**: The `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order) stored in `FmToPysat.variables` as the authoritative source. This ensures feature_ids match SAT variable IDs in CNF clauses. Using alphabetical sorting would cause critical mismatch with clause variable references.
 
-3. **GenerateNE Design**: GenerateNE is invoked internally by `ConGenModel.prepare()`. Results are merged into task via `merge_ne_into_task()`. Checkers are immutable after construction.
+3. **Assumption-Based Representation**: All checkers (Incremental and NonIncremental) use identical assumption-based data: `List[int]` for assumptions, used uniformly in algorithms (no `if is_incremental` branching).
 
-4. **CheckerModel Protocol**: ConGenModel implements `get_kb()`, `get_assumptions()`, `use_incremental`, `solver_name` for compatibility with CheckerFactory.
+4. **GenerateNE Design**: Now invoked internally by `ConGenModel.prepare()`. Results simplified to `NEResult(new_clauses, set_neg_tv, next_tseitin_var)`. Merged via inline code in `ConGenModel.prepare()` (no longer caller-invoked).
 
-5. **Builder Pattern**: ConGenModelBuilder encapsulates file loading, model construction, and prepare() invocation (mirrors DiagnosisModelBuilder).
+5. **CheckerModel Protocol**: `FMOracleModel` and `ConGenModel` implement `get_kb()`, `get_assumptions()`, `use_incremental` for compatibility with `CheckerFactory`.
+
+6. **Builder Pattern**: ConGenModelBuilder encapsulates file loading, model construction, and prepare() invocation (mirrors DiagnosisModelBuilder).
 
 #### acqmss/eval/ — Evaluation Framework (~3,700 LOC, 13 files)
 
@@ -299,7 +302,14 @@ CONGEN and QuAcq learning results:
 | tests/ | ~3,500+ | 8 | 437 | ✅ Comprehensive coverage |
 | **Total** | **~22,540+** | **~106** | **~212** | ✅ **Production ready** |
 
-**Recent Changes**:
+**Recent Changes** (FMOracleModel Migration - commit 012a9db):
+- **Replaced `OracleModel` with `FMOracleModel`**: New class with assumption-guarded FM clauses for incremental checker integration
+- **FeatureModelOracle refactored**: Now delegates to `FMOracleModel` instead of building CNF internally
+- **ConGenTaskPreparation enhanced**: Reserves ID slots for FM constraints and variable assignments
+- **NEResult simplified**: Removed `assumption_ids`, `neg_map`; added `set_neg_tv` (list form)
+- **GenerateNE internalized**: Now called by `ConGenModel.prepare()` (no longer caller-invoked)
+- **`get_cnf_clauses()` fixed**: Returns raw FM CNF (no assumption guards) via `FMOracleModel.get_raw_fm_clauses()`
+- **`is_valid()` aligned**: Signature now `is_valid(assignments: Dict[str, bool])` across Oracle implementations
 - QueryGenerator moved from `acqmss/algorithms/interactive/` to `acqmss/example_generators/`
 - ExampleProvider moved from `acqmss/oracle/` to `acqmss/example_generators/`
 - Both classes now have canonical imports from `acqmss.example_generators`

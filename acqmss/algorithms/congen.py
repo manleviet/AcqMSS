@@ -65,13 +65,13 @@ class ConGen:
     @measure_time('congen_runtime')
     @count_calls('congen_calls')
     def acquire(
-        self,
-        set_b: List[int],
-        set_bg: List[int],
-        set_tc: List[int],
-        set_neg_tv: Optional[List[int]] = None,
-        neg_c_map: Optional[Dict[int, int]] = None,
-        assumption_to_constraint: Optional[Dict[int, str]] = None
+            self,
+            set_b: List[int],
+            set_bg: List[int],
+            set_tc: List[int],
+            set_neg_tv: Optional[List[int]] = None,
+            neg_c_map: Optional[Dict[int, int]] = None,
+            assumption_to_constraint: Optional[Dict[int, str]] = None
     ) -> CONGENResult:
         """Acquire knowledge base from bias constraints.
 

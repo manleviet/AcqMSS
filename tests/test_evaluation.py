@@ -27,7 +27,7 @@ from acqmss.eval import (
 DATA_DIR = Path(__file__).parent.parent / "data"
 FM_PATH = DATA_DIR / "fms" / "REAL-FM-7.uvl"
 BIAS_PATH = DATA_DIR / "bias" / "REAL-FM-7-bias.json"
-RESULT_PATH = DATA_DIR / "results" / "REAL-FM-7_rs_1n_incremental_fold1_kb.json"
+RESULT_PATH = DATA_DIR / "results" / "REAL-FM-7_rs_1n_non-incremental_fold1_kb.json"
 EXAMPLES_RS_1N_PATH = DATA_DIR / "examples" / "REAL-FM-7_rs_1n.json"
 
 

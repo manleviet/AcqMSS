@@ -1,6 +1,6 @@
 # AcqMSS Code Standards & Guidelines
 
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-15
 
 ## Language & Environment
 
@@ -382,7 +382,7 @@ The `acqmss/oracle/` package provides a unified oracle abstraction for configura
 
 ```python
 from typing import Dict
-from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle
+from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle, FMOracleModel
 from acqmss.example_generators import ExampleProvider
 
 # Unified Oracle interface
@@ -403,8 +403,8 @@ class Oracle(ABC):
         """Alias for is_valid() (interactive compatibility)."""
         return self.is_valid(query)
 
-# FM-based oracle (most common)
-oracle = FeatureModelOracle('data/fms/model.uvl')
+# FM-based oracle (most common) — delegates to FMOracleModel
+oracle = FeatureModelOracle('data/fms/model.uvl', use_incremental=True)
 is_valid = oracle.is_valid({'root': True, 'feature_a': False})
 
 # With caching for repeated queries
@@ -414,17 +414,35 @@ result = cached_oracle.is_valid(query)
 # Example-based learning
 provider = ExampleProvider(oracle)
 examples = provider.generate_examples(count=100)
+
+# Low-level: Use FMOracleModel directly with assumption-guarded FM clauses
+model = FMOracleModel.from_fm('data/fms/model.uvl').set_incremental(True).build()
+from explanation.operations.algorithms.checker_factory import CheckerFactory
+checker = CheckerFactory.create_from_model(model)
 ```
 
+**Architecture**:
+- `FMOracleModel` — SAT-based FM model with assumption-guarded clauses
+  - FM constraints stored directly in `set_kb` (always active)
+  - Feature assignments become assumption-guarded unit clauses:
+    - `[-a_pos_i, fid]` → if `a_pos_i` active, feature must be true
+    - `[-a_neg_i, -fid]` → if `a_neg_i` active, feature must be false
+  - Satisfies `CheckerModel` protocol for `CheckerFactory`
+  - Prepared by `OracleTaskPreparation`
+- `FeatureModelOracle` — High-level oracle interface
+  - Wraps `FMOracleModel` for configuration validation
+  - Delegates to underlying checker for `is_valid(assignments)`
+  - Provides FM-specific helpers: `get_leaf_features()`, `get_root_feature()`, `get_constraint_descriptions()`
+
 **Critical Requirement**: Feature ID consistency
-- `FeatureModelOracle._build_feature_ids()` uses flamapy's variable mapping (tree traversal order)
-- Stores `FmToPysat.variables` as the authoritative feature-to-SAT-variable source
-- All checkers and solvers must use matching variable IDs
+- `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)
+- Source of truth: `FmToPysat.variables` from FM→SAT conversion
+- Ensures feature_ids match SAT variable IDs in CNF clauses
 - **Never** sort feature IDs alphabetically — breaks consistency with SAT clause literals
 
 **Conventions**:
 - All oracles inherit from unified `Oracle` ABC (no separate hierarchies)
-- `FeatureModelOracle`: Standard implementation for FM validation
+- `FeatureModelOracle`: Standard implementation for FM validation (wraps `FMOracleModel`)
 - `UserPromptOracle`: Interactive human-in-the-loop oracle
 - `CachedOracle`: Wrapper for performance (transparent caching)
 - Use `ExampleProvider` for batch example generation

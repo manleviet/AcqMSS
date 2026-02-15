@@ -68,6 +68,11 @@ class DiagnosisModel(PySATModel):
         self._task: Optional[DiagnosisTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
 
+    @property
+    def use_incremental(self) -> bool:
+        """Whether to use incremental solver."""
+        return self._use_incremental
+
     def add_clause_to_map(self, description: str, clauses: List[List]) -> None:
         """Add clauses with description to constraint map."""
         self.constraint_map[description] = clauses
