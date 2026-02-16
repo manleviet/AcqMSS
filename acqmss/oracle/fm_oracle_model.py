@@ -12,11 +12,7 @@ from typing import Dict, List, Optional
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 
 from explanation.models import DiagnosisTask, DescriptionProvider
-from explanation.models.task_preparation import PreparationOutput, prepare_kb
-
-# Each FM constraint produces a pair of assumptions (original + negated),
-# so we stride by 2 to select only original constraint assumptions for set_c.
-_ASSUMPTION_PAIR_STRIDE = 2
+from explanation.models.task_preparation import PreparationOutput, prepare_kb, _ASSUMPTION_PAIR_STRIDE
 
 
 class FMOracleModel:
