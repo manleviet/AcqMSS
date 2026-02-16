@@ -15,6 +15,7 @@ import logging
 
 from acqmss.algorithms.congen import ConGen
 from acqmss.algorithms.congen_model_builder import ConGenModelBuilder
+from acqmss.oracle import FeatureModelOracle
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import Profiler
 
@@ -109,11 +110,14 @@ class ConGenRunner:
         self.solver_name = solver_name
         self.is_incremental = is_incremental
 
-        # Build model once (without examples — will use prepare() per fold)
+        # Build model (bias only)
         self.model = (ConGenModelBuilder
-                      .from_bias_and_fm_uvl(bias_path, fm_path)
+                      .from_bias(bias_path)
                       .use_incremental(is_incremental)
                       .build())
+
+        # Create oracle (reused across folds)
+        self.oracle = FeatureModelOracle(fm_path, use_incremental=False)
 
         # Keep original bias order for shuffle restore
         self._original_constraint_order = list(self.model.constraint_map.keys())
@@ -157,6 +161,7 @@ class ConGenRunner:
 
             # Prepare for this fold's examples (runs GenerateNE)
             self.model.prepare(
+                oracle=self.oracle,
                 positive_examples=positive_examples,
                 negative_examples=negative_examples
             )
@@ -223,3 +228,8 @@ class ConGenRunner:
                       result.n_kb, runtime_ms, consistency_checks)
 
         return run_result
+
+    def cleanup(self):
+        """Release oracle resources."""
+        if hasattr(self, 'oracle') and self.oracle is not None:
+            self.oracle.cleanup()

@@ -118,6 +118,10 @@ class FeatureModelOracle(Oracle):
         """Get number of FM constraints in ground truth."""
         return len(self._oracle_model.constraint_map)
 
+    def get_next_tseitin_var(self) -> int:
+        """Get starting Tseitin variable ID from FM model."""
+        return self._oracle_model.next_tseitin_var
+
     def get_constraint_descriptions(self) -> Set[str]:
         """Extract constraint descriptions from FM (cached).
 

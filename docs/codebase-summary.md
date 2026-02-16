@@ -19,10 +19,10 @@ Primary constraint discovery algorithms:
 | `congen.py` | 228 | ConGen orchestration (direct params, no task object) |
 | `acqmss.py` | 104 | ACQMSS: divide-and-conquer MSS finding |
 | `reduce.py` | 155 | REDUCE: redundancy elimination via consistency checking |
-| `generate_ne.py` | 193 | GenerateNE: negated example generation (called by ConGenModel.prepare()) |
+| `generate_ne.py` | 193 | GenerateNE: negated example generation (internal to ConGenModel.prepare()) |
 | `task_preparation.py` | 435 | Task hierarchy (DiagnosisTask → TestCaseTask → ConGenTask) + unified prep |
-| `congen_model.py` | 186 | ConGenModel - CheckerModel protocol, self-preparing with prepare() |
-| `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern (mirrors DiagnosisModelBuilder) |
+| `congen_model.py` | 186 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Call prepare(oracle) before use |
+| `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern. from_bias() returns unprepared model |
 
 **Interactive Sub-package** (`interactive/`, 6 files, ~1,950 LOC):
 
@@ -64,9 +64,9 @@ Sampling strategies, example generation, and query generation for learning:
 **Oracle Sub-package** (`acqmss/oracle/`, 8 files, ~900 LOC):
 
 | File | LOC | Purpose |
-|------|-----|---------| 
+|------|-----|---------|
 | `base.py` | 47 | Oracle ABC: unified oracle interface for membership queries |
-| `fm_oracle.py` | 144 | FeatureModelOracle: delegates to FMOracleModel, lazy FM + cached descriptions |
+| `fm_oracle.py` | 144 | FeatureModelOracle: delegates to FMOracleModel, lazy FM + cached descriptions. Has `get_next_tseitin_var()` |
 | `fm_oracle_model.py` | 268 | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol |
 | `constraint_description.py` | 120 | CTC description extraction from FM (requires/excludes/hierarchical) |
 | `user_prompt.py` | 100+ | UserPromptOracle: interactive human-in-the-loop oracle |
@@ -86,7 +86,9 @@ Sampling strategies, example generation, and query generation for learning:
 
 5. **CheckerModel Protocol**: `FMOracleModel` and `ConGenModel` implement `get_kb()`, `get_assumptions()`, `use_incremental` for compatibility with `CheckerFactory`.
 
-6. **Builder Pattern**: ConGenModelBuilder encapsulates file loading, model construction, and prepare() invocation (mirrors DiagnosisModelBuilder).
+6. **Builder Pattern**: ConGenModelBuilder encapsulates bias loading and builder configuration. Calls to `build()` return unprepared models (no FM fields). Call `prepare(oracle, examples)` to prepare for use.
+
+7. **Oracle Separation**: Oracle created independently and passed to `model.prepare()`. Enables cross-validation reuse without rebuilding model.
 
 #### acqmss/eval/ — Evaluation Framework (~3,700 LOC, 13 files)
 
@@ -303,17 +305,15 @@ CONGEN and QuAcq learning results:
 | tests/ | ~3,500+ | 8 | 437 | ✅ Comprehensive coverage |
 | **Total** | **~22,540+** | **~106** | **~212** | ✅ **Production ready** |
 
-**Recent Changes** (FMOracleModel Migration - commit 012a9db):
-- **Replaced `OracleModel` with `FMOracleModel`**: New class with assumption-guarded FM clauses for incremental checker integration
-- **FeatureModelOracle refactored**: Now delegates to `FMOracleModel` instead of building CNF internally
-- **ConGenTaskPreparation enhanced**: Reserves ID slots for FM constraints and variable assignments
-- **NEResult simplified**: Removed `assumption_ids`, `neg_map`; added `set_neg_tv` (list form)
-- **GenerateNE internalized**: Now called by `ConGenModel.prepare()` (no longer caller-invoked)
-- **`get_cnf_clauses()` fixed**: Returns raw FM CNF (no assumption guards) via `FMOracleModel.get_raw_fm_clauses()`
-- **`is_valid()` aligned**: Signature now `is_valid(assignments: Dict[str, bool])` across Oracle implementations
-- QueryGenerator moved from `acqmss/algorithms/interactive/` to `acqmss/example_generators/`
-- ExampleProvider moved from `acqmss/oracle/` to `acqmss/example_generators/`
-- Both classes now have canonical imports from `acqmss.example_generators`
+**Recent Changes** (Oracle Extraction Refactor - latest):
+- **ConGenModel**: Now pure data container (bias + solver config only). No FM/oracle fields.
+- **ConGenModel.prepare(oracle, pos_examples, neg_examples)**: Signature changed. Oracle passed as parameter, not stored.
+- **ConGenModelBuilder.from_bias(path)**: Simplified signature (replaces `from_bias_and_fm_uvl()`/`from_bias_and_fm_fide()`). Returns unprepared model.
+- **GenerateNE internalized**: Now called only by `ConGenModel.prepare()`. Callers no longer invoke directly.
+- **FeatureModelOracle.get_next_tseitin_var() -> int**: New method to retrieve starting Tseitin variable ID from FM model.
+- **ConGenRunner pattern**: Creates oracle in `__init__`, reuses across CV folds for efficiency.
+- **Cross-validation reuse**: Build model once, create oracle once, prepare per fold instead of rebuilding.
+- Previous changes (FMOracleModel, assumption-guarded clauses, etc.) remain in place.
 
 ## Build & Test Commands
 

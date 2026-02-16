@@ -48,15 +48,25 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     Returns:
         Tuple of (checker, task, model, profiler, root_id)
     """
+    from acqmss.examples import ExampleIO
+
     profiler = get_global_profiler()
+
+    # Create oracle
+    oracle = FeatureModelOracle(fm_path, use_incremental=False)
+
+    # Build model (bias only)
     model = (ConGenModelBuilder
-             .from_bias_and_fm_uvl(bias_path, fm_path)
-             .with_examples(examples_path)
+             .from_bias(bias_path)
              .use_incremental(is_incremental)
              .build())
 
-    # Get root_id from model for test assertions
-    oracle = FeatureModelOracle(fm_path)
+    # Load examples and prepare with oracle
+    examples = ExampleIO.load_json(examples_path)
+    pos = [e.assignments for e in examples.positive]
+    neg = [e.assignments for e in examples.negative]
+    model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
+
     root_name = oracle.get_root_feature()
     root_id = model.variables[root_name]
 

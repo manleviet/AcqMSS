@@ -20,6 +20,8 @@ except ImportError:
     import tomli as tomllib
 
 from acqmss.algorithms import ConGen, ConGenModelBuilder, resolve_congen_names
+from acqmss.oracle import FeatureModelOracle
+from acqmss.examples import ExampleIO
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import get_global_profiler
 
@@ -89,6 +91,7 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         True if successful, False otherwise
     """
     checker = None
+    oracle = None
     try:
         model_name = Path(model_config.path).stem
         sampling_type = extract_sampling_type(model_config.examples)
@@ -100,15 +103,22 @@ def process_model(model_config: ModelConfig, output_dir: Path,
             print(f"  Examples: {model_config.examples}")
             print(f"  Mode: {'incremental' if is_incremental else 'non-incremental'}")
 
-        # Build model via builder (loads bias, FM, examples, runs prepare)
         profiler = get_global_profiler()
+
+        # Build model (bias only)
         congen_model = (ConGenModelBuilder
-                        .from_bias_and_fm_uvl(model_config.bias, model_config.path)
-                        .with_examples(model_config.examples)
+                        .from_bias(model_config.bias)
                         .use_incremental(is_incremental)
-                        .with_solver(solver_name)
-                        .with_profiler(profiler)
                         .build())
+
+        # Create oracle
+        oracle = FeatureModelOracle(model_config.path, use_incremental=False)
+
+        # Load examples and prepare
+        examples = ExampleIO.load_json(model_config.examples)
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        congen_model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
 
         if verbose:
             print(f"  Bias constraints: {len(congen_model.constraint_map)}")
@@ -160,6 +170,8 @@ def process_model(model_config: ModelConfig, output_dir: Path,
     finally:
         if checker is not None:
             checker.cleanup()
+        if oracle is not None:
+            oracle.cleanup()
 
 
 def main():

@@ -94,14 +94,6 @@ class Bias:
         return clauses
 
     @property
-    def root_feature(self) -> Optional[str]:
-        """Assume the root feature is the one with ID 1 (if exists)"""
-        for f in self.features:
-            if f.id == 1:
-                return f.name
-        return self.features[0].name if self.features else None
-
-    @property
     def feature_ids(self) -> Dict[str, int]:
         """Feature name to SAT variable ID mapping."""
         return {f.name: f.id for f in self.features}

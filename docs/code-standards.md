@@ -271,19 +271,24 @@ class ConGen:
 
 
 # Usage with ConGenModelBuilder (fluent pattern)
+# 1. Build unprepared model (no FM dependency)
 model = (ConGenModelBuilder
-         .from_bias_and_fm_fide('data/bias/model.json', 'data/fms/model.uvl')
-         .with_examples('data/examples/examples.json')
+         .from_bias('data/bias/model.json')
          .use_incremental(True)
-         .with_solver('glucose4')
-         .build())  # Calls prepare() internally (includes GenerateNE)
+         .build())
 
-# Create checker from model (CheckerModel protocol)
+# 2. Create oracle separately
+oracle = FeatureModelOracle('data/fms/model.uvl')
+
+# 3. Prepare model with examples (GenerateNE called internally)
+model.prepare(oracle, positive_examples=pos, negative_examples=neg)
+
+# 4. Create checker from model (CheckerModel protocol)
 from explanation.operations.algorithms.checker_factory import CheckerFactory
 
 checker = CheckerFactory.create_from_model(model, profiler)
 
-# Run ConGen with direct params
+# 5. Run ConGen
 congen = ConGen(checker, profiler)
 result = congen.acquire(
     set_b=model.task.set_c,
@@ -292,6 +297,14 @@ result = congen.acquire(
     set_neg_tv=model.task.set_neg_tv,
     negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
 )
+
+# For cross-validation: build once, prepare per fold
+model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
+oracle = FeatureModelOracle('data/fms/model.uvl')
+for fold_pos, fold_neg in folds:
+    model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
+    checker = CheckerFactory.create_from_model(model, profiler)
+    # Use model.task for this fold
 ```
 
 **Benefits**:
@@ -431,6 +444,7 @@ checker = CheckerFactory.create_from_model(model)
   - Wraps `FMOracleModel` for configuration validation
   - Delegates to underlying checker for `is_valid(assignments)`
   - Provides FM-specific helpers: `get_leaf_features()`, `get_root_feature()`, `get_constraint_descriptions()`
+  - **New**: `get_next_tseitin_var() -> int` returns starting Tseitin variable ID from FM model
 
 **Critical Requirement**: Feature ID consistency
 - `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)

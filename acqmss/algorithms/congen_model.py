@@ -1,45 +1,47 @@
 """
 Model for ConGen algorithm.
 
+Pure data container for bias constraints and solver config.
+Oracle injected at prepare() time — model has no FM dependency.
+
 Uses existing classes from explanation module:
 - Assignment, TestCase, TestSuite from explanation.models.testsuite
 - TaskInput, DescriptionProvider from explanation.models.task_preparation
 
 ConGenModel uses composition to delegate task preparation to ConGenTaskPreparation.
-Call prepare() before accessing task or description_provider.
+Call prepare(oracle) before accessing task or description_provider.
 """
 
-from typing import Dict, List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
-from ..oracle import FeatureModelOracle
+
+if TYPE_CHECKING:
+    from ..oracle import FeatureModelOracle
 
 
 class ConGenModel:
-    """Model for ConGen algorithm.
+    """Pure data container for ConGen algorithm.
 
-    Uses composition to delegate task preparation to ConGenTaskPreparation.
-    Call prepare() before accessing task or description_provider.
+    Holds bias constraints, variables, and solver config.
+    Oracle injected at prepare() time — no FM dependency.
 
-    Unlike DiagnosisModel, this doesn't require a feature model and works
-    directly with bias constraints.
+    Call prepare(oracle) before accessing task or description_provider.
     """
 
     def __init__(self) -> None:
-        self._fm_path: Optional[str] = None
-        self._oracle: Optional[FeatureModelOracle] = None
-
         # map clauses to bias relationships/constraint
         self.constraint_map: Dict[str, List[List[int]]] = {}
         # map negated clauses to bias relationships/constraint (for redundancy detection)
         self.negated_constraint_map: Dict[str, List[List[int]]] = {}
         # map feature names to IDs (for debugging and description generation)
         self.variables: Dict[str, int] = {}
-        # number of fm constraints
-        self.num_fm_constraints: int = 0
         # Used as starting ID for assumption literals to avoid conflicts.
+        # Initialized from oracle at prepare() time.
         self.next_tseitin_var: int = 1000
 
         # CheckerModel protocol attributes
@@ -48,17 +50,9 @@ class ConGenModel:
         # Task input populated by builder or caller before prepare()
         self._task_input: TaskInput = TaskInput()
 
-        # Background knowledge (e.g., root feature IDs) to include in set_b
-        self.root_feature: Optional[str] = None
-        # self.background_knowledge: List[int] = []
-
         # Populated after prepare()
         self._task: Optional[ConGenTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
-
-    @property
-    def oracle(self):
-        return self._oracle
 
     @property
     def use_incremental(self) -> bool:
@@ -169,23 +163,26 @@ class ConGenModel:
 
     def prepare(
             self,
+            oracle: FeatureModelOracle,
             positive_examples: Optional[List[Dict[str, bool]]] = None,
             negative_examples: Optional[List[Dict[str, bool]]] = None
     ) -> ConGenTask:
         """Prepare ConGen task including GenerateNE.
 
-        If examples provided, updates task_input before preparing.
-        Runs GenerateNE internally (callers no longer need to).
-        Can be called multiple times (e.g., for CV folds) — each call
-        overwrites the previous task state.
+        Oracle injected here — model stays FM-agnostic.
+        Can be called multiple times (e.g., for CV folds).
 
         Args:
+            oracle: Feature model oracle for NE generation and FM metadata
             positive_examples: Optional new E+ (for fold reuse)
             negative_examples: Optional new E- (for fold reuse)
 
         Returns:
             ConGenTask with set_neg_tv already populated.
         """
+        # Initialize next_tseitin_var from oracle
+        self.next_tseitin_var = oracle.get_next_tseitin_var()
+
         # Update task_input if new examples provided
         if positive_examples is not None or negative_examples is not None:
             pos_tc = self._examples_to_testsuite(positive_examples or [])
@@ -196,10 +193,10 @@ class ConGenModel:
                 for_redundancy=True
             )
 
-        # Step 1: Run ConGenTaskPreparation
+        # Run ConGenTaskPreparation with oracle
         from .task_preparation import ConGenTaskPreparation
         preparation = ConGenTaskPreparation()
-        output = preparation.prepare(self)
+        output = preparation.prepare(self, oracle)
 
         assert isinstance(output.task, ConGenTask)
         self._task = output.task

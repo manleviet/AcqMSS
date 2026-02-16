@@ -55,16 +55,15 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 
 ```python
 from acqmss.algorithms import ConGen, ConGenModelBuilder
+from acqmss.oracle import FeatureModelOracle
 from acqmss.algorithms.interactive import QuAcq, InteractiveLearner
 from acqmss.example_generators import QueryGenerator, ExampleProvider
 from explanation.operations.algorithms.checker_factory import CheckerFactory
 
-# Passive learning (recommended pattern)
-model = (ConGenModelBuilder
-         .from_bias_and_fm_fide('data/bias/model.json', 'data/fms/model.uvl')
-         .with_examples('data/examples/examples.json')
-         .use_incremental(True)
-         .build())  # Calls prepare() internally (includes GenerateNE)
+# Passive learning: build model, create oracle, prepare separately
+model = ConGenModelBuilder.from_bias('data/bias/model.json').use_incremental(True).build()
+oracle = FeatureModelOracle('data/fms/model.uvl')
+model.prepare(oracle, positive_examples=pos, negative_examples=neg)  # Calls GenerateNE internally
 
 checker = CheckerFactory.create_from_model(model, profiler)
 congen = ConGen(checker, profiler)
@@ -75,6 +74,13 @@ result = congen.acquire(
    set_neg_tv=model.task.set_neg_tv,
    negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
 )
+
+# For cross-validation: build once, prepare per fold
+model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
+oracle = FeatureModelOracle('data/fms/model.uvl')
+for fold_pos, fold_neg in folds:
+    model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
+    # Use model.task for this fold
 
 # Interactive learning
 learner = InteractiveLearner.from_files(fm_path='model.uvl', bias_path='bias.json')
@@ -91,10 +97,10 @@ examples = ExampleProvider(...)  # Canonical import
    - Process: Check consistency → ACQMSS → REDUCE
    - Output: CONGENResult with KB constraint names and assumption IDs
    - **GenerateNE now called internally by `ConGenModel.prepare()`** (callers no longer invoke directly)
-   - Can be reused across CV folds: `model.prepare(fold_pos_examples, fold_neg_examples)`
+   - Can be reused across CV folds: Call `model.prepare(oracle, fold_pos, fold_neg)` per fold (oracle reused)
 
-2. **GenerateNE** — Create negated examples (model-invoked, simplified API)
-   - **Now invoked internally by `ConGenModel.prepare()`** (no longer caller-invoked)
+2. **GenerateNE** — Create negated examples (internal API, not caller-invoked)
+   - **Invoked only internally by `ConGenModel.prepare()`**
    - Uses QuickXPlain to find minimal conflicts from E⁻
    - Simplified result: `NEResult(new_clauses, set_neg_tv, next_tseitin_var)` (removed `assumption_ids`, `neg_map`)
    - Results merged in-place via inline code in `ConGenModel.prepare()`
@@ -300,6 +306,9 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
 - Input: Pre-collected E+/E- examples
 - No user interaction required
 - Learns constraint KB in one pass (GenerateNE called by `ConGenModel.prepare()`, then ACQMSS → REDUCE)
+- **ConGenModel**: Pure data container (bias + solver config). Oracle injected at `prepare()` time.
+- **Preparation**: `model.prepare(oracle, positive_examples, negative_examples)` generates NE and populates task.
+- **Reusable**: Build once, prepare multiple times per fold for cross-validation without rebuilding.
 - ConGenModel satisfies CheckerModel protocol (`get_kb()`, `get_assumptions()`, solver config)
 - Complexity: O(|B| * SAT checks)
 
@@ -322,20 +331,22 @@ Both paradigms use:
 
 ### ConGen Learning Flow
 ```
-Feature Model (UVL) + Bias + Examples
-    └─→ ConGenModelBuilder (fluent pattern)
-        ├─ from_files(bias_path, fm_path)
-        ├─ with_examples(examples_path)
-        ├─ use_incremental(True/False)
-        └─ build() → ConGenModel
-            ├─ ConGenTaskPreparation: Create unified task structure
-            │   └─ set_kb: CNF with assumption literals
-            │   └─ set_c: Bias assumption IDs
-            │   └─ set_tc: E+ assumption IDs
-            │   └─ e_neg_literals: E- literals
-            └─ ConGenModel.prepare() (called internally)
-                ├─ GenerateNE: E- → NE (assumption IDs)
-                └─ merge_ne_into_task() → set_neg_tv populated
+Bias (JSON) + Feature Model (UVL) + Examples
+    ├─→ ConGenModelBuilder.from_bias(bias_path)
+    │   ├─ .use_incremental(True/False)
+    │   └─ .build() → ConGenModel (unprepared, no FM dependency)
+    │
+    ├─→ FeatureModelOracle.from(fm_path)
+    │   └─ Builds FMOracleModel with assumption-guarded FM clauses
+    │
+    └─→ ConGenModel.prepare(oracle, pos_examples, neg_examples)
+        ├─ GenerateNE: E- → NE (assumption IDs) [internal to prepare()]
+        ├─ ConGenTaskPreparation: Create unified task from bias + NE
+        │   └─ set_kb: CNF with assumption literals
+        │   └─ set_c: Bias assumption IDs
+        │   └─ set_tc: E+ assumption IDs
+        │   └─ set_neg_tv: NE assumption IDs (populated by GenerateNE)
+        └─ Task ready for ConGen
 
     └─→ CheckerFactory.create_from_model(model)
         └─ Returns Incremental or NonIncremental checker
@@ -350,9 +361,11 @@ Result: CONGENResult (KB constraint names + assumption IDs)
         └─ Accuracy/Precision/Recall metrics
 ```
 
-**Mode-Agnostic Design**: ConGen, ACQMSS, and REDUCE contain no `if is_incremental` branching. All data is assumption-based (List[int]); the ConsistencyChecker implementation determines solver lifecycle.
-
-**Builder Pattern**: ConGenModelBuilder encapsulates file loading, model construction, and prepare() invocation. Mirrors DiagnosisModelBuilder pattern.
+**Key Changes**:
+- **ConGenModel**: Pure data container (no FM fields). Build once, prepare multiple times.
+- **Oracle**: Created separately, passed to `prepare()`. Enables CV reuse without rebuilding.
+- **GenerateNE**: Now internal to `prepare()` (callers no longer invoke directly).
+- **Mode-Agnostic Design**: ConGen, ACQMSS, REDUCE contain no solver-mode branching.
 
 ### QuAcq Interactive/Batch Flow
 

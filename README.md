@@ -49,12 +49,19 @@ Learn constraints from positive (valid) and negative (invalid) example configura
 
 ```python
 from acqmss.algorithms import ConGen, ConGenModelBuilder
-from explanation.operations.algorithms.checker import CheckerFactory
+from acqmss.oracle import FeatureModelOracle
+from explanation.operations.algorithms.checker_factory import CheckerFactory
 
-model = (ConGenModelBuilder
-    .from_bias_and_fm_uvl('data/bias/model.json', 'data/fms/model.uvl')
-    .with_examples('data/examples/examples.json')
-    .build())
+# Build model (no FM dependency)
+model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
+
+# Create oracle
+oracle = FeatureModelOracle('data/fms/model.uvl')
+
+# Prepare with examples (calls GenerateNE internally)
+model.prepare(oracle, positive_examples=pos_examples, negative_examples=neg_examples)
+
+# Create checker and run ConGen
 checker = CheckerFactory.create_from_model(model, profiler)
 congen = ConGen(checker, profiler)
 result = congen.acquire(

@@ -1,73 +1,46 @@
 """Builder for creating configured ConGenModel instances.
 
-Mirrors DiagnosisModelBuilder pattern. Encapsulates file loading,
-model creation, and prepare() invocation.
+Handles bias loading and solver config only.
+Oracle creation is the caller's responsibility.
 """
 
 from typing import Dict, List, Optional, Tuple
 
-from flamapy.metamodels.pysat_metamodel.models import PySATModel
-
-from explanation.models import DiagnosisModel
 from .congen_model import ConGenModel
-from ..oracle import FeatureModelOracle
 
 
 class ConGenModelBuilder:
     """Fluent builder for ConGenModel.
 
     Examples:
-        # From files (with examples)
-        model = (ConGenModelBuilder
-            .from_bias_and_fm_uvl('data/bias/model.json', 'data/fms/model.uvl')
-            .with_examples('data/examples/examples.json')
-            .use_incremental(True)
-            .build())
+        # Build model, prepare separately
+        model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
+        oracle = FeatureModelOracle('data/fms/model.uvl')
+        model.prepare(oracle, positive_examples=pos, negative_examples=neg)
 
-        # Without examples (for CV — build once, prepare per fold)
-        model = (ConGenModelBuilder
-            .from_bias_and_fm_uvl('data/bias/model.json', 'data/fms/model.uvl')
-            .use_incremental(True)
-            .build())
-        model.prepare(positive_examples=fold_pos, negative_examples=fold_neg)
+        # For CV: build once, prepare per fold
+        model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
+        oracle = FeatureModelOracle('data/fms/model.uvl')
+        for fold_pos, fold_neg in folds:
+            model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
     """
 
     def __init__(self):
-        # Bias
         self._bias_path: Optional[str] = None
 
-        # Feature Model
-        self._fm_source_type: Optional[str] = None
-        self._fm_path: Optional[str] = None
-
-        # Examples
+        # Examples (optional, for convenience)
         self._examples_path: Optional[str] = None
-
         self._positive_examples: Optional[List[Dict[str, bool]]] = None
         self._negative_examples: Optional[List[Dict[str, bool]]] = None
-
-        # Mode flags - Default is True since need negation bias constraints and NE
-        # self._for_redundancy: bool = True
 
         # Solver configuration
         self._use_incremental: bool = True
 
     @classmethod
-    def from_bias_and_fm_fide(cls, bias_path: str, fide_fm_path: str) -> 'ConGenModelBuilder':
-        """Create builder from bias and FeatureIDE feature model files."""
+    def from_bias(cls, bias_path: str) -> 'ConGenModelBuilder':
+        """Create builder from bias JSON file."""
         builder = cls()
         builder._bias_path = bias_path
-        builder._fm_source_type = 'fide'
-        builder._fm_path = fide_fm_path
-        return builder
-
-    @classmethod
-    def from_bias_and_fm_uvl(cls, bias_path: str, uvl_fm_path: str) -> 'ConGenModelBuilder':
-        """Create builder from bias and UVL feature model files."""
-        builder = cls()
-        builder._bias_path = bias_path
-        builder._fm_source_type = 'uvl'
-        builder._fm_path = uvl_fm_path
         return builder
 
     def with_examples(self, examples_path: str) -> 'ConGenModelBuilder':
@@ -91,48 +64,32 @@ class ConGenModelBuilder:
         return self
 
     def build(self) -> ConGenModel:
-        """Build and return configured ConGenModel.
+        """Build and return configured ConGenModel (unprepared).
 
-        If examples are provided, calls prepare() and returns a fully prepared model.
-        If no examples, returns an unprepared model (for CV — use prepare() per fold).
+        Returns model with bias loaded. Caller must call
+        model.prepare(oracle, pos_examples, neg_examples) before use.
 
         Raises:
-            ValueError: If bias/FM paths missing
+            ValueError: If bias path missing
         """
         self._validate()
 
         from acqmss.bias import BiasIO
 
         bias = BiasIO.load_from_json(self._bias_path)
-        fm_model = self._load_model()
-        oracle = FeatureModelOracle(self._fm_path, use_incremental=False)
 
-        # Build model
         model = ConGenModel()
-        model._fm_path = self._fm_path
-        model._oracle = oracle
-
-        # model.constraint_map, model.negated_constraint_map, model.next_tseitin_var \
-        #     = bias.to_constraint_maps_with_negation()
         model.constraint_map = bias.to_constraint_map()
-        model.next_tseitin_var = fm_model.next_tseitin_var
-
         model.variables = bias.feature_ids
-        model.num_fm_constraints = len(fm_model.constraint_map)
-        model.root_feature = bias.root_feature
         model._use_incremental = self._use_incremental
 
-        # Set examples + prepare only if examples provided
-        if self._has_examples():
-            pos_examples, neg_examples = self._resolve_examples()
-            # model.task_input = TaskInput(
-            #     positive_test_cases=ConGenModel._examples_to_testsuite(pos_examples),
-            #     negative_test_cases=ConGenModel._examples_to_testsuite(neg_examples),
-            #     for_redundancy=True
-            # )
-            model.prepare(positive_examples=pos_examples, negative_examples=neg_examples)
-
         return model
+
+    def get_examples(self) -> Optional[Tuple[List[Dict[str, bool]], List[Dict[str, bool]]]]:
+        """Get resolved examples if any were provided."""
+        if not self._has_examples():
+            return None
+        return self._resolve_examples()
 
     def _has_examples(self) -> bool:
         """Check if examples were provided (file or data)."""
@@ -141,9 +98,8 @@ class ConGenModelBuilder:
 
     def _validate(self) -> None:
         """Validate builder state."""
-        if self._bias_path is None or self._fm_path is None:
-            raise ValueError(
-                "Source must be specified (use from_bias_and_fm_uvl() or from_bias_and_fm_fide())")
+        if self._bias_path is None:
+            raise ValueError("Bias path required (use from_bias())")
 
     def _resolve_examples(self) -> Tuple[List[Dict[str, bool]], List[Dict[str, bool]]]:
         """Load examples from path or return direct data."""
@@ -155,25 +111,3 @@ class ConGenModelBuilder:
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]
         return pos, neg
-
-    def _load_model(self) -> DiagnosisModel:
-        """Load DiagnosisModel from source.
-
-        Uses lazy imports to avoid circular dependencies.
-        """
-        if self._fm_source_type == 'fide':
-            from flamapy.metamodels.fm_metamodel.transformations import FeatureIDEReader
-            from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
-
-            fm = FeatureIDEReader(self._fm_path).transform()
-            return FmToDiagPysat(fm, create_negation=True).transform()
-
-        elif self._fm_source_type == 'uvl':
-            from flamapy.metamodels.fm_metamodel.transformations import UVLReader
-            from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
-
-            fm = UVLReader(self._fm_path).transform()
-            return FmToDiagPysat(fm, create_negation=True).transform()
-
-        raise ValueError(f"Unknown source type: {self._fm_source_type}")
-    

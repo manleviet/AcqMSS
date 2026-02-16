@@ -24,6 +24,7 @@ from .generate_ne import GenerateNE
 if TYPE_CHECKING:
     from explanation.models.testsuite import TestSuite
     from .congen_model import ConGenModel
+    from ..oracle import FeatureModelOracle
 
 
 @dataclass
@@ -102,20 +103,24 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel) -> PreparationOutput:
-        """Prepare ConGen task from model."""
+    def prepare(self, model: ConGenModel, oracle: FeatureModelOracle) -> PreparationOutput:
+        """Prepare ConGen task from model. FM metadata extracted from oracle."""
         result = ConGenTask()
         provider = DescriptionProvider()
         task_input = model.task_input
+
+        # Extract FM metadata from oracle
+        root_feature = oracle.get_root_feature()
+        num_fm_constraints = oracle.get_num_constraints()
 
         # Start assumption IDs after Tseitin variables
         id_assumption = model.next_tseitin_var
 
         # Step 0: Prepare background knowledge (BG) - root constraints
-        id_assumption = _prepare_bg(result, provider, model.variables, model.root_feature, id_assumption)
+        id_assumption = _prepare_bg(result, provider, model.variables, root_feature, id_assumption)
 
         # Reserve IDs for fm constraints and their negations + variable assignments
-        id_assumption = id_assumption + (model.num_fm_constraints - 1) * _ASSUMPTION_PAIR_STRIDE
+        id_assumption = id_assumption + (num_fm_constraints - 1) * _ASSUMPTION_PAIR_STRIDE
         id_assumption = id_assumption + len(model.variables) * _ASSUMPTION_PAIR_STRIDE
 
         # Step 1: Prepare bias constraints as set_c (with negated forms for REDUCE)
@@ -141,7 +146,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         testsuite = task_input.negative_test_cases
         if testsuite is not None and len(testsuite.testcases) > 0:
             id_assumption = self._prepare_negative_examples(
-                result, provider, model, testsuite, id_assumption)
+                result, provider, model, oracle, testsuite, id_assumption)
 
         # Store next available assumption ID
         model.next_tseitin_var = id_assumption
@@ -156,6 +161,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             result: ConGenTask,
             provider: DescriptionProvider,
             model: ConGenModel,
+            oracle: FeatureModelOracle,
             testsuite: TestSuite,
             id_assumption: int
     ) -> int:
@@ -163,9 +169,6 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
 
         Orchestrates: GenerateNE -> combine -> negate -> populate task.
         """
-        oracle = model.oracle
-        if oracle is None:
-            raise ValueError("Oracle required for NE generation from negative examples")
 
         generate_ne = GenerateNE(oracle)
         ne_results, id_assumption = generate_ne.generate(
