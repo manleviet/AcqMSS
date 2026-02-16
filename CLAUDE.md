@@ -4,11 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets) is a Python-based system for constraint acquisition from feature models. It implements:
-- **Diagnosis algorithms**: FastDiag, QuickXPlain, KBDiag, WipeOutR with HSDAG tree search
-- **CONGEN**: Passive/batch constraint acquisition using ACQMSS, REDUCE, and GenerateNE
-- **QuAcq**: Interactive constraint acquisition via membership queries
-- **Evaluation framework**: Cross-validation, accuracy metrics, performance benchmarking
+AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets) — Python system for constraint acquisition from feature models. Two packages: `acqmss/` (acquisition algorithms) + `explanation/` (SAT solver infrastructure).
+
+**Key references** (read on-demand, not duplicated here):
+- `README.md` — Quick start, code examples, project structure
+- `docs/system-architecture.md` — Architecture, data flow, solver modes, performance
+- `docs/codebase-summary.md` — Package structure, file inventory, dependencies
+- `docs/code-standards.md` — Naming, patterns, testing conventions
+- `docs/project-roadmap.md` — Development phases and status
+- `docs/quacq.md` — QuAcq algorithm documentation (IJCAI 2013)
 
 ## Role & Responsibilities
 
@@ -27,6 +31,28 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 **IMPORTANT:** Before you plan or proceed any implementation, always read the `./README.md` file first to get context.
 **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
+
+## Quick Commands
+
+```bash
+# Tests (PYTHONPATH=. required)
+PYTHONPATH=. pytest tests/ -v                        # All tests
+PYTHONPATH=. pytest tests/test_congen.py -v          # Specific file
+PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
+
+# Key apps pattern: PYTHONPATH=. python apps/<script> <toml-config> -v
+# See README.md for full workflow commands
+```
+
+## Gotchas & Conventions
+
+- **PYTHONPATH=.** required for all commands (no `pyproject.toml` with package install)
+- **`neg_c_map` renamed to `negation_map`** across all modules (commit f15200b)
+- **Feature ID source of truth**: flamapy's tree traversal order (NOT alphabetical) — see `docs/system-architecture.md` § "Feature ID Consistency"
+- **GenerateNE**: Called internally by `ConGenModel.prepare()`, not by callers
+- **CheckerModel protocol**: Both `ConGenModel` and `FMOracleModel` implement `get_kb()`, `get_assumptions()`, `use_incremental`
+- **Test control**: `ENABLED_TESTS` and `ENABLED_PARAMS` dicts at top of test files toggle specific tests
+- **Known pytest warnings**: `TestSuiteReader` triggers PytestCollectionWarning (has `__init__`); `pytest.mark.slow` is unregistered
 
 ## Hook Response Protocol
 
@@ -82,155 +108,17 @@ This ensures packages installed by `install.sh` (google-genai, pypdf, etc.) are 
 
 ## Documentation Management
 
-We keep all important docs in `./docs` folder and keep updating them, structure like below:
+We keep all important docs in `./docs` folder and keep updating them:
 
 ```
 ./docs
-├── project-overview-pdr.md
+├── README.md
 ├── code-standards.md
 ├── codebase-summary.md
-├── design-guidelines.md
-├── deployment-guide.md
-├── system-architecture.md
-└── project-roadmap.md
+├── project-overview-pdr.md
+├── project-roadmap.md
+├── quacq.md
+└── system-architecture.md
 ```
 
 **IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in project `./CLAUDE.md`, especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*
-
-## Main Applications
-
-```bash
-# Generate bias files from feature model
-PYTHONPATH=. python apps/generate_bias_config.py data/fms/model.uvl -v
-PYTHONPATH=. python apps/generate_bias_files.py data/bias-config/model.yaml
-
-# Generate test examples
-PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml
-
-# Run ConGen (passive learning)
-PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
-PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml --non-incremental
-
-# Run QuAcq (interactive learning)
-PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v
-PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml --interactive
-
-# Evaluate results
-PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v
-```
-
-## Architecture
-
-### Two Learning Paradigms
-
-**CONGEN (Passive/Batch Learning)**:
-```
-CONGEN(E+, E-, B, BG) → KB
-1: NE ← GENERATENE(E⁻)      # Create negated examples
-2: B′ ← ACQMSS(∅, B, NE, E⁺, BG)  # Find MSS of bias
-3: return REDUCE(B′, NE, BG)  # Remove redundant constraints
-```
-
-**QuAcq (Interactive Learning)**:
-```
-QuAcq(B, BG, Oracle) → KB
-while B is not empty:
-  1. q ← GenerateQuery(KB, B, BG)
-  2. answer ← Oracle.is_valid(q)
-  3. if answer: prune constraints rejecting q
-     else: find conflict, add to KB
-return REDUCE(KB, BG)
-```
-
-### Solver Modes
-
-- **Incremental**: Persistent solver with assumptions (default, efficient for repeated SAT checks)
-- **Non-incremental**: Fresh solver instance per check
-- **SAT4J**: External Java solver via subprocess
-
-### Evaluation Metrics (from Paper Formula 1)
-
-- **Accuracy** = (TP + TN) / (TP + TN + FP + FN) — primary metric
-- **Precision** = TP / (TP + FP)
-- **Recall** = TP / (TP + FN)
-- **F1** = 2 * P * R / (P + R)
-
-Evaluation strategies: `description` (compare constraint descriptions) or `clause` (compare CNF clauses)
-
-## Test Configuration
-
-Tests use `@parameterized.expand` with combinations of incremental/non-incremental modes and with/without profiling. Toggle specific tests via `ENABLED_TESTS` and `ENABLED_PARAMS` dictionaries at the top of test files.
-
-## Key API Patterns
-
-**ConGen usage** (recommended pattern with builder):
-
-```python
-from acqmss.algorithms import ConGen, ConGenModelBuilder
-from explanation.operations.algorithms.checker_factory import CheckerFactory
-
-# Build model (includes prepare() with GenerateNE)
-model = (ConGenModelBuilder
-         .from_bias_and_fm_fide('data/bias/model.json', 'data/fms/model.uvl')
-         .with_examples('data/examples/examples.json')
-         .use_incremental(True)
-         .with_solver('glucose4')
-         .build())  # Calls prepare() internally
-
-# Create checker from model (CheckerModel protocol)
-checker = CheckerFactory.create_from_model(model, profiler)
-
-# Run ConGen with direct params
-congen = ConGen(checker, profiler)
-result = congen.acquire(
-    set_b=model.task.set_c,  # Bias assumption IDs
-    set_bg=model.task.set_b,  # Background assumption IDs
-    set_tc=model.task.set_tc,  # E+ assumption IDs
-    set_neg_tv=model.task.set_neg_tv,  # NE assumption IDs (from prepare())
-    negation_map=model.task.neg_c_map  # Maps assumption ID → negated ID for REDUCE
-)
-```
-
-**CV folds** (build once, prepare per fold):
-
-```python
-from acqmss.algorithms import ConGenModelBuilder
-
-# Build model without examples (unprepared)
-model = (ConGenModelBuilder
-    .from_bias_and_fm_uvl('data/bias/model.json', 'data/fms/model.uvl')
-    .use_incremental(True)
-    .with_solver('glucose4')
-    .build())
-
-# Per fold: prepare with fold-specific examples
-model.prepare(
-    positive_examples=fold_pos,
-    negative_examples=fold_neg,
-    profiler=profiler
-)
-# Continue as above with CheckerFactory and ConGen.acquire()
-```
-
-**QuAcq usage**:
-```python
-from acqmss.algorithms.interactive import InteractiveLearner
-
-learner = InteractiveLearner.from_files(fm_path='model.uvl', bias_path='bias.json')
-result = learner.learn(mode='automated', max_queries=1000)
-evaluation = learner.evaluate(result)
-```
-
-**Diagnosis operations**:
-```python
-from explanation.operations import PySATDiagnosisBuilder, PySATTestcaseBuilder
-
-# FastDiag
-operation = PySATDiagnosisBuilder.for_diagnosis().with_max_diagnoses(5).build()
-
-# QuickXPlain
-operation = PySATDiagnosisBuilder.for_conflict().with_max_conflicts(3).build()
-
-# KBDiag
-operation = PySATTestcaseBuilder.for_debugging().with_max_diagnoses(1).build()
-```

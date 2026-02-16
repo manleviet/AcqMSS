@@ -59,7 +59,7 @@ class InteractiveMetrics:
 
 
 @dataclass
-class CONGENMetrics:
+class ConGenMetrics:
     """
     Metrics for ConGen (passive) constraint acquisition.
 
@@ -118,7 +118,7 @@ class ComparisonResult:
         kb_size_diff: QuAcq KB size - ConGen KB size
     """
     model_name: str
-    congen: CONGENMetrics
+    congen: ConGenMetrics
     quacq: InteractiveMetrics
 
     @property
@@ -257,7 +257,7 @@ class InteractiveEvaluator:
             self,
             result_path: str,
             examples_path: str
-    ) -> CONGENMetrics:
+    ) -> ConGenMetrics:
         """
         Evaluate a ConGen result.
 
@@ -298,7 +298,7 @@ class InteractiveEvaluator:
         # Extract sampling strategy from filename
         sampling_strategy = Path(examples_path).stem.split('_')[-1]
 
-        return CONGENMetrics(
+        return ConGenMetrics(
             n_examples=len(positive) + len(negative),
             n_positive=len(positive),
             n_negative=len(negative),
