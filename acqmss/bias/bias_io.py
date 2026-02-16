@@ -113,15 +113,7 @@ class BiasIO:
                 for f in sorted(bias.features, key=lambda f: f.id)
             ],
             'constraints': [
-                {
-                    'id': c.id,
-                    'operator': c.operator.value if c.operator else None,
-                    'parent': c.parent.name if c.parent else None,
-                    'children': [ch.name for ch in c.children],
-                    'clauses': c.clauses,
-                    'description': c.description
-                }
-                for c in bias.constraints
+                BiasIO._constraint_to_dict(c) for c in bias.constraints
             ]
         }
 
@@ -158,22 +150,38 @@ class BiasIO:
         feature_map = {f.name: f for f in features}
 
         # Reconstruct constraints
-        constraints = []
-        for c_data in data['constraints']:
-            parent = feature_map.get(c_data['parent']) if c_data['parent'] else None
-            children = [feature_map[name] for name in c_data['children']]
-
-            constraint = Constraint(
-                id=c_data['id'],
-                operator=OperatorType(c_data['operator']) if c_data['operator'] else None,
-                parent=parent,
-                children=children,
-                clauses=c_data['clauses'],
-                description=c_data['description']
-            )
-            constraints.append(constraint)
+        constraints = [
+            BiasIO._constraint_from_dict(c_data, feature_map)
+            for c_data in data['constraints']
+        ]
 
         return Bias(constraints=constraints, features=features)
+
+    @staticmethod
+    def _constraint_to_dict(constraint: Constraint) -> dict:
+        """Serialize a Constraint to a JSON-compatible dict."""
+        return {
+            'id': constraint.id,
+            'operator': constraint.operator.value if constraint.operator else None,
+            'parent': constraint.parent.name if constraint.parent else None,
+            'children': [ch.name for ch in constraint.children],
+            'clauses': constraint.clauses,
+            'description': constraint.description
+        }
+
+    @staticmethod
+    def _constraint_from_dict(c_data: dict, feature_map: dict) -> Constraint:
+        """Deserialize a Constraint from a JSON dict and feature lookup map."""
+        parent = feature_map.get(c_data['parent']) if c_data['parent'] else None
+        children = [feature_map[name] for name in c_data['children']]
+        return Constraint(
+            id=c_data['id'],
+            operator=OperatorType(c_data['operator']) if c_data['operator'] else None,
+            parent=parent,
+            children=children,
+            clauses=c_data['clauses'],
+            description=c_data['description']
+        )
 
     @staticmethod
     def save_statistics(bias: Bias, filepath: str):

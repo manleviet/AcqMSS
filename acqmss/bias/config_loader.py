@@ -20,6 +20,9 @@ from .data_structures import (
 )
 
 
+_MAX_CROSS_TREE_FEATURES_WARNING = 20
+
+
 class BiasConfigLoader:
     """Load YAML configuration for bias generation"""
 
@@ -82,47 +85,8 @@ class BiasConfigLoader:
         if not isinstance(leaf_features, list):
             raise ValueError("Field 'leaf_features' must be a list")
 
-        # Parse hierarchical candidates
-        hierarchical_candidates = []
-        for hc in data.get('hierarchical_candidates', []):
-            # Validate required fields
-            if 'parent' not in hc:
-                raise KeyError("'parent' field missing in hierarchical candidate")
-            if 'children' not in hc:
-                raise KeyError("'children' field missing in hierarchical candidate")
-            if 'relationship_type' not in hc:
-                raise KeyError("'relationship_type' field missing in hierarchical candidate")
-
-            # Validate relationship type
-            rel_type_str = hc['relationship_type']
-            if rel_type_str not in ['binary', 'group']:
-                raise ValueError(f"Invalid relationship_type: {rel_type_str}. Must be 'binary' or 'group'")
-
-            candidate = HierarchicalCandidate(
-                parent=hc['parent'],
-                children=hc['children'] if isinstance(hc['children'], list) else [hc['children']],
-                relationship_type=RelationshipType(rel_type_str)
-            )
-            hierarchical_candidates.append(candidate)
-
-        # Parse cross-tree config
-        ct_data = data.get('cross_tree_candidates', {})
-
-        # Parse cross_tree_mode (default: leaf)
-        mode_str = ct_data.get('cross_tree_mode', 'leaf')
-        if mode_str not in ['all', 'leaf', 'extracted']:
-            raise ValueError(f"Invalid cross_tree_mode: {mode_str}. Must be 'all', 'leaf', or 'extracted'")
-
-        # Parse cross_tree_features (for extracted mode)
-        cross_tree_features = ct_data.get('cross_tree_features', [])
-        if not isinstance(cross_tree_features, list):
-            raise ValueError("Field 'cross_tree_features' must be a list")
-
-        cross_tree_config = CrossTreeConfig(
-            cross_tree_mode=CrossTreeMode(mode_str),
-            specific_pairs=ct_data.get('specific_pairs', []),
-            cross_tree_features=cross_tree_features
-        )
+        hierarchical_candidates = BiasConfigLoader._parse_hierarchical_candidates(data)
+        cross_tree_config = BiasConfigLoader._parse_cross_tree_config(data)
 
         return BiasConfig(
             name=data.get('name', 'Unnamed'),
@@ -130,6 +94,48 @@ class BiasConfigLoader:
             leaf_features=leaf_features,
             hierarchical_candidates=hierarchical_candidates,
             cross_tree_config=cross_tree_config
+        )
+
+    @staticmethod
+    def _parse_hierarchical_candidates(data: dict) -> list:
+        """Parse hierarchical candidates from raw YAML data."""
+        candidates = []
+        for hc in data.get('hierarchical_candidates', []):
+            if 'parent' not in hc:
+                raise KeyError("'parent' field missing in hierarchical candidate")
+            if 'children' not in hc:
+                raise KeyError("'children' field missing in hierarchical candidate")
+            if 'relationship_type' not in hc:
+                raise KeyError("'relationship_type' field missing in hierarchical candidate")
+
+            rel_type_str = hc['relationship_type']
+            if rel_type_str not in ['binary', 'group']:
+                raise ValueError(f"Invalid relationship_type: {rel_type_str}. Must be 'binary' or 'group'")
+
+            candidates.append(HierarchicalCandidate(
+                parent=hc['parent'],
+                children=hc['children'] if isinstance(hc['children'], list) else [hc['children']],
+                relationship_type=RelationshipType(rel_type_str)
+            ))
+        return candidates
+
+    @staticmethod
+    def _parse_cross_tree_config(data: dict) -> CrossTreeConfig:
+        """Parse cross-tree configuration from raw YAML data."""
+        ct_data = data.get('cross_tree_candidates', {})
+
+        mode_str = ct_data.get('cross_tree_mode', 'leaf')
+        if mode_str not in ['all', 'leaf', 'extracted']:
+            raise ValueError(f"Invalid cross_tree_mode: {mode_str}. Must be 'all', 'leaf', or 'extracted'")
+
+        cross_tree_features = ct_data.get('cross_tree_features', [])
+        if not isinstance(cross_tree_features, list):
+            raise ValueError("Field 'cross_tree_features' must be a list")
+
+        return CrossTreeConfig(
+            cross_tree_mode=CrossTreeMode(mode_str),
+            specific_pairs=ct_data.get('specific_pairs', []),
+            cross_tree_features=cross_tree_features
         )
 
     @staticmethod
@@ -187,7 +193,7 @@ class BiasConfigLoader:
 
         # Check cross-tree features based on mode
         cross_tree_features = config.get_cross_tree_features()
-        if len(cross_tree_features) > 20:
+        if len(cross_tree_features) > _MAX_CROSS_TREE_FEATURES_WARNING:
             n_features = len(cross_tree_features)
             expected_ct = n_features * (n_features - 1) // 2 * 3  # (n choose 2) * 3
             mode = config.cross_tree_config.cross_tree_mode.value

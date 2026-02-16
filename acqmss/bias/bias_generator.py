@@ -18,6 +18,11 @@ from .data_structures import (
 )
 from .clause_generator import ConstraintClauseGenerator
 
+# Operators that belong to hierarchical (parent-child) constraints.
+# Cross-tree operators (REQUIRES, EXCLUDES) are everything else.
+_HIERARCHICAL_OPS = {OperatorType.MANDATORY, OperatorType.OPTIONAL,
+                     OperatorType.ALTERNATIVE, OperatorType.OR}
+
 
 class BiasGenerator:
     """
@@ -38,6 +43,7 @@ class BiasGenerator:
         self.feature_ids = config.get_feature_ids()
         self.constraint_counter = 0
         self.clause_gen = ConstraintClauseGenerator()
+        self._cached_bias = None
 
     def _next_constraint_id(self) -> str:
         """Generate next constraint ID (c1, c2, ...)"""
@@ -134,83 +140,85 @@ class BiasGenerator:
         Returns:
             List of Constraint objects
         """
-        constraints = []
         allowed_ops = self.config.cross_tree_config.get_allowed_operators()
-        cross_tree_mode = self.config.cross_tree_config.cross_tree_mode
-
-        # Use specific pairs if provided
         if self.config.cross_tree_config.specific_pairs:
-            for pair in self.config.cross_tree_config.specific_pairs:
-                feature_a = self._get_feature_obj(pair[0])
-                feature_b = self._get_feature_obj(pair[1])
+            return self._generate_from_specific_pairs(allowed_ops)
+        return self._generate_from_combinations(allowed_ops)
 
-                for op_name in allowed_ops:
-                    op_type = OperatorType(op_name)
+    def _generate_from_specific_pairs(self, allowed_ops: list) -> List[Constraint]:
+        """Generate cross-tree constraints from explicitly listed pairs."""
+        constraints = []
+        for pair in self.config.cross_tree_config.specific_pairs:
+            feature_a = self._get_feature_obj(pair[0])
+            feature_b = self._get_feature_obj(pair[1])
 
-                    if op_type == OperatorType.REQUIRES:
-                        clauses = self.clause_gen.requires(feature_a, feature_b)
-                    else:  # EXCLUDES
-                        clauses = self.clause_gen.excludes(feature_a, feature_b)
+            for op_name in allowed_ops:
+                op_type = OperatorType(op_name)
 
-                    if op_type == OperatorType.EXCLUDES:
-                        excl_names = sorted([feature_a.name, feature_b.name])
-                        desc = f"{excl_names[0]} {op_type.value} {excl_names[1]}"
-                    else:
-                        desc = f"{feature_a.name} {op_type.value} {feature_b.name}"
+                if op_type == OperatorType.REQUIRES:
+                    clauses = self.clause_gen.requires(feature_a, feature_b)
+                else:  # EXCLUDES
+                    clauses = self.clause_gen.excludes(feature_a, feature_b)
 
+                if op_type == OperatorType.EXCLUDES:
+                    excl_names = sorted([feature_a.name, feature_b.name])
+                    desc = f"{excl_names[0]} {op_type.value} {excl_names[1]}"
+                else:
+                    desc = f"{feature_a.name} {op_type.value} {feature_b.name}"
+
+                constraints.append(Constraint(
+                    id=self._next_constraint_id(),
+                    operator=op_type,
+                    parent=feature_a,
+                    children=[feature_b],
+                    clauses=clauses,
+                    description=desc
+                ))
+        return constraints
+
+    def _generate_from_combinations(self, allowed_ops: list) -> List[Constraint]:
+        """Generate cross-tree constraints from all feature pair combinations."""
+        constraints = []
+        cross_tree_feature_names = self.config.get_cross_tree_features()
+        cross_tree_features = [self._get_feature_obj(name) for name in cross_tree_feature_names]
+
+        for feature_a, feature_b in combinations(cross_tree_features, 2):
+            for op_name in allowed_ops:
+                op_type = OperatorType(op_name)
+
+                if op_type == OperatorType.REQUIRES:
+                    # Generate BOTH directions for requires
+                    clauses_ab = self.clause_gen.requires(feature_a, feature_b)
+                    constraints.append(Constraint(
+                        id=self._next_constraint_id(),
+                        operator=op_type,
+                        parent=feature_a,
+                        children=[feature_b],
+                        clauses=clauses_ab,
+                        description=f"{feature_a.name} requires {feature_b.name}"
+                    ))
+
+                    clauses_ba = self.clause_gen.requires(feature_b, feature_a)
+                    constraints.append(Constraint(
+                        id=self._next_constraint_id(),
+                        operator=op_type,
+                        parent=feature_b,
+                        children=[feature_a],
+                        clauses=clauses_ba,
+                        description=f"{feature_b.name} requires {feature_a.name}"
+                    ))
+
+                elif op_type == OperatorType.EXCLUDES:
+                    clauses = self.clause_gen.excludes(feature_a, feature_b)
+                    excl_names = sorted([feature_a.name, feature_b.name])
                     constraints.append(Constraint(
                         id=self._next_constraint_id(),
                         operator=op_type,
                         parent=feature_a,
                         children=[feature_b],
                         clauses=clauses,
-                        description=desc
+                        description=f"{excl_names[0]} excludes {excl_names[1]}"
                     ))
-        else:
-            # Generate pairs based on cross_tree_mode
-            cross_tree_feature_names = self.config.get_cross_tree_features()
-            cross_tree_features = [self._get_feature_obj(name) for name in cross_tree_feature_names]
-
-            for feature_a, feature_b in combinations(cross_tree_features, 2):
-                for op_name in allowed_ops:
-                    op_type = OperatorType(op_name)
-
-                    if op_type == OperatorType.REQUIRES:
-                        # Generate BOTH directions for requires
-                        # a → b
-                        clauses_ab = self.clause_gen.requires(feature_a, feature_b)
-                        constraints.append(Constraint(
-                            id=self._next_constraint_id(),
-                            operator=op_type,
-                            parent=feature_a,
-                            children=[feature_b],
-                            clauses=clauses_ab,
-                            description=f"{feature_a.name} requires {feature_b.name}"
-                        ))
-
-                        # b → a
-                        clauses_ba = self.clause_gen.requires(feature_b, feature_a)
-                        constraints.append(Constraint(
-                            id=self._next_constraint_id(),
-                            operator=op_type,
-                            parent=feature_b,
-                            children=[feature_a],
-                            clauses=clauses_ba,
-                            description=f"{feature_b.name} requires {feature_a.name}"
-                        ))
-
-                    elif op_type == OperatorType.EXCLUDES:
-                        # Excludes is symmetric, only one direction
-                        clauses = self.clause_gen.excludes(feature_a, feature_b)
-                        excl_names = sorted([feature_a.name, feature_b.name])
-                        constraints.append(Constraint(
-                            id=self._next_constraint_id(),
-                            operator=op_type,
-                            parent=feature_a,
-                            children=[feature_b],
-                            clauses=clauses,
-                            description=f"{excl_names[0]} excludes {excl_names[1]}"
-                        ))
 
         return constraints
 
@@ -247,12 +255,16 @@ class BiasGenerator:
             features=features
         )
 
+        self._cached_bias = bias
         print(f"Total bias size: {len(bias.constraints)} constraints")
         return bias
 
     def get_statistics(self) -> Dict[str, any]:
         """
         Get statistics about the bias that will be generated.
+
+        Uses cached bias if available (after generate_bias() was called),
+        otherwise generates fresh to avoid counter drift.
 
         Returns:
             Dictionary with statistics:
@@ -266,10 +278,11 @@ class BiasGenerator:
         """
         from collections import Counter
 
-        # Generate to count
-        hierarchical = self.generate_hierarchical_constraints()
-        cross_tree = self.generate_cross_tree_constraints()
-        all_constraints = hierarchical + cross_tree
+        bias = self._cached_bias if self._cached_bias else self.generate_bias()
+        all_constraints = bias.constraints
+
+        hierarchical = [c for c in all_constraints if c.operator in _HIERARCHICAL_OPS]
+        cross_tree = [c for c in all_constraints if c.operator not in _HIERARCHICAL_OPS]
 
         op_counts = Counter(c.operator.value for c in all_constraints)
 
