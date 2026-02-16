@@ -14,6 +14,10 @@ from flamapy.metamodels.configuration_metamodel.models import Configuration
 from explanation.models import DiagnosisTask, DescriptionProvider
 from explanation.models.task_preparation import PreparationOutput, prepare_kb
 
+# Each FM constraint produces a pair of assumptions (original + negated),
+# so we stride by 2 to select only original constraint assumptions for set_c.
+_ASSUMPTION_PAIR_STRIDE = 2
+
 
 class FMOracleModel:
     """Model for Oracle FM validation via ConsistencyChecker.
@@ -102,6 +106,15 @@ class FMOracleModel:
         return [clause for clauses in self.constraint_map.values()
                 for clause in clauses]
 
+    def _compute_base_set_c(self) -> list:
+        """Compute base set_c from FM constraint assumptions (excluding feature assignments).
+
+        Returns assumption IDs for original (non-negated) FM constraints only,
+        by striding through paired pos/neg assumptions.
+        """
+        return [self._task.assumptions[i]
+                for i in range(0, self._start_id_assignments, _ASSUMPTION_PAIR_STRIDE)]
+
     def with_configuration(self, configuration) -> list:
         """Convert feature config to list of assumption IDs to activate.
 
@@ -122,10 +135,7 @@ class FMOracleModel:
             assumption = self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[feat]
             active_assumptions.append(assumption)
 
-        step = 2
-        set_c = [self._task.assumptions[i] for i in range(0, self.start_id_assignments, step)]
-        set_c += active_assumptions
-
+        set_c = self._compute_base_set_c() + active_assumptions
         self._task.set_c = set_c
         return set_c
 
@@ -174,7 +184,6 @@ class FMOracleModel:
         self.prepare()
 
         return self
-
 
 
 class OracleTaskPreparation:
@@ -228,9 +237,9 @@ class OracleTaskPreparation:
         model._pos_assignment_to_assumption = pos_assignment_to_assumption
         model._neg_assignment_to_assumption = neg_assumption_to_assumption
 
-        # Step 4: assign to set_c for consistency checks
-        step = 2
-        result.set_c = [result.assumptions[i] for i in range(0, model.start_id_assignments, step)]
+        # Step 3: assign to set_c for consistency checks
+        result.set_c = [result.assumptions[i]
+                        for i in range(0, model.start_id_assignments, _ASSUMPTION_PAIR_STRIDE)]
 
         return PreparationOutput(
             task=result,

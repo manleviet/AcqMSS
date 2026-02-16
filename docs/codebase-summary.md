@@ -61,13 +61,14 @@ Sampling strategies, example generation, and query generation for learning:
 | `example_provider.py` | 120+ | ExampleProvider: batch example interface for learning (moved from oracle/) |
 | `__init__.py` | 1 | Package exports with lazy-loaded QueryGenerator |
 
-**Oracle Sub-package** (`acqmss/oracle/`, 7 files, ~1,000 LOC):
+**Oracle Sub-package** (`acqmss/oracle/`, 8 files, ~900 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------| 
 | `base.py` | 47 | Oracle ABC: unified oracle interface for membership queries |
-| `fm_oracle.py` | 200+ | FeatureModelOracle: delegates to FMOracleModel for SAT-based validation |
-| `fm_oracle_model.py` | 280+ | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol |
+| `fm_oracle.py` | 144 | FeatureModelOracle: delegates to FMOracleModel, lazy FM + cached descriptions |
+| `fm_oracle_model.py` | 268 | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol |
+| `constraint_description.py` | 120 | CTC description extraction from FM (requires/excludes/hierarchical) |
 | `user_prompt.py` | 100+ | UserPromptOracle: interactive human-in-the-loop oracle |
 | `cached.py` | 80+ | CachedOracle: wrapper with query result caching |
 | `extractor.py` | 100+ | OracleData: extract oracle data for evaluation |
