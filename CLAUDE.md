@@ -13,6 +13,7 @@ AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets) — Python syst
 - `docs/code-standards.md` — Naming, patterns, testing conventions
 - `docs/project-roadmap.md` — Development phases and status
 - `docs/quacq.md` — QuAcq algorithm documentation (IJCAI 2013)
+- `docs/congen.md` — ConGen algorithm documentation (MSS-based constraint acquisition)
 
 ## Role & Responsibilities
 
@@ -117,6 +118,7 @@ We keep all important docs in `./docs` folder and keep updating them:
 ├── codebase-summary.md
 ├── project-overview-pdr.md
 ├── project-roadmap.md
+├── congen.md
 ├── quacq.md
 └── system-architecture.md
 ```

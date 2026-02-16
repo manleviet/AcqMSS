@@ -16,7 +16,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Core Acquisition Algorithms (acqmss/)                       │
-│ ├─ CONGEN: GenerateNE → ACQMSS → REDUCE (caller-invoked NE)│
+│ ├─ CONGEN: GenerateNE → ACQMSS → REDUCE (internal NE gen)  │
 │ ├─ QuAcq: GenerateQuery → Oracle → Update KB                │
 │ ├─ Bias generation from feature models                      │
 │ ├─ Example generation (RS, FF, 2-COV strategies)            │

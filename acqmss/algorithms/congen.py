@@ -36,18 +36,18 @@ from explanation.operations.algorithms.profiler import (
 
 
 @dataclass
-class CONGENResult:
+class ConGenResult:
     """Result of ConGen constraint acquisition."""
     kb_assumption_ids: List[int]  # Assumption IDs of acquired constraints
     redundant_ids: List[int]  # Assumption IDs of redundant constraints removed
     n_bias: int  # Number of bias constraints
-    n_mss: int  # Size of MSS before REDUCE
+    n_mss: int  # Size of MSS before Reduce
     n_kb: int  # Size of final KB
     bg_clauses: List[List[int]] = field(default_factory=list)  # BG clauses (e.g., [[1]])
     metadata: Dict = field(default_factory=dict)
 
 
-def resolve_congen_names(result: CONGENResult, provider) -> Dict[str, List[str]]:
+def resolve_congen_names(result: ConGenResult, provider) -> Dict[str, List[str]]:
     """Resolve assumption IDs to human-readable names.
 
     Args:
@@ -75,7 +75,7 @@ class ConGen:
                  profiler_instance: AbstractProfiler = None) -> None:
         self.checker = checker
         self.profiler = profiler_instance if profiler_instance is not None else get_global_profiler()
-        self.result: Optional[CONGENResult] = None
+        self.result: Optional[ConGenResult] = None
 
     @measure_time('congen_runtime')
     @count_calls('congen_calls')
@@ -86,7 +86,7 @@ class ConGen:
             set_tc: List[int],
             set_neg_tv: Optional[List[int]] = None,
             negation_map: Optional[Dict[int, int]] = None,
-    ) -> CONGENResult:
+    ) -> ConGenResult:
         """Acquire knowledge base from bias constraints.
 
         Paper Algorithm 1 (steps 2-9, NE pre-computed):
@@ -120,7 +120,7 @@ class ConGen:
         if len(inconsistent) > 0:
             logging.debug('<<< ConGen return Phi (E+ inconsistent with NE ∪ BG)')
             bg_clauses = [[lit] for lit in set_bg]
-            self.result = CONGENResult(
+            self.result = ConGenResult(
                 kb_assumption_ids=[],
                 redundant_ids=[],
                 n_bias=len(set_b),
@@ -142,7 +142,7 @@ class ConGen:
         )
         logging.debug('AcqMSS: MSS size = %d', len(b_prime))
 
-        # Step 9: return REDUCE(B′, NE, BG)
+        # Step 9: return Reduce(B′, NE, BG)
         reduce = Reduce(self.checker, self.profiler)
         redundant, kb = reduce.reduce(
             set_b_prime=b_prime,
@@ -150,11 +150,11 @@ class ConGen:
             set_bg=set_bg,
             negation_map=negation_map
         )
-        logging.debug('REDUCE: %d redundant, %d in final KB', len(redundant), len(kb))
+        logging.debug('Reduce: %d redundant, %d in final KB', len(redundant), len(kb))
 
         bg_clauses = [[lit] for lit in set_bg]
 
-        self.result = CONGENResult(
+        self.result = ConGenResult(
             kb_assumption_ids=kb,
             redundant_ids=redundant,
             n_bias=len(set_b),

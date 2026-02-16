@@ -141,6 +141,7 @@ All applications use TOML configuration files in `apps/conf/`. See [docs/codebas
 | [docs/system-architecture.md](docs/system-architecture.md) | Components, data flow, design patterns |
 | [docs/project-roadmap.md](docs/project-roadmap.md) | Phase progress, timeline, milestones |
 | [docs/quacq.md](docs/quacq.md) | QuAcq algorithm documentation (IJCAI 2013) |
+| [docs/congen.md](docs/congen.md) | ConGen algorithm documentation (MSS-based acquisition) |
 
 ## Contributing
 

@@ -128,6 +128,20 @@ Paper-based implementation guide:
 
 **Read when**: You need to understand the QuAcq algorithm or integrate new oracle types.
 
+### congen.md
+**Purpose**: ConGen algorithm documentation (MSS-based constraint acquisition)
+**Length**: 383 LOC
+
+Paper-based implementation guide:
+- Overview of ConGen algorithm (passive/batch learning via MSS)
+- Three sub-algorithms: GenerateNE, AcqMSS, REDUCE with pseudocode
+- Formal definitions and working example walkthrough
+- Complexity analysis and correctness theorems
+- Relation to codebase (file locations, LOC)
+- Shared infrastructure with QuAcq
+
+**Read when**: You need to understand the ConGen/ACQMSS algorithm or modify passive learning.
+
 ## How These Documents Work Together
 
 ```
@@ -154,6 +168,10 @@ project-roadmap.md (WHAT'S DONE & WHAT'S NEXT)
 quacq.md (ALGORITHM DETAILS)
     ↓
     Deep dive on QuAcq implementation
+
+congen.md (ALGORITHM DETAILS)
+    ↓
+    Deep dive on ConGen/ACQMSS implementation
 ```
 
 ## Key Concepts
@@ -162,8 +180,7 @@ quacq.md (ALGORITHM DETAILS)
 
 **CONGEN (Passive/Batch Learning)**
 - Learn from sets of valid/invalid example configurations
-- Process: Prepare task → GenerateNE (called by caller) → Merge NE into task → ACQMSS → REDUCE
-- Callers invoke GenerateNE separately before CONGEN, then merge results via `merge_ne_into_task()`
+- Process: `ConGenModel.prepare()` (internally runs GenerateNE) → ACQMSS → REDUCE
 - Good for: Offline learning from examples
 - Time: 10-30 seconds (65 features), 30-60 minutes (6,467 features)
 
@@ -258,7 +275,8 @@ quacq.md (ALGORITHM DETAILS)
 | system-architecture.md | 478 | 18 KB | ✅ Trimmed & updated 2026-02-16 |
 | project-roadmap.md | 344 | 14 KB | ✅ Updated 2026-02-16 |
 | quacq.md | 104 | 4 KB | ✅ Updated 2026-02-16 |
-| **TOTAL** | **2,320** | **89 KB** | ✅ **All under 800 LOC** |
+| congen.md | 383 | 15 KB | ✅ Created 2026-02-16 |
+| **TOTAL** | **2,703** | **104 KB** | ✅ **All under 800 LOC** |
 
 All files are within size constraints (≤800 LOC per file) and follow documentation standards.
 
@@ -283,6 +301,7 @@ All files are within size constraints (≤800 LOC per file) and follow documenta
 - [system-architecture.md](#system-architecture) → Diagnosis algorithms, data flows
 - [project-overview-pdr.md](#project-overview--pdr) → Functional requirements
 - [quacq.md](#quacq) → QuAcq algorithm details
+- [congen.md](#congen) → ConGen algorithm details
 
 **Performance & Optimization**
 - [system-architecture.md](#system-architecture) → Performance characteristics, solver modes
@@ -300,7 +319,8 @@ All files are within size constraints (≤800 LOC per file) and follow documenta
 1. [project-overview-pdr.md](#project-overview--pdr) — Algorithm requirements
 2. [system-architecture.md](#system-architecture) — Solver abstraction, diagnosis algorithms
 3. [quacq.md](#quacq) — QuAcq implementation details
-4. [project-roadmap.md](#project-roadmap) — Current metrics, performance targets
+4. [congen.md](#congen) — ConGen/ACQMSS implementation details
+5. [project-roadmap.md](#project-roadmap) — Current metrics, performance targets
 
 **DevOps/Maintainer**
 1. [project-roadmap.md](#project-roadmap) — Release strategy, milestones
@@ -332,6 +352,7 @@ Documentation is updated when:
 - **New features added** — Document architecture and usage
 
 **Version History:**
+- v1.3 (2026-02-16): Added congen.md, cross-linked all docs
 - v1.2 (2026-02-16): Update for variable naming refactor (neg_c_map → negation_map), CheckerFactory API update
 - v1.1 (2026-02-13): Comprehensive update with oracle/ package, Phase 5 completion, file size trim
 - v1.0 (2026-02-12): Initial comprehensive documentation

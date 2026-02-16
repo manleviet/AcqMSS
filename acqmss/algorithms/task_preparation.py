@@ -125,7 +125,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             neg_clauses, next_tseitin_var = negate_cnf_tseitin(c, next_tseitin_var)
             model.negated_constraint_map[f"NOT({key})"] = neg_clauses
 
-        id_assumption_first_bias = id_assumption = next_tseitin_var
+        id_assumption = next_tseitin_var
         id_assumption = prepare_kb(
             result, provider, model.constraint_map,
             id_assumption, model.negated_constraint_map)
