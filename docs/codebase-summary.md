@@ -53,9 +53,9 @@ Sampling strategies, example generation, and query generation for learning:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `base.py` | 245 | Base strategy class for example generation |
+| `base.py` | 245 | Base strategy class for example generation. No longer imports pysat.solvers; calls oracle.complete_configuration() instead |
 | `random_sampling.py` | 245 | RS sampling: uniformly random configuration selection |
-| `feature_frequency.py` | 197 | FF strategy: feature frequency-based sampling |
+| `feature_frequency.py` | 197 | FF strategy: feature frequency-based sampling. No longer imports pysat.solvers; calls oracle.complete_configuration() |
 | `nwise_coverage.py` | 136 | 2-COV strategy: n-wise pairwise coverage |
 | `query_generator.py` | 262 | QueryGenerator: discriminative query generation (moved from interactive/) |
 | `example_provider.py` | 120+ | ExampleProvider: batch example interface for learning (moved from oracle/) |
@@ -65,12 +65,12 @@ Sampling strategies, example generation, and query generation for learning:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `base.py` | 47 | Oracle ABC: unified oracle interface for membership queries |
-| `fm_oracle.py` | 144 | FeatureModelOracle: delegates to FMOracleModel, lazy FM + cached descriptions. Has `get_next_tseitin_var()` |
+| `base.py` | 47 | Oracle ABC: unified oracle interface. Abstract methods: `is_valid(assignments)`, `get_features()`, `complete_configuration(partial)`, `get_cnf_clauses()` |
+| `fm_oracle.py` | 144 | FeatureModelOracle: delegates to FMOracleModel, lazy FM + cached descriptions. Has `get_next_tseitin_var()`. Implements `complete_configuration()` (SAT solving with fallback) and `get_cnf_clauses()` |
 | `fm_oracle_model.py` | 268 | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol |
 | `constraint_description.py` | 120 | CTC description extraction from FM (requires/excludes/hierarchical) |
-| `user_prompt.py` | 100+ | UserPromptOracle: interactive human-in-the-loop oracle |
-| `cached.py` | 80+ | CachedOracle: wrapper with query result caching |
+| `user_prompt.py` | 100+ | UserPromptOracle: interactive human-in-the-loop oracle. Raises NotImplementedError for `complete_configuration()` and `get_cnf_clauses()` |
+| `cached.py` | 80+ | CachedOracle: wrapper with query result caching. Delegates `complete_configuration()` and `get_cnf_clauses()` to base oracle |
 | `extractor.py` | 100+ | OracleData: extract oracle data for evaluation |
 | `__init__.py` | 1 | Package exports |
 

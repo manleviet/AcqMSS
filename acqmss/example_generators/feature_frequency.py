@@ -7,7 +7,6 @@ in both positive and negative examples.
 
 import random
 from typing import Optional, Dict, Set, List, Tuple
-from pysat.solvers import Solver
 from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
 from .base import ExampleGenerator
 
@@ -184,49 +183,22 @@ class FeatureFrequencyGenerator(ExampleGenerator):
         Returns:
             Valid configuration dict, or None if failed
         """
-        # Pick a random uncovered requirement to satisfy
         random.shuffle(uncovered)
         target_feature, target_value = uncovered[0]
 
-        # Create assumption for the target
-        assumptions = []
-        fid = self.feature_ids[target_feature]
-        assumptions.append(fid if target_value else -fid)
-
-        # Add some random assumptions for diversity
+        # Build partial with target + random extras for diversity
+        partial = {target_feature: target_value}
         other_features = [f for f in features_list if f != target_feature]
         random.shuffle(other_features)
         n_extra = min(len(other_features) // 3, 5)
-
         for f in other_features[:n_extra]:
-            fid = self.feature_ids[f]
-            val = random.choice([True, False])
-            assumptions.append(fid if val else -fid)
+            partial[f] = random.choice([True, False])
 
-        # Try to solve with assumptions
-        solver = Solver(name='glucose4')
-        for clause in self.oracle.get_cnf_clauses():
-            solver.add_clause(clause)
-
-        try:
-            if solver.solve(assumptions=assumptions):
-                model = solver.get_model()
-                config = {}
-                for name, fid in self.feature_ids.items():
-                    config[name] = fid in model
-                return config
-            else:
-                # Try with just the target assumption
-                if solver.solve(assumptions=[assumptions[0]]):
-                    model = solver.get_model()
-                    config = {}
-                    for name, fid in self.feature_ids.items():
-                        config[name] = fid in model
-                    return config
-        finally:
-            solver.delete()
-
-        return None
+        # Try full partial, then target-only fallback
+        config = self.oracle.complete_configuration(partial)
+        if config is None:
+            config = self.oracle.complete_configuration({target_feature: target_value})
+        return config
 
     def _generate_biased_invalid_config(
             self,

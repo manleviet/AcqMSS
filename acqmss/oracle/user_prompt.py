@@ -4,7 +4,7 @@ Human-in-the-loop oracle via terminal prompts.
 Prompts user for membership query answers in interactive mode.
 """
 
-from typing import Dict, Set
+from typing import Dict, List, Optional, Set
 
 from acqmss.oracle.base import Oracle
 
@@ -88,6 +88,14 @@ class UserPromptOracle(Oracle):
     def get_feature_ids(self) -> Dict[str, int]:
         """Get feature name to SAT variable ID mapping."""
         return {f: i + 1 for i, f in enumerate(sorted(self.features))}
+
+    def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
+        """Not supported for interactive oracle."""
+        raise NotImplementedError("UserPromptOracle cannot complete configurations")
+
+    def get_cnf_clauses(self) -> List[List[int]]:
+        """Not supported for interactive oracle."""
+        raise NotImplementedError("UserPromptOracle has no CNF representation")
 
     def get_query_count(self) -> int:
         """Get number of queries asked so far."""

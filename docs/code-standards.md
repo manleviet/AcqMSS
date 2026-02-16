@@ -392,7 +392,7 @@ class QuAcq:
 The `acqmss/oracle/` package provides a unified oracle abstraction for configuration validation:
 
 ```python
-from typing import Dict
+from typing import Dict, Optional, List
 from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle, FMOracleModel
 from acqmss.example_generators import ExampleProvider
 
@@ -408,6 +408,19 @@ class Oracle(ABC):
     @abstractmethod
     def get_features(self) -> Set[str]:
         """Get all feature names."""
+        pass
+
+    @abstractmethod
+    def complete_configuration(self, partial: Dict[str, Optional[bool]]) -> Optional[Dict[str, bool]]:
+        """Complete a partial configuration to a valid full configuration.
+
+        Returns fully assigned configuration or None if not possible.
+        """
+        pass
+
+    @abstractmethod
+    def get_cnf_clauses(self) -> List[List[int]]:
+        """Get CNF clauses representing oracle constraints."""
         pass
 
     def ask(self, query: Dict[str, bool]) -> bool:
@@ -444,7 +457,9 @@ checker = CheckerFactory.create_from_model(model)
   - Wraps `FMOracleModel` for configuration validation
   - Delegates to underlying checker for `is_valid(assignments)`
   - Provides FM-specific helpers: `get_leaf_features()`, `get_root_feature()`, `get_constraint_descriptions()`
-  - **New**: `get_next_tseitin_var() -> int` returns starting Tseitin variable ID from FM model
+  - `get_next_tseitin_var() -> int` — Returns starting Tseitin variable ID from FM model
+  - `complete_configuration(partial) -> Optional[Dict]` — Uses SAT solving to complete partial configs, returns None if unsatisfiable
+  - `get_cnf_clauses() -> List[List[int]]` — Returns underlying FM CNF clauses
 
 **Critical Requirement**: Feature ID consistency
 - `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)

@@ -6,8 +6,6 @@ import random
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
 
-from pysat.solvers import Solver
-
 from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
 from acqmss.oracle import Oracle
 
@@ -70,40 +68,10 @@ class ExampleGenerator(ABC):
         Returns:
             Valid configuration dict, or None if failed
         """
-        # Shuffle to add randomness
         shuffled = list(features_list)
         random.shuffle(shuffled)
 
-        # Pick random subset to fix
         n_fixed = random.randint(0, len(shuffled) // 2)
-        assumptions = []
+        partial = {f: random.choice([True, False]) for f in shuffled[:n_fixed]}
 
-        for f in shuffled[:n_fixed]:
-            fid = self.feature_ids[f]
-            val = random.choice([True, False])
-            assumptions.append(fid if val else -fid)
-
-        # Create temporary solver
-        solver = Solver(name='glucose4')
-        for clause in self.oracle.get_cnf_clauses():
-            solver.add_clause(clause)
-
-        try:
-            if solver.solve(assumptions=assumptions):
-                model = solver.get_model()
-                config = {}
-                for name, fid in self.feature_ids.items():
-                    config[name] = fid in model
-                return config
-            else:
-                # Fallback: try without assumptions
-                if solver.solve():
-                    model = solver.get_model()
-                    config = {}
-                    for name, fid in self.feature_ids.items():
-                        config[name] = fid in model
-                    return config
-        finally:
-            solver.delete()
-
-        return None
+        return self.oracle.complete_configuration(partial)

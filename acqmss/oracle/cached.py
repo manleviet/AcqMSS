@@ -4,7 +4,7 @@ Caching wrapper for any Oracle implementation.
 Caches membership query results to avoid redundant queries.
 """
 
-from typing import Dict, Set
+from typing import Dict, List, Optional, Set
 
 from acqmss.oracle.base import Oracle
 
@@ -63,6 +63,14 @@ class CachedOracle(Oracle):
     def get_feature_ids(self) -> Dict[str, int]:
         """Get feature name to SAT variable ID mapping."""
         return self.base_oracle.get_feature_ids()
+
+    def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
+        """Delegate to base oracle."""
+        return self.base_oracle.complete_configuration(partial)
+
+    def get_cnf_clauses(self) -> List[List[int]]:
+        """Delegate to base oracle."""
+        return self.base_oracle.get_cnf_clauses()
 
     def get_cache_stats(self) -> Dict[str, int]:
         """Get cache statistics."""

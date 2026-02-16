@@ -5,7 +5,7 @@ Defines the base interface for all oracle implementations.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Set
+from typing import Dict, List, Optional, Set
 
 
 class Oracle(ABC):
@@ -35,6 +35,27 @@ class Oracle(ABC):
     @abstractmethod
     def get_feature_ids(self) -> Dict[str, int]:
         """Get mapping from feature names to SAT variable IDs."""
+        pass
+
+    @abstractmethod
+    def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
+        """Complete a partial configuration to a full valid one.
+
+        Args:
+            partial: Partial assignment {feature_name: True/False} for subset of features
+
+        Returns:
+            Full valid configuration dict, or None if no valid completion exists
+        """
+        pass
+
+    @abstractmethod
+    def get_cnf_clauses(self) -> List[List[int]]:
+        """Get the raw ground truth CNF clauses.
+
+        Returns:
+            List of clauses, each clause a list of integer literals
+        """
         pass
 
     def ask(self, query: Dict[str, bool]) -> bool:
