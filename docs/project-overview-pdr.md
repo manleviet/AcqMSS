@@ -1,6 +1,6 @@
 # AcqMSS Project Overview & Product Development Requirements (PDR)
 
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-16
 
 ## Executive Summary
 
@@ -47,7 +47,7 @@ Build a **production-ready constraint acquisition framework** that:
 - Handle up to 1,000 bias constraints per model
 
 **Key Algorithms**:
-1. GenerateNE — Create negated examples from E- (invoked by callers before CONGEN, results merged via merge_ne_into_task())
+1. GenerateNE — Create negated examples from E- (invoked internally by ConGenModel.prepare())
 2. ACQMSS — Find maximum satisfiable subset of bias
 3. REDUCE — Eliminate redundant constraints
 

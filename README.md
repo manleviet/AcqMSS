@@ -55,9 +55,15 @@ model = (ConGenModelBuilder
     .from_bias_and_fm_uvl('data/bias/model.json', 'data/fms/model.uvl')
     .with_examples('data/examples/examples.json')
     .build())
-checker = CheckerFactory.create_from_model(model, 'glucose4')
-congen = ConGen(checker)
-result = congen.acquire(task=model.task)
+checker = CheckerFactory.create_from_model(model, profiler)
+congen = ConGen(checker, profiler)
+result = congen.acquire(
+    set_b=model.task.set_c,
+    set_bg=model.task.set_b,
+    set_tc=model.task.set_tc,
+    set_neg_tv=model.task.set_neg_tv,
+    negation_map=model.task.negation_map
+)
 ```
 
 **Process**: GenerateNE → ACQMSS (MSS finding) → REDUCE (redundancy elimination)
@@ -162,4 +168,4 @@ If you use AcqMSS in your research, please cite:
 
 ---
 
-**Version**: 1.0 | **Python**: 3.13+ | **Status**: Production research system | **Last Updated**: 2026-02-13
+**Version**: 1.0 | **Python**: 3.13+ | **Status**: Production research system | **Last Updated**: 2026-02-16

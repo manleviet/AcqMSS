@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-15
+**Last Updated**: 2026-02-16
 
 ## High-Level Overview
 
@@ -73,7 +73,7 @@ result = congen.acquire(
    set_bg=model.task.set_b,
    set_tc=model.task.set_tc,
    set_neg_tv=model.task.set_neg_tv,
-   negation_map=model.task.neg_c_map  # Maps assumption ID → negated ID for REDUCE
+   negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
 )
 
 # Interactive learning
@@ -230,7 +230,7 @@ class CONGENTask(TestCaseTask):
     set_tv: list[int]           # E- assumption IDs
     set_neg_tv: list[int]           # Negated example assumption IDs
     set_b: list[int]            # Background assumption IDs
-    neg_c_map: Dict[int, int]   # Negation map: assumption_id → negated_id
+    negation_map: Dict[int, int]   # Negation map: assumption_id → negated_id
 ```
 
 #### explanation/operations/ — Diagnosis Algorithms

@@ -1,6 +1,6 @@
 # QuAcq - Constraint Acquisition via Partial Queries (IJCAI 2013)
 
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-16
 
 **Paper:** Bessiere, Coletta, Hebrard, Katsirelos, Lazaar, Narodytska, Quimper, Walsh
 

@@ -7,23 +7,10 @@ configurations via persistent PySAT solver.
 
 from typing import Dict, Set, List, Optional
 
-from flamapy.metamodels.fm_metamodel.models import FeatureModel
-from pysat.solvers import Solver
-
 from acqmss.oracle.base import Oracle
 from acqmss.oracle.fm_oracle_model import FMOracleModel
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler
-
-
-# def _load_fm(fm_path: str) -> FeatureModel:
-#     """Load feature model using flamapy."""
-#     from flamapy.metamodels.fm_metamodel.transformations import UVLReader
-#
-#     if fm_path.endswith('.uvl'):
-#         return UVLReader(fm_path).transform()
-#     else:
-#         raise ValueError(f"Unsupported feature model format: {fm_path}")
 
 
 class FeatureModelOracle(Oracle):

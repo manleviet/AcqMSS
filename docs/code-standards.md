@@ -1,6 +1,6 @@
 # AcqMSS Code Standards & Guidelines
 
-**Last Updated**: 2026-02-15
+**Last Updated**: 2026-02-16
 
 ## Language & Environment
 
@@ -290,7 +290,7 @@ result = congen.acquire(
     set_bg=model.task.set_b,
     set_tc=model.task.set_tc,
     set_neg_tv=model.task.set_neg_tv,
-    negation_map=model.task.neg_c_map  # Maps assumption ID → negated ID for REDUCE
+    negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
 )
 ```
 
@@ -409,7 +409,7 @@ is_valid = oracle.is_valid({'root': True, 'feature_a': False})
 cached_oracle = CachedOracle(oracle)
 result = cached_oracle.is_valid(query)
 
-# Example-based learning
+# Example-based learning (ExampleProvider moved to example_generators)
 provider = ExampleProvider(oracle)
 examples = provider.generate_examples(count=100)
 
@@ -543,8 +543,8 @@ class CONGEN:
 
     Example:
         >>> checker = IncrementalPySATChecker(solver)
-        >>> congen = ConGen(checker, profiler=None)
-        >>> result = congen.acquire(task)
+        >>> congen_root = ConGen(checker, profiler=None)
+        >>> result = congen_root.acquire(task)
         >>> print(len(result.kb))
     """
 ```

@@ -1,6 +1,6 @@
 # AcqMSS Documentation
 
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-16
 
 Welcome to the comprehensive documentation for AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets). This directory contains technical documentation for developers, researchers, and contributors.
 
@@ -252,12 +252,12 @@ quacq.md (ALGORITHM DETAILS)
 
 | File | LOC | Size | Status |
 |------|-----|------|--------|
-| code-standards.md | 687 | 23 KB | ✅ Updated 2026-02-13 |
-| codebase-summary.md | 354 | 14 KB | ✅ Updated 2026-02-13 |
-| project-overview-pdr.md | 353 | 16 KB | ✅ Updated 2026-02-13 |
-| system-architecture.md | 478 | 18 KB | ✅ Trimmed & updated 2026-02-13 |
-| project-roadmap.md | 344 | 14 KB | ✅ Updated 2026-02-13 |
-| quacq.md | 104 | 4 KB | ✅ Updated 2026-02-13 |
+| code-standards.md | 687 | 23 KB | ✅ Updated 2026-02-16 |
+| codebase-summary.md | 354 | 14 KB | ✅ Updated 2026-02-16 |
+| project-overview-pdr.md | 353 | 16 KB | ✅ Updated 2026-02-16 |
+| system-architecture.md | 478 | 18 KB | ✅ Trimmed & updated 2026-02-16 |
+| project-roadmap.md | 344 | 14 KB | ✅ Updated 2026-02-16 |
+| quacq.md | 104 | 4 KB | ✅ Updated 2026-02-16 |
 | **TOTAL** | **2,320** | **89 KB** | ✅ **All under 800 LOC** |
 
 All files are within size constraints (≤800 LOC per file) and follow documentation standards.
@@ -332,10 +332,11 @@ Documentation is updated when:
 - **New features added** — Document architecture and usage
 
 **Version History:**
+- v1.2 (2026-02-16): Update for variable naming refactor (neg_c_map → negation_map), CheckerFactory API update
 - v1.1 (2026-02-13): Comprehensive update with oracle/ package, Phase 5 completion, file size trim
 - v1.0 (2026-02-12): Initial comprehensive documentation
 
 ---
 
 **Documentation Status**: Phase 6 (Documentation & Polish) — In Progress
-**All files updated**: 2026-02-13
+**All files updated**: 2026-02-16
