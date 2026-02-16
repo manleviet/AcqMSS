@@ -47,6 +47,9 @@ class ConGenModel:
         # CheckerModel protocol attributes
         self._use_incremental: bool = True
 
+        # Background knowledge (e.g., root feature IDs) to include in set_b
+        # self.background_knowledge: List[int] = []
+
         # Task input populated by builder or caller before prepare()
         self._task_input: TaskInput = TaskInput()
 
