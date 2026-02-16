@@ -26,6 +26,11 @@ from explanation.operations.algorithms.utils import get_hashcode
 if TYPE_CHECKING:
     from .pysat_diagnosis_model import DiagnosisModel
 
+# Each constraint produces a pair of assumptions (original + negated),
+# so we stride by 2 to select only original assumptions.
+_ASSUMPTION_PAIR_STRIDE = 2
+_ASSUMPTION_SINGLE_STRIDE = 1
+
 
 # === INPUT DATA CLASS ===
 
@@ -384,7 +389,7 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         """Assign set_c and set_b based on use case."""
         # With negation: [root, neg_root, c1, neg_c1, ...] -> step=2
         # Without negation: [root, c1, c2, ...] -> step=1
-        step = 2 if has_negated_forms else 1
+        step = _ASSUMPTION_PAIR_STRIDE if has_negated_forms else _ASSUMPTION_SINGLE_STRIDE
 
         if task_input.configuration is not None:
             if not task_input.with_cf_in_c:
@@ -525,9 +530,9 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
         result.set_c = result.assumptions[1:start_id_tc]
 
         tc_tv_assumptions = result.assumptions[start_id_tc:]
-        original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), 2)]
+        original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), _ASSUMPTION_PAIR_STRIDE)]
 
-        num_tc_original = (start_id_tv - start_id_tc) // 2
+        num_tc_original = (start_id_tv - start_id_tc) // _ASSUMPTION_PAIR_STRIDE
         result.set_tc = original_tc_tv[:num_tc_original]
         result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
 

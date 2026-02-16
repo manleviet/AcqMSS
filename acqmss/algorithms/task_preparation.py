@@ -16,6 +16,7 @@ from explanation.models.task_preparation import (
     DescriptionProvider,
     PreparationOutput, prepare_testsuite_with_negation,
     prepare_kb,
+    _ASSUMPTION_PAIR_STRIDE,
 )
 from explanation.operations.algorithms.utils import negate_cnf_tseitin
 from .generate_ne import GenerateNE
@@ -114,8 +115,8 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         id_assumption = _prepare_bg(result, provider, model.variables, model.root_feature, id_assumption)
 
         # Reserve IDs for fm constraints and their negations + variable assignments
-        id_assumption = id_assumption + (model.num_fm_constraints - 1) * 2
-        id_assumption = id_assumption + len(model.variables) * 2
+        id_assumption = id_assumption + (model.num_fm_constraints - 1) * _ASSUMPTION_PAIR_STRIDE
+        id_assumption = id_assumption + len(model.variables) * _ASSUMPTION_PAIR_STRIDE
 
         # Step 1: Prepare bias constraints as set_c (with negated forms for REDUCE)
         bias_start_pos = len(result.assumptions)
@@ -252,14 +253,12 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         Each test case has two assumptions (original + negated),
         so extract only the original assumptions for set_tc and set_tv.
         """
-        step = 2
-
         result.set_b = [result.assumptions[0]]
-        result.set_c = result.assumptions[bias_start_id:start_id_tc:step]
+        result.set_c = result.assumptions[bias_start_id:start_id_tc:_ASSUMPTION_PAIR_STRIDE]
 
         tc_tv_assumptions = result.assumptions[start_id_tc:]
-        original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), step)]
+        original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), _ASSUMPTION_PAIR_STRIDE)]
 
-        num_tc_original = (start_id_tv - start_id_tc) // step
+        num_tc_original = (start_id_tv - start_id_tc) // _ASSUMPTION_PAIR_STRIDE
         result.set_tc = original_tc_tv[:num_tc_original]
         result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
