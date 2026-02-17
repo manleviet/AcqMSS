@@ -315,7 +315,7 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 | `acqmss/bias/` | ~1,250 | BiasGenerator, ClauseGenerator |
 | `acqmss/example_generators/` | ~1,285 | RS, FF, 2-COV sampling strategies |
 | `acqmss/eval/cross_validation.py` | 504 | n-fold cross-validation framework |
-| `acqmss/eval/congen_runner.py` | 228 | ConGenRunner pipeline |
+| `acqmss/runners/congen_runner.py` | 228 | ConGenRunner pipeline |
 | `acqmss/eval/accuracy.py` | 170 | AccuracyCalculator metrics |
 
 ### SAT Solver Layer

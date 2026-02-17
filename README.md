@@ -122,6 +122,7 @@ AcqMSS/
 │   │   └── interactive/       # QuAcq, learner, query generation
 │   ├── bias/                  # Bias generation from feature models
 │   ├── testcases/             # Example generation (RS, 2-COV, FF)
+│   ├── runners/               # ConGenRunner, InteractiveRunner
 │   └── eval/                  # Accuracy, cross-validation, evaluator
 ├── explanation/               # SAT solver infrastructure
 │   ├── models/                # DiagnosisModel, builder, task preparation

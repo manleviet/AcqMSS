@@ -19,7 +19,7 @@ import time
 
 from .metrics import EvaluationMetrics
 from .accuracy import AccuracyCalculator
-from .congen_runner import ConGenRunner
+from acqmss.runners import ConGenRunner
 from .fold_io import FoldData, generate_folds, apply_folds
 from .performance_metrics import (
     PerformanceMetrics,
@@ -359,7 +359,7 @@ def n_fold_cross_validation_interactive(
     cv_start_time = time.perf_counter()
 
     # Lazy import to avoid circular dependency
-    from .interactive_runner import InteractiveRunner
+    from acqmss.runners import InteractiveRunner
 
     # Create interactive runner
     runner = InteractiveRunner(

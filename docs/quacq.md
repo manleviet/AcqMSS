@@ -122,7 +122,7 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 
 **Evaluation Support**:
 - `acqmss/eval/fold_io.py` — Shared CV fold generation for CONGEN/QuAcq comparison (145 LOC)
-- `acqmss/eval/interactive_runner.py` — QuAcq pipeline runner (197 LOC)
+- `acqmss/runners/interactive_runner.py` — QuAcq pipeline runner (197 LOC)
 - `acqmss/eval/interactive_metrics.py` — QuAcq-specific metrics (391 LOC)
 - `apps/generate_cv_folds.py` — CLI to pre-generate folds (68 LOC)
 

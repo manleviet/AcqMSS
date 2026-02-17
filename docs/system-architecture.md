@@ -235,9 +235,11 @@ class Oracle(ABC):
 
 **Components**:
 - `cross_validation.py` — n-fold CV orchestration (CONGEN & Interactive modes)
+- `accuracy.py` — Calculate accuracy, precision, recall, F1
+
+**Runners** (`acqmss/runners/`, re-exported from `acqmss.eval` for backward compat):
 - `congen_runner.py` — CONGEN pipeline runner with metrics
 - `interactive_runner.py` — QuAcq pipeline runner (analogous to CONGENRunner)
-- `accuracy.py` — Calculate accuracy, precision, recall, F1
 - `report.py` — Generate CSV/JSON/LaTeX/Markdown reports
 - `interactive_metrics.py` — QuAcq-specific metrics (query counts, convergence)
 

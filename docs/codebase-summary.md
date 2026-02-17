@@ -102,15 +102,22 @@ Sampling strategies, example generation, and query generation for learning:
 
 11. **Oracle Separation**: Oracle created independently and passed to `model.prepare()`. Enables cross-validation reuse without rebuilding model.
 
-#### acqmss/eval/ — Evaluation Framework (~3,700 LOC, 13 files)
+#### acqmss/runners/ — Execution Runners (~425 LOC, 2 files)
 
-Cross-validation and accuracy metrics:
+Pipeline runners for constraint acquisition algorithms:
+
+| File | LOC | Purpose |
+|------|-----|---------|
+| `congen_runner.py` | 228 | CONGEN pipeline runner with profiling + bias shuffle seed support |
+| `interactive_runner.py` | 197 | QuAcq pipeline runner with metrics collection |
+
+#### acqmss/eval/ — Evaluation Framework (~3,275 LOC, 11 files)
+
+Cross-validation and accuracy metrics (runners re-exported for backward compat):
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `cross_validation.py` | 504 | n-fold CV (CONGEN + Interactive) with pre-generated fold support |
-| `congen_runner.py` | 228 | CONGEN pipeline runner with profiling + bias shuffle seed support |
-| `interactive_runner.py` | 197 | QuAcq pipeline runner with metrics collection |
 | `interactive_metrics.py` | 391 | QuAcq-specific metrics (query count, convergence) |
 | `evaluator.py` | 267 | Evaluation orchestrator for CONGEN/QuAcq results |
 | `report.py` | 281 | Generate CSV/JSON/LaTeX/Markdown reports |

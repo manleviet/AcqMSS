@@ -19,7 +19,7 @@ from acqmss.oracle import FeatureModelOracle
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import Profiler
 
-from .performance_metrics import PerformanceMetrics
+from acqmss.eval.performance_metrics import PerformanceMetrics
 
 
 @dataclass

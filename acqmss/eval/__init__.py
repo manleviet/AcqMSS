@@ -45,11 +45,9 @@ from .performance_metrics import (
     aggregate_metrics
 )
 
-# ConGen runner
-from .congen_runner import ConGenRunner, ConGenRunResult
-
-# Interactive runner
-from .interactive_runner import InteractiveRunner, InteractiveRunResult
+# Runners (re-exported from acqmss.runners for backward compat)
+from acqmss.runners import ConGenRunner, ConGenRunResult
+from acqmss.runners import InteractiveRunner, InteractiveRunResult
 
 # Cross-validation
 from .cross_validation import (

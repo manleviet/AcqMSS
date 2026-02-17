@@ -19,11 +19,9 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.algorithms import ConGen, ConGenModelBuilder, resolve_congen_names
-from acqmss.oracle import FeatureModelOracle
+from acqmss.runners import ConGenRunner
 from acqmss.examples import ExampleIO
-from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import get_global_profiler
+from acqmss.eval.report import save_kb_result
 
 
 @dataclass
@@ -77,7 +75,7 @@ def extract_sampling_type(examples_path: str) -> str:
 def process_model(model_config: ModelConfig, output_dir: Path,
                   seed: int, verbose: bool, is_incremental: bool = True,
                   solver_name: str = 'glucose4') -> bool:
-    """Process a single model with ConGen.
+    """Process a single model with ConGen via ConGenRunner.
 
     Args:
         model_config: Model configuration
@@ -90,8 +88,7 @@ def process_model(model_config: ModelConfig, output_dir: Path,
     Returns:
         True if successful, False otherwise
     """
-    checker = None
-    oracle = None
+    runner = None
     try:
         model_name = Path(model_config.path).stem
         sampling_type = extract_sampling_type(model_config.examples)
@@ -103,58 +100,38 @@ def process_model(model_config: ModelConfig, output_dir: Path,
             print(f"  Examples: {model_config.examples}")
             print(f"  Mode: {'incremental' if is_incremental else 'non-incremental'}")
 
-        profiler = get_global_profiler()
-
-        # Build model (bias only)
-        congen_model = (ConGenModelBuilder
-                        .from_bias(model_config.bias)
-                        .use_incremental(is_incremental)
-                        .build())
-
-        # Create oracle
-        oracle = FeatureModelOracle(model_config.path, use_incremental=False)
-
-        # Load examples and prepare
+        # Load examples
         examples = ExampleIO.load_json(model_config.examples)
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]
-        congen_model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
+
+        # Run ConGen via runner
+        runner = ConGenRunner(model_config.bias, model_config.path,
+                              solver_name, is_incremental)
+        result = runner.run(pos, neg)
 
         if verbose:
-            print(f"  Bias constraints: {len(congen_model.constraint_map)}")
-            print(f"  E+: {len(congen_model.task_input.positive_test_cases.testcases)}, "
-                  f"E-: {len(congen_model.task_input.negative_test_cases.testcases)}")
-
-        task = congen_model.task
-
-        # Create checker via factory
-        checker = CheckerFactory.create_from_model(congen_model, solver_name, profiler)
-
-        # Run ConGen
-        congen = ConGen(checker, profiler)
-        result = congen.acquire(
-            set_b=task.set_c,
-            set_bg=task.set_b,
-            set_tc=task.set_tc,
-            set_neg_tv=task.set_neg_tv,
-            negation_map=task.negation_map,
-        )
-
-        if verbose:
+            print(f"  Bias constraints: {result.n_bias}")
+            print(f"  E+: {len(pos)}, E-: {len(neg)}")
             print(f"  MSS size: {result.n_mss}")
             print(f"  Acquired KB: {result.n_kb} constraints")
-            if result.kb_assumption_ids:
-                names = resolve_congen_names(result, congen_model.description_provider)
+            if result.kb_constraints:
                 print(f"  Constraints:")
-                for c in names['kb'][:10]:  # Show first 10
+                for c in result.kb_constraints[:10]:
                     print(f"    - {c}")
-                if len(names['kb']) > 10:
-                    print(f"    ... and {len(names['kb']) - 10} more")
+                if len(result.kb_constraints) > 10:
+                    print(f"    ... and {len(result.kb_constraints) - 10} more")
 
-        # Save result with sampling type in filename
-        # Format: {model_name}_{sampling_type}_kb.json
+        # Save result in standard format (compatible with ConGenResultData.from_json)
         output_file = output_dir / f"{model_name}_{sampling_type}_kb.json"
-        congen.save_result(str(output_file), congen_model.description_provider)
+        save_kb_result(
+            kb_constraints=result.kb_constraints,
+            redundant_constraints=result.redundant_constraints,
+            n_bias=result.n_bias,
+            n_mss=result.n_mss,
+            n_kb=result.n_kb,
+            output_path=output_file,
+        )
 
         if verbose:
             print(f"  Saved: {output_file}")
@@ -168,10 +145,8 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         return False
 
     finally:
-        if checker is not None:
-            checker.cleanup()
-        if oracle is not None:
-            oracle.cleanup()
+        if runner is not None:
+            runner.cleanup()
 
 
 def main():
