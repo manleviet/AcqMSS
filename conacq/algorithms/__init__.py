@@ -17,16 +17,23 @@ Interactive Learning (QuAcq):
 Task classes shared across incremental and non-incremental modes.
 """
 
-from .acqmss import AcqMSS
-from .reduce import Reduce
-from .generate_ne import GenerateNE, NEPerTestcase
-from .congen import ConGen, ConGenResult, resolve_congen_names
-from .task_preparation import ConGenTask
-from .task_preparation import ConGenTaskPreparation
-from .congen_model import ConGenModel
-from .congen_model_builder import ConGenModelBuilder
+# Passive learning (ConGen) - expose from acqmss subpackage
+from .acqmss import (
+    AcqMSS,
+    Reduce,
+    GenerateNE,
+    ConGen,
+    ConGenResult,
+    resolve_congen_names,
+    ConGenModel,
+    ConGenModelBuilder,
+)
 
-# Interactive learning components
+# Expose submodules for direct imports (e.g., from conacq.algorithms.generate_ne import ...)
+from . import acqmss
+from . import interactive
+
+# Interactive learning (QuAcq)
 from .interactive import (
     InteractiveLearner,
     QuAcq,
@@ -47,12 +54,9 @@ __all__ = [
     'AcqMSS',
     'Reduce',
     'GenerateNE',
-    'NEPerTestcase',
     'ConGen',
     'ConGenResult',
     'resolve_congen_names',
-    'ConGenTask',
-    'ConGenTaskPreparation',
     'ConGenModel',
     'ConGenModelBuilder',
     # Interactive learning (QuAcq)

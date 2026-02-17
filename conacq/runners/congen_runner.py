@@ -13,13 +13,13 @@ import time
 import tracemalloc
 import logging
 
-from acqmss.algorithms.congen import ConGen
-from acqmss.algorithms.congen_model_builder import ConGenModelBuilder
-from acqmss.oracle import FeatureModelOracle
+from conacq.algorithms.congen import ConGen
+from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
+from conacq.oracle import FeatureModelOracle
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import Profiler
 
-from acqmss.eval.performance_metrics import PerformanceMetrics
+from conacq.eval.performance_metrics import PerformanceMetrics
 
 
 @dataclass

@@ -14,12 +14,12 @@ from pysat.solvers import Solver
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from acqmss.oracle import Oracle
-from acqmss.example_generators import QueryGenerator, ExampleProvider
+from conacq.oracle import Oracle
+from conacq.example_generators import QueryGenerator, ExampleProvider
 from .findscope import find_scope
 from .findc import find_c
-from acqmss.algorithms.reduce import Reduce
-from acqmss.oracle.fm_oracle_model import OneShotModel
+from conacq.algorithms.acqmss.reduce import Reduce
+from conacq.oracle.fm_oracle_model import OneShotModel
 from explanation.operations.algorithms.checker import CheckerFactory, NonIncrementalPySATChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
