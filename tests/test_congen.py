@@ -7,9 +7,9 @@ Supports both incremental and non-incremental solver modes.
 
 import pytest
 from pathlib import Path
-from acqmss.oracle import FeatureModelOracle
-from acqmss.bias import BiasIO
-from acqmss.algorithms import (
+from conacq.oracle import FeatureModelOracle
+from conacq.bias import BiasIO
+from conacq.algorithms import (
     ConGen, AcqMSS, Reduce,
     ConGenModelBuilder
 )
@@ -48,7 +48,7 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     Returns:
         Tuple of (checker, task, model, profiler, root_id)
     """
-    from acqmss.examples import ExampleIO
+    from conacq.examples import ExampleIO
 
     profiler = get_global_profiler()
 
@@ -270,7 +270,7 @@ class TestGenerateNE:
         if not FM_PATH.exists():
             pytest.skip("FM file not found")
 
-        from acqmss.algorithms.generate_ne import GenerateNE
+        from conacq.algorithms.acqmss.generate_ne import GenerateNE
         from explanation.models.testsuite import TestSuite
 
         oracle = FeatureModelOracle(str(FM_PATH))

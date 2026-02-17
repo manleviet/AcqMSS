@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from acqmss.bias import BiasConfigLoader, BiasGenerator, BiasIO
+from conacq.bias import BiasConfigLoader, BiasGenerator, BiasIO
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 OUTPUT_DIR = Path(__file__).parent / "output"

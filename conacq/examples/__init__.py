@@ -7,7 +7,7 @@ Provides:
 """
 
 from .data_structures import Example, ExampleSet, ExampleType
-from acqmss.example_generators import (
+from conacq.example_generators import (
     ExampleGenerator,
     RandomSamplingGenerator,
     BalancedRandomSamplingGenerator,

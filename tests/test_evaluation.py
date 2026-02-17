@@ -7,7 +7,7 @@ Uses REAL-FM-7 feature model with generated bias and results.
 import pytest
 from pathlib import Path
 
-from acqmss.eval import (
+from conacq.eval import (
     EvaluationMetrics,
     compute_metrics,
     BiasData,
@@ -351,7 +351,7 @@ class TestReportGeneration:
 
     def test_generate_evaluation_report(self):
         """Test evaluation report generation."""
-        from acqmss.eval import EvaluationResult
+        from conacq.eval import EvaluationResult
 
         result = EvaluationResult(
             strategy='description',
@@ -413,7 +413,7 @@ class TestIntegration:
 
     def test_accuracy_with_real_examples(self):
         """Test accuracy calculation with real examples."""
-        from acqmss.examples import ExampleIO
+        from conacq.examples import ExampleIO
 
         bias = BiasData.from_json(BIAS_PATH)
         examples = ExampleIO.load_json(EXAMPLES_RS_1N_PATH)

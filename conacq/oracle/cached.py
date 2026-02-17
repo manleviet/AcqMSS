@@ -7,7 +7,7 @@ Only caches is_valid() — the sole Oracle ABC method.
 
 from typing import Dict
 
-from acqmss.oracle.base import Oracle
+from conacq.oracle.base import Oracle
 
 
 class CachedOracle(Oracle):

@@ -25,7 +25,7 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.eval import (
+from conacq.eval import (
     Evaluator,
     EvaluationStrategy,
     AccuracyCalculator,
@@ -38,7 +38,7 @@ from acqmss.eval import (
     save_cv_kb_files,
     load_folds,
 )
-from acqmss.examples import ExampleIO
+from conacq.examples import ExampleIO
 
 
 @dataclass

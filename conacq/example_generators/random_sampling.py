@@ -10,7 +10,7 @@ Provides:
 import random
 from typing import Optional
 
-from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
+from conacq.examples.data_structures import Example, ExampleSet, ExampleType
 from .base import ExampleGenerator
 
 

@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 
-from .acqmss import AcqMSS
+from conacq.algorithms.acqmss import AcqMSS
 from .reduce import Reduce
 from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.profiler import (

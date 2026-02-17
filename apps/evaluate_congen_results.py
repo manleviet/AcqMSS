@@ -28,8 +28,8 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.eval.evaluator import Evaluator, EvaluationStrategy
-from acqmss.eval.result_loader import ConGenResultData
+from conacq.eval.evaluator import Evaluator, EvaluationStrategy
+from conacq.eval.result_loader import ConGenResultData
 
 
 @dataclass

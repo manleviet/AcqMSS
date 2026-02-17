@@ -25,18 +25,18 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.algorithms.interactive import (
+from conacq.algorithms.interactive import (
     InteractiveLearner,
     InteractiveResult
 )
-from acqmss.eval import (
+from conacq.eval import (
     BiasData,
     load_folds,
     n_fold_cross_validation_interactive,
     generate_cv_report,
     save_cv_kb_files,
 )
-from acqmss.examples import ExampleIO
+from conacq.examples import ExampleIO
 from explanation.operations.algorithms.profiler import (
     use_global_profiler,
     ProfilerPreset

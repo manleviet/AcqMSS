@@ -29,10 +29,6 @@ from .acqmss import (
     ConGenModelBuilder,
 )
 
-# Expose submodules for direct imports (e.g., from conacq.algorithms.generate_ne import ...)
-from . import acqmss
-from . import interactive
-
 # Interactive learning (QuAcq)
 from .interactive import (
     InteractiveLearner,

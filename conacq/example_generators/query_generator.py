@@ -9,7 +9,7 @@ import logging
 from typing import Optional, Dict, List, Tuple
 from pysat.solvers import Solver
 
-from acqmss.algorithms.interactive.task import InteractiveTask
+from conacq.algorithms.interactive.task import InteractiveTask
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )

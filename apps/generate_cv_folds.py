@@ -15,8 +15,8 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.examples import ExampleIO
-from acqmss.eval.fold_io import generate_folds, save_folds
+from conacq.examples import ExampleIO
+from conacq.eval.fold_io import generate_folds, save_folds
 
 
 def main():

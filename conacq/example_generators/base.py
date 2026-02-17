@@ -6,8 +6,8 @@ import random
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
 
-from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
-from acqmss.oracle.fm_oracle import FeatureModelOracle
+from conacq.examples.data_structures import Example, ExampleSet, ExampleType
+from conacq.oracle.fm_oracle import FeatureModelOracle
 
 
 class ExampleGenerator(ABC):

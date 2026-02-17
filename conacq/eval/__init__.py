@@ -21,7 +21,7 @@ Metrics (Formula 1 from paper):
 - F1 = 2 * P * R / (P + R)
 
 Example usage:
-    >>> from acqmss.eval import Evaluator, EvaluationStrategy
+    >>> from conacq.eval import Evaluator, EvaluationStrategy
     >>> evaluator = Evaluator.from_bias_and_fm_fide('model.uvl', 'bias.json')
     >>> result = evaluator.evaluate(congen_result, EvaluationStrategy.DESCRIPTION)
     >>> print(f"Accuracy: {result.metrics.accuracy:.4f}")
@@ -33,7 +33,7 @@ from .metrics import EvaluationMetrics, compute_metrics
 # Data loaders
 from .bias_loader import BiasData, BiasConstraint
 from .result_loader import ConGenResultData
-from acqmss.oracle.extractor import GroundTruthData, OracleData
+from conacq.oracle.extractor import GroundTruthData, OracleData
 
 # Accuracy calculation
 from .accuracy import AccuracyCalculator, AccuracyResult
@@ -46,8 +46,8 @@ from .performance_metrics import (
 )
 
 # Runners (re-exported from acqmss.runners for backward compat)
-from acqmss.runners import ConGenRunner, ConGenRunResult
-from acqmss.runners import InteractiveRunner, InteractiveRunResult
+from conacq.runners import ConGenRunner, ConGenRunResult
+from conacq.runners import InteractiveRunner, InteractiveRunResult
 
 # Cross-validation
 from .cross_validation import (

@@ -1,6 +1,6 @@
 # QuAcq - Constraint Acquisition via Partial Queries (IJCAI 2013)
 
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-02-17
 
 **Paper:** Bessiere, Coletta, Hebrard, Katsirelos, Lazaar, Narodytska, Quimper, Walsh
 
@@ -113,23 +113,22 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 ## Relation to Codebase
 
 **Core Implementation**:
-- `acqmss/algorithms/interactive/quacq.py` — Main QuAcq algorithm (439 LOC)
-- `acqmss/algorithms/interactive/findscope.py` — FindScope (Algorithm 2, 134 LOC)
-- `acqmss/algorithms/interactive/findc.py` — FindC (Algorithm 3, 208 LOC)
-- `acqmss/algorithms/interactive/learner.py` — InteractiveLearner facade (426 LOC, from_examples() API)
-- `acqmss/oracle/` — Oracle implementations: FeatureModelOracle, UserPromptOracle, CachedOracle (base.py, fm_oracle.py, user_prompt.py, cached.py)
-- `acqmss/example_generators/` — Query generation and batch examples (query_generator.py, example_provider.py)
+- `conacq/algorithms/interactive/quacq.py` — Main QuAcq algorithm (439 LOC)
+- `conacq/algorithms/interactive/findscope.py` — FindScope (Algorithm 2, 134 LOC)
+- `conacq/algorithms/interactive/findc.py` — FindC (Algorithm 3, 208 LOC)
+- `conacq/algorithms/interactive/learner.py` — InteractiveLearner facade (426 LOC, from_examples() API)
+- `conacq/oracle/` — Oracle implementations: FeatureModelOracle, UserPromptOracle, CachedOracle, FMData (frozen dataclass)
+- `conacq/example_generators/` — Query generation and batch examples (query_generator.py, example_provider.py)
 
 **Evaluation Support**:
-- `acqmss/eval/fold_io.py` — Shared CV fold generation for CONGEN/QuAcq comparison (145 LOC)
-- `acqmss/runners/interactive_runner.py` — QuAcq pipeline runner (197 LOC)
-- `acqmss/eval/interactive_metrics.py` — QuAcq-specific metrics (391 LOC)
+- `conacq/eval/fold_io.py` — Shared CV fold generation for CONGEN/QuAcq comparison (145 LOC)
+- `conacq/runners/interactive_runner.py` — QuAcq pipeline runner (197 LOC, moved from eval/)
+- `conacq/eval/interactive_metrics.py` — QuAcq-specific metrics (391 LOC)
 - `apps/generate_cv_folds.py` — CLI to pre-generate folds (68 LOC)
 
 **Two Paradigms**:
 - **CONGEN** (passive): Learns from E+/E- in one batch pass (GenerateNE → ACQMSS → REDUCE)
-  - Caller invokes GenerateNE separately before CONGEN
-  - Results merged into task via merge_ne_into_task()
+  - **GenerateNE called internally by `ConGenModel.prepare()`** (not by callers)
   - Immutable checkers after construction
 
 - **QuAcq oracle mode** (active/interactive): Queries user via GenerateQuery

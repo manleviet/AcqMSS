@@ -74,7 +74,7 @@ class ConGenModelBuilder:
         """
         self._validate()
 
-        from acqmss.bias import BiasIO
+        from conacq.bias import BiasIO
 
         bias = BiasIO.load_from_json(self._bias_path)
 
@@ -106,7 +106,7 @@ class ConGenModelBuilder:
         if self._positive_examples is not None:
             return self._positive_examples, self._negative_examples
 
-        from acqmss.examples import ExampleIO
+        from conacq.examples import ExampleIO
         examples = ExampleIO.load_json(self._examples_path)
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]

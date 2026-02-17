@@ -43,7 +43,7 @@ Example Usage:
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from acqmss.oracle import (
+from conacq.oracle import (
     Oracle,
     FeatureModelOracle,
     UserPromptOracle,

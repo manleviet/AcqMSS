@@ -13,8 +13,8 @@ from typing import Optional, List
 from pysat.solvers import Solver
 
 from .task import InteractiveTask
-from acqmss.example_generators import ExampleProvider
-from acqmss.oracle.fm_oracle_model import OneShotModel
+from conacq.example_generators import ExampleProvider
+from conacq.oracle.fm_oracle_model import OneShotModel
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import AbstractProfiler
 

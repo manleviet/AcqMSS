@@ -21,8 +21,8 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.oracle import FeatureModelOracle
-from acqmss.examples import (
+from conacq.oracle import FeatureModelOracle
+from conacq.examples import (
     BalancedRandomSamplingGenerator,
     ControlledRandomSamplingGenerator,
     FeatureFrequencyGenerator,

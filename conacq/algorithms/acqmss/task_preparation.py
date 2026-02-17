@@ -24,8 +24,8 @@ from .generate_ne import GenerateNE
 if TYPE_CHECKING:
     from explanation.models.testsuite import TestSuite
     from .congen_model import ConGenModel
-    from ..oracle import FeatureModelOracle
-    from ..oracle.fm_data import FMData
+    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle.fm_data import FMData
 
 
 @dataclass

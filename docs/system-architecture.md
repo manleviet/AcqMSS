@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-17
+**Last Updated**: 2026-02-17 (oracle refactor, runners move)
 
 ## High-Level Overview
 
@@ -54,11 +54,11 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 **Core API**:
 
 ```python
-from acqmss.algorithms import ConGen, ConGenModelBuilder
-from acqmss.oracle import FeatureModelOracle
-from acqmss.algorithms.interactive import QuAcq, InteractiveLearner
-from acqmss.example_generators import QueryGenerator, ExampleProvider
-from explanation.operations.algorithms.checker_factory import CheckerFactory
+from conacq.algorithms import ConGen, ConGenModelBuilder
+from conacq.oracle import FeatureModelOracle
+from conacq.algorithms.interactive import QuAcq, InteractiveLearner
+from conacq.example_generators import QueryGenerator, ExampleProvider
+from explanation.operations.algorithms.checker import CheckerFactory
 
 # Passive learning: build model, create oracle, prepare separately
 model = ConGenModelBuilder.from_bias('data/bias/model.json').use_incremental(True).build()
@@ -68,11 +68,11 @@ model.prepare(oracle, positive_examples=pos, negative_examples=neg)  # Calls Gen
 checker = CheckerFactory.create_from_model(model, profiler)
 congen = ConGen(checker, profiler)
 result = congen.acquire(
-   set_b=model.task.set_c,
-   set_bg=model.task.set_b,
-   set_tc=model.task.set_tc,
-   set_neg_tv=model.task.set_neg_tv,
-   negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
+    set_b=model.task.set_c,
+    set_bg=model.task.set_b,
+    set_tc=model.task.set_tc,
+    set_neg_tv=model.task.set_neg_tv,
+    negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
 )
 
 # For cross-validation: build once, prepare per fold

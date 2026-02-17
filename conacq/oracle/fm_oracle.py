@@ -9,9 +9,9 @@ from typing import Dict, Optional, Set, List
 
 from pysat.solvers import Solver
 
-from acqmss.oracle.base import Oracle
-from acqmss.oracle.fm_data import FMData
-from acqmss.oracle.fm_oracle_model import FMOracleModel
+from conacq.oracle.base import Oracle
+from conacq.oracle.fm_data import FMData
+from conacq.oracle.fm_oracle_model import FMOracleModel
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler
 
@@ -178,7 +178,7 @@ class FeatureModelOracle(Oracle):
             Set of constraint descriptions
         """
         if self._constraint_descriptions_cache is None:
-            from acqmss.oracle.constraint_description import extract_constraint_descriptions
+            from conacq.oracle.constraint_description import extract_constraint_descriptions
             self._constraint_descriptions_cache = extract_constraint_descriptions(self.fm)
         return self._constraint_descriptions_cache
 

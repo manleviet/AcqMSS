@@ -284,7 +284,7 @@ oracle = FeatureModelOracle('data/fms/model.uvl')
 model.prepare(oracle, positive_examples=pos, negative_examples=neg)
 
 # 4. Create checker from model (CheckerModel protocol)
-from explanation.operations.algorithms.checker_factory import CheckerFactory
+from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
 
 checker = CheckerFactory.create_from_model(model, profiler)
 
@@ -314,184 +314,46 @@ for fold_pos, fold_neg in folds:
 
 ### 6. Shared Utility Methods
 
-Extract duplicated logic into static/class methods:
-
-```python
-@dataclass
-class InteractiveTask:
-    """Task state for QuAcq."""
-
-    @staticmethod
-    def violates_clauses(clauses: List[List[int]],
-                        assignment: Dict[int, bool]) -> bool:
-        """Check if assignment violates constraint clauses.
-
-        Shared utility used by QuAcq, FindScope, and FindC.
-        Centralizes violation checking logic in one place.
-        """
-        for clause in clauses:
-            clause_satisfied = False
-            for lit in clause:
-                var = abs(lit)
-                if var in assignment:
-                    if (lit > 0 and assignment[var]) or (lit < 0 and not assignment[var]):
-                        clause_satisfied = True
-                        break
-            if not clause_satisfied:
-                return True
-        return False
-
-# Usage across multiple modules
-class QuAcq:
-    def check_violation(self, config):
-        return InteractiveTask.violates_clauses(clauses, assignment)
-```
+Extract duplicated logic into static/class methods. Example: `InteractiveTask.violates_clauses()` used by QuAcq, FindScope, and FindC centralizes violation checking logic in one place.
 
 ### 7. Interactive Learning Patterns
 
-Guidelines for implementing QuAcq and related algorithms:
-
-```python
-class InteractiveLearner:
-    """High-level facade for QuAcq learning modes."""
-
-    def learn(self, mode: str = 'automated') -> InteractiveResult:
-        """Learn constraints using oracle or example modes.
-
-        Args:
-            mode: 'automated' (FM-based) or 'manual' (user) for oracle mode,
-                  'example' for batch learning (FindScope/FindC)
-
-        Returns:
-            InteractiveResult with learned KB and metrics
-        """
-        if mode == 'example':
-            return self.learn_from_examples()  # FindScope/FindC
-        else:
-            return self.learn_with_oracle()    # Interactive oracle
-
-class QuAcq:
-    """QuAcq algorithm (IJCAI13 paper)."""
-
-    def learn_from_examples(self, examples) -> List[Constraint]:
-        """Example-based learning using FindScope/FindC.
-
-        Process each negative example to identify violated constraints.
-        """
-        for e_minus in examples.negative:
-            scope = FindScope(self.checker).find(e_minus)
-            constraint = FindC(self.checker).find(e_minus, scope)
-            self.kb.add(constraint)
-        return self.kb
-```
+`InteractiveLearner` provides high-level facade for QuAcq learning modes (oracle-based or example-based). QuAcq processes negative examples with FindScope/FindC to identify violated constraints.
 
 ## Oracle Module Conventions
 
-### Unified Oracle Interface
+**Package**: `conacq/oracle/` — Minimal, focused oracle abstraction
 
-The `acqmss/oracle/` package provides a minimal, focused oracle abstraction:
+**Oracle ABC**: Minimal interface — only `is_valid(assignments)` abstract; `ask()` concrete alias.
 
-```python
-from typing import Dict, Optional, List, Set
-from abc import ABC, abstractmethod
-from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle, FMData
-from acqmss.example_generators import ExampleProvider
+**Key Classes**:
 
-# Unified Oracle ABC — minimal interface
-class Oracle(ABC):
-    """Abstract oracle for membership queries (minimal interface)."""
+1. **FMData** (`@dataclass(frozen=True)`): Immutable FM metadata container
+   - Fields: `features`, `feature_ids`, `root_feature`, `num_constraints`, `next_tseitin_var`, `feature_count` property
+   - Created by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers
 
-    @abstractmethod
-    def is_valid(self, assignments: Dict[str, bool]) -> bool:
-        """Check if configuration is valid."""
-        pass
-
-    def ask(self, query: Dict[str, bool]) -> bool:
-        """Alias for is_valid() (interactive compatibility)."""
-        return self.is_valid(query)
-
-# FM-based oracle (most common)
-oracle = FeatureModelOracle('data/fms/model.uvl', use_incremental=True)
-
-# Public ABC methods
-is_valid = oracle.is_valid({'root': True, 'feature_a': False})
-ask_result = oracle.ask({'root': True, 'feature_a': False})
-
-# FM-specific extensions (not part of Oracle ABC)
-fm_data = oracle.get_fm_data()                    # FMData snapshot
-features = oracle.get_features()                  # Set[str]
-feature_ids = oracle.get_feature_ids()            # Dict[str, int]
-root = oracle.get_root_feature()                  # str
-config = oracle.complete_configuration({'root': True})  # Optional[Dict]
-cnf = oracle.get_cnf_clauses()                   # List[List[int]]
-tseitin_var = oracle.get_next_tseitin_var()      # int
-constraint_descs = oracle.get_constraint_descriptions()  # Set[str]
-
-# With caching for repeated queries
-cached_oracle = CachedOracle(oracle)
-result = cached_oracle.is_valid(query)
-
-# Example-based learning
-provider = ExampleProvider(oracle)
-examples = provider.generate_examples(count=100)
-```
-
-**FMData Dataclass** (`fm_data.py`):
-- Immutable container for FM metadata (frozen dataclass)
-- Created once by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers from oracle
-- **Fields**:
-  - `features: Set[str]` — All feature names
-  - `feature_ids: Dict[str, int]` — Feature→SAT variable ID mapping
-  - `root_feature: str` — Root feature name
-  - `num_constraints: int` — Number of FM constraints
-  - `next_tseitin_var: int` — Starting Tseitin variable ID
-  - `feature_count` property — Number of features
-
-**Architecture**:
-
-1. **FeatureModelOracle** — Main FM oracle implementation
-   - **ABC methods** (required): `is_valid(assignments)`, `ask(query)`
-   - **FM-specific extensions** (not part of ABC):
-     - `get_fm_data() -> FMData` — Frozen FM metadata snapshot
-     - `get_features()`, `get_feature_ids()`, `get_root_feature()`
-     - `get_num_constraints()`, `get_next_tseitin_var()`
-     - `complete_configuration(partial) -> Optional[Dict]` — SAT-based config completion (with fallback to any valid config)
-     - `get_cnf_clauses() -> List[List[int]]` — Raw FM CNF (no assumption guards)
-     - `get_constraint_descriptions() -> Set[str]` — Cached constraint descriptions
-   - Wraps `FMOracleModel` for consistency checking
+2. **FeatureModelOracle**: Main FM oracle
+   - ABC methods: `is_valid()`, `ask()`
+   - FM extensions: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_tseitin_var()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`
+   - Delegates to `FMOracleModel` for consistency checking
    - Uses incremental solver by default
 
-2. **FMOracleModel** (`fm_oracle_model.py`) — Assumption-guarded FM model
-   - FM clauses stored directly in `set_kb` (always active)
-   - Feature assignments become assumption-guarded unit clauses:
-     - `[-a_pos_i, fid]` → if `a_pos_i` active, feature must be true
-     - `[-a_neg_i, -fid]` → if `a_neg_i` active, feature must be false
+3. **FMOracleModel**: Assumption-guarded FM model
+   - FM clauses in `set_kb` (always active)
+   - Feature assignments as assumption-guarded unit clauses: `[-a_pos_i, fid]`, `[-a_neg_i, -fid]`
    - Satisfies `CheckerModel` protocol for `CheckerFactory`
-   - Prepared via `OracleTaskPreparation`
 
-3. **UserPromptOracle** — Interactive human-in-the-loop
-   - Implements: `is_valid()` only (interactive queries)
-   - Raises `NotImplementedError` for `complete_configuration()`, `get_cnf_clauses()`
+4. **UserPromptOracle**: Interactive human oracle (implements `is_valid()` only)
 
-4. **CachedOracle** — Transparent caching wrapper
-   - Caches `is_valid()` results
-   - Delegates extended methods to base oracle
-
-5. **OracleData** / **GroundTruthData** — Extracted oracle data for evaluation
-   - Reads FM directly (no solver dependency)
+5. **CachedOracle**: Transparent caching wrapper (caches `is_valid()`, delegates FM methods)
 
 **Design Principles**:
-- **Minimal ABC**: Oracle ABC defines only `is_valid()` (membership query)
-- **FM metadata decoupled**: `FMData` passed explicitly to decouple callers from oracle
-- **Concrete-specific extensions**: FM methods live on `FeatureModelOracle`, not ABC
-- **Example generators typed as FeatureModelOracle**: Not generic `Oracle` (avoids ambiguity)
-- **Single configuration validation path**: All methods delegate to `FMOracleModel` + checker
+- Minimal ABC (only `is_valid()`)
+- FM metadata via `FMData` (decoupled)
+- FM-specific methods on `FeatureModelOracle` (not ABC)
+- Example generators typed as `FeatureModelOracle` (not generic `Oracle`)
 
-**Critical Requirement**: Feature ID consistency
-- `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)
-- Source of truth: `FmToPysat.variables` from FM→SAT conversion
-- Ensures feature_ids match SAT variable IDs in CNF clauses
-- **Never** sort feature IDs alphabetically — breaks consistency with SAT clause literals
+**Critical**: Feature ID consistency — `FMOracleModel.variables` uses flamapy's tree traversal order (source: `FmToPysat.variables`). **Never** sort alphabetically — breaks SAT clause literal mapping.
 
 ## Testing Strategy
 
@@ -809,18 +671,13 @@ config_path = 'apps/conf/config.toml'
 ## Code Review Checklist
 
 Before submitting PR:
-
 - [ ] Type hints on all public functions
 - [ ] Docstrings on all public modules/classes/functions
-- [ ] No hard-coded magic numbers (use constants or config)
 - [ ] Error handling for all exception cases
-- [ ] Tests for new code (≥80% coverage)
-- [ ] Tests pass with both incremental and non-incremental modes
+- [ ] Tests for new code (≥80% coverage, pass both incremental/non-incremental modes)
 - [ ] Code follows naming conventions
 - [ ] No unused imports or variables
-- [ ] No print() statements (use logging or configuration)
-- [ ] Configuration externalized (not in code)
-- [ ] Docstring examples match actual API
+- [ ] Configuration externalized (not hard-coded)
 
 ## Style Guide Quick Reference
 
@@ -835,37 +692,3 @@ Before submitting PR:
 | Type hints | ✓ Required on public | `def acquire(task: Task)` |
 | Docstrings | Google-style | Module, class, function |
 
-## Tools
-
-### Linting & Formatting
-
-```bash
-# Check code style
-ruff check .
-
-# Auto-fix style issues
-ruff check . --fix
-
-# Format code
-ruff format .
-
-# Type checking
-mypy . --strict
-pyright
-
-# Combined check
-ruff check . && mypy . && pytest tests/
-```
-
-### Pre-commit Hook (Optional)
-
-Create `.git/hooks/pre-commit`:
-
-```bash
-#!/bin/bash
-set -e
-ruff check . --fix
-ruff format .
-mypy .
-PYTHONPATH=. pytest tests/ -q
-```

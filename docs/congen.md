@@ -1,6 +1,6 @@
 # ConGen - Constraint Acquisition With Maximum Satisfiable Subsets
 
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-02-17
 
 **Paper:** Leviet M. — MSS-based Passive Constraint Acquisition for Feature Models
 
@@ -135,7 +135,7 @@ Converts negative examples E- into NE constraints that the KB must satisfy.
 
 **Subset minimality**: Assumes negative examples are subset-minimal — no proper subset of an e- is also negative.
 
-**Implementation**: `acqmss/algorithms/generate_ne.py` — `GenerateNE.generate()` (193 LOC)
+**Implementation**: `conacq/algorithms/generate_ne.py` — `GenerateNE.generate()` (193 LOC)
 - Called internally by `ConGenModel.prepare()`, not by callers directly
 - Uses QuickXPlain from `explanation/operations/algorithms/quickxplain.py` (80 LOC)
 
@@ -173,7 +173,7 @@ Output: B' ⊆ B (maximum satisfiable subset)
 - **Line 13**: Find MSS of second half, with first half's MSS added to BG
 - **Lines 6-8**: Base case — single constraint that causes inconsistency is removed
 
-**Implementation**: `acqmss/algorithms/acqmss.py` — `AcqMSS.find_mss()` (104 LOC)
+**Implementation**: `conacq/algorithms/acqmss.py` — `AcqMSS.find_mss()` (104 LOC)
 - Uses KBDiag from `explanation/operations/algorithms/kbdiag.py` (100 LOC)
 
 ## REDUCE (Algorithm 3)
@@ -197,7 +197,7 @@ Output: KB (reduced knowledge base)
 
 **Line 3 logic**: If adding ¬ci to the remaining KB causes inconsistency, then KB − {ci} already entails ci, so ci is redundant.
 
-**Implementation**: `acqmss/algorithms/reduce.py` — `Reduce.reduce()` (155 LOC)
+**Implementation**: `conacq/algorithms/reduce.py` — `Reduce.reduce()` (155 LOC)
 - Uses `negation_map` (Dict[int, int]) mapping assumption ID → negated form
 - Tseitin encoding used to negate CNF clauses
 
@@ -300,23 +300,24 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `acqmss/algorithms/congen.py` | 228 | Main ConGen algorithm (Algorithm 1) |
-| `acqmss/algorithms/acqmss.py` | 104 | AcqMSS MSS finding (Algorithm 2) |
-| `acqmss/algorithms/reduce.py` | 155 | REDUCE redundancy elimination (Algorithm 3) |
-| `acqmss/algorithms/generate_ne.py` | 193 | GenerateNE negative example processing |
-| `acqmss/algorithms/task_preparation.py` | 435 | ConGenTaskPreparation setup |
-| `acqmss/algorithms/congen_model.py` | 186 | ConGenModel data container |
-| `acqmss/algorithms/congen_model_builder.py` | 157 | Builder for ConGenModel construction |
+| `conacq/algorithms/congen.py` | 228 | Main ConGen algorithm (Algorithm 1) |
+| `conacq/algorithms/acqmss.py` | 104 | AcqMSS MSS finding (Algorithm 2) |
+| `conacq/algorithms/reduce.py` | 155 | REDUCE redundancy elimination (Algorithm 3) |
+| `conacq/algorithms/generate_ne.py` | 193 | GenerateNE negative example processing |
+| `conacq/algorithms/task_preparation.py` | 435 | ConGenTaskPreparation setup |
+| `conacq/algorithms/congen_model.py` | 186 | ConGenModel data container |
+| `conacq/algorithms/congen_model_builder.py` | 157 | Builder for ConGenModel construction |
 
 ### Supporting Infrastructure
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `acqmss/bias/` | ~1,250 | BiasGenerator, ClauseGenerator |
-| `acqmss/example_generators/` | ~1,285 | RS, FF, 2-COV sampling strategies |
-| `acqmss/eval/cross_validation.py` | 504 | n-fold cross-validation framework |
-| `acqmss/runners/congen_runner.py` | 228 | ConGenRunner pipeline |
-| `acqmss/eval/accuracy.py` | 170 | AccuracyCalculator metrics |
+| `conacq/bias/` | ~1,176 | BiasGenerator, ClauseGenerator |
+| `conacq/example_generators/` | ~1,097 | RS, FF, 2-COV sampling strategies |
+| `conacq/oracle/` | ~929 | Oracle ABC, FeatureModelOracle, FMData |
+| `conacq/eval/cross_validation.py` | 504 | n-fold cross-validation framework |
+| `conacq/runners/congen_runner.py` | 235 | ConGenRunner pipeline (moved from eval/) |
+| `conacq/eval/accuracy.py` | 170 | AccuracyCalculator metrics |
 
 ### SAT Solver Layer
 
@@ -345,9 +346,10 @@ ConGen and QuAcq share significant infrastructure:
 |-----------|--------------|-------|
 | SAT solvers | `explanation/operations/algorithms/` | IncrementalPySATChecker, NonIncrementalPySATChecker |
 | FM representation | `explanation/transformations/` | FM → SAT conversion pipeline |
-| Bias generation | `acqmss/bias/` | Same BiasGenerator for both paradigms |
-| Evaluation | `acqmss/eval/` | Same accuracy metrics and cross-validation |
-| CV folds | `acqmss/eval/fold_io.py` | Pre-generated folds for fair comparison |
+| Bias generation | `conacq/bias/` | Same BiasGenerator for both paradigms |
+| Oracle | `conacq/oracle/` | Oracle ABC, FeatureModelOracle, FMData |
+| Evaluation | `conacq/eval/` | Same accuracy metrics and cross-validation |
+| CV folds | `conacq/eval/fold_io.py` | Pre-generated folds for fair comparison |
 | Feature IDs | flamapy tree traversal | Authoritative variable mapping (NOT alphabetical) |
 
 **Two paradigms, one framework**:

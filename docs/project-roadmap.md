@@ -1,6 +1,6 @@
 # AcqMSS Project Roadmap
 
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-02-17
 
 ## Executive Summary
 
@@ -8,7 +8,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 
 **Status**: Production-ready for research and development use
 **Version**: 1.0
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-02-17
 
 ## Development Phases
 
@@ -116,15 +116,19 @@ AcqMSS is a mature research system with core functionality fully implemented and
 **Status**: Documentation updates in progress
 
 **Completed**:
-- ✅ Codebase summary updated with oracle/ package (660 LOC, 3 files)
-- ✅ System architecture updated with oracle architecture and checker interface details
-- ✅ Code standards updated with file size guidelines (~200 lines Python)
+- ✅ Codebase summary updated with oracle/ package, runners/ move, and accurate LOC counts
+- ✅ System architecture updated with oracle architecture, FMData, and checker interface details
+- ✅ Code standards trimmed to 694 LOC (under 800 limit), CheckerFactory import path corrected
 - ✅ Project overview updated with FindScope/FindC, oracle module, Phase 5 completion
 - ✅ Project roadmap updated with Phase 5 completion and metrics
+- ✅ Oracle refactoring documented (ABC slimmed, FMData introduced, FeatureModelOracle extended)
+- ✅ Runners package move documented (ConGenRunner, InteractiveRunner in conacq/runners/)
+- ✅ README.md updated (package name conacq, runners in structure)
+- ✅ quacq.md fixed (GenerateNE internal to prepare(), runners path corrected)
+- ✅ All doc imports verified (conacq.* not acqmss.*)
 
 **In Progress**:
-- 📝 QuAcq documentation update (oracle references)
-- 📝 README.md update (LOC counts, quacq.md references)
+- 📝 Final cross-reference verification
 
 **Planned**:
 - 📝 API documentation (Sphinx/pdoc integration)
@@ -140,11 +144,11 @@ AcqMSS is a mature research system with core functionality fully implemented and
 
 | Component | LOC | Files | Test Coverage | Status |
 |-----------|-----|-------|---------------|--------|
-| acqmss/ | 8,695 | 47 | 85% | ✅ Complete |
-| explanation/ | 6,580 | 42 | 90% | ✅ Complete |
-| apps/ | 3,765 | 9 | 60% | ✅ Complete |
-| tests/ | ~3,000+ | 8 | — | ✅ Complete |
-| **Total** | **~22,000+** | **~106** | **80%** | ✅ **Complete** |
+| conacq/ | ~9,900 | ~50 | 85% | ✅ Complete (includes runners/) |
+| explanation/ | ~6,100 | ~35 | 90% | ✅ Complete |
+| apps/ | ~3,702 | 9 | 60% | ✅ Complete |
+| tests/ | ~3,500+ | 8 | — | ✅ Complete |
+| **Total** | **~19,532** | **~97** | **80%** | ✅ **Complete** |
 
 ### Performance Benchmarks
 
@@ -341,5 +345,5 @@ pytest tests/test_diagnosis.py -k "with_profiling" -v
 ---
 
 **Document Version**: 1.1
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-02-17
 **Maintained By**: Development Team

@@ -14,7 +14,7 @@ import logging
 
 from explanation.operations.algorithms.profiler import Profiler
 
-from acqmss.eval.performance_metrics import PerformanceMetrics
+from conacq.eval.performance_metrics import PerformanceMetrics
 
 
 @dataclass
@@ -137,7 +137,7 @@ class InteractiveRunner:
 
             # Lazy import to avoid circular dependency
             # (learner.py imports from acqmss.eval)
-            from acqmss.algorithms.interactive import InteractiveLearner
+            from conacq.algorithms.interactive import InteractiveLearner
 
             # Create learner; disable profiling to avoid global profiler conflict
             # (caller manages the global profiler lifecycle)

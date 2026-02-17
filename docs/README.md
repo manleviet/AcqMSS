@@ -1,6 +1,6 @@
 # AcqMSS Documentation
 
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-02-17
 
 Welcome to the comprehensive documentation for AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets). This directory contains technical documentation for developers, researchers, and contributors.
 
@@ -40,30 +40,32 @@ Defines what AcqMSS is, why it exists, and what success looks like:
 
 ### codebase-summary.md
 **Purpose**: Code organization and inventory
-**Length**: 354 LOC
+**Length**: 439 LOC
 
 High-level overview of what code exists where:
-- Package structure (acqmss, explanation, apps, tests)
+- Package structure (conacq, explanation, apps, tests)
 - Detailed LOC breakdown per component
-- **NEW**: acqmss/oracle/ package (3 files, ~660 LOC)
+- **conacq/oracle/**: Oracle ABC, FeatureModelOracle, FMData (9 files, ~929 LOC)
+- **conacq/runners/**: ConGenRunner, InteractiveRunner (3 files, ~446 LOC, moved from eval/)
 - File inventory by purpose
 - Data directory structure (feature models, configurations, results)
 - Dependencies (runtime, development, optional)
 - Key architectural patterns
-- Codebase statistics (~22,000+ LOC across ~106 files)
+- Codebase statistics (~19,532 LOC across ~97 files)
 
 **Read when**: You need to find where something is implemented, or understand the code organization.
 
 ### code-standards.md
 **Purpose**: Development guidelines and conventions
-**Length**: 687 LOC
+**Length**: 694 LOC (trimmed to <800 LOC limit)
 
 Comprehensive style guide and best practices:
 - Language requirements (Python 3.13+, type hints)
-- **NEW**: Module file size guidelines (~200 lines Python, max ~300)
+- Module file size guidelines (~200 lines Python, max ~300)
 - Naming conventions (modules, classes, functions, variables)
 - File organization and import order
-- 6 design patterns with code examples (including shared utility methods)
+- 7 design patterns (Builder, Strategy, Template, DI, Facade, Shared Utils, Interactive)
+- Oracle module conventions (Oracle ABC, FMData, FeatureModelOracle)
 - Testing strategy (parameterization, coverage requirements)
 - Documentation standards (docstring formats)
 - Type hints and error handling
@@ -75,7 +77,7 @@ Comprehensive style guide and best practices:
 
 ### system-architecture.md
 **Purpose**: Technical architecture and data flows
-**Length**: 478 LOC (trimmed from 904 to meet 800 LOC limit)
+**Length**: 595 LOC
 
 Deep dive into how the system works:
 - Two-layer architecture overview
@@ -94,7 +96,7 @@ Deep dive into how the system works:
 
 ### project-roadmap.md
 **Purpose**: Development timeline and progress
-**Length**: 344 LOC
+**Length**: 347 LOC
 
 Project status and future planning:
 - **Updated**: 5 development phases (Phases 1-5 complete, Phase 6 in progress)
@@ -111,13 +113,13 @@ Project status and future planning:
 
 ### quacq.md
 **Purpose**: QuAcq algorithm documentation (IJCAI 2013)
-**Length**: 104 LOC
+**Length**: 193 LOC
 
 Paper-based implementation guide:
 - Overview of QuAcq algorithm (partial queries for active learning)
 - **UPDATED**: Two implementation modes (oracle-based + example-based)
 - **UPDATED**: FindScope (Algorithm 2) and FindC (Algorithm 3) details
-- **UPDATED**: Oracle and oracle module references (acqmss/oracle/)
+- **UPDATED**: Oracle and oracle module references (conacq/oracle/)
 - Complexity analysis for both modes
 - Optimality discussion
 - Experimental results (from paper)
@@ -269,14 +271,15 @@ congen.md (ALGORITHM DETAILS)
 
 | File | LOC | Size | Status |
 |------|-----|------|--------|
-| code-standards.md | 687 | 23 KB | ✅ Updated 2026-02-16 |
-| codebase-summary.md | 354 | 14 KB | ✅ Updated 2026-02-16 |
-| project-overview-pdr.md | 353 | 16 KB | ✅ Updated 2026-02-16 |
-| system-architecture.md | 478 | 18 KB | ✅ Trimmed & updated 2026-02-16 |
-| project-roadmap.md | 344 | 14 KB | ✅ Updated 2026-02-16 |
-| quacq.md | 104 | 4 KB | ✅ Updated 2026-02-16 |
-| congen.md | 383 | 15 KB | ✅ Created 2026-02-16 |
-| **TOTAL** | **2,703** | **104 KB** | ✅ **All under 800 LOC** |
+| code-standards.md | 694 | 24 KB | ✅ Updated 2026-02-17 (trimmed to <800) |
+| codebase-summary.md | 439 | 22 KB | ✅ Updated 2026-02-17 |
+| system-architecture.md | 595 | 22 KB | ✅ Updated 2026-02-17 |
+| congen.md | 383 | 17 KB | ✅ Updated 2026-02-17 |
+| README.md | 364 | 10 KB | ✅ Updated 2026-02-17 |
+| project-overview-pdr.md | 352 | 17 KB | ✅ Updated 2026-02-17 |
+| project-roadmap.md | 347 | 14 KB | ✅ Updated 2026-02-17 |
+| quacq.md | 193 | 7 KB | ✅ Updated 2026-02-17 |
+| **TOTAL** | **3,367** | **133 KB** | ✅ **All under 800 LOC** |
 
 All files are within size constraints (≤800 LOC per file) and follow documentation standards.
 
@@ -352,6 +355,7 @@ Documentation is updated when:
 - **New features added** — Document architecture and usage
 
 **Version History:**
+- v1.4 (2026-02-17): Updated for oracle refactoring (ABC slimmed, FMData introduced, FeatureModelOracle extended), runners/ package move, CheckerFactory import path correction
 - v1.3 (2026-02-16): Added congen.md, cross-linked all docs
 - v1.2 (2026-02-16): Update for variable naming refactor (neg_c_map → negation_map), CheckerFactory API update
 - v1.1 (2026-02-13): Comprehensive update with oracle/ package, Phase 5 completion, file size trim
@@ -360,4 +364,4 @@ Documentation is updated when:
 ---
 
 **Documentation Status**: Phase 6 (Documentation & Polish) — In Progress
-**All files updated**: 2026-02-16
+**All files updated**: 2026-02-17

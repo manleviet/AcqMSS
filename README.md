@@ -48,9 +48,9 @@ PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.tom
 Learn constraints from positive (valid) and negative (invalid) example configurations:
 
 ```python
-from acqmss.algorithms import ConGen, ConGenModelBuilder
-from acqmss.oracle import FeatureModelOracle
-from explanation.operations.algorithms.checker_factory import CheckerFactory
+from conacq.algorithms import ConGen, ConGenModelBuilder
+from conacq.oracle import FeatureModelOracle
+from explanation.operations.algorithms.checker import CheckerFactory
 
 # Build model (no FM dependency)
 model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
@@ -80,7 +80,7 @@ result = congen.acquire(
 Learn constraints through interaction with an oracle (user or model):
 
 ```python
-from acqmss.algorithms.interactive import InteractiveLearner
+from conacq.algorithms.interactive import InteractiveLearner
 
 learner = InteractiveLearner.from_files(
     fm_path='data/fms/arcade-game.uvl',
@@ -117,12 +117,14 @@ Seven reference models of increasing complexity:
 
 ```
 AcqMSS/
-├── acqmss/                    # Core constraint acquisition package
+├── conacq/                    # Core constraint acquisition package
 │   ├── algorithms/            # ACQMSS, CONGEN, REDUCE, GenerateNE
-│   │   └── interactive/       # QuAcq, learner, query generation
+│   │   └── interactive/       # QuAcq, learner, FindScope, FindC
 │   ├── bias/                  # Bias generation from feature models
-│   ├── testcases/             # Example generation (RS, 2-COV, FF)
-│   ├── runners/               # ConGenRunner, InteractiveRunner
+│   ├── example_generators/    # RS, 2-COV, FF + QueryGenerator, ExampleProvider
+│   ├── examples/              # Example data structures + I/O utilities
+│   ├── oracle/                # Oracle ABC, FeatureModelOracle, FMData, cached
+│   ├── runners/               # ConGenRunner, InteractiveRunner (moved from eval/)
 │   └── eval/                  # Accuracy, cross-validation, evaluator
 ├── explanation/               # SAT solver infrastructure
 │   ├── models/                # DiagnosisModel, builder, task preparation
@@ -177,4 +179,4 @@ If you use AcqMSS in your research, please cite:
 
 ---
 
-**Version**: 1.0 | **Python**: 3.13+ | **Status**: Production research system | **Last Updated**: 2026-02-16
+**Version**: 1.0 | **Python**: 3.13+ | **Status**: Production research system | **Last Updated**: 2026-02-17

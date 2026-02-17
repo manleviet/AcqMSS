@@ -19,7 +19,7 @@ from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
 from explanation.operations.algorithms.quickxplain import QuickXPlain
 
 if TYPE_CHECKING:
-    from acqmss.oracle import FeatureModelOracle
+    from conacq.oracle import FeatureModelOracle
     from explanation.models.testsuite import TestCase, TestSuite
 
 

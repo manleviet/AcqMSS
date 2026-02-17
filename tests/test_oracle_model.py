@@ -2,7 +2,7 @@
 
 import pytest
 
-from acqmss.oracle.fm_oracle_model import FMOracleModel, OneShotModel
+from conacq.oracle.fm_oracle_model import FMOracleModel, OneShotModel
 from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
 
 

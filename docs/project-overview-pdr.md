@@ -1,6 +1,6 @@
 # AcqMSS Project Overview & Product Development Requirements (PDR)
 
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-02-17
 
 ## Executive Summary
 
@@ -212,7 +212,7 @@ Application Layer (apps/)
   ├── run_interactive_eval.py
   └── run_congen_eval.py
        ↓
-Core Algorithms (acqmss/)
+Core Algorithms (conacq/)
   ├── CONGEN (GenerateNE → ACQMSS → REDUCE)
   ├── QuAcq (GenerateQuery → Oracle → Update KB)
   ├── FindScope/FindC (example-based learning)

@@ -19,9 +19,9 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from acqmss.runners import ConGenRunner
-from acqmss.examples import ExampleIO
-from acqmss.eval.report import save_kb_result
+from conacq.runners import ConGenRunner
+from conacq.examples import ExampleIO
+from conacq.eval.report import save_kb_result
 
 
 @dataclass

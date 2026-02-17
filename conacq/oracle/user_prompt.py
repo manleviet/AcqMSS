@@ -7,7 +7,7 @@ Only implements is_valid() from Oracle ABC.
 
 from typing import Dict
 
-from acqmss.oracle.base import Oracle
+from conacq.oracle.base import Oracle
 
 
 class UserPromptOracle(Oracle):

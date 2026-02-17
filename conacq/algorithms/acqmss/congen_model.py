@@ -21,7 +21,7 @@ from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
 
 if TYPE_CHECKING:
-    from ..oracle import FeatureModelOracle
+    from conacq.oracle import FeatureModelOracle
 
 
 class ConGenModel:

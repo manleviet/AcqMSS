@@ -8,15 +8,15 @@ Tests core components: QueryGenerator, QuAcq, InteractiveLearner.
 import pytest
 from pathlib import Path
 
-from acqmss.oracle import FeatureModelOracle, Oracle, CachedOracle
-from acqmss.bias import BiasIO
-from acqmss.algorithms.interactive import (
+from conacq.oracle import FeatureModelOracle, Oracle, CachedOracle
+from conacq.bias import BiasIO
+from conacq.algorithms.interactive import (
     InteractiveTask,
     InteractiveResult,
     QuAcq,
     InteractiveLearner,
 )
-from acqmss.example_generators import QueryGenerator
+from conacq.example_generators import QueryGenerator
 from explanation.operations.algorithms.profiler import (
     get_global_profiler,
     use_global_profiler,
@@ -587,7 +587,7 @@ class TestOracleABC:
     def test_oracle_abc_minimal(self):
         """Verify Oracle ABC has only is_valid as abstract method."""
         import inspect
-        from acqmss.oracle.base import Oracle
+        from conacq.oracle.base import Oracle
 
         abstract_methods = {
             name for name, method in inspect.getmembers(Oracle)

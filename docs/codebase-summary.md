@@ -1,16 +1,16 @@
 # AcqMSS Codebase Summary
 
-**Total Python Code**: ~22,000+ lines across ~106 files
-**Main Packages**: acqmss (8,695 LOC) + explanation (6,580 LOC) + apps (3,765 LOC) + tests (~3,000+ LOC)
+**Total Python Code**: ~19,532 lines across ~97 files
+**Main Packages**: conacq (~9,900 LOC) + explanation (~6,100 LOC) + apps (~3,700 LOC) + tests (~3,000+ LOC)
 **Last Updated**: 2026-02-17
 
 ## Package Structure
 
-### acqmss/ — Constraint Acquisition Algorithms (8,695 LOC)
+### conacq/ — Constraint Acquisition Algorithms (~9,900 LOC)
 
-Core acquisition logic organized into six sub-packages:
+Core acquisition logic organized into seven sub-packages:
 
-#### acqmss/algorithms/ — Acquisition Algorithms (~1,455 LOC, 7 files)
+#### conacq/algorithms/ — Acquisition Algorithms (~2,771 LOC, 15 files)
 
 Primary constraint discovery algorithms:
 
@@ -24,18 +24,19 @@ Primary constraint discovery algorithms:
 | `congen_model.py` | 186 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Call prepare(oracle) before use |
 | `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern. from_bias() returns unprepared model |
 
-**Interactive Sub-package** (`interactive/`, 6 files, ~1,950 LOC):
+**Interactive Sub-package** (`interactive/`, 7 files, ~1,543 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `quacq.py` | 439 | QuAcq: oracle-based + example-based learning modes |
 | `learner.py` | 426 | InteractiveLearner: high-level facade (from_examples(), from_files()) |
-| `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): scope identification via partial queries |
 | `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): constraint discrimination from scope |
 | `task.py` | 137 | Task state, scope helpers, shared utilities (violates_clauses) |
 | `result.py` | 137 | InteractiveResult - outcome with metrics |
+| `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): scope identification via partial queries |
+| `__init__.py` | ~60 | Package exports |
 
-#### acqmss/bias/ — Bias (Constraint) Generation (~1,250 LOC, 6 files)
+#### conacq/bias/ — Bias (Constraint) Generation (~1,176 LOC, 6 files)
 
 Feature model to constraint conversion pipeline:
 
@@ -47,21 +48,21 @@ Feature model to constraint conversion pipeline:
 | `clause_generator.py` | 199 | Convert FM constraints to CNF clauses |
 | `data_structures.py` | 160 | Constraint, BiasConfig, ConstraintType enumerations |
 
-#### acqmss/example_generators/ — Example & Query Generation (~1,285 LOC, 7 files)
+#### conacq/example_generators/ — Example & Query Generation (~1,097 LOC, 7 files)
 
 Sampling strategies, example generation, and query generation for learning:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `base.py` | 245 | Base strategy class for example generation. No longer imports pysat.solvers; calls oracle.complete_configuration() instead |
-| `random_sampling.py` | 245 | RS sampling: uniformly random configuration selection |
-| `feature_frequency.py` | 197 | FF strategy: feature frequency-based sampling. No longer imports pysat.solvers; calls oracle.complete_configuration() |
-| `nwise_coverage.py` | 136 | 2-COV strategy: n-wise pairwise coverage |
 | `query_generator.py` | 262 | QueryGenerator: discriminative query generation (moved from interactive/) |
-| `example_provider.py` | 120+ | ExampleProvider: batch example interface for learning (moved from oracle/) |
-| `__init__.py` | 1 | Package exports with lazy-loaded QueryGenerator |
+| `base.py` | 245 | Base strategy class. Calls oracle.complete_configuration() (no pysat.solvers imports) |
+| `random_sampling.py` | 245 | RS sampling: uniformly random configuration selection |
+| `feature_frequency.py` | 197 | FF: feature frequency-based sampling. Calls oracle.complete_configuration() |
+| `nwise_coverage.py` | 136 | 2-COV strategy: n-wise pairwise coverage |
+| `example_provider.py` | ~120 | ExampleProvider: batch example interface (moved from oracle/) |
+| `__init__.py` | ~1 | Package exports with lazy-loaded QueryGenerator |
 
-**Oracle Sub-package** (`acqmss/oracle/`, 8 files, ~900 LOC):
+**Oracle Sub-package** (`conacq/oracle/`, 9 files, ~929 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
@@ -102,18 +103,19 @@ Sampling strategies, example generation, and query generation for learning:
 
 11. **Oracle Separation**: Oracle created independently and passed to `model.prepare()`. Enables cross-validation reuse without rebuilding model.
 
-#### acqmss/runners/ — Execution Runners (~425 LOC, 2 files)
+#### conacq/runners/ — Execution Runners (~446 LOC, 3 files)
 
-Pipeline runners for constraint acquisition algorithms:
+Pipeline runners for constraint acquisition algorithms (extracted from eval/):
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `congen_runner.py` | 228 | CONGEN pipeline runner with profiling + bias shuffle seed support |
+| `congen_runner.py` | 235 | CONGEN pipeline runner with profiling + bias shuffle seed support |
 | `interactive_runner.py` | 197 | QuAcq pipeline runner with metrics collection |
+| `__init__.py` | ~14 | Package exports |
 
-#### acqmss/eval/ — Evaluation Framework (~3,275 LOC, 11 files)
+#### conacq/eval/ — Evaluation Framework (~2,346 LOC, 11 files)
 
-Cross-validation and accuracy metrics (runners re-exported for backward compat):
+Cross-validation and accuracy metrics:
 
 | File | LOC | Purpose |
 |------|-----|---------|
@@ -128,11 +130,11 @@ Cross-validation and accuracy metrics (runners re-exported for backward compat):
 | `result_loader.py` | 84 | Load evaluation results |
 | `oracle_extractor.py` | 102 | Extract oracle data for interactive learning |
 
-### explanation/ — SAT Solver Infrastructure (~6,580 LOC, 42 files)
+### explanation/ — SAT Solver Infrastructure (~6,100 LOC, ~35 files)
 
 Diagnosis algorithms and SAT model abstraction:
 
-#### explanation/models/ — Diagnosis Models (~1,000 LOC, 5 files)
+#### explanation/models/ — Diagnosis Models (~1,403 LOC, 5 files)
 
 SAT model representation and construction:
 
@@ -143,7 +145,7 @@ SAT model representation and construction:
 | `pysat_diagnosis_model.py` | 255 | DiagnosisModel: SAT instance + metadata (clauses, assumptions) |
 | `testsuite.py` | 75 | TestSuite: holds test cases + their configurations |
 
-#### explanation/operations/ — SAT Operations (~5,200 LOC, 31 files)
+#### explanation/operations/ — SAT Operations (~4,405 LOC, ~25 files)
 
 Diagnosis algorithm implementations and SAT abstractions:
 
@@ -173,7 +175,7 @@ Diagnosis algorithm implementations and SAT abstractions:
 
 Each wraps diagnosis algorithms for specific use cases (diagnosis vs conflict, PySAT vs SAT4J, various test modes).
 
-#### explanation/transformations/ — Model Converters (~400 LOC, 5 files)
+#### explanation/transformations/ — Model Converters (~292 LOC, 5 files)
 
 Feature model to SAT conversion:
 
@@ -184,7 +186,7 @@ Feature model to SAT conversion:
 | `dimacs_to_configuration.py` | 59 | DIMACS variable assignments → Configuration |
 | `testsuite_reader.py` | 42 | Read test suites from files |
 
-### apps/ — Standalone Applications (~3,765 LOC, 9 files)
+### apps/ — Standalone Applications (~3,702 LOC, 9 files)
 
 CLI applications for constraint acquisition pipeline:
 
@@ -318,11 +320,11 @@ CONGEN and QuAcq learning results:
 
 | Component | LOC | Files | Avg File Size | Status |
 |-----------|-----|-------|---------------|--------|
-| acqmss/ | 8,695 | 47 | 185 | ✅ Core algorithms |
-| explanation/ | 6,580 | 42 | 157 | ✅ SAT infrastructure |
-| apps/ | 3,765 | 9 | 418 | ✅ CLI applications |
-| tests/ | ~3,500+ | 8 | 437 | ✅ Comprehensive coverage |
-| **Total** | **~22,540+** | **~106** | **~212** | ✅ **Production ready** |
+| conacq/ | ~9,900 | ~50 | ~198 | ✅ Core algorithms |
+| explanation/ | ~6,100 | ~35 | ~174 | ✅ SAT infrastructure |
+| apps/ | ~3,702 | 9 | ~411 | ✅ CLI applications |
+| tests/ | ~3,500+ | 8 | ~437 | ✅ Comprehensive coverage |
+| **Total** | **~19,532** | **~97** | **~201** | ✅ **Production ready** |
 
 **Recent Changes** (Oracle Interface Refactoring - commit c978d66):
 

@@ -10,14 +10,14 @@ from typing import Optional, Dict, List, Union
 
 from .task import InteractiveTask
 from .result import InteractiveResult
-from acqmss.oracle import Oracle, FeatureModelOracle, UserPromptOracle
-from acqmss.oracle.fm_data import FMData
-from acqmss.example_generators import ExampleProvider
+from conacq.oracle import Oracle, FeatureModelOracle, UserPromptOracle
+from conacq.oracle.fm_data import FMData
+from conacq.example_generators import ExampleProvider
 from .quacq import QuAcq
-from acqmss.bias.bias_io import BiasIO
-from acqmss.bias.data_structures import Bias
-from acqmss.eval.evaluator import Evaluator, EvaluationStrategy
-from acqmss.eval.result_loader import ConGenResultData
+from conacq.bias.bias_io import BiasIO
+from conacq.bias.data_structures import Bias
+from conacq.eval.evaluator import Evaluator, EvaluationStrategy
+from conacq.eval.result_loader import ConGenResultData
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, use_global_profiler, ProfilerPreset, AbstractProfiler
 )

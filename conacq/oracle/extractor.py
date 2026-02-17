@@ -41,7 +41,7 @@ class GroundTruthData:
         """
         from flamapy.metamodels.fm_metamodel.transformations import UVLReader
         from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
-        from acqmss.oracle.constraint_description import extract_constraint_descriptions
+        from conacq.oracle.constraint_description import extract_constraint_descriptions
 
         uvl_path = Path(uvl_path)
         fm = UVLReader(str(uvl_path)).transform()

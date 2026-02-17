@@ -33,7 +33,7 @@ ROOT_PROJECT_FOLDER = Path(__file__).resolve().parent.parent
 os.chdir(ROOT_PROJECT_FOLDER)
 sys.path.insert(0, str(ROOT_PROJECT_FOLDER))
 
-from acqmss.bias import BiasConfigLoader, BiasGenerator, BiasIO
+from conacq.bias import BiasConfigLoader, BiasGenerator, BiasIO
 
 
 @dataclass

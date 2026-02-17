@@ -9,7 +9,7 @@ This script demonstrates how to:
 4. Display statistics
 """
 
-from acqmss.bias import (
+from conacq.bias import (
     BiasConfigLoader,
     BiasGenerator,
     BiasIO,

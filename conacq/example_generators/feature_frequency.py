@@ -7,7 +7,7 @@ in both positive and negative examples.
 
 import random
 from typing import Optional, Dict, Set, List, Tuple
-from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
+from conacq.examples.data_structures import Example, ExampleSet, ExampleType
 from .base import ExampleGenerator
 
 
