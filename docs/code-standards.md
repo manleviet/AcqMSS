@@ -1,6 +1,6 @@
 # AcqMSS Code Standards & Guidelines
 
-**Last Updated**: 2026-02-16
+**Last Updated**: 2026-02-17
 
 ## Language & Environment
 
@@ -389,90 +389,109 @@ class QuAcq:
 
 ### Unified Oracle Interface
 
-The `acqmss/oracle/` package provides a unified oracle abstraction for configuration validation:
+The `acqmss/oracle/` package provides a minimal, focused oracle abstraction:
 
 ```python
-from typing import Dict, Optional, List
-from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle, FMOracleModel
+from typing import Dict, Optional, List, Set
+from abc import ABC, abstractmethod
+from acqmss.oracle import Oracle, FeatureModelOracle, CachedOracle, FMData
 from acqmss.example_generators import ExampleProvider
 
-# Unified Oracle interface
+# Unified Oracle ABC — minimal interface
 class Oracle(ABC):
-    """Abstract oracle for membership queries."""
+    """Abstract oracle for membership queries (minimal interface)."""
 
     @abstractmethod
     def is_valid(self, assignments: Dict[str, bool]) -> bool:
         """Check if configuration is valid."""
         pass
 
-    @abstractmethod
-    def get_features(self) -> Set[str]:
-        """Get all feature names."""
-        pass
-
-    @abstractmethod
-    def complete_configuration(self, partial: Dict[str, Optional[bool]]) -> Optional[Dict[str, bool]]:
-        """Complete a partial configuration to a valid full configuration.
-
-        Returns fully assigned configuration or None if not possible.
-        """
-        pass
-
-    @abstractmethod
-    def get_cnf_clauses(self) -> List[List[int]]:
-        """Get CNF clauses representing oracle constraints."""
-        pass
-
     def ask(self, query: Dict[str, bool]) -> bool:
         """Alias for is_valid() (interactive compatibility)."""
         return self.is_valid(query)
 
-# FM-based oracle (most common) — delegates to FMOracleModel
+# FM-based oracle (most common)
 oracle = FeatureModelOracle('data/fms/model.uvl', use_incremental=True)
+
+# Public ABC methods
 is_valid = oracle.is_valid({'root': True, 'feature_a': False})
+ask_result = oracle.ask({'root': True, 'feature_a': False})
+
+# FM-specific extensions (not part of Oracle ABC)
+fm_data = oracle.get_fm_data()                    # FMData snapshot
+features = oracle.get_features()                  # Set[str]
+feature_ids = oracle.get_feature_ids()            # Dict[str, int]
+root = oracle.get_root_feature()                  # str
+config = oracle.complete_configuration({'root': True})  # Optional[Dict]
+cnf = oracle.get_cnf_clauses()                   # List[List[int]]
+tseitin_var = oracle.get_next_tseitin_var()      # int
+constraint_descs = oracle.get_constraint_descriptions()  # Set[str]
 
 # With caching for repeated queries
 cached_oracle = CachedOracle(oracle)
 result = cached_oracle.is_valid(query)
 
-# Example-based learning (ExampleProvider moved to example_generators)
+# Example-based learning
 provider = ExampleProvider(oracle)
 examples = provider.generate_examples(count=100)
-
-# Low-level: Use FMOracleModel directly with assumption-guarded FM clauses
-model = FMOracleModel.from_fm('data/fms/model.uvl').set_incremental(True).build()
-from explanation.operations.algorithms.checker_factory import CheckerFactory
-checker = CheckerFactory.create_from_model(model)
 ```
 
+**FMData Dataclass** (`fm_data.py`):
+- Immutable container for FM metadata (frozen dataclass)
+- Created once by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers from oracle
+- **Fields**:
+  - `features: Set[str]` — All feature names
+  - `feature_ids: Dict[str, int]` — Feature→SAT variable ID mapping
+  - `root_feature: str` — Root feature name
+  - `num_constraints: int` — Number of FM constraints
+  - `next_tseitin_var: int` — Starting Tseitin variable ID
+  - `feature_count` property — Number of features
+
 **Architecture**:
-- `FMOracleModel` — SAT-based FM model with assumption-guarded clauses
-  - FM constraints stored directly in `set_kb` (always active)
-  - Feature assignments become assumption-guarded unit clauses:
-    - `[-a_pos_i, fid]` → if `a_pos_i` active, feature must be true
-    - `[-a_neg_i, -fid]` → if `a_neg_i` active, feature must be false
-  - Satisfies `CheckerModel` protocol for `CheckerFactory`
-  - Prepared by `OracleTaskPreparation`
-- `FeatureModelOracle` — High-level oracle interface
-  - Wraps `FMOracleModel` for configuration validation
-  - Delegates to underlying checker for `is_valid(assignments)`
-  - Provides FM-specific helpers: `get_leaf_features()`, `get_root_feature()`, `get_constraint_descriptions()`
-  - `get_next_tseitin_var() -> int` — Returns starting Tseitin variable ID from FM model
-  - `complete_configuration(partial) -> Optional[Dict]` — Uses SAT solving to complete partial configs, returns None if unsatisfiable
-  - `get_cnf_clauses() -> List[List[int]]` — Returns underlying FM CNF clauses
+
+1. **FeatureModelOracle** — Main FM oracle implementation
+   - **ABC methods** (required): `is_valid(assignments)`, `ask(query)`
+   - **FM-specific extensions** (not part of ABC):
+     - `get_fm_data() -> FMData` — Frozen FM metadata snapshot
+     - `get_features()`, `get_feature_ids()`, `get_root_feature()`
+     - `get_num_constraints()`, `get_next_tseitin_var()`
+     - `complete_configuration(partial) -> Optional[Dict]` — SAT-based config completion (with fallback to any valid config)
+     - `get_cnf_clauses() -> List[List[int]]` — Raw FM CNF (no assumption guards)
+     - `get_constraint_descriptions() -> Set[str]` — Cached constraint descriptions
+   - Wraps `FMOracleModel` for consistency checking
+   - Uses incremental solver by default
+
+2. **FMOracleModel** (`fm_oracle_model.py`) — Assumption-guarded FM model
+   - FM clauses stored directly in `set_kb` (always active)
+   - Feature assignments become assumption-guarded unit clauses:
+     - `[-a_pos_i, fid]` → if `a_pos_i` active, feature must be true
+     - `[-a_neg_i, -fid]` → if `a_neg_i` active, feature must be false
+   - Satisfies `CheckerModel` protocol for `CheckerFactory`
+   - Prepared via `OracleTaskPreparation`
+
+3. **UserPromptOracle** — Interactive human-in-the-loop
+   - Implements: `is_valid()` only (interactive queries)
+   - Raises `NotImplementedError` for `complete_configuration()`, `get_cnf_clauses()`
+
+4. **CachedOracle** — Transparent caching wrapper
+   - Caches `is_valid()` results
+   - Delegates extended methods to base oracle
+
+5. **OracleData** / **GroundTruthData** — Extracted oracle data for evaluation
+   - Reads FM directly (no solver dependency)
+
+**Design Principles**:
+- **Minimal ABC**: Oracle ABC defines only `is_valid()` (membership query)
+- **FM metadata decoupled**: `FMData` passed explicitly to decouple callers from oracle
+- **Concrete-specific extensions**: FM methods live on `FeatureModelOracle`, not ABC
+- **Example generators typed as FeatureModelOracle**: Not generic `Oracle` (avoids ambiguity)
+- **Single configuration validation path**: All methods delegate to `FMOracleModel` + checker
 
 **Critical Requirement**: Feature ID consistency
 - `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)
 - Source of truth: `FmToPysat.variables` from FM→SAT conversion
 - Ensures feature_ids match SAT variable IDs in CNF clauses
 - **Never** sort feature IDs alphabetically — breaks consistency with SAT clause literals
-
-**Conventions**:
-- All oracles inherit from unified `Oracle` ABC (no separate hierarchies)
-- `FeatureModelOracle`: Standard implementation for FM validation (wraps `FMOracleModel`)
-- `UserPromptOracle`: Interactive human-in-the-loop oracle
-- `CachedOracle`: Wrapper for performance (transparent caching)
-- Use `ExampleProvider` for batch example generation
 
 ## Testing Strategy
 

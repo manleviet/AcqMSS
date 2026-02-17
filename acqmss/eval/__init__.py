@@ -33,7 +33,7 @@ from .metrics import EvaluationMetrics, compute_metrics
 # Data loaders
 from .bias_loader import BiasData, BiasConstraint
 from .result_loader import ConGenResultData
-from acqmss.oracle.extractor import OracleData
+from acqmss.oracle.extractor import GroundTruthData, OracleData
 
 # Accuracy calculation
 from .accuracy import AccuracyCalculator, AccuracyResult
@@ -83,7 +83,8 @@ __all__ = [
     'BiasData',
     'BiasConstraint',
     'ConGenResultData',
-    'OracleData',
+    'GroundTruthData',
+    'OracleData',  # backward compat alias
 
     # Accuracy
     'AccuracyCalculator',

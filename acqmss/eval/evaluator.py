@@ -12,7 +12,7 @@ from pathlib import Path
 from enum import Enum
 import logging
 
-from acqmss.oracle.extractor import OracleData
+from acqmss.oracle.extractor import GroundTruthData
 from .bias_loader import BiasData
 from .result_loader import ConGenResultData
 from .metrics import EvaluationMetrics, compute_metrics
@@ -68,12 +68,12 @@ class Evaluator:
     2. Clause-based: Compare CNF clauses (semantic)
     """
 
-    def __init__(self, oracle: OracleData, bias: BiasData):
+    def __init__(self, oracle: GroundTruthData, bias: BiasData):
         """
         Initialize evaluator with oracle and bias data.
 
         Args:
-            oracle: OracleData extracted from feature model
+            oracle: GroundTruthData extracted from feature model
             bias: BiasData loaded from bias JSON
         """
         self.oracle = oracle
@@ -268,6 +268,6 @@ class Evaluator:
         Returns:
             Evaluator instance
         """
-        oracle = OracleData.from_uvl(Path(oracle_path))
+        oracle = GroundTruthData.from_uvl(Path(oracle_path))
         bias = BiasData.from_json(Path(bias_path))
         return cls(oracle, bias)

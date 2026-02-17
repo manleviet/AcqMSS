@@ -10,6 +10,7 @@ from typing import Dict, Optional, Set, List
 from pysat.solvers import Solver
 
 from acqmss.oracle.base import Oracle
+from acqmss.oracle.fm_data import FMData
 from acqmss.oracle.fm_oracle_model import FMOracleModel
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler
@@ -21,9 +22,8 @@ class FeatureModelOracle(Oracle):
     Loads a feature model, converts it to CNF, and uses a SAT solver
     to validate configurations.
 
-    Attributes:
-        fm_path: Path to the feature model file
-        fm: Loaded feature model object (lazy)
+    Extends Oracle ABC with FM-specific methods:
+    get_fm_data(), complete_configuration(), get_features(), etc.
 
     Example:
         >>> oracle = FeatureModelOracle('data/fms/model.uvl')
@@ -64,19 +64,6 @@ class FeatureModelOracle(Oracle):
 
     # --- Oracle ABC implementation ---
 
-    # Convenience getters (delegate to result)
-    def get_kb(self) -> List[List[int]]:
-        """Get the full knowledge base with assumptions."""
-        return self._oracle_model.task.set_kb
-
-    def get_assumptions(self) -> List[int]:
-        """Get the list of assumption literals."""
-        return self._oracle_model.task.assumptions
-
-    def get_c(self) -> List[int]:
-        """Get the set of constraint assumptions (FM constraints only, excluding feature assignments)."""
-        return self._oracle_model.get_c()
-
     def is_valid(self, assignments: Dict[str, bool]) -> bool:
         """Check if configuration is valid (satisfies FM constraints).
 
@@ -86,13 +73,28 @@ class FeatureModelOracle(Oracle):
         Returns:
             True if configuration is valid
         """
-        # If any unknown features are assigned, we consider it invalid (backward compatibility)
         if any(name not in self._oracle_model.variables for name in assignments):
             raise KeyError(f"Unknown features in assignment: {set(assignments) - set(self._oracle_model.variables)}")
 
         self._oracle_model.with_configuration(assignments)
 
         return self._checker.is_consistent(self._oracle_model.get_c())
+
+    # --- FM-specific extensions (not part of Oracle ABC) ---
+
+    def get_fm_data(self) -> FMData:
+        """Create FMData snapshot from current oracle state.
+
+        Returns:
+            Frozen FMData with all FM metadata
+        """
+        return FMData(
+            features=self.get_features(),
+            feature_ids=self.get_feature_ids(),
+            root_feature=self.get_root_feature(),
+            num_constraints=self.get_num_constraints(),
+            next_tseitin_var=self.get_next_tseitin_var(),
+        )
 
     def get_features(self) -> Set[str]:
         """Get all feature names."""
@@ -121,7 +123,7 @@ class FeatureModelOracle(Oracle):
             assumptions.append(fid if value else -fid)
 
         solver = Solver(name=self.solver_name)
-        for clause in self.get_cnf_clauses():
+        for clause in self._oracle_model.get_raw_fm_clauses():
             solver.add_clause(clause)
 
         try:
@@ -140,11 +142,18 @@ class FeatureModelOracle(Oracle):
         return {name: fid in model
                 for name, fid in self._oracle_model.variables.items()}
 
-    # --- FM-specific extensions ---
+    # Convenience getters (delegate to model)
+    def get_kb(self) -> List[List[int]]:
+        """Get the full knowledge base with assumptions."""
+        return self._oracle_model.task.set_kb
 
-    def get_leaf_features(self) -> Set[str]:
-        """Get leaf features (features with no children)."""
-        return {f.name for f in self.fm.get_features() if f.is_leaf()}
+    def get_assumptions(self) -> List[int]:
+        """Get the list of assumption literals."""
+        return self._oracle_model.task.assumptions
+
+    def get_c(self) -> List[int]:
+        """Get the set of constraint assumptions (FM constraints only, excluding feature assignments)."""
+        return self._oracle_model.get_c()
 
     def get_root_feature(self) -> str:
         """Get root feature name."""
@@ -165,8 +174,6 @@ class FeatureModelOracle(Oracle):
     def get_constraint_descriptions(self) -> Set[str]:
         """Extract constraint descriptions from FM (cached).
 
-        Returns descriptions in format matching bias.
-
         Returns:
             Set of constraint descriptions
         """
@@ -176,7 +183,7 @@ class FeatureModelOracle(Oracle):
         return self._constraint_descriptions_cache
 
     def __repr__(self):
-        return f"FeatureModelOracle(features={self.get_feature_count()})"
+        return f"FeatureModelOracle(features={len(self._oracle_model.variables)})"
 
     def cleanup(self):
         """Release checker resources."""

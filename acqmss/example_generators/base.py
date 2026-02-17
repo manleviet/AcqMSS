@@ -7,32 +7,33 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict
 
 from acqmss.examples.data_structures import Example, ExampleSet, ExampleType
-from acqmss.oracle import Oracle
+from acqmss.oracle.fm_oracle import FeatureModelOracle
 
 
 class ExampleGenerator(ABC):
     """
     Abstract base class for example example_generators.
 
-    Generators use an Oracle to classify generated configurations
+    Generators use a FeatureModelOracle to classify generated configurations
     as positive or negative examples.
 
     Attributes:
-        oracle: Oracle for classifying examples
+        oracle: FeatureModelOracle for classifying and completing examples
         features: Set of all feature names
         feature_ids: Mapping from feature names to SAT variable IDs
     """
 
-    def __init__(self, oracle: Oracle):
+    def __init__(self, oracle: FeatureModelOracle):
         """
-        Initialize generator with an oracle.
+        Initialize generator with a FeatureModelOracle.
 
         Args:
-            oracle: Oracle for classifying examples
+            oracle: FeatureModelOracle for classifying examples
         """
         self.oracle = oracle
-        self.features = oracle.get_features()
-        self.feature_ids = oracle.get_feature_ids()
+        fm_data = oracle.get_fm_data()
+        self.features = fm_data.features
+        self.feature_ids = fm_data.feature_ids
 
     @abstractmethod
     def generate(self, **kwargs) -> ExampleSet:

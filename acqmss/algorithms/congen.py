@@ -152,7 +152,7 @@ class ConGen:
         )
         logging.debug('Reduce: %d redundant, %d in final KB', len(redundant), len(kb))
 
-        bg_clauses = [[lit] for lit in set_bg]
+        bg_clauses = [[lit] for lit in set_bg]  # TODO: check lại
 
         self.result = ConGenResult(
             kb_assumption_ids=kb,

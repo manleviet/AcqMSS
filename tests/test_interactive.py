@@ -187,7 +187,7 @@ class TestFeatureModelOracle:
 
     def test_oracle_creation(self, oracle):
         """Test oracle can be created."""
-        assert oracle.get_feature_count() > 0
+        assert oracle.get_fm_data().feature_count > 0
 
     # def test_oracle_valid_config(self, oracle):
     #     """Test oracle accepts valid configuration."""
@@ -330,12 +330,12 @@ class TestInteractiveLearner:
             pytest.skip("Test data files not found")
 
         oracle = FeatureModelOracle(str(FM_PATH))
+        fm_data = oracle.get_fm_data()
         bias = BiasIO.load_from_json(str(BIAS_PATH))
 
-        task = InteractiveLearner._build_task_from_bias(bias, oracle)
+        task = InteractiveLearner._build_task_from_bias(bias, fm_data)
 
-        root_name = oracle.get_root_feature()
-        root_id = oracle.get_feature_ids()[root_name]
+        root_id = fm_data.feature_ids[fm_data.root_feature]
         assert task.background == [root_id], \
             f"Expected background=[{root_id}], got {task.background}"
 
@@ -556,6 +556,44 @@ class TestEvaluation:
 
         with pytest.raises(ValueError, match="FM path and bias path are required"):
             learner.evaluate(result)
+
+
+class TestFMData:
+    """Tests for FMData dataclass."""
+
+    def test_fm_data_populated(self, oracle):
+        """Verify FMData contains correct FM metadata."""
+        fm_data = oracle.get_fm_data()
+
+        assert isinstance(fm_data.features, set)
+        assert len(fm_data.features) > 0
+        assert isinstance(fm_data.feature_ids, dict)
+        assert len(fm_data.feature_ids) == len(fm_data.features)
+        assert fm_data.root_feature in fm_data.features
+        assert fm_data.num_constraints > 0
+        assert fm_data.next_tseitin_var > max(fm_data.feature_ids.values())
+        assert fm_data.feature_count == len(fm_data.features)
+
+    def test_fm_data_frozen(self, oracle):
+        """Verify FMData is immutable."""
+        fm_data = oracle.get_fm_data()
+        with pytest.raises(AttributeError):
+            fm_data.root_feature = "changed"
+
+
+class TestOracleABC:
+    """Tests for Oracle ABC contract."""
+
+    def test_oracle_abc_minimal(self):
+        """Verify Oracle ABC has only is_valid as abstract method."""
+        import inspect
+        from acqmss.oracle.base import Oracle
+
+        abstract_methods = {
+            name for name, method in inspect.getmembers(Oracle)
+            if getattr(method, '__isabstractmethod__', False)
+        }
+        assert abstract_methods == {'is_valid'}
 
 
 if __name__ == '__main__':

@@ -183,8 +183,9 @@ class ConGenModel:
         Returns:
             ConGenTask with set_neg_tv already populated.
         """
-        # Initialize next_tseitin_var from oracle
-        self.next_tseitin_var = oracle.get_next_tseitin_var()
+        # Extract FM metadata from oracle
+        fm_data = oracle.get_fm_data()
+        self.next_tseitin_var = fm_data.next_tseitin_var
 
         # Update task_input if new examples provided
         if positive_examples is not None or negative_examples is not None:
@@ -196,10 +197,10 @@ class ConGenModel:
                 for_redundancy=True
             )
 
-        # Run ConGenTaskPreparation with oracle
+        # Run ConGenTaskPreparation with fm_data + oracle (oracle still needed for GenerateNE)
         from .task_preparation import ConGenTaskPreparation
         preparation = ConGenTaskPreparation()
-        output = preparation.prepare(self, oracle)
+        output = preparation.prepare(self, fm_data, oracle)
 
         assert isinstance(output.task, ConGenTask)
         self._task = output.task

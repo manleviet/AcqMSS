@@ -11,6 +11,7 @@ from typing import Optional, Dict, List, Union
 from .task import InteractiveTask
 from .result import InteractiveResult
 from acqmss.oracle import Oracle, FeatureModelOracle, UserPromptOracle
+from acqmss.oracle.fm_data import FMData
 from acqmss.example_generators import ExampleProvider
 from .quacq import QuAcq
 from acqmss.bias.bias_io import BiasIO
@@ -105,9 +106,10 @@ class InteractiveLearner:
 
         # Create oracle from feature model
         oracle = FeatureModelOracle(fm_path)
+        fm_data = oracle.get_fm_data()
 
         # Build task from bias
-        task = cls._build_task_from_bias(bias, oracle)
+        task = cls._build_task_from_bias(bias, fm_data)
 
         return cls(task, oracle, solver_name, profiler, fm_path, bias_path)
 
@@ -151,17 +153,15 @@ class InteractiveLearner:
         return cls(task, oracle, solver_name)
 
     @staticmethod
-    def _build_task_from_bias(bias: Bias, oracle: FeatureModelOracle) -> InteractiveTask:
-        """Build InteractiveTask from Bias and FeatureModelOracle."""
-        feature_ids = oracle.get_feature_ids()
+    def _build_task_from_bias(bias: Bias, fm_data: FMData) -> InteractiveTask:
+        """Build InteractiveTask from Bias and FMData."""
+        feature_ids = fm_data.feature_ids
         id_to_feature = {v: k for k, v in feature_ids.items()}
 
         # Extract root feature ID for background knowledge
-        root_name = oracle.get_root_feature()
-        root_feature_id = feature_ids.get(root_name)
+        root_feature_id = feature_ids.get(fm_data.root_feature)
         background = [root_feature_id] if root_feature_id is not None else []
 
-        tseitin_start = max(feature_ids.values()) + 1
         constraint_map, negated_constraint_map, _ = bias.to_constraint_maps_with_negation()
 
         task = InteractiveTask(
@@ -206,7 +206,8 @@ class InteractiveLearner:
 
         bias = BiasIO.load_from_json(bias_path)
         oracle = FeatureModelOracle(fm_path)
-        task = cls._build_task_from_bias(bias, oracle)
+        fm_data = oracle.get_fm_data()
+        task = cls._build_task_from_bias(bias, fm_data)
 
         learner = cls(task, oracle, solver_name, profiler, fm_path, bias_path)
         learner._example_provider = ExampleProvider(examples, seed)

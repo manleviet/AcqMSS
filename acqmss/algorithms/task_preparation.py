@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from explanation.models.testsuite import TestSuite
     from .congen_model import ConGenModel
     from ..oracle import FeatureModelOracle
+    from ..oracle.fm_data import FMData
 
 
 @dataclass
@@ -103,15 +104,15 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel, oracle: FeatureModelOracle) -> PreparationOutput:
-        """Prepare ConGen task from model. FM metadata extracted from oracle."""
+    def prepare(self, model: ConGenModel, fm_data: FMData, oracle: FeatureModelOracle) -> PreparationOutput:
+        """Prepare ConGen task from model. FM metadata from FMData, oracle for GenerateNE."""
         result = ConGenTask()
         provider = DescriptionProvider()
         task_input = model.task_input
 
-        # Extract FM metadata from oracle
-        root_feature = oracle.get_root_feature()
-        num_fm_constraints = oracle.get_num_constraints()
+        # Extract FM metadata from FMData
+        root_feature = fm_data.root_feature
+        num_fm_constraints = fm_data.num_constraints
 
         # Start assumption IDs after Tseitin variables
         id_assumption = model.next_tseitin_var
