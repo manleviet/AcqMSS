@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 
+from conacq.oracle.bg_data import BGData
 from explanation.models import DiagnosisTask, DescriptionProvider
 from explanation.models.task_preparation import PreparationOutput, prepare_kb, _ASSUMPTION_PAIR_STRIDE
 
@@ -37,7 +38,7 @@ class FMOracleModel:
         # map feature names to IDs (for debugging and description generation)
         self.variables: Dict[str, int] = {}
         # Used as starting ID for assumption literals to avoid conflicts.
-        self.next_tseitin_var: int = 1000
+        self.next_available_id: int = 1000
 
         self.configuration: Optional[Configuration] = None
 
@@ -45,10 +46,11 @@ class FMOracleModel:
         self._use_incremental: bool = True
 
         # Populated after prepare()
-        self._start_id_assignments: int = 1
+        self._base_set_c: List = []
         self._pos_assignment_to_assumption: Dict[str, int] = {}
         self._neg_assignment_to_assumption: Dict[str, int] = {}
         # Populated after prepare()
+        self._bg_data: Optional[BGData] = None
         self._task: Optional[DiagnosisTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
 
@@ -67,8 +69,11 @@ class FMOracleModel:
         return self._description_provider
 
     @property
-    def start_id_assignments(self):
-        return self._start_id_assignments
+    def bg_data(self) -> BGData:
+        """Root BG data for ConGen. Call prepare() first."""
+        if self._bg_data is None:
+            raise RuntimeError("Call prepare() first")
+        return self._bg_data
 
     @property
     def use_incremental(self) -> bool:
@@ -102,42 +107,38 @@ class FMOracleModel:
         return [clause for clauses in self.constraint_map.values()
                 for clause in clauses]
 
-    def _compute_base_set_c(self) -> list:
-        """Compute base set_c from FM constraint assumptions (excluding feature assignments).
-
-        Returns assumption IDs for original (non-negated) FM constraints only,
-        by striding through paired pos/neg assumptions.
-        """
-        return [self._task.assumptions[i]
-                for i in range(0, self._start_id_assignments, _ASSUMPTION_PAIR_STRIDE)]
-
-    def with_configuration(self, configuration) -> list:
-        """Convert feature config to list of assumption IDs to activate.
+    def _config_to_assumptions(self, configuration) -> list:
+        """Convert feature config to assignment assumption IDs.
 
         Args:
             configuration: Dict[str, bool] or Configuration object
 
         Returns:
-            List of active assumption IDs (set_c is also updated in-place)
+            List of assumption IDs for the given feature assignments
         """
-        # Accept both dict and Configuration objects
-        if hasattr(configuration, 'elements'):
-            items = configuration.elements.items()
-        else:
-            items = configuration.items()
+        items = configuration.elements.items() if hasattr(configuration, 'elements') else configuration.items()
+        return [self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[feat]
+                for feat, value in items]
 
-        active_assumptions = []
-        for feat, value in items:
-            assumption = self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[feat]
-            active_assumptions.append(assumption)
+    def with_configuration(self, configuration) -> 'FMOracleModel':
+        """Apply feature config: updates set_c with base + assignment assumptions.
 
-        set_c = self._compute_base_set_c() + active_assumptions
-        self._task.set_c = set_c
-        return set_c
+        Args:
+            configuration: Dict[str, bool] or Configuration object
 
-    def prepare(self) -> DiagnosisTask:
-        """Build set_kb + assumptions from constraint_map and variables."""
-        output = OracleTaskPreparation.prepare(self)
+        Returns:
+            self (for fluent chaining)
+        """
+        self.task.set_c = self._base_set_c + self._config_to_assumptions(configuration)
+        return self
+
+    def prepare(self, configuration=None) -> DiagnosisTask:
+        """Build set_kb + assumptions from constraint_map and variables.
+
+        Args:
+            configuration: Optional Dict[str, bool] or Configuration to apply immediately
+        """
+        output = FMOracleTaskPreparation.prepare(self, configuration)
 
         self._task = output.task
         self._description_provider = output.description_provider
@@ -147,12 +148,12 @@ class FMOracleModel:
     @classmethod
     def from_fm_data(cls, constraint_map: Dict[str, List[List[int]]],
                      variables: Dict[str, int],
-                     next_tseitin_var: int) -> 'FMOracleModel':
+                     next_available_id: int) -> 'FMOracleModel':
         """Factory: create from FM data and prepare."""
         model = cls()
         model.constraint_map = constraint_map
         model.variables = variables
-        model.next_tseitin_var = next_tseitin_var
+        model.next_available_id = next_available_id
         model.prepare()
         return model
 
@@ -169,43 +170,52 @@ class FMOracleModel:
         from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 
         fm = UVLReader(self._fm_path).transform()
+        # FmToDiagPysat creates both constraint_map and negated_constraint_map for redundancy detection.
         fm_model = FmToDiagPysat(fm, create_negation=True).transform()
 
         self.constraint_map = fm_model.constraint_map
         self.negated_constraint_map = fm_model.negated_constraint_map
 
         self.variables = fm_model.variables
-        self.next_tseitin_var = fm_model.next_tseitin_var
+        self.next_available_id = fm_model.next_available_id
 
-        self.prepare()
+        self.prepare(configuration=self.configuration)
 
         return self
 
 
-class OracleTaskPreparation:
+class FMOracleTaskPreparation:
     """Prepare assumption-guarded clauses for Oracle FM validation.
 
-    FM constraints → direct in set_kb (always active).
-    Feature assignments → assumption-guarded unit clauses.
+    Shared Assumption ID Layout (Oracle owns Parts 1-4):
+      Part 1: Feature variable IDs (1..n)               <- FmToDiagPysat
+      Part 2: Tseitin vars (negated FM constraints)      <- FmToDiagPysat
+      Part 3: FM constraint assumptions (paired)         <- This method
+               [root, NOT(root), c2, NOT(c2), ...]
+      Part 4: Variable assignment assumptions (paired)   <- This method
+               [f1=true, f1=false, f2=true, ...]
+
+    ConGen continues from Part 5 onward (see ConGenTaskPreparation).
+    BGData extracts Part 3's first pair (root BG) + end-of-Part-4 ID.
     """
 
     @staticmethod
-    def prepare(model: 'FMOracleModel') -> PreparationOutput:
+    def prepare(model: 'FMOracleModel', configuration=None) -> PreparationOutput:
         result = DiagnosisTask()
         provider = DescriptionProvider()
 
-        # Use next_tseitin_var to avoid conflicts with Tseitin variables
-        id_assumption = model.next_tseitin_var
+        # Use next_available_id to avoid conflicts with Tseitin variables
+        id_assumption = model.next_available_id
 
         # Determine if negated forms should be used
         negated_constraint_map = model.negated_constraint_map
 
-        # Step 1: FM constraints from constraint_map → direct in set_kb
+        # Step 1: FM constraints from constraint_map → set_kb with assumptions
         id_assumption = prepare_kb(
             result, provider, model.constraint_map, id_assumption, negated_constraint_map)
 
         # Step 2: Feature assignments → assumption-guarded
-        model._start_id_assignments = len(result.assumptions)
+        assignments_start_index = len(result.assumptions)
         pos_assignment_to_assumption = {}
         neg_assumption_to_assumption = {}
 
@@ -233,9 +243,24 @@ class OracleTaskPreparation:
         model._pos_assignment_to_assumption = pos_assignment_to_assumption
         model._neg_assignment_to_assumption = neg_assumption_to_assumption
 
-        # Step 3: assign to set_c for consistency checks
-        result.set_c = [result.assumptions[i]
-                        for i in range(0, model.start_id_assignments, _ASSUMPTION_PAIR_STRIDE)]
+        # Step 3: compute and cache base set_c (FM constraint assumptions only)
+        model._base_set_c = [result.assumptions[i]
+                             for i in range(0, assignments_start_index, _ASSUMPTION_PAIR_STRIDE)]
+        result.set_c = list(model._base_set_c)
+
+        # Step 3b: apply configuration if provided
+        if configuration is not None:
+            result.set_c = model._base_set_c + model._config_to_assumptions(configuration)
+
+        # Step 4: Extract root BG data for ConGen consumption (requires negated constraints)
+        model._bg_data = BGData(
+            set_kb=result.set_kb[:2],  # first pair of assumptions for root constraint
+            assumptions=(result.assumptions[0], result.assumptions[1]),
+            negation_map={result.assumptions[0]: result.assumptions[1]},
+            descriptions=provider.get_descriptions_for(
+                [result.assumptions[0], result.assumptions[1]]),
+            next_available_id=id_assumption,
+        )
 
         return PreparationOutput(
             task=result,

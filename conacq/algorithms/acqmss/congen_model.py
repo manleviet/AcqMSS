@@ -42,7 +42,7 @@ class ConGenModel:
         self.variables: Dict[str, int] = {}
         # Used as starting ID for assumption literals to avoid conflicts.
         # Initialized from oracle at prepare() time.
-        self.next_tseitin_var: int = 1000
+        self.next_available_id: int = 1000
 
         # CheckerModel protocol attributes
         self._use_incremental: bool = True
@@ -183,10 +183,6 @@ class ConGenModel:
         Returns:
             ConGenTask with set_neg_tv already populated.
         """
-        # Extract FM metadata from oracle
-        fm_data = oracle.get_fm_data()
-        self.next_tseitin_var = fm_data.next_tseitin_var
-
         # Update task_input if new examples provided
         if positive_examples is not None or negative_examples is not None:
             pos_tc = self._examples_to_testsuite(positive_examples or [])
@@ -197,10 +193,10 @@ class ConGenModel:
                 for_redundancy=True
             )
 
-        # Run ConGenTaskPreparation with fm_data + oracle (oracle still needed for GenerateNE)
+        # Run ConGenTaskPreparation (oracle provides BGData + GenerateNE)
         from .task_preparation import ConGenTaskPreparation
         preparation = ConGenTaskPreparation()
-        output = preparation.prepare(self, fm_data, oracle)
+        output = preparation.prepare(self, oracle)
 
         assert isinstance(output.task, ConGenTask)
         self._task = output.task

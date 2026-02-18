@@ -102,7 +102,7 @@ examples = ExampleProvider(...)  # Canonical import
 2. **GenerateNE** — Create negated examples (internal API, not caller-invoked)
    - **Invoked only internally by `ConGenModel.prepare()`**
    - Uses QuickXPlain to find minimal conflicts from E⁻
-   - Simplified result: `NEResult(new_clauses, set_neg_tv, next_tseitin_var)` (removed `assumption_ids`, `neg_map`)
+   - Simplified result: `NEResult(new_clauses, set_neg_tv, next_available_id)` (removed `assumption_ids`, `neg_map`)
    - Results merged in-place via inline code in `ConGenModel.prepare()`
 
 3. **ACQMSS** — Divide-and-conquer maximum satisfiable subset finding
@@ -181,7 +181,7 @@ class Oracle(ABC):
    - `feature_ids: Dict[str, int]` — Feature→SAT variable ID mapping
    - `root_feature: str` — Root feature name
    - `num_constraints: int` — Number of FM constraints
-   - `next_tseitin_var: int` — Starting Tseitin variable ID
+   - `next_available_id: int` — Starting Tseitin variable ID
    - Created once by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers
 
 2. **FeatureModelOracle** (`fm_oracle.py`): FM-based oracle
@@ -192,28 +192,39 @@ class Oracle(ABC):
      - `get_feature_ids() -> Dict[str, int]` — Feature→var ID mapping
      - `get_root_feature() -> str` — Root feature
      - `get_num_constraints() -> int` — Constraint count
-     - `get_next_tseitin_var() -> int` — Tseitin start variable
+     - `get_next_available_id() -> int` — Tseitin start variable
      - `complete_configuration(partial) -> Optional[Dict]` — SAT-based config completion (with fallback)
      - `get_cnf_clauses() -> List[List[int]]` — Raw FM CNF (no assumption guards)
      - `get_constraint_descriptions() -> Set[str]` — Cached constraint descriptions
    - Delegates to `FMOracleModel` for consistency checking
    - Uses incremental solver by default for performance
 
-3. **FMOracleModel** (`fm_oracle_model.py`): Assumption-guarded FM model
+3. **BGData** (`bg_data.py`): Root background knowledge constraint data
+   - `set_kb: List[List[int]]` — Assumption-guarded clauses for root constraint + negated form
+   - `assumptions: Tuple[int, int]` — (root_assumption_id, negated_root_assumption_id)
+   - `negation_map: Dict[int, int]` — Maps root_id → negated_root_id
+   - `descriptions: Dict[int, str]` — Text descriptions of root constraint
+   - `next_available_id: int` — First free assumption ID after Oracle Parts 3+4
+   - Extracted post-preparation via `FMOracleModel.bg_data` property or `get_bg_data()` method
+   - Enables ConGen to cleanly allocate assumption IDs without overlap
+
+4. **FMOracleModel** (`fm_oracle_model.py`): Assumption-guarded FM model
    - FM clauses stored directly in `set_kb` (always active)
    - Feature assignments become assumption-guarded unit clauses: `[-a_pos_i, fid]`, `[-a_neg_i, -fid]`
    - Satisfies `CheckerModel` protocol for `CheckerFactory` integration
    - Prepared via `OracleTaskPreparation`
+   - Exposes `bg_data` property (lazy-computed) and `get_bg_data()` method to extract root constraint
+   - Internal: Uses `_assignments_index` to track feature assignment assumption boundary
 
-4. **UserPromptOracle** (`user_prompt.py`): Interactive human-in-the-loop oracle
+5. **UserPromptOracle** (`user_prompt.py`): Interactive human-in-the-loop oracle
    - Raises `NotImplementedError` for `complete_configuration()` and `get_cnf_clauses()`
    - Suitable for interactive learning only
 
-5. **CachedOracle** (`cached.py`): Transparent result caching wrapper
+6. **CachedOracle** (`cached.py`): Transparent result caching wrapper
    - Caches `is_valid()` results
    - Delegates `complete_configuration()`, `get_cnf_clauses()` to base oracle
 
-6. **OracleData** (`extractor.py`): Extracted oracle data for evaluation
+7. **OracleData** (`extractor.py`): Extracted oracle data for evaluation
    - Backward-compatible alias: `GroundTruthData`
    - Reads FM directly (no solver)
 

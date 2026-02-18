@@ -51,8 +51,8 @@ class DimacsToDiagPysat(DimacsReader):
         if self.create_negation:
             self._create_negated_forms(model)
         else:
-            # Set next_tseitin_var for task preparation (no Tseitin vars in DIMACS)
-            model.next_tseitin_var = len(variables) + 1
+            # Set next_available_id for task preparation (no Tseitin vars in DIMACS)
+            model.next_available_id = len(variables) + 1
 
         return model
 
@@ -67,7 +67,7 @@ class DimacsToDiagPysat(DimacsReader):
             negated_clauses, tseitin_var = negate_cnf_tseitin(clauses, tseitin_var)
             model.add_negated_clause_to_map(f"NOT({description})", negated_clauses)
 
-        model.next_tseitin_var = tseitin_var
+        model.next_available_id = tseitin_var
 
     def _parse_features_variables(self, lines: List[str]) -> Tuple[Dict[int, str], Dict[str, int]]:
         features = {int(line.split()[1]): line.split()[2] for line in lines}

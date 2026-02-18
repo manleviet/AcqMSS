@@ -11,7 +11,7 @@ class TestOracleModel:
         """FMOracleModel.from_fm produces valid set_kb and assumptions."""
         constraint_map = {"fm": [[1, 2]]}
         variables = {"f1": 1, "f2": 2}
-        model = FMOracleModel.from_fm_data(constraint_map, variables, next_tseitin_var=2)
+        model = FMOracleModel.from_fm_data(constraint_map, variables, next_available_id=2)
 
         assert len(model.get_assumptions()) == 5  # 1 FM constraint + 2 features * 2 (pos+neg)
         assert model._use_incremental is True
@@ -27,7 +27,7 @@ class TestOracleModel:
         """Verify constraint_map + variables stored correctly."""
         constraint_map = {"fm": [[1, 2], [-1, 3]]}
         variables = {"f1": 1, "f2": 2, "f3": 3}
-        model = FMOracleModel.from_fm_data(constraint_map, variables, next_tseitin_var=3)
+        model = FMOracleModel.from_fm_data(constraint_map, variables, next_available_id=3)
 
         assert model.constraint_map == constraint_map
         assert model.variables == variables
@@ -36,9 +36,10 @@ class TestOracleModel:
         """Config dict correctly maps to assumption IDs."""
         constraint_map = {"fm": [[1, 2]]}
         variables = {"f1": 1, "f2": 2}
-        model = FMOracleModel.from_fm_data(constraint_map, variables, next_tseitin_var=2)
+        model = FMOracleModel.from_fm_data(constraint_map, variables, next_available_id=2)
 
-        active = model.with_configuration({"f1": True, "f2": False})
+        model.with_configuration({"f1": True, "f2": False})
+        active = model.get_c()
         # set_c includes FM constraint assumptions + feature assignment assumptions
         assert model._pos_assignment_to_assumption["f1"] in active
         assert model._neg_assignment_to_assumption["f2"] in active
@@ -46,7 +47,7 @@ class TestOracleModel:
     def test_assumption_ids_start_after_tseitin(self):
         """Assumption IDs don't collide with FM variables."""
         model = FMOracleModel.from_fm_data({"fm": [[1, 2, 3]]}, {"f1": 1, "f2": 2, "f3": 3}, 3)
-        # All assumption IDs should be >= next_tseitin_var (3)
+        # All assumption IDs should be >= next_available_id (3)
         for a in model.get_assumptions():
             assert a >= 3
 
@@ -54,24 +55,24 @@ class TestOracleModel:
         """CheckerFactory creates valid checker; SAT case."""
         constraint_map = {"fm": [[1, 2]]}  # f1 OR f2
         variables = {"f1": 1, "f2": 2}
-        model = FMOracleModel.from_fm_data(constraint_map, variables, next_tseitin_var=2)
+        model = FMOracleModel.from_fm_data(constraint_map, variables, next_available_id=2)
         checker = CheckerFactory.create_from_model(model, 'glucose4')
 
         # f1=True, f2=True → SAT
-        active = model.with_configuration({"f1": True, "f2": True})
-        assert checker.is_consistent(active) is True
+        model.with_configuration({"f1": True, "f2": True})
+        assert checker.is_consistent(model.get_c()) is True
         checker.cleanup()
 
     def test_checker_integration_unsat(self):
         """CheckerFactory creates valid checker; UNSAT case."""
         constraint_map = {"fm": [[1, 2]]}  # f1 OR f2
         variables = {"f1": 1, "f2": 2}
-        model = FMOracleModel.from_fm_data(constraint_map, variables, next_tseitin_var=2)
+        model = FMOracleModel.from_fm_data(constraint_map, variables, next_available_id=2)
         checker = CheckerFactory.create_from_model(model, 'glucose4')
 
         # f1=False, f2=False → UNSAT (neither true violates f1 OR f2)
-        active = model.with_configuration({"f1": False, "f2": False})
-        assert checker.is_consistent(active) is False
+        model.with_configuration({"f1": False, "f2": False})
+        assert checker.is_consistent(model.get_c()) is False
         checker.cleanup()
 
 

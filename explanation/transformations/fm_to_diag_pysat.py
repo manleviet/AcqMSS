@@ -90,8 +90,8 @@ class FmToDiagPysat(FmToPysat):
         if self.create_negation:
             self._create_negated_forms()
         else:
-            # Set next_tseitin_var for task preparation
-            self.destination_model.next_tseitin_var = len(self.destination_model.variables) + 1
+            # Set next_available_id for task preparation
+            self.destination_model.next_available_id = len(self.destination_model.variables) + 1
 
         return self.destination_model
 
@@ -110,4 +110,4 @@ class FmToDiagPysat(FmToPysat):
                 f"NOT({description})", negated_clauses)
 
         # Store next available Tseitin var for TaskPreparation
-        self.destination_model.next_tseitin_var = tseitin_var
+        self.destination_model.next_available_id = tseitin_var

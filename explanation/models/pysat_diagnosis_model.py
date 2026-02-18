@@ -24,7 +24,7 @@ class DiagnosisModel(PySATModel):
     Important:
         This model should be created via transformation (FmToDiagPysat or
         DimacsToDiagPysat), which populates constraint_map, negated_constraint_map,
-        and next_tseitin_var. Direct instantiation requires manually setting
+        and next_available_id. Direct instantiation requires manually setting
         these fields correctly.
 
     Supported task types (via prepare() method):
@@ -56,7 +56,7 @@ class DiagnosisModel(PySATModel):
         self.negated_constraint_map: Dict[str, List[List]] = {}
         # Next available variable ID after Tseitin variables (set by transformation).
         # Used as starting ID for assumption literals to avoid conflicts.
-        self.next_tseitin_var: int = 1000
+        self.next_available_id: int = 1000
 
         # Solver configuration
         self._use_incremental: bool = True  # default to use incremental solver

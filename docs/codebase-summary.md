@@ -62,14 +62,15 @@ Sampling strategies, example generation, and query generation for learning:
 | `example_provider.py` | ~120 | ExampleProvider: batch example interface (moved from oracle/) |
 | `__init__.py` | ~1 | Package exports with lazy-loaded QueryGenerator |
 
-**Oracle Sub-package** (`conacq/oracle/`, 9 files, ~929 LOC):
+**Oracle Sub-package** (`conacq/oracle/`, 10 files, ~998 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `base.py` | 47 | Oracle ABC: minimal interface. Only abstract: `is_valid(assignments)`. Concrete: `ask()` alias. |
-| `fm_data.py` | 25 | FMData: frozen dataclass for FM metadata (features, feature_ids, root_feature, num_constraints, next_tseitin_var). Decouples metadata from oracle. |
-| `fm_oracle.py` | 200+ | FeatureModelOracle: FM oracle implementation. ABC methods: `is_valid()`, `ask()`. FM-specific: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_tseitin_var()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`. |
-| `fm_oracle_model.py` | 268 | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol |
+| `fm_data.py` | 25 | FMData: frozen dataclass for FM metadata (features, feature_ids, root_feature, num_constraints, next_available_id). Decouples metadata from oracle. |
+| `bg_data.py` | 27 | BGData: frozen dataclass for background knowledge root constraint + negation pair. Extracted post-preparation from Oracle for ConGen consumption. |
+| `fm_oracle.py` | 200+ | FeatureModelOracle: FM oracle implementation. ABC methods: `is_valid()`, `ask()`. FM-specific: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`. |
+| `fm_oracle_model.py` | 280+ | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol. Exposes `bg_data` property + `get_bg_data()` for ConGen to extract root BG constraint. |
 | `constraint_description.py` | 120 | CTC description extraction from FM (requires/excludes/hierarchical) |
 | `user_prompt.py` | 100+ | UserPromptOracle: interactive oracle. ABC methods: `is_valid()`, `ask()`. Raises NotImplementedError for FM-specific methods. |
 | `cached.py` | 80+ | CachedOracle: transparent caching wrapper. Caches `is_valid()`, delegates FM methods to base oracle. |
@@ -84,10 +85,10 @@ Sampling strategies, example generation, and query generation for learning:
 
 3. **FeatureModelOracle Architecture**: 
    - ABC methods (all oracles): `is_valid()`, `ask()`
-   - FM-specific extensions (FeatureModelOracle only): `get_fm_data()`, `get_features()`, `get_feature_ids()`, `complete_configuration()`, `get_cnf_clauses()`, `get_root_feature()`, `get_num_constraints()`, `get_next_tseitin_var()`, `get_constraint_descriptions()`
+   - FM-specific extensions (FeatureModelOracle only): `get_fm_data()`, `get_features()`, `get_feature_ids()`, `complete_configuration()`, `get_cnf_clauses()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `get_constraint_descriptions()`
    - Delegates to `FMOracleModel` for SAT-based consistency checking
 
-4. **FMOracleModel Architecture**: FM clauses stored directly in `set_kb` (always active). Feature assignments become assumption-guarded unit clauses: `[-a_pos_i, fid]` and `[-a_neg_i, -fid]`. Satisfies `CheckerModel` protocol for `CheckerFactory` integration. Prepared via `OracleTaskPreparation` class.
+4. **FMOracleModel Architecture**: FM clauses stored directly in `set_kb` (always active). Feature assignments become assumption-guarded unit clauses: `[-a_pos_i, fid]` and `[-a_neg_i, -fid]`. Satisfies `CheckerModel` protocol for `CheckerFactory` integration. Prepared via `OracleTaskPreparation` class. Exposes `bg_data` property (lazy-computed) and `get_bg_data()` method for ConGen to extract root background constraint pair post-preparation.
 
 5. **Feature ID Consistency**: The `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order) stored in `FmToPysat.variables` as the authoritative source. This ensures feature_ids match SAT variable IDs in CNF clauses. Using alphabetical sorting would cause critical mismatch with clause variable references.
 
@@ -95,7 +96,7 @@ Sampling strategies, example generation, and query generation for learning:
 
 7. **Assumption-Based Representation**: All checkers (Incremental and NonIncremental) use identical assumption-based data: `List[int]` for assumptions, used uniformly in algorithms (no `if is_incremental` branching).
 
-8. **GenerateNE Design**: Now invoked internally by `ConGenModel.prepare()`. Results simplified to `NEResult(new_clauses, set_neg_tv, next_tseitin_var)`. Merged via inline code in `ConGenModel.prepare()` (no longer caller-invoked).
+8. **GenerateNE Design**: Now invoked internally by `ConGenModel.prepare()`. Results simplified to `NEResult(new_clauses, set_neg_tv, next_available_id)`. Merged via inline code in `ConGenModel.prepare()` (no longer caller-invoked).
 
 9. **CheckerModel Protocol**: `FMOracleModel` and `ConGenModel` implement `get_kb()`, `get_assumptions()`, `use_incremental` for compatibility with `CheckerFactory`.
 
@@ -336,12 +337,12 @@ CONGEN and QuAcq learning results:
 
 **FMData Introduced**:
 - New frozen dataclass `acqmss/oracle/fm_data.py` — FM metadata container
-- Fields: `features`, `feature_ids`, `root_feature`, `num_constraints`, `next_tseitin_var`
+- Fields: `features`, `feature_ids`, `root_feature`, `num_constraints`, `next_available_id`
 - Created by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers
 
 **FeatureModelOracle Extended**:
 - New method: `get_fm_data() -> FMData` — Create frozen metadata snapshot
-- Concrete methods: `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_tseitin_var()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`
+- Concrete methods: `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`
 - `complete_configuration()` implements SAT-based config completion with fallback
 - `get_cnf_clauses()` returns raw FM CNF (no assumption guards)
 
@@ -369,6 +370,14 @@ CONGEN and QuAcq learning results:
 - `prepare()` now takes `(model, fm_data, oracle)` signature
 - `fm_data` for metadata (FMData), `oracle` for `GenerateNE` and config completion
 - Separates concerns: metadata vs. SAT queries
+- No longer uses `_prepare_bg()` method (refactored to use BG data extraction)
+
+**BG Data Extraction** (new):
+- New frozen dataclass `BGData` in `conacq/oracle/bg_data.py` — Root BG constraint pair + metadata
+- Fields: `set_kb`, `assumptions` (root_id, negated_root_id), `negation_map`, `descriptions`, `next_available_id`
+- FMOracleModel now exposes `bg_data` property (lazy-computed) and `get_bg_data()` method
+- ConGenTaskPreparation calls `oracle.get_bg_data()` to extract root constraint post-preparation
+- Enables clean separation: Oracle owns Parts 1-4 of assumption ID layout; ConGen starts allocation at `next_available_id`
 
 **Earlier Changes** (still in place):
 - ConGenModel pure data container (bias + solver config only)

@@ -571,7 +571,7 @@ class TestFMData:
         assert len(fm_data.feature_ids) == len(fm_data.features)
         assert fm_data.root_feature in fm_data.features
         assert fm_data.num_constraints > 0
-        assert fm_data.next_tseitin_var > max(fm_data.feature_ids.values())
+        assert fm_data.next_available_id > max(fm_data.feature_ids.values())
         assert fm_data.feature_count == len(fm_data.features)
 
     def test_fm_data_frozen(self, oracle):

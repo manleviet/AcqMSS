@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 from explanation.models.task_preparation import (
     TestCaseTask,
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from explanation.models.testsuite import TestSuite
     from .congen_model import ConGenModel
     from conacq.oracle import FeatureModelOracle
-    from conacq.oracle.fm_data import FMData
 
 
 @dataclass
@@ -50,47 +49,12 @@ class ConGenTask(TestCaseTask):
     pass  # No additional fields needed
 
 
-def _prepare_bg(
-        result: ConGenTask,
-        provider: DescriptionProvider,
-        variables: Dict[str, int],
-        root_feature: str,
-        id_assumption: int
-) -> int:
-    # Adds root clauses and negated clauses to knowledgebase
-    if root_feature is not None and root_feature in variables:
-        root_id = variables[root_feature]
-
-        # root clause
-        key = f'{root_feature}=true'
-        original_id = id_assumption
-
-        result.set_kb.append([root_id, -original_id])
-
-        result.assumptions.append(original_id)
-        provider.add_constraint_description(original_id, key)
-        id_assumption += 1
-
-        # negated root clause for REDUCE
-        negated_key = f'NOT({root_feature}=true)'
-        negated_id = id_assumption
-
-        result.set_kb.append([-root_id, -negated_id])
-
-        result.assumptions.append(negated_id)
-        result.negation_map[original_id] = negated_id
-        provider.add_constraint_description(negated_id, negated_key)
-        id_assumption += 1
-
-    return id_assumption
-
-
 class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     """Prepare ConGen task using assumptions.
 
     Data mapping:
     - set_c: Bias constraints (B) with individual assumptions
-    - set_b: Background knowledge (BG) - empty or FM root
+    - set_b: Background knowledge (BG) - root from Oracle via BGData
     - set_tc: Positive examples (E+) with assumptions
     - set_tv: Negative examples (E-) with assumptions
     - set_neg_tv: Negated negative examples (NE)
@@ -104,25 +68,31 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel, fm_data: FMData, oracle: FeatureModelOracle) -> PreparationOutput:
-        """Prepare ConGen task from model. FM metadata from FMData, oracle for GenerateNE."""
+    def prepare(self, model: ConGenModel, oracle: FeatureModelOracle) -> PreparationOutput:
+        """Prepare ConGen task from model. BG from Oracle, oracle for GenerateNE.
+
+        Shared Assumption ID Layout (ConGen owns Parts 5-8):
+          Parts 1-4: Owned by Oracle (see OracleTaskPreparation)
+          Part 5: Tseitin vars (negated bias constraints)    <- This method
+          Part 6: Bias constraint assumptions (paired)       <- This method
+          Part 7: Positive test case assumptions (paired)    <- This method
+          Part 8: NE + negated NE                            <- This method
+
+        ConGen starts from bg_data.next_available_id (end of Oracle Part 4).
+        Root BG (Part 3 first pair) is copied from Oracle via BGData.
+        """
         result = ConGenTask()
         provider = DescriptionProvider()
         task_input = model.task_input
 
-        # Extract FM metadata from FMData
-        root_feature = fm_data.root_feature
-        num_fm_constraints = fm_data.num_constraints
-
-        # Start assumption IDs after Tseitin variables
-        id_assumption = model.next_tseitin_var
-
-        # Step 0: Prepare background knowledge (BG) - root constraints
-        id_assumption = _prepare_bg(result, provider, model.variables, root_feature, id_assumption)
-
-        # Reserve IDs for fm constraints and their negations + variable assignments
-        id_assumption = id_assumption + (num_fm_constraints - 1) * _ASSUMPTION_PAIR_STRIDE
-        id_assumption = id_assumption + len(model.variables) * _ASSUMPTION_PAIR_STRIDE
+        # Step 0: Copy BG data from Oracle (root constraint pair from Part 3)
+        bg_data = oracle.get_bg_data()
+        result.set_kb.extend(bg_data.set_kb)
+        result.assumptions.extend(list(bg_data.assumptions))
+        result.negation_map.update(bg_data.negation_map)
+        for aid, desc in bg_data.descriptions.items():
+            provider.add_constraint_description(aid, desc)
+        id_assumption = bg_data.next_available_id
 
         # Step 1: Prepare bias constraints as set_c (with negated forms for REDUCE)
         bias_start_pos = len(result.assumptions)
@@ -135,6 +105,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         id_assumption = prepare_kb(
             result, provider, model.constraint_map,
             id_assumption, model.negated_constraint_map)
+
         # Step 2: Prepare E+ as set_tc
         tc_start_pos = len(result.assumptions)
         id_assumption = prepare_testsuite_with_negation(
@@ -150,7 +121,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
                 result, provider, model, oracle, testsuite, id_assumption)
 
         # Store next available assumption ID
-        model.next_tseitin_var = id_assumption
+        model.next_available_id = id_assumption
 
         logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, set_tv=%d',
                       len(result.set_c), len(result.set_tc), len(result.set_tv))

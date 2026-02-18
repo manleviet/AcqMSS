@@ -329,12 +329,12 @@ Extract duplicated logic into static/class methods. Example: `InteractiveTask.vi
 **Key Classes**:
 
 1. **FMData** (`@dataclass(frozen=True)`): Immutable FM metadata container
-   - Fields: `features`, `feature_ids`, `root_feature`, `num_constraints`, `next_tseitin_var`, `feature_count` property
+   - Fields: `features`, `feature_ids`, `root_feature`, `num_constraints`, `next_available_id`, `feature_count` property
    - Created by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers
 
 2. **FeatureModelOracle**: Main FM oracle
    - ABC methods: `is_valid()`, `ask()`
-   - FM extensions: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_tseitin_var()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`
+   - FM extensions: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`
    - Delegates to `FMOracleModel` for consistency checking
    - Uses incremental solver by default
 

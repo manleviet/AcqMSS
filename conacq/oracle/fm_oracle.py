@@ -10,6 +10,7 @@ from typing import Dict, Optional, Set, List
 from pysat.solvers import Solver
 
 from conacq.oracle.base import Oracle
+from conacq.oracle.bg_data import BGData
 from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel
 from explanation.operations.algorithms.checker import CheckerFactory
@@ -76,9 +77,9 @@ class FeatureModelOracle(Oracle):
         if any(name not in self._oracle_model.variables for name in assignments):
             raise KeyError(f"Unknown features in assignment: {set(assignments) - set(self._oracle_model.variables)}")
 
-        self._oracle_model.with_configuration(assignments)
+        set_c = self._oracle_model.with_configuration(assignments).get_c()
 
-        return self._checker.is_consistent(self._oracle_model.get_c())
+        return self._checker.is_consistent(set_c)
 
     # --- FM-specific extensions (not part of Oracle ABC) ---
 
@@ -93,8 +94,12 @@ class FeatureModelOracle(Oracle):
             feature_ids=self.get_feature_ids(),
             root_feature=self.get_root_feature(),
             num_constraints=self.get_num_constraints(),
-            next_tseitin_var=self.get_next_tseitin_var(),
+            next_available_id=self.get_next_available_id(),
         )
+
+    def get_bg_data(self) -> BGData:
+        """Return root BG assumption data for ConGen."""
+        return self._oracle_model.bg_data
 
     def get_features(self) -> Set[str]:
         """Get all feature names."""
@@ -167,9 +172,9 @@ class FeatureModelOracle(Oracle):
         """Get number of FM constraints in ground truth."""
         return len(self._oracle_model.constraint_map)
 
-    def get_next_tseitin_var(self) -> int:
+    def get_next_available_id(self) -> int:
         """Get starting Tseitin variable ID from FM model."""
-        return self._oracle_model.next_tseitin_var
+        return self._oracle_model.next_available_id
 
     def get_constraint_descriptions(self) -> Set[str]:
         """Extract constraint descriptions from FM (cached).

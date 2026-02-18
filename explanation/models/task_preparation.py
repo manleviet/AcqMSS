@@ -172,6 +172,10 @@ class DescriptionProvider:
         """Add description for test case."""
         self.test_case_map[self._to_key(key)] = description
 
+    def get_descriptions_for(self, ids: List[int]) -> Dict[int, str]:
+        """Extract descriptions for given assumption IDs."""
+        return {aid: self.get_description(aid) for aid in ids}
+
     def reset_constraint(self) -> None:
         """Reset constraint map."""
         self.constraint_map = {}
@@ -203,7 +207,7 @@ class DiagnosisTaskPreparationStrategy(ABC):
     - Redundancy detection (with negated_constraint_map)
 
     The model parameter accepts any object with: constraint_map, negated_constraint_map,
-    variables, task_input, next_tseitin_var, background_knowledge (duck-typed).
+    variables, task_input, next_available_id, background_knowledge (duck-typed).
     """
 
     @abstractmethod
@@ -225,7 +229,7 @@ class TestCaseTaskPreparationStrategy(ABC):
     WipeOutR_T for test case redundancy detection, and ConGen.
 
     The model parameter accepts any object with: constraint_map, negated_constraint_map,
-    variables, task_input, next_tseitin_var, background_knowledge (duck-typed).
+    variables, task_input, next_available_id, background_knowledge (duck-typed).
     """
 
     @abstractmethod
@@ -360,8 +364,8 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         # Determine if negated forms should be used
         negated_constraint_map = model.negated_constraint_map if task_input.for_redundancy else None
 
-        # Use next_tseitin_var to avoid conflicts with Tseitin variables
-        id_assumption = model.next_tseitin_var
+        # Use next_available_id to avoid conflicts with Tseitin variables
+        id_assumption = model.next_available_id
 
         # Prepare KB with assumptions and optionally negated forms
         id_assumption = prepare_kb(
@@ -497,7 +501,7 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
         task_input = model.task_input
 
         # Start assumption IDs after Tseitin variables
-        id_assumption = model.next_tseitin_var
+        id_assumption = model.next_available_id
 
         # Prepare KB (no negated forms needed for TestCaseTask)
         id_assumption = prepare_kb(
