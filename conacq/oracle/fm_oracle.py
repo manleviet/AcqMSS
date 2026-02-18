@@ -55,6 +55,7 @@ class FeatureModelOracle(Oracle):
         self._fm = None
         self._constraint_descriptions_cache: Optional[Set[str]] = None
 
+    # TODO: need check
     @property
     def fm(self):
         """Lazy-load FM for description extraction."""
@@ -83,6 +84,7 @@ class FeatureModelOracle(Oracle):
 
     # --- FM-specific extensions (not part of Oracle ABC) ---
 
+    # TODO: need check
     def get_fm_data(self) -> FMData:
         """Create FMData snapshot from current oracle state.
 
@@ -101,14 +103,17 @@ class FeatureModelOracle(Oracle):
         """Return root BG assumption data for ConGen."""
         return self._oracle_model.bg_data
 
+    # TODO: need check
     def get_features(self) -> Set[str]:
         """Get all feature names."""
         return set(self._oracle_model.variables.keys())
 
+    # TODO: need check
     def get_feature_ids(self) -> Dict[str, int]:
         """Get feature name to SAT variable ID mapping."""
         return dict(self._oracle_model.variables)
 
+    # TODO: need check
     def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
         """Complete a partial configuration to a full valid one via SAT solving.
 
@@ -148,34 +153,42 @@ class FeatureModelOracle(Oracle):
                 for name, fid in self._oracle_model.variables.items()}
 
     # Convenience getters (delegate to model)
+    # TODO: need check
     def get_kb(self) -> List[List[int]]:
         """Get the full knowledge base with assumptions."""
         return self._oracle_model.task.set_kb
 
+    # TODO: need check
     def get_assumptions(self) -> List[int]:
         """Get the list of assumption literals."""
         return self._oracle_model.task.assumptions
 
+    # TODO: need check
     def get_c(self) -> List[int]:
         """Get the set of constraint assumptions (FM constraints only, excluding feature assignments)."""
         return self._oracle_model.get_c()
 
+    # TODO: need check
     def get_root_feature(self) -> str:
         """Get root feature name."""
         return self.fm.root.name
 
+    # TODO: need check
     def get_cnf_clauses(self) -> List[List[int]]:
         """Get the raw ground truth CNF clauses (without assumption guards)."""
         return self._oracle_model.get_raw_fm_clauses()
 
+    # TODO: need check
     def get_num_constraints(self) -> int:
         """Get number of FM constraints in ground truth."""
         return len(self._oracle_model.constraint_map)
 
+    # TODO: need check
     def get_next_available_id(self) -> int:
         """Get starting Tseitin variable ID from FM model."""
         return self._oracle_model.next_available_id
 
+    # TODO: need check
     def get_constraint_descriptions(self) -> Set[str]:
         """Extract constraint descriptions from FM (cached).
 
@@ -190,6 +203,7 @@ class FeatureModelOracle(Oracle):
     def __repr__(self):
         return f"FeatureModelOracle(features={len(self._oracle_model.variables)})"
 
+    # TODO: need update
     def cleanup(self):
         """Release checker resources."""
         if hasattr(self, '_checker') and self._checker is not None:

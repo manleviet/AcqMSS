@@ -98,6 +98,7 @@ class FMOracleModel:
         """Get the list of assumption literals."""
         return self.task.assumptions
 
+    # TODO: need check
     def get_raw_fm_clauses(self) -> List[List[int]]:
         """Get raw FM CNF clauses (without assumption guards).
 
@@ -145,6 +146,7 @@ class FMOracleModel:
 
         return self._task
 
+    # TODO: need remove
     @classmethod
     def from_fm_data(cls, constraint_map: Dict[str, List[List[int]]],
                      variables: Dict[str, int],
