@@ -249,12 +249,11 @@ class TestAccuracyCalculator:
         # KB: A must be true
         kb_clauses = [[1]]
 
-        with AccuracyCalculator(kb_clauses) as calc:
+        with AccuracyCalculator(kb_clauses, {'A': 1}) as calc:
             positive = [{'A': True}]
             negative = [{'A': False}]
-            feature_ids = {'A': 1}
 
-            result = calc.calculate(positive, negative, feature_ids)
+            result = calc.calculate(positive, negative)
 
             assert result.metrics.accuracy == 1.0
             assert result.metrics.true_positives == 1
@@ -267,13 +266,12 @@ class TestAccuracyCalculator:
         # KB: A and B must be true
         kb_clauses = [[1], [2]]
 
-        with AccuracyCalculator(kb_clauses) as calc:
+        with AccuracyCalculator(kb_clauses, {'A': 1, 'B': 2}) as calc:
             # E+ has A=True, B=False (should be rejected by this KB)
             positive = [{'A': True, 'B': False}]
             negative = []
-            feature_ids = {'A': 1, 'B': 2}
 
-            result = calc.calculate(positive, negative, feature_ids)
+            result = calc.calculate(positive, negative)
 
             assert result.metrics.false_negatives == 1
 
@@ -282,13 +280,12 @@ class TestAccuracyCalculator:
         # KB: A or B (always satisfiable if A=True)
         kb_clauses = [[1, 2]]
 
-        with AccuracyCalculator(kb_clauses) as calc:
+        with AccuracyCalculator(kb_clauses, {'A': 1, 'B': 2}) as calc:
             positive = []
             # E- has A=True (should be accepted by this KB)
             negative = [{'A': True, 'B': False}]
-            feature_ids = {'A': 1, 'B': 2}
 
-            result = calc.calculate(positive, negative, feature_ids)
+            result = calc.calculate(positive, negative)
 
             assert result.metrics.false_positives == 1
 
@@ -467,13 +464,12 @@ class TestIntegration:
             if bias.has_constraint(cid):
                 kb_clauses.extend(bias.get_clauses(cid))
 
-        with AccuracyCalculator(kb_clauses) as calc:
+        with AccuracyCalculator(kb_clauses, bias.feature_ids) as calc:
             pos_assignments = [e.assignments for e in examples.positive]
             neg_assignments = [e.assignments for e in examples.negative]
             accuracy_result = calc.calculate(
                 pos_assignments,
-                neg_assignments,
-                bias.features
+                neg_assignments
             )
 
         # Sanity checks - accuracy should be valid

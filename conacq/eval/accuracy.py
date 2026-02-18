@@ -59,14 +59,17 @@ class AccuracyCalculator:
     - FN: positive example REJECTED by KB
     """
 
-    def __init__(self, kb_clauses: List[List[int]], solver_name: str = 'glucose4'):
+    def __init__(self, kb_clauses: List[List[int]], variables: Dict[str, int],
+                 solver_name: str = 'glucose4'):
         """
-        Initialize with KB clauses.
+        Initialize with KB clauses and variable mapping.
 
         Args:
             kb_clauses: CNF clauses of the learned KB
+            variables: Mapping {feature_name: SAT_variable_id}
             solver_name: SAT solver name
         """
+        self.variables = variables
         self.solver = Solver(name=solver_name)
         for clause in kb_clauses:
             self.solver.add_clause(clause)
@@ -75,8 +78,7 @@ class AccuracyCalculator:
     def calculate(
             self,
             positive_examples: List[Dict[str, bool]],
-            negative_examples: List[Dict[str, bool]],
-            feature_ids: Dict[str, int]
+            negative_examples: List[Dict[str, bool]]
     ) -> AccuracyResult:
         """
         Calculate accuracy metrics.
@@ -84,7 +86,6 @@ class AccuracyCalculator:
         Args:
             positive_examples: List of E+ (should be ACCEPTED by KB)
             negative_examples: List of E- (should be REJECTED by KB)
-            feature_ids: Mapping {feature_name: SAT_variable_id}
 
         Returns:
             AccuracyResult with metrics and example lists
@@ -98,7 +99,7 @@ class AccuracyCalculator:
         # Test positive examples (should be accepted by correct KB)
         for i, example in enumerate(positive_examples):
             example_id = f"e{i+1}+"
-            accepted = self._is_accepted(example, feature_ids)
+            accepted = self._is_accepted(example)
             if accepted:
                 tp_examples.append(example_id)
             else:
@@ -107,7 +108,7 @@ class AccuracyCalculator:
         # Test negative examples (should be rejected by correct KB)
         for i, example in enumerate(negative_examples):
             example_id = f"e{i+1}-"
-            accepted = self._is_accepted(example, feature_ids)
+            accepted = self._is_accepted(example)
             if accepted:
                 fp_examples.append(example_id)  # Error: negative accepted
             else:
@@ -132,21 +133,20 @@ class AccuracyCalculator:
             fn_examples=fn_examples
         )
 
-    def _is_accepted(self, example: Dict[str, bool], feature_ids: Dict[str, int]) -> bool:
+    def _is_accepted(self, example: Dict[str, bool]) -> bool:
         """
         Check if example is accepted (consistent) with KB.
 
         Args:
             example: Feature assignments {feature_name: True/False}
-            feature_ids: Mapping {feature_name: variable_id}
 
         Returns:
             True if example is consistent with KB
         """
         assumptions = []
         for name, value in example.items():
-            if name in feature_ids:
-                fid = feature_ids[name]
+            if name in self.variables:
+                fid = self.variables[name]
                 assumptions.append(fid if value else -fid)
         return self.solver.solve(assumptions=assumptions)
 

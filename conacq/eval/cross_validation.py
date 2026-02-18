@@ -210,8 +210,8 @@ def _run_cv_loop(
         performance_list.append(perf)
 
         # Test: calculate accuracy on held-out fold
-        with AccuracyCalculator(run_result.kb_clauses, solver_name) as calculator:
-            accuracy_result = calculator.calculate(test_pos, test_neg, variables)
+        with AccuracyCalculator(run_result.kb_clauses, variables, solver_name) as calculator:
+            accuracy_result = calculator.calculate(test_pos, test_neg)
 
         fold_accuracy = accuracy_result.metrics.accuracy
         fold_accuracies.append(fold_accuracy)
