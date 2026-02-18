@@ -71,7 +71,7 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     task = model.task
     checker = CheckerFactory.create_from_model(model, 'glucose4', profiler)
 
-    return checker, task, profiler
+    return checker, task, profiler, model.description_provider
 
 
 class TestCONGEN:
@@ -81,7 +81,7 @@ class TestCONGEN:
         """Test ConGen incremental mode with random sampling examples."""
         if not FM_PATH.exists() or not EXAMPLES_RS_1N_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, profiler = create_checker_and_task(
+        checker, task, profiler, provider = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=True
         )
 
@@ -114,9 +114,10 @@ class TestCONGEN:
             print(f"  KB: {result.n_kb}")
             if result.kb_assumption_ids:
                 for c in result.kb_assumption_ids:
-                    # print constraints by bias.get_constraint_by_id() for readability
-                    constraint = bias.get_constraint_by_id(c)
-                    print(f"  Constraint: {constraint} (ID: {c})")
+                    # Bridge assumption ID (int) → constraint name (str) → Constraint
+                    cname = provider.get_description(c)
+                    constraint = bias.get_constraint_by_id(cname)
+                    print(f"  Constraint: {constraint if constraint else cname} (ID: {c})")
 
             profiler.print_summary(include_raw_timers=True)
 
@@ -127,7 +128,7 @@ class TestCONGEN:
         """Test ConGen non-incremental mode with random sampling examples."""
         if not FM_PATH.exists() or not EXAMPLES_RS_1N_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, profiler = create_checker_and_task(
+        checker, task, profiler, provider = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=False
         )
 
@@ -161,8 +162,9 @@ class TestCONGEN:
 
             if result.kb_assumption_ids:
                 for c in result.kb_assumption_ids:
-                    # print constraints by bias.get_constraint_by_id() for readability
-                    constraint = bias.get_constraint_by_id(c)
+                    # Bridge assumption ID (int) → constraint name (str) → Constraint
+                    cname = provider.get_description(c)
+                    constraint = bias.get_constraint_by_id(cname)
                     print(f"  Constraint: {constraint} (ID: {c})")
 
             profiler.print_summary(include_raw_timers=True)
@@ -174,7 +176,7 @@ class TestCONGEN:
         """Test ConGen incremental mode with feature frequency examples."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, profiler = create_checker_and_task(
+        checker, task, profiler, provider = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_FF_PATH), is_incremental=True
         )
 
@@ -206,8 +208,9 @@ class TestCONGEN:
 
             if result.kb_assumption_ids:
                 for c in result.kb_assumption_ids:
-                    # print constraints by bias.get_constraint_by_id() for readability
-                    constraint = bias.get_constraint_by_id(c)
+                    # Bridge assumption ID (int) → constraint name (str) → Constraint
+                    cname = provider.get_description(c)
+                    constraint = bias.get_constraint_by_id(cname)
                     print(f"  Constraint: {constraint} (ID: {c})")
 
             profiler.print_summary(include_raw_timers=True)
