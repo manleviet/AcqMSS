@@ -1189,4 +1189,33 @@ def use_global_profiler(preset: ProfilerPreset) -> AbstractProfiler:
     return gprofiler
 
 
+@contextmanager
+def profiler_session(preset: ProfilerPreset, mode: ProfilerMode = ProfilerMode.SINGLE_THREAD):
+    """Context manager for profiler lifecycle: create, reset, start, yield, stop.
+
+    Higher-level wrapper around use_global_profiler() that manages the full
+    profiling session lifecycle.
+
+    Args:
+        preset: ProfilerPreset enum value (DISABLED or BENCHMARK)
+        mode: Profiling mode (SINGLE_THREAD or MULTI_PROCESS)
+
+    Yields:
+        The configured profiler instance
+
+    Example:
+        with profiler_session(ProfilerPreset.BENCHMARK) as profiler:
+            # ... run code to profile ...
+            pass
+        # profiler is automatically stopped
+    """
+    profiler = use_global_profiler(preset)
+    profiler.reset()
+    profiler.start(mode=mode)
+    try:
+        yield profiler
+    finally:
+        profiler.stop()
+
+
 gprofiler: AbstractProfiler = use_global_profiler(ProfilerPreset.DISABLED)

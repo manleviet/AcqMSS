@@ -60,9 +60,13 @@ from conacq.algorithms.interactive import QuAcq, InteractiveLearner
 from conacq.example_generators import QueryGenerator, ExampleProvider
 from explanation.operations.algorithms.checker import CheckerFactory
 
-# Passive learning: build model, create oracle, prepare separately
-model = ConGenModelBuilder.from_bias('data/bias/model.json').use_incremental(True).build()
+# Passive learning — Pattern 1: auto-prepare (oracle + examples at build time)
 oracle = FeatureModelOracle('data/fms/model.uvl')
+model = (ConGenModelBuilder.from_bias('data/bias/model.json')
+         .with_oracle(oracle).with_examples('data/examples/model.json').build())
+
+# Passive learning — Pattern 2: manual prepare (CV reuse)
+model = ConGenModelBuilder.from_bias('data/bias/model.json').build()  # unprepared
 model.prepare(oracle, positive_examples=pos, negative_examples=neg)  # Calls GenerateNE internally
 
 checker = CheckerFactory.create_from_model(model, profiler)
@@ -390,8 +394,10 @@ Both paradigms use:
 ```
 Bias (JSON) + Feature Model (UVL) + Examples
     ├─→ ConGenModelBuilder.from_bias(bias_path)
+    │   ├─ .with_oracle(oracle)          # optional: enables auto-prepare
+    │   ├─ .with_examples(path)          # optional: enables auto-prepare
     │   ├─ .use_incremental(True/False)
-    │   └─ .build() → ConGenModel (unprepared, no FM dependency)
+    │   └─ .build() → ConGenModel        # prepared if oracle+examples set, else unprepared
     │
     ├─→ FeatureModelOracle.from(fm_path)
     │   └─ Builds FMOracleModel with assumption-guarded FM clauses

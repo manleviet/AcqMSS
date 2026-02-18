@@ -9,11 +9,8 @@ To enable/disable specific parameter combinations, modify ENABLED_PARAMS.
 """
 import os
 import sys
-from contextlib import contextmanager
-from typing import cast
 
 from flamapy.metamodels.configuration_metamodel.transformations import ConfigurationBasicReader
-from flamapy.metamodels.fm_metamodel.transformations import FeatureIDEReader, UVLReader
 from parameterized import parameterized
 
 from explanation.models import DiagnosisModelBuilder
@@ -22,18 +19,14 @@ from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.fastdiag import FastDiag
 from explanation.operations.algorithms.fastdiagp import FastDiagP
 from explanation.operations.algorithms.kbdiag import KBDiag
-from explanation.operations.algorithms.profiler import ProfilerMode, ProfilerPreset, use_global_profiler
+from explanation.operations.algorithms.profiler import ProfilerMode, ProfilerPreset, profiler_session
 from explanation.operations.algorithms.quickxplain import QuickXPlain
 from explanation.operations.algorithms.quickxplain_with_testcases import QuickXPlainWithTestCases
-from explanation.operations.algorithms.wipeoutr_fm import WipeOutR_FM
-from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
 from explanation.operations.pysat_abstract_explanation import _format_results
-from explanation.operations.pysat_redundancy_testcases import PySATRedundancyTestCases
 from explanation.operations.pysat_explanation_builder import (
     PySATDiagnosisBuilder, PySATTestcaseBuilder,
     PySATRedundancyTestCasesBuilder, PySATRedundancyConstraintsBuilder, PySATTestcaseQuickXplainBuilder
 )
-from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 from explanation.transformations.testsuite_reader import TestSuiteReader
 
 # =============================================================================
@@ -178,18 +171,9 @@ class Resources:
 # HELPER FUNCTIONS
 # =============================================================================
 
-@contextmanager
-def profiler_context(enable_profiling: bool, mode: ProfilerMode = ProfilerMode.SINGLE_THREAD):
-    """Context manager for profiler setup and teardown."""
-    preset = ProfilerPreset.BENCHMARK if enable_profiling else ProfilerPreset.DISABLED
-    profiler = use_global_profiler(preset)
-    profiler.reset()
-    profiler.start(mode=mode)
-
-    try:
-        yield profiler
-    finally:
-        profiler.stop()
+def _profiler_preset(enable_profiling: bool) -> ProfilerPreset:
+    """Map enable_profiling flag to ProfilerPreset."""
+    return ProfilerPreset.BENCHMARK if enable_profiling else ProfilerPreset.DISABLED
 
 def print_test_header(name: str, is_incremental: bool, solver_name: str,
                       use_sat4j: bool, enable_profiling: bool):
@@ -237,7 +221,7 @@ def test_fastdiag_1diag(name, is_incremental, solver_name, use_sat4j, enable_pro
     """Test FastDiag with different checker implementations and profiling modes."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -261,7 +245,7 @@ def test_quickxplain_1cs(name, is_incremental, solver_name, use_sat4j, enable_pr
     """Test QuickXPlain to find one conflict."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -285,7 +269,7 @@ def test_fastdiagp_1diag(name, is_incremental, solver_name, use_sat4j, enable_pr
     """Test FastDiagP (parallel) to find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling, ProfilerMode.MULTI_PROCESS) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling), ProfilerMode.MULTI_PROCESS) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -309,7 +293,7 @@ def test_kbdiag_1diag_1(name, is_incremental, solver_name, use_sat4j, enable_pro
     """Test KBDIAG: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -335,7 +319,7 @@ def test_kbdiag_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable
     """Test KBDIAG: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -363,7 +347,7 @@ def test_kbdiag_1diag_2(name, is_incremental, solver_name, use_sat4j, enable_pro
     """Test KBDIAG: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
@@ -391,7 +375,7 @@ def test_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, enable
     """Test KBDIAG: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
@@ -418,7 +402,7 @@ def test_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, enable
 def test_quickxplainwithtestcases_1cs_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -443,7 +427,7 @@ def test_quickxplainwithtestcases_1cs_1(name, is_incremental, solver_name, use_s
 def test_quickxplainwithtestcases_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -475,7 +459,7 @@ def test_hsdag_fastdiag_1diag(name, is_incremental, solver_name, use_sat4j, enab
     """HSDAG with FastDiag: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -498,7 +482,7 @@ def test_hsdag_fastdiag_2diag(name, is_incremental, solver_name, use_sat4j, enab
     """HSDAG with FastDiag: find two diagnoses."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -522,7 +506,7 @@ def test_hsdag_fastdiag_all(name, is_incremental, solver_name, use_sat4j, enable
     """HSDAG with FastDiag: find all diagnoses."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -551,7 +535,7 @@ def test_hsdag_quickxplain_1cs(name, is_incremental, solver_name, use_sat4j, ena
     """HSDAG with QuickXPlain: find one conflict."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -576,7 +560,7 @@ def test_hsdag_quickxplain_one_depth_first_search(name, is_incremental, solver_n
     """HSDAG with QuickXPlain: find one conflict using depth-first search."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -601,7 +585,7 @@ def test_hsdag_quickxplain_2cs(name, is_incremental, solver_name, use_sat4j, ena
     """HSDAG with QuickXPlain: find two conflicts."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -626,7 +610,7 @@ def test_hsdag_quickxplain_all(name, is_incremental, solver_name, use_sat4j, ena
     """HSDAG with QuickXPlain: find all conflicts."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         model = (DiagnosisModelBuilder
@@ -655,7 +639,7 @@ def test_hsdag_fastdiag_with_configuration(name, is_incremental, solver_name, us
     """HSDAG with FastDiag: diagnose with configuration."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         configuration = ConfigurationBasicReader(Resources.CONF_NONVALID).transform()
@@ -679,7 +663,7 @@ def test_hsdag_quickxplain_with_configuration(name, is_incremental, solver_name,
     """HSDAG with QuickXPlain: find conflicts with configuration."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         configuration = ConfigurationBasicReader(Resources.CONF_NONVALID).transform()
@@ -705,7 +689,7 @@ def test_hsdag_fastdiag_with_test_case(name, is_incremental, solver_name, use_sa
     """HSDAG with FastDiag: diagnose with test case."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         test_case = ConfigurationBasicReader(Resources.CONF_TESTCASE).transform()
@@ -733,7 +717,7 @@ def test_hsdag_quickxplain_with_testcase(name, is_incremental, solver_name, use_
     """HSDAG with QuickXPlain: find conflicts with test case."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         test_case = ConfigurationBasicReader(Resources.CONF_TESTCASE).transform()
@@ -764,7 +748,7 @@ def test_hsdag_kbdiag_1diag_1(name, is_incremental, solver_name, use_sat4j, enab
     """HSDAG with KBDIAG: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -794,7 +778,7 @@ def test_hsdag_kbdiag_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, 
     """HSDAG with KBDIAG: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -828,7 +812,7 @@ def test_hsdag_kbdiag_all_1(name, is_incremental, solver_name, use_sat4j, enable
     """HSDAG with KBDIAG: all diagnoses."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -859,7 +843,7 @@ def test_hsdag_kbdiag_all_1_neg(name, is_incremental, solver_name, use_sat4j, en
     """HSDAG with KBDIAG: all diagnoses."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -890,7 +874,7 @@ def test_hsdag_kbdiag_1diag_2(name, is_incremental, solver_name, use_sat4j, enab
     """HSDAG with KBDIAG: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
@@ -920,7 +904,7 @@ def test_hsdag_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, 
     """HSDAG with KBDIAG: find one diagnosis."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
@@ -954,7 +938,7 @@ def test_hsdag_kbdiag_all_2(name, is_incremental, solver_name, use_sat4j, enable
     """HSDAG with KBDIAG: all diagnoses."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
@@ -982,7 +966,7 @@ def test_hsdag_kbdiag_all_2_neg(name, is_incremental, solver_name, use_sat4j, en
     """HSDAG with KBDIAG: all diagnoses."""
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
@@ -1016,7 +1000,7 @@ def test_hsdag_kbdiag_all_2_neg(name, is_incremental, solver_name, use_sat4j, en
 def test_hsdag_quickxplainwithtestcases_1diag_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -1048,7 +1032,7 @@ def test_hsdag_quickxplainwithtestcases_1diag_1(name, is_incremental, solver_nam
 def test_hsdag_quickxplainwithtestcases_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -1081,7 +1065,7 @@ def test_hsdag_quickxplainwithtestcases_1diag_1_neg(name, is_incremental, solver
 def test_hsdag_quickxplainwithtestcases_all_1(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -1113,7 +1097,7 @@ def test_hsdag_quickxplainwithtestcases_all_1(name, is_incremental, solver_name,
 def test_hsdag_quickxplainwithtestcases_all_1_neg(name, is_incremental, solver_name, use_sat4j, enable_profiling):
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with (profiler_context(enable_profiling) as profiler):
+    with (profiler_session(_profiler_preset(enable_profiling)) as profiler):
         print_profiler_status(profiler)
 
         positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
@@ -1177,7 +1161,7 @@ def test_wipeoutr_fm_redundancy(name, is_incremental, solver_name, use_sat4j, en
     """
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         # Load model with negated forms created during transformation
@@ -1237,7 +1221,7 @@ def test_pysat_redundancy_constraints(name, is_incremental, solver_name, use_sat
     """
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         # Load model with negated forms created during transformation
@@ -1303,7 +1287,7 @@ def test_wipeoutr_t_redundancy(name, is_incremental, solver_name, use_sat4j, ena
     """
     print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-    with profiler_context(enable_profiling) as profiler:
+    with profiler_session(_profiler_preset(enable_profiling)) as profiler:
         print_profiler_status(profiler)
 
         testsuite = TestSuiteReader(Resources.REDUNDANT_TESTSUITE).transform()

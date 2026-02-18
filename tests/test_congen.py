@@ -5,20 +5,21 @@ Uses REAL-FM-7 feature model with generated bias and examples.
 Supports both incremental and non-incremental solver modes.
 """
 
-import pytest
 from pathlib import Path
-from conacq.oracle import FeatureModelOracle
-from conacq.bias import BiasIO
+
+import pytest
+
 from conacq.algorithms import (
     ConGen, AcqMSS, Reduce,
     ConGenModelBuilder
 )
+from conacq.bias import BiasIO
+from conacq.oracle import FeatureModelOracle
 from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
     CheckerFactory
 )
 from explanation.operations.algorithms.profiler import get_global_profiler
-
 
 # Test data paths
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -46,34 +47,31 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
         is_incremental: Use incremental mode
 
     Returns:
-        Tuple of (checker, task, model, profiler, root_id)
+        Tuple of (checker, task, profiler)
     """
-    from conacq.examples import ExampleIO
-
     profiler = get_global_profiler()
 
     # Create oracle
     oracle = FeatureModelOracle(fm_path, use_incremental=False)
 
-    # Build model (bias only)
+    # Build and prepare model
     model = (ConGenModelBuilder
              .from_bias(bias_path)
              .use_incremental(is_incremental)
+             .with_oracle(oracle)
+             .with_examples(examples_path)
              .build())
 
     # Load examples and prepare with oracle
-    examples = ExampleIO.load_json(examples_path)
-    pos = [e.assignments for e in examples.positive]
-    neg = [e.assignments for e in examples.negative]
-    model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
-
-    root_name = oracle.get_root_feature()
-    root_id = model.variables[root_name]
+    # examples = ExampleIO.load_json(examples_path)
+    # pos = [e.assignments for e in examples.positive]
+    # neg = [e.assignments for e in examples.negative]
+    # model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
 
     task = model.task
     checker = CheckerFactory.create_from_model(model, 'glucose4', profiler)
 
-    return checker, task, model, profiler, root_id
+    return checker, task, profiler
 
 
 class TestCONGEN:
@@ -83,7 +81,7 @@ class TestCONGEN:
         """Test ConGen incremental mode with random sampling examples."""
         if not FM_PATH.exists() or not EXAMPLES_RS_1N_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, congen_model, profiler, root_id = create_checker_and_task(
+        checker, task, profiler = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=True
         )
 
@@ -120,6 +118,8 @@ class TestCONGEN:
                     constraint = bias.get_constraint_by_id(c)
                     print(f"  Constraint: {constraint} (ID: {c})")
 
+            profiler.print_summary(include_raw_timers=True)
+
         finally:
             checker.cleanup()
 
@@ -127,7 +127,7 @@ class TestCONGEN:
         """Test ConGen non-incremental mode with random sampling examples."""
         if not FM_PATH.exists() or not EXAMPLES_RS_1N_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, congen_model, profiler, root_id = create_checker_and_task(
+        checker, task, profiler = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=False
         )
 
@@ -165,6 +165,8 @@ class TestCONGEN:
                     constraint = bias.get_constraint_by_id(c)
                     print(f"  Constraint: {constraint} (ID: {c})")
 
+            profiler.print_summary(include_raw_timers=True)
+
         finally:
             checker.cleanup()
 
@@ -172,7 +174,7 @@ class TestCONGEN:
         """Test ConGen incremental mode with feature frequency examples."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
-        checker, task, congen_model, profiler, root_id = create_checker_and_task(
+        checker, task, profiler = create_checker_and_task(
             str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_FF_PATH), is_incremental=True
         )
 
@@ -207,6 +209,8 @@ class TestCONGEN:
                     # print constraints by bias.get_constraint_by_id() for readability
                     constraint = bias.get_constraint_by_id(c)
                     print(f"  Constraint: {constraint} (ID: {c})")
+
+            profiler.print_summary(include_raw_timers=True)
 
         finally:
             checker.cleanup()
@@ -281,6 +285,92 @@ class TestGenerateNE:
         assert results == []
         assert next_id == 1000
         del oracle
+
+
+class TestConGenModelBuilder:
+    """Tests for ConGenModelBuilder auto-prepare patterns."""
+
+    def test_auto_prepare_from_file(self):
+        """Pattern 1: with_oracle + with_examples → build returns prepared model."""
+        if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
+            pytest.skip("Test data files not found")
+
+        oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        model = (ConGenModelBuilder
+                 .from_bias(str(BIAS_PATH))
+                 .with_oracle(oracle)
+                 .with_examples(str(EXAMPLES_FF_PATH))
+                 .build())
+        assert model.task is not None
+        assert len(model.get_kb()) > 0
+
+    def test_auto_prepare_from_data(self):
+        """Pattern 2: with_oracle + with_examples_data → build returns prepared model."""
+        if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
+            pytest.skip("Test data files not found")
+
+        from conacq.examples import ExampleIO
+        examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+
+        oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        model = (ConGenModelBuilder
+                 .from_bias(str(BIAS_PATH))
+                 .with_oracle(oracle)
+                 .with_examples_data(positive_examples=pos, negative_examples=neg)
+                 .build())
+        assert model.task is not None
+
+    def test_build_without_oracle_returns_unprepared(self):
+        """build() without oracle → unprepared model."""
+        if not BIAS_PATH.exists():
+            pytest.skip("Bias file not found")
+
+        model = ConGenModelBuilder.from_bias(str(BIAS_PATH)).build()
+        assert model.task is None
+
+    def test_cv_re_prepare(self):
+        """Pattern 3: build once, prepare per fold."""
+        if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
+            pytest.skip("Test data files not found")
+
+        from conacq.examples import ExampleIO
+
+        model = ConGenModelBuilder.from_bias(str(BIAS_PATH)).build()
+        oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+
+        # First prepare
+        model.prepare(oracle, positive_examples=pos, negative_examples=neg)
+        task1_kb = list(model.get_kb())
+
+        # Re-prepare (idempotent)
+        model.prepare(oracle, positive_examples=pos, negative_examples=neg)
+        task2_kb = list(model.get_kb())
+
+        assert task1_kb == task2_kb
+
+    def test_last_call_wins(self):
+        """with_examples then with_examples_data → raw data used."""
+        if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
+            pytest.skip("Test data files not found")
+
+        from conacq.examples import ExampleIO
+        examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+
+        oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        model = (ConGenModelBuilder
+                 .from_bias(str(BIAS_PATH))
+                 .with_oracle(oracle)
+                 .with_examples('nonexistent.json')  # Would fail if used
+                 .with_examples_data(positive_examples=pos, negative_examples=neg)
+                 .build())
+        assert model.task is not None  # Used raw data, not file
 
 
 class TestOracleFeatureIds:

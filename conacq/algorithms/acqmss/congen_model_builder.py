@@ -1,32 +1,46 @@
 """Builder for creating configured ConGenModel instances.
 
-Handles bias loading and solver config only.
-Oracle creation is the caller's responsibility.
+Handles bias loading, solver config, and optional auto-prepare.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from .congen_model import ConGenModel
+
+if TYPE_CHECKING:
+    from conacq.oracle import FeatureModelOracle
 
 
 class ConGenModelBuilder:
     """Fluent builder for ConGenModel.
 
     Examples:
-        # Build model, prepare separately
-        model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
+        # Pattern 1: Auto-prepare from file
         oracle = FeatureModelOracle('data/fms/model.uvl')
-        model.prepare(oracle, positive_examples=pos, negative_examples=neg)
+        model = (ConGenModelBuilder
+                 .from_bias('data/bias/model.json')
+                 .with_oracle(oracle)
+                 .with_examples('data/examples/model.json')
+                 .build())  # Returns prepared model
 
-        # For CV: build once, prepare per fold
+        # Pattern 2: Auto-prepare from raw data
+        model = (ConGenModelBuilder
+                 .from_bias('data/bias/model.json')
+                 .with_oracle(oracle)
+                 .with_examples_data(positive_examples=pos, negative_examples=neg)
+                 .build())  # Returns prepared model
+
+        # Pattern 3: CV build-once, prepare per fold
         model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
-        oracle = FeatureModelOracle('data/fms/model.uvl')
         for fold_pos, fold_neg in folds:
             model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
     """
 
     def __init__(self):
         self._bias_path: Optional[str] = None
+
+        # Oracle (optional, enables auto-prepare)
+        self._oracle: Optional['FeatureModelOracle'] = None
 
         # Examples (optional, for convenience)
         self._examples_path: Optional[str] = None
@@ -43,19 +57,33 @@ class ConGenModelBuilder:
         builder._bias_path = bias_path
         return builder
 
+    def with_oracle(self, oracle: 'FeatureModelOracle') -> 'ConGenModelBuilder':
+        """Set oracle for auto-prepare during build()."""
+        self._oracle = oracle
+        return self
+
     def with_examples(self, examples_path: str) -> 'ConGenModelBuilder':
-        """Set examples file path (contains both E+ and E-)."""
+        """Set examples file path (contains both E+ and E-).
+
+        Clears any previously set raw example data (last-call-wins).
+        """
         self._examples_path = examples_path
+        self._positive_examples = None
+        self._negative_examples = None
         return self
 
     def with_examples_data(
             self,
-            positive: List[Dict[str, bool]],
-            negative: List[Dict[str, bool]]
+            positive_examples: List[Dict[str, bool]],
+            negative_examples: Optional[List[Dict[str, bool]]] = None
     ) -> 'ConGenModelBuilder':
-        """Set example data directly (for CV folds)."""
-        self._positive_examples = positive
-        self._negative_examples = negative
+        """Set example data directly (for CV folds).
+
+        Clears any previously set file path (last-call-wins).
+        """
+        self._positive_examples = positive_examples
+        self._negative_examples = negative_examples
+        self._examples_path = None
         return self
 
     def use_incremental(self, enabled: bool = True) -> 'ConGenModelBuilder':
@@ -64,10 +92,10 @@ class ConGenModelBuilder:
         return self
 
     def build(self) -> ConGenModel:
-        """Build and return configured ConGenModel (unprepared).
+        """Build and return configured ConGenModel.
 
-        Returns model with bias loaded. Caller must call
-        model.prepare(oracle, pos_examples, neg_examples) before use.
+        Auto-prepares if both oracle and examples are set.
+        Otherwise returns unprepared model for manual prepare().
 
         Raises:
             ValueError: If bias path missing
@@ -82,6 +110,15 @@ class ConGenModelBuilder:
         model.constraint_map = bias.to_constraint_map()
         model.variables = bias.feature_ids
         model._use_incremental = self._use_incremental
+
+        # Auto-prepare when oracle + examples present
+        if self._oracle and self._has_examples():
+            pos, neg = self._resolve_examples()
+            model.prepare(
+                oracle=self._oracle,
+                positive_examples=pos,
+                negative_examples=neg or []
+            )
 
         return model
 
@@ -104,7 +141,7 @@ class ConGenModelBuilder:
     def _resolve_examples(self) -> Tuple[List[Dict[str, bool]], List[Dict[str, bool]]]:
         """Load examples from path or return direct data."""
         if self._positive_examples is not None:
-            return self._positive_examples, self._negative_examples
+            return self._positive_examples, self._negative_examples or []
 
         from conacq.examples import ExampleIO
         examples = ExampleIO.load_json(self._examples_path)

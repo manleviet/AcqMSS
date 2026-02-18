@@ -22,7 +22,7 @@ Primary constraint discovery algorithms:
 | `generate_ne.py` | 193 | GenerateNE: negated example generation (internal to ConGenModel.prepare()) |
 | `task_preparation.py` | 435 | Task hierarchy (DiagnosisTask → TestCaseTask → ConGenTask) + unified prep |
 | `congen_model.py` | 186 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Call prepare(oracle) before use |
-| `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern. from_bias() returns unprepared model |
+| `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern. Auto-prepares when oracle+examples set; otherwise returns unprepared model |
 
 **Interactive Sub-package** (`interactive/`, 7 files, ~1,543 LOC):
 
@@ -100,7 +100,7 @@ Sampling strategies, example generation, and query generation for learning:
 
 9. **CheckerModel Protocol**: `FMOracleModel` and `ConGenModel` implement `get_kb()`, `get_assumptions()`, `use_incremental` for compatibility with `CheckerFactory`.
 
-10. **Builder Pattern**: ConGenModelBuilder encapsulates bias loading and builder configuration. Calls to `build()` return unprepared models (no FM fields). Call `prepare(oracle, examples)` to prepare for use.
+10. **Builder Pattern**: ConGenModelBuilder encapsulates bias loading and configuration. `build()` auto-prepares when `with_oracle()` + `with_examples()` are set; returns unprepared model otherwise. Call `model.prepare(oracle, examples)` manually for CV reuse patterns.
 
 11. **Oracle Separation**: Oracle created independently and passed to `model.prepare()`. Enables cross-validation reuse without rebuilding model.
 
@@ -382,7 +382,7 @@ CONGEN and QuAcq learning results:
 **Earlier Changes** (still in place):
 - ConGenModel pure data container (bias + solver config only)
 - ConGenModel.prepare(oracle, pos_examples, neg_examples)
-- ConGenModelBuilder.from_bias(path) returns unprepared model
+- ConGenModelBuilder.from_bias(path): returns unprepared model by default; auto-prepares if oracle+examples set via with_oracle()/with_examples()
 - GenerateNE internalized to ConGenModel.prepare()
 - FMOracleModel with assumption-guarded clauses
 - Cross-validation reuse pattern

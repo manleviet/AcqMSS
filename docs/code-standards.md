@@ -271,24 +271,24 @@ class ConGen:
 
 
 # Usage with ConGenModelBuilder (fluent pattern)
-# 1. Build unprepared model (no FM dependency)
+
+# Pattern 1: Auto-prepare (oracle + examples set at build time)
+oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (ConGenModelBuilder
          .from_bias('data/bias/model.json')
-         .use_incremental(True)
-         .build())
+         .with_oracle(oracle)
+         .with_examples('data/examples/model.json')
+         .build())  # Returns prepared model (ready to use)
 
-# 2. Create oracle separately
+# Pattern 2: Manual prepare (cross-validation reuse)
+model = ConGenModelBuilder.from_bias('data/bias/model.json').build()  # Unprepared
 oracle = FeatureModelOracle('data/fms/model.uvl')
+model.prepare(oracle, positive_examples=pos, negative_examples=neg)  # GenerateNE called internally
 
-# 3. Prepare model with examples (GenerateNE called internally)
-model.prepare(oracle, positive_examples=pos, negative_examples=neg)
-
-# 4. Create checker from model (CheckerModel protocol)
+# Create checker and run ConGen
 from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
 
 checker = CheckerFactory.create_from_model(model, profiler)
-
-# 5. Run ConGen
 congen = ConGen(checker, profiler)
 result = congen.acquire(
     set_b=model.task.set_c,

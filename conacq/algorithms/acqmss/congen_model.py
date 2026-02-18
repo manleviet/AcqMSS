@@ -73,10 +73,8 @@ class ConGenModel:
         self._task_input = value
 
     @property
-    def task(self) -> ConGenTask:
-        """Get prepared task. Call prepare() first."""
-        if self._task is None:
-            raise RuntimeError("Call prepare() first")
+    def task(self) -> Optional[ConGenTask]:
+        """Get prepared task, or None if prepare() has not been called."""
         return self._task
 
     @property
@@ -86,14 +84,20 @@ class ConGenModel:
             raise RuntimeError("Call prepare() first")
         return self._description_provider
 
+    def _require_task(self) -> ConGenTask:
+        """Return task or raise if not prepared."""
+        if self._task is None:
+            raise RuntimeError("Model not prepared. Call prepare() first.")
+        return self._task
+
     # Convenience getters (delegate to result)
     def get_c(self) -> List:
         """Get the set of potentially faulty constraints."""
-        return self.task.set_c
+        return self._require_task().set_c
 
     def get_b(self) -> List:
         """Get the background knowledge."""
-        return self.task.set_b
+        return self._require_task().set_b
 
     def get_cf(self) -> List:
         """Get all constraints (C ∪ B) for redundancy detection.
@@ -101,11 +105,11 @@ class ConGenModel:
         Returns:
             List of all constraint IDs (set_c + set_b).
         """
-        return self.task.get_cf()
+        return self._require_task().get_cf()
 
     def get_kb(self) -> List[List]:
         """Get the full knowledge base with assumptions."""
-        return self.task.set_kb
+        return self._require_task().set_kb
 
     def get_negation_map(self) -> dict:
         """Get the mapping from original to negated assumption IDs.
@@ -114,11 +118,11 @@ class ConGenModel:
             Dict mapping original assumption ID to negated assumption ID,
             or empty dict if no negated forms.
         """
-        return self.task.negation_map
+        return self._require_task().negation_map
 
     def get_assumptions(self) -> List:
         """Get the list of assumption literals."""
-        return self.task.assumptions
+        return self._require_task().assumptions
 
     def get_tc(self) -> List:
         """Get the positive test cases (debugging task only).

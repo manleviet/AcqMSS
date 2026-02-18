@@ -362,15 +362,18 @@ ConGen supports n-fold cross-validation with shared folds for fair comparison wi
 
 ```python
 from acqmss.algorithms import ConGen, ConGenModelBuilder
+from acqmss.oracle import FeatureModelOracle
 from acqmss.eval.fold_io import load_folds
 from acqmss.eval.cross_validation import n_fold_cross_validation
 
 # Load pre-generated folds (shared with QuAcq)
 fold_data = load_folds('data/cv_folds.json')
 
-# Build model
+# Build model (auto-prepare: oracle + examples passed at build time)
+oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (ConGenModelBuilder
-    .from_bias_and_fm_uvl('data/bias/model.json', 'data/fms/model.uvl')
+    .from_bias('data/bias/model.json')
+    .with_oracle(oracle)
     .with_examples('data/examples/examples.json')
     .build())
 
