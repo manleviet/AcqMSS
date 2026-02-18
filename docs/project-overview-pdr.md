@@ -208,9 +208,10 @@ Build a **production-ready constraint acquisition framework** that:
 Application Layer (apps/)
   ├── generate_bias_config.py
   ├── generate_examples.py
-  ├── run_congen.py
+  ├── run_congen.py             # dev/debug tool
   ├── run_interactive_eval.py
-  └── run_congen_eval.py
+  ├── run_congen_eval.py        # CV mode only
+  └── extract_results.py        # reports with fold metrics
        ↓
 Core Algorithms (conacq/)
   ├── CONGEN (GenerateNE → ACQMSS → REDUCE)

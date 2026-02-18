@@ -187,28 +187,27 @@ Feature model to SAT conversion:
 | `dimacs_to_configuration.py` | 59 | DIMACS variable assignments → Configuration |
 | `testsuite_reader.py` | 42 | Read test suites from files |
 
-### apps/ — Standalone Applications (~3,702 LOC, 9 files)
+### apps/ — Standalone Applications (~3,100 LOC, 8 files)
 
 CLI applications for constraint acquisition pipeline:
 
 | File | LOC | Purpose |
 |-----|-----|---------|
-| `extract_results.py` | 1,013 | Post-process results, generate reports |
+| `extract_results.py` | 621 | Post-process results, generate Markdown/LaTeX reports (with fold metrics: precision/recall/F1/specificity mean±std) |
 | `generate_bias_config.py` | 536 | Feature model → YAML bias configuration |
 | `generate_examples.py` | 325 | Generate E+/E- examples with sampling strategies |
 | `generate_bias_files.py` | 302 | YAML bias config → JSON/CNF files |
-| `run_congen.py` | 217 | Execute CONGEN learning pipeline |
+| `run_congen.py` | 217 | Execute CONGEN learning pipeline (dev/debug tool) |
 | `run_interactive_eval.py` | 337 | Execute QuAcq interactive learning with CV support |
-| `run_congen_eval.py` | 309 | Execute n-fold cross-validation |
+| `run_congen_eval.py` | ~370 | Execute n-fold CV + strategy evaluation (description/clause) against oracle FM |
 | `generate_cv_folds.py` | 68 | CLI to pre-generate CV folds for reproducible evaluation |
-| `evaluate_congen_results.py` | 524 | Post-process and analyze CONGEN results |
 
-**Config Files** (`conf/`, 8 TOML files):
+**Config Files** (`conf/`, 7 TOML files):
 - `generate_examples_config.toml` — Example generation settings
 - `run_congen_config.toml` — CONGEN execution settings
 - `run_interactive_eval_config.toml` — QuAcq execution settings
 - `run_congen_eval_config.toml` — Cross-validation settings
-- Plus 4 additional task-specific configs
+- Plus 3 additional task-specific configs
 
 ### tests/ — Test Suite (~3,500+ LOC, 8 files)
 
@@ -323,7 +322,7 @@ CONGEN and QuAcq learning results:
 |-----------|-----|-------|---------------|--------|
 | conacq/ | ~9,272 | ~50 | ~185 | ✅ Core algorithms |
 | explanation/ | ~4,600 | ~35 | ~131 | ✅ SAT infrastructure |
-| apps/ | ~3,300 | 9 | ~367 | ✅ CLI applications |
+| apps/ | ~3,100 | 8 | ~388 | ✅ CLI applications |
 | tests/ | ~3,745 | 8 | ~468 | ✅ Comprehensive coverage |
 | **Total** | **~20,900** | **~101** | **~207** | ✅ **Production ready** |
 
@@ -408,6 +407,8 @@ PYTHONPATH=. pytest tests/test_diagnosis.py::test_fastdiag -v -s
 
 ## Main Applications
 
+**Pipeline**: `run_congen_eval.py` (CV + strategy evaluation) → `extract_results.py` (reports + eval tables). `run_congen.py` is a dev/debug tool.
+
 ```bash
 # Generate bias files from feature model
 PYTHONPATH=. python apps/generate_bias_config.py data/fms/model.uvl -v
@@ -416,7 +417,10 @@ PYTHONPATH=. python apps/generate_bias_files.py data/bias-config/model.yaml
 # Generate test examples
 PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml
 
-# Run ConGen (passive learning)
+# Run ConGen cross-validation (primary evaluation path)
+PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v
+
+# Run ConGen single run (dev/debug only)
 PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
 PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml --non-incremental
 
@@ -427,8 +431,8 @@ PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_
 # Run QuAcq with cross-validation
 PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v --cv
 
-# Evaluate results
-PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v
+# Extract results and generate reports (includes fold metrics)
+PYTHONPATH=. python apps/extract_results.py <results_dir> -v
 ```
 
 ## File Size Analysis
@@ -437,7 +441,7 @@ Largest files (by line count):
 - `explanation/operations/profiler.py` — 1,192 LOC (profiling infrastructure)
 - `explanation/models/task_preparation.py` — 952 LOC (SAT task setup)
 - `tests/test_diagnosis.py` — 1,416 LOC (diagnosis tests)
-- `apps/extract_results.py` — 1,013 LOC (result processing)
+- `apps/extract_results.py` — 621 LOC (result processing, DRY-refactored from 1,139 LOC)
 
 Most files keep to ~200 LOC for maintainability, except specialized components.
 

@@ -10,7 +10,8 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 ┌─────────────────────────────────────────────────────────────┐
 │ Application Layer (apps/)                                   │
 │ generate_bias_config.py, generate_examples.py,              │
-│ run_congen.py, run_interactive_eval.py, run_congen_eval.py  │
+│ run_congen.py, run_interactive_eval.py,                     │
+│ run_congen_eval.py (CV only), extract_results.py            │
 └─────────────────┬───────────────────────────────────────────┘
                   │ TOML Configuration Files
                   ▼
@@ -251,6 +252,7 @@ class Oracle(ABC):
 **Components**:
 - `cross_validation.py` — n-fold CV orchestration (CONGEN & Interactive modes)
 - `accuracy.py` — Calculate accuracy, precision, recall, F1
+- `evaluator.py` — Strategy-based evaluation (description/clause) against oracle FM
 
 **Runners** (`acqmss/runners/`, re-exported from `acqmss.eval` for backward compat):
 - `congen_runner.py` — CONGEN pipeline runner with metrics

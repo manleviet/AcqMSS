@@ -79,12 +79,11 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ generate_bias_config.py — FM → YAML bias config
 - ✅ generate_bias_files.py — YAML config → JSON/CNF
 - ✅ generate_examples.py — FM → E+/E- examples
-- ✅ run_congen.py — Execute CONGEN learning
+- ✅ run_congen.py — Execute CONGEN learning (dev/debug tool)
 - ✅ run_interactive_eval.py — Execute QuAcq learning
-- ✅ run_congen_eval.py — n-fold cross-validation
-- ✅ evaluate_congen_results.py — Post-process results
-- ✅ extract_results.py — Generate reports
-- ✅ TOML configuration system (8 configuration files)
+- ✅ run_congen_eval.py — n-fold cross-validation (CV mode only; pre-computed result evaluation removed)
+- ✅ extract_results.py — Generate reports with fold metrics (precision/recall/F1/specificity mean±std; DRY-refactored to 621 LOC)
+- ✅ TOML configuration system (7 configuration files; evaluate_congen_config.toml removed)
 - ✅ 7 reference feature models (14-6,467 features)
 
 ### Phase 5: QuAcq Enhancement ✅ COMPLETE
@@ -129,6 +128,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ BGData class documented (commit b9dd90e)
 - ✅ Cross-validation refactoring documented (commit 11366df)
 - ✅ All doc imports verified (conacq.* not acqmss.*)
+- ✅ Pipeline simplified: removed evaluate_congen_results.py + evaluate_congen_config.toml; run_congen_eval.py now CV-only; extract_results.py extended with fold metrics and DRY-refactored (1,139→621 LOC)
 
 **In Progress**:
 - 📝 Documentation finalization
@@ -149,7 +149,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 |-----------|-----|-------|---------------|--------|
 | conacq/ | ~9,272 | ~50 | 85% | ✅ Complete (includes runners/) |
 | explanation/ | ~4,600 | ~35 | 90% | ✅ Complete |
-| apps/ | ~3,300 | 9 | 60% | ✅ Complete |
+| apps/ | ~3,100 | 8 | 60% | ✅ Complete |
 | tests/ | ~3,745 | 8 | — | ✅ Complete (307/309 passing) |
 | **Total** | **~19,532** | **~97** | **80%** | ✅ **Complete** |
 

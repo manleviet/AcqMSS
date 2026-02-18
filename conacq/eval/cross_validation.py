@@ -294,13 +294,13 @@ def n_fold_cross_validation(
         fm_path: str,
         seed: int,
         solver_name: str = 'glucose4',
-        is_incremental: bool = True,
+        use_incremental: bool = True,
         shuffle_each_fold: bool = True,
         fold_data: Optional[FoldData] = None,
         shuffle_bias: bool = False
 ) -> CrossValidationResult:
     """
-    Standard n-fold cross validation according to the paper (page 6).
+    Standard n-fold cross validation.
 
     Process:
     1. Split examples into n folds
@@ -318,7 +318,7 @@ def n_fold_cross_validation(
         fm_path: Path to feature model (.uvl) file
         seed: Random seed for fold generation and training shuffle (required)
         solver_name: SAT solver name
-        is_incremental: Use incremental solver mode
+        use_incremental: Use incremental solver mode
         shuffle_each_fold: Shuffle training examples before each fold
         fold_data: Optional pre-generated fold assignments (for shared folds)
         shuffle_bias: Shuffle bias ordering per fold using fold_data.shuffle_seeds
@@ -330,7 +330,7 @@ def n_fold_cross_validation(
         bias_path=bias_path,
         fm_path=fm_path,
         solver_name=solver_name,
-        use_incremental=is_incremental
+        use_incremental=use_incremental
     )
     return _run_cv_loop(
         runner=runner, variables=runner.model.variables,

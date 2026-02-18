@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 """
-Evaluate ConGen results against Oracle FM.
+Run ConGen cross-validation against Oracle FM.
 
 Usage:
     PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml
 
 Features:
-- Evaluate pre-computed ConGen results (if result file provided)
-- Run cross-validation with ConGen (if n_folds > 0)
+- Run n-fold cross-validation with ConGen
 - Calculate accuracy against test examples
-- Support both description-based and clause-based evaluation strategies
 - Support both incremental and non-incremental solver modes
 """
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 from dataclasses import dataclass
 
 try:
@@ -26,18 +25,15 @@ except ImportError:
     import tomli as tomllib
 
 from conacq.eval import (
-    Evaluator,
-    EvaluationStrategy,
-    AccuracyCalculator,
-    BiasData,
-    ConGenResultData,
     n_fold_cross_validation,
-    generate_evaluation_report,
-    generate_accuracy_report,
     generate_cv_report,
     save_cv_kb_files,
     load_folds,
+    Evaluator,
+    EvaluationStrategy,
+    CrossValidationResult,
 )
+from conacq.eval.result_loader import ConGenResultData
 from conacq.examples import ExampleIO
 
 
@@ -47,7 +43,6 @@ class ModelConfig:
     name: str
     oracle: str
     bias: str
-    result: str = None  # TODO: necessary?
     examples: str = None
     folds_path: str = None
 
@@ -66,24 +61,11 @@ def parse_models(config: Dict) -> List[ModelConfig]:
             name=m.get('name', 'unknown'),
             oracle=m['oracle'],
             bias=m['bias'],
-            result=m.get('result'),  # TODO: necessary?
             examples=m.get('examples'),
             folds_path=m.get('folds_path')
         )
         for m in models_data
     ]
-
-
-def get_strategies(strategy_config: str) -> List[EvaluationStrategy]:
-    """Get list of strategies to run."""
-    if strategy_config == 'all':
-        return [EvaluationStrategy.DESCRIPTION, EvaluationStrategy.CLAUSE]
-    elif strategy_config == 'description':
-        return [EvaluationStrategy.DESCRIPTION]
-    elif strategy_config == 'clause':
-        return [EvaluationStrategy.CLAUSE]
-    else:
-        return [EvaluationStrategy.DESCRIPTION]
 
 
 def get_solver_modes(mode_config: str) -> List[bool]:
@@ -98,27 +80,87 @@ def get_solver_modes(mode_config: str) -> List[bool]:
         return [True]
 
 
+def get_strategies(strategy_config: str) -> List[EvaluationStrategy]:
+    """Parse strategy config into list of EvaluationStrategy."""
+    if strategy_config == 'all':
+        return [EvaluationStrategy.DESCRIPTION, EvaluationStrategy.CLAUSE]
+    elif strategy_config == 'description':
+        return [EvaluationStrategy.DESCRIPTION]
+    elif strategy_config == 'clause':
+        return [EvaluationStrategy.CLAUSE]
+    return [EvaluationStrategy.DESCRIPTION]
+
+
+def evaluate_cv_with_strategy(
+        cv_result: CrossValidationResult,
+        strategies: List[EvaluationStrategy],
+        oracle_path: str,
+        bias_path: str,
+) -> Tuple[List[Dict], Dict]:
+    """Evaluate fold KBs + intersected KB with strategies.
+
+    Returns: (fold_evaluations, intersected_evaluation)
+    Each fold_evaluation is a dict mapping strategy name -> EvaluationResult.to_dict().
+    """
+    evaluator = Evaluator.from_files(Path(oracle_path), Path(bias_path))
+
+    fold_evaluations = []
+    for fold in cv_result.fold_results:
+        fold_eval = {}
+        result_data = ConGenResultData(
+            kb_constraints=fold.kb_constraints,
+            redundant_constraints=fold.redundant_constraints,
+            n_bias=fold.n_bias,
+            n_mss=fold.n_mss,
+            n_kb=fold.n_kb,
+            bg_clauses=[]
+        )
+        for strategy in strategies:
+            eval_result = evaluator.evaluate(result_data, strategy)
+            fold_eval[strategy.value] = eval_result.to_dict()
+        fold_evaluations.append(fold_eval)
+
+    # Evaluate intersected KB
+    intersected_eval = {}
+    if cv_result.intersected_kb:
+        first_fold = cv_result.fold_results[0]
+        intersected_data = ConGenResultData(
+            kb_constraints=cv_result.intersected_kb,
+            redundant_constraints=[],
+            n_bias=first_fold.n_bias,
+            n_mss=0,
+            n_kb=len(cv_result.intersected_kb),
+            bg_clauses=[]
+        )
+        for strategy in strategies:
+            eval_result = evaluator.evaluate(intersected_data, strategy)
+            intersected_eval[strategy.value] = eval_result.to_dict()
+
+    return fold_evaluations, intersected_eval
+
+
 def evaluate_model(
         model_config: ModelConfig,
         eval_config: Dict,
         output_dir: Path,
-        verbose: bool
+        verbose: bool,
+        strategies: List[EvaluationStrategy] = None,
 ) -> bool:
     """
-    Evaluate a single model.
+    Evaluate a single model via cross-validation.
 
     Args:
         model_config: Model configuration
         eval_config: Evaluation settings
         output_dir: Output directory for results
         verbose: Enable verbose output
+        strategies: Evaluation strategies for KB comparison against oracle
 
     Returns:
         True if successful, False otherwise
     """
     try:
         model_name = model_config.name
-        strategies = get_strategies(eval_config.get('strategy', 'all'))
         solver_modes = get_solver_modes(eval_config.get('solver_mode', 'all'))
         n_folds = eval_config.get('n_folds', 0)
         solver_name = eval_config.get('solver_name', 'glucose4')
@@ -132,83 +174,21 @@ def evaluate_model(
         if verbose:
             print(f"  Oracle: {model_config.oracle}")
             print(f"  Bias: {model_config.bias}")
-            print(f"  Strategies: {[s.value for s in strategies]}")
             print(f"  Solver modes: {['incremental' if m else 'non-incremental' for m in solver_modes]}")
-            if model_config.result:
-                print(f"  Result: {model_config.result}")
             if model_config.examples:
                 print(f"  Examples: {model_config.examples}")
             if model_config.folds_path:
                 print(f"  Folds: {model_config.folds_path}")
             print(f"  Solver: {solver_name}, Seed: {seed}, Shuffle bias: {shuffle_bias}")
 
-        # Load bias data (for pre-computed result evaluation + accuracy)
-        bias = BiasData.from_json(Path(model_config.bias))
-        bias_clauses = {cid: c.clauses for cid, c in bias.constraints.items()}
-
-        # Load examples if provided
+        # Load examples
         examples = None
         if model_config.examples:
             examples = ExampleIO.load_json(model_config.examples)
             if verbose:
                 print(f"  E+: {len(examples.positive)}, E-: {len(examples.negative)}")
 
-        # ============================================================
-        # Option 1: Evaluate pre-computed result (both strategies)
-        # ============================================================
-        if model_config.result:
-            print("\n" + "=" * 50)
-            print("Evaluating Pre-computed Result")
-            print("=" * 50)
-
-            # Create evaluator
-            evaluator = Evaluator.from_files(
-                Path(model_config.oracle),
-                Path(model_config.bias)
-            )
-
-            # Load result
-            result = ConGenResultData.from_json(Path(model_config.result))
-
-            # Evaluate with each strategy
-            for strategy in strategies:
-                print(f"\n--- Strategy: {strategy.value.upper()} ---")
-
-                eval_result = evaluator.evaluate(result, strategy=strategy)
-
-                # Generate and print report
-                output_file = output_dir / f"{model_name}_eval_{strategy.value}.json"
-                report = generate_evaluation_report(eval_result, output_file)
-                print(report)
-
-            # Calculate accuracy if examples provided
-            if examples:
-                print("\n--- Accuracy Against Examples ---")
-
-                # Build KB clauses from result
-                kb_clauses = []
-                for cid in result.kb_constraints:
-                    if cid in bias_clauses:
-                        kb_clauses.extend(bias_clauses[cid])
-
-                with AccuracyCalculator(kb_clauses, solver_name) as calculator:
-                    pos_assignments = [e.assignments for e in examples.positive]
-                    neg_assignments = [e.assignments for e in examples.negative]
-                    accuracy_result = calculator.calculate(
-                        pos_assignments,
-                        neg_assignments,
-                        bias.features
-                    )
-
-                acc_report = generate_accuracy_report(
-                    accuracy_result,
-                    output_dir / f"{model_name}_accuracy.json"
-                )
-                print(acc_report)
-
-        # ============================================================
-        # Option 2: Run cross-validation (both modes)
-        # ============================================================
+        # Run cross-validation
         if n_folds > 0 and examples:
             print("\n" + "=" * 50)
             print(f"{n_folds}-Fold Cross-Validation")
@@ -239,20 +219,61 @@ def evaluate_model(
                     fm_path=model_config.oracle,
                     seed=seed,
                     solver_name=solver_name,
-                    is_incremental=is_incremental,
+                    use_incremental=is_incremental,
                     fold_data=fold_data,
                     shuffle_bias=shuffle_bias
                 )
 
-                output_file = output_dir / f"{model_name}_cv_{mode_name}.json"
-                cv_report = generate_cv_report(cv_result, output_file)
+                # Generate CV report (print only, don't save yet)
+                cv_report = generate_cv_report(cv_result)
                 print(cv_report)
+
+                # Serialize CV result and inject strategy evaluation
+                cv_dict = cv_result.to_dict()
+
+                if strategies:
+                    fold_evals, intersected_eval = evaluate_cv_with_strategy(
+                        cv_result, strategies, model_config.oracle, model_config.bias
+                    )
+                    # Inject per-fold strategy evaluation
+                    for i, fold_eval in enumerate(fold_evals):
+                        cv_dict['folds'][i]['strategy_evaluation'] = fold_eval
+                    # Add intersected evaluation at top level
+                    cv_dict['intersected_evaluation'] = intersected_eval
+
+                    # Print summary
+                    print("\n  Strategy Evaluation:")
+                    for strategy in strategies:
+                        sname = strategy.value
+                        if intersected_eval.get(sname):
+                            m = intersected_eval[sname]['metrics']
+                            print(f"    {sname}: P={m['precision']:.4f}, R={m['recall']:.4f}, F1={m['f1_score']:.4f}")
+
+                # Save CV JSON with eval data
+                output_file = output_dir / f"{model_name}_cv_{mode_name}.json"
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_file, 'w') as f:
+                    json.dump(cv_dict, f, indent=2)
 
                 # Save KB files (fold KBs + intersected KB)
                 saved_kbs = save_cv_kb_files(cv_result, output_dir, model_name, mode_name)
                 print(f"  Saved {len(saved_kbs['fold_kbs'])} fold KB files")
                 print(f"  Intersected KB: {len(cv_result.intersected_kb)} constraints")
                 print(f"  -> {saved_kbs['intersected_kb']}")
+
+                # Save intersected KB evaluation separately
+                if strategies and intersected_eval:
+                    intersected_eval_file = output_dir / f"{model_name}_intersected_eval_{mode_name}.json"
+                    intersected_eval_data = {
+                        'model': model_name,
+                        'mode': mode_name,
+                        'strategies': [s.value for s in strategies],
+                        'intersected_kb': cv_result.intersected_kb,
+                        'evaluation': intersected_eval,
+                    }
+                    with open(intersected_eval_file, 'w') as f:
+                        json.dump(intersected_eval_data, f, indent=2)
+                    print(f"  Intersected eval: {intersected_eval_file}")
 
         print(f"\nResults saved to {output_dir}")
         return True
@@ -266,7 +287,7 @@ def evaluate_model(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate ConGen constraint acquisition results",
+        description="Run ConGen cross-validation evaluation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
@@ -314,9 +335,8 @@ Example:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Get configured strategies and modes
-    strategies = get_strategies(eval_config.get('strategy', 'all'))
     solver_modes = get_solver_modes(eval_config.get('solver_mode', 'all'))
+    strategies = get_strategies(eval_config.get('strategy', 'all'))
 
     print("=" * 60)
     print("ConGen Evaluation")
@@ -324,17 +344,17 @@ Example:
     print(f"Config: {args.config}")
     print(f"Output: {output_dir}")
     print(f"Models: {len(models)}")
-    print(f"Strategies: {[s.value for s in strategies]}")
     print(f"Solver modes: {['incremental' if m else 'non-incremental' for m in solver_modes]}")
     print(f"Solver: {eval_config.get('solver_name', 'glucose4')}")
     print(f"CV Folds: {eval_config.get('n_folds', 0)}")
     print(f"Seed: {eval_config.get('seed', 42)}")
     print(f"Shuffle bias: {eval_config.get('shuffle_bias', False)}")
+    print(f"Strategies: {[s.value for s in strategies]}")
 
     # Evaluate each model
     success_count = 0
     for model in models:
-        if evaluate_model(model, eval_config, output_dir, verbose):
+        if evaluate_model(model, eval_config, output_dir, verbose, strategies):
             success_count += 1
 
     print()

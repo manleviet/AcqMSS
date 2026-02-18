@@ -6,18 +6,17 @@ Usage:
     PYTHONPATH=. python apps/extract_results.py [--results-dir data/results] [--output-dir paper/tables]
 
 Tables generated:
-    - Table: Accuracy by Sampling Strategy (similar to Tables 9-11 in paper)
-    - Table: Performance Metrics (similar to Tables 7-8 in paper)
-    - Table: KB Size Statistics
-    - Table: Incremental vs Non-incremental comparison
+    - Paper Tables 7, 9, 10, 11 (consistency checks, accuracy by strategy)
+    - Fold metrics (Precision/Recall/F1)
+    - Performance, KB summary, incremental comparison
 """
 
 import argparse
 import json
+import statistics
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
-import re
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, Tuple
 
 
 # KB name mapping (paper names)
@@ -27,21 +26,14 @@ KB_MAPPING = {
     'arcade': 'KB3',
     'REAL-FM-4': 'KB4',
 }
-
-# Reverse mapping
 KB_REVERSE = {v: k for k, v in KB_MAPPING.items()}
+KB_NAMES = ['KB1', 'KB2', 'KB3', 'KB4']
 
 # Sampling strategies in order
 STRATEGIES = ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m', '2cov', 'ff']
-
-# Strategy display names
 STRATEGY_NAMES = {
-    'rs_1n': 'RS(1n)',
-    'rs_2n': 'RS(2n)',
-    'rs_3n': 'RS(3n)',
-    'rs_m': 'RS(m)',
-    '2cov': '2-COV',
-    'ff': 'FF',
+    'rs_1n': 'RS(1n)', 'rs_2n': 'RS(2n)', 'rs_3n': 'RS(3n)',
+    'rs_m': 'RS(m)', '2cov': '2-COV', 'ff': 'FF',
 }
 
 
@@ -68,23 +60,39 @@ class CVResult:
     n_intersected: int
     total_runtime_ms: float
     # Example counts (from training set)
-    n_positive: int = 0  # |E+|
-    n_negative: int = 0  # |E-|
+    n_positive: int = 0
+    n_negative: int = 0
+    # Fold-level metrics (precision, recall, F1, specificity)
+    precision_mean: float = 0.0
+    precision_std: float = 0.0
+    recall_mean: float = 0.0
+    recall_std: float = 0.0
+    f1_mean: float = 0.0
+    f1_std: float = 0.0
+    specificity_mean: float = 0.0
+    specificity_std: float = 0.0
+    # Strategy evaluation on intersected KB (description strategy)
+    desc_accuracy: float = 0.0
+    desc_precision: float = 0.0
+    desc_recall: float = 0.0
+    desc_f1: float = 0.0
+    # Strategy evaluation on intersected KB (clause strategy)
+    clause_accuracy: float = 0.0
+    clause_precision: float = 0.0
+    clause_recall: float = 0.0
+    clause_f1: float = 0.0
+    has_strategy_eval: bool = False
 
+
+# =============================================================================
+# Data Loading
+# =============================================================================
 
 def parse_filename(filename: str) -> Optional[Tuple[str, str, str]]:
-    """
-    Parse CV result filename to extract model, strategy, mode.
-
-    Pattern: {model}_{strategy}_cv_{mode}.json
-    Example: REAL-FM-7_rs_1n_cv_incremental.json
-
-    Returns: (model, strategy, mode) or None if not matching
-    """
+    """Parse CV result filename → (model, strategy, mode) or None."""
     if not filename.endswith('_cv_incremental.json') and not filename.endswith('_cv_non-incremental.json'):
         return None
 
-    # Determine mode
     if filename.endswith('_cv_incremental.json'):
         mode = 'incremental'
         base = filename[:-len('_cv_incremental.json')]
@@ -92,12 +100,10 @@ def parse_filename(filename: str) -> Optional[Tuple[str, str, str]]:
         mode = 'non-incremental'
         base = filename[:-len('_cv_non-incremental.json')]
 
-    # Try to match strategy
     for strategy in STRATEGIES:
         if base.endswith(f'_{strategy}'):
             model = base[:-len(f'_{strategy}')]
             return (model, strategy, mode)
-
     return None
 
 
@@ -116,29 +122,49 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         print(f"Error loading {filepath}: {e}")
         return None
 
-    # Extract performance data
     perf = data.get('performance', {})
     runtime = perf.get('runtime', {})
     checks = perf.get('consistency_checks', {})
     memory = perf.get('memory', {})
     kb_size = perf.get('kb_size', {})
 
-    # Get n_bias and example counts from first fold
-    n_bias = 0
-    n_positive = 0
-    n_negative = 0
+    # Extract per-fold data
+    n_bias, n_positive, n_negative = 0, 0, 0
+    fold_precisions, fold_recalls, fold_f1s, fold_specificities = [], [], [], []
     if data.get('folds'):
         first_fold = data['folds'][0]
         n_bias = first_fold.get('statistics', {}).get('n_bias', 0)
-        # Get example counts from train_size
         train_size = first_fold.get('train_size', {})
         n_positive = train_size.get('positive', 0)
         n_negative = train_size.get('negative', 0)
+        for fold in data['folds']:
+            metrics = fold.get('metrics', {})
+            if metrics:
+                fold_precisions.append(metrics.get('precision', 0.0))
+                fold_recalls.append(metrics.get('recall', 0.0))
+                fold_f1s.append(metrics.get('f1_score', 0.0))
+                fold_specificities.append(metrics.get('specificity', 0.0))
+
+    def _mean_std(values):
+        if not values:
+            return 0.0, 0.0
+        m = statistics.mean(values)
+        s = statistics.pstdev(values) if len(values) > 1 else 0.0
+        return m, s
+
+    prec_m, prec_s = _mean_std(fold_precisions)
+    rec_m, rec_s = _mean_std(fold_recalls)
+    f1_m, f1_s = _mean_std(fold_f1s)
+    spec_m, spec_s = _mean_std(fold_specificities)
+
+    # Extract strategy evaluation on intersected KB
+    intersected_eval = data.get('intersected_evaluation', {})
+    has_strategy_eval = bool(intersected_eval)
+    desc_eval = intersected_eval.get('description', {}).get('metrics', {})
+    clause_eval = intersected_eval.get('clause', {}).get('metrics', {})
 
     return CVResult(
-        model=model,
-        strategy=strategy,
-        mode=mode,
+        model=model, strategy=strategy, mode=mode,
         n_folds=data.get('n_folds', 5),
         mean_accuracy=data.get('mean_accuracy', 0),
         std_accuracy=data.get('std_accuracy', 0),
@@ -153,754 +179,406 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         n_kb_mean=kb_size.get('n_kb_mean', 0),
         n_intersected=data.get('n_intersected', 0),
         total_runtime_ms=data.get('total_runtime_ms', 0),
-        n_positive=n_positive,
-        n_negative=n_negative,
+        n_positive=n_positive, n_negative=n_negative,
+        precision_mean=prec_m, precision_std=prec_s,
+        recall_mean=rec_m, recall_std=rec_s,
+        f1_mean=f1_m, f1_std=f1_s,
+        specificity_mean=spec_m, specificity_std=spec_s,
+        desc_accuracy=desc_eval.get('accuracy', 0.0),
+        desc_precision=desc_eval.get('precision', 0.0),
+        desc_recall=desc_eval.get('recall', 0.0),
+        desc_f1=desc_eval.get('f1_score', 0.0),
+        clause_accuracy=clause_eval.get('accuracy', 0.0),
+        clause_precision=clause_eval.get('precision', 0.0),
+        clause_recall=clause_eval.get('recall', 0.0),
+        clause_f1=clause_eval.get('f1_score', 0.0),
+        has_strategy_eval=has_strategy_eval,
     )
 
 
 def load_all_results(results_dir: Path) -> Dict[str, Dict[str, Dict[str, CVResult]]]:
-    """
-    Load all CV results from directory.
-
-    Returns: {model: {strategy: {mode: CVResult}}}
-    """
+    """Load all CV results. Returns: {model: {strategy: {mode: CVResult}}}"""
     results = {}
-
     for filepath in results_dir.glob('*_cv_*.json'):
         result = load_cv_result(filepath)
         if result:
-            if result.model not in results:
-                results[result.model] = {}
-            if result.strategy not in results[result.model]:
-                results[result.model][result.strategy] = {}
-            results[result.model][result.strategy][result.mode] = result
-
+            results.setdefault(result.model, {}).setdefault(result.strategy, {})[result.mode] = result
     return results
 
 
 # =============================================================================
-# Table Generators
+# Table Helpers — DRY formatting infrastructure
 # =============================================================================
 
-def generate_accuracy_table_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate accuracy table in Markdown format.
+def _get_result(results: Dict, kb_name: str, strategy: str, mode: str) -> Optional[CVResult]:
+    """Look up a CVResult by KB name, strategy, and mode."""
+    model = KB_REVERSE.get(kb_name)
+    if model and model in results and strategy in results[model] and mode in results[model][strategy]:
+        return results[model][strategy][mode]
+    return None
 
-    Similar to Tables 9-11 in paper: accuracy by sampling strategy.
-    """
-    lines = []
-    lines.append("## Table: Accuracy by Sampling Strategy ({})".format(mode.capitalize()))
-    lines.append("")
 
-    # Header
-    header = "| KB |"
-    for s in STRATEGIES:
-        header += f" {STRATEGY_NAMES[s]} |"
-    lines.append(header)
+def _compact_grid_md(
+    title: str, results: Dict, mode: str,
+    cell_fn: Callable[[CVResult], str],
+    strategies: List[str] = None, align: str = ':---:'
+) -> str:
+    """Generate a compact KB-rows × Strategy-columns table in Markdown."""
+    strats = strategies or STRATEGIES
+    lines = [f"## {title} - {mode.capitalize()} Mode", ""]
 
-    # Separator
-    sep = "|:---|"
-    for _ in STRATEGIES:
-        sep += ":---:|"
-    lines.append(sep)
+    header = "| KB |" + "".join(f" {STRATEGY_NAMES[s]} |" for s in strats)
+    sep = "|:---|" + "".join(f"{align}|" for _ in strats)
+    lines.extend([header, sep])
 
-    # Data rows - ordered by KB1, KB2, KB3, KB4
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
-
-        row = f"| {kb_name} |"
-        for strategy in STRATEGIES:
-            if strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                row += f" {r.mean_accuracy:.4f} ± {r.std_accuracy:.4f} |"
-            else:
-                row += " - |"
+    for kb in KB_NAMES:
+        row = f"| {kb} |"
+        for s in strats:
+            r = _get_result(results, kb, s, mode)
+            row += f" {cell_fn(r)} |" if r else " - |"
         lines.append(row)
-
     return "\n".join(lines)
 
 
-def generate_accuracy_table_latex(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate accuracy table in LaTeX format.
-    """
-    lines = []
-    lines.append("% Table: Accuracy by Sampling Strategy ({})".format(mode.capitalize()))
-    lines.append("\\begin{table}[htbp]")
-    lines.append("\\centering")
-    lines.append("\\caption{Accuracy by Sampling Strategy (" + mode.capitalize() + ")}")
-    lines.append("\\label{tab:accuracy_" + mode + "}")
+def _latex_wrap(title: str, label: str, col_spec: str, header: str,
+                body_lines: List[str], mode: str = '') -> str:
+    """Wrap body lines in LaTeX table boilerplate."""
+    caption = f"{title} ({mode.capitalize()})" if mode else title
+    full_label = f"{label}_{mode}" if mode else label
+    lines = [
+        f"% {caption}",
+        "\\begin{table}[htbp]", "\\centering",
+        f"\\caption{{{caption}}}",
+        f"\\label{{tab:{full_label}}}",
+        f"\\begin{{tabular}}{{{col_spec}}}",
+        "\\toprule", header, "\\midrule",
+    ]
+    lines.extend(body_lines)
+    lines.extend(["\\bottomrule", "\\end{tabular}", "\\end{table}"])
+    return "\n".join(lines)
 
-    # Column spec
-    col_spec = "l" + "c" * len(STRATEGIES)
-    lines.append("\\begin{tabular}{" + col_spec + "}")
-    lines.append("\\toprule")
 
-    # Header
-    header = "KB"
-    for s in STRATEGIES:
-        header += f" & {STRATEGY_NAMES[s]}"
-    header += " \\\\"
-    lines.append(header)
-    lines.append("\\midrule")
-
-    # Data rows
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
-
-        row = f"{kb_name}"
-        for strategy in STRATEGIES:
-            if strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                row += f" & {r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f}"
-            else:
-                row += " & -"
+def _compact_grid_latex(
+    title: str, label: str, results: Dict, mode: str,
+    cell_fn: Callable[[CVResult], str],
+    strategies: List[str] = None
+) -> str:
+    """Generate a compact KB-rows × Strategy-columns table in LaTeX."""
+    strats = strategies or STRATEGIES
+    col_spec = "l" + "c" * len(strats)
+    header = "KB" + "".join(f" & {STRATEGY_NAMES[s]}" for s in strats) + " \\\\"
+    body = []
+    for kb in KB_NAMES:
+        row = kb
+        for s in strats:
+            r = _get_result(results, kb, s, mode)
+            row += f" & {cell_fn(r)}" if r else " & -"
         row += " \\\\"
-        lines.append(row)
-
-    lines.append("\\bottomrule")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    return "\n".join(lines)
+        body.append(row)
+    return _latex_wrap(title, label, col_spec, header, body, mode)
 
 
-def generate_performance_table_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate performance metrics table in Markdown format.
+# =============================================================================
+# Table Generators — Compact grid tables (unified MD + LaTeX)
+# =============================================================================
 
-    Similar to Tables 7-8 in paper.
-    """
-    lines = []
-    lines.append("## Table: Performance Metrics ({})".format(mode.capitalize()))
-    lines.append("")
-    lines.append("| KB | Strategy | Runtime (ms) | #Checks | Memory (MB) | n_bias | n_mss | n_kb |")
-    lines.append("|:---|:---|---:|---:|---:|---:|---:|---:|")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
-
-        for strategy in STRATEGIES:
-            if strategy not in results[model] or mode not in results[model][strategy]:
-                continue
-
-            r = results[model][strategy][mode]
-            row = f"| {kb_name} | {STRATEGY_NAMES[strategy]} |"
-            row += f" {r.runtime_mean_ms:.2f} ± {r.runtime_std_ms:.2f} |"
-            row += f" {r.checks_mean:.0f} ± {r.checks_std:.0f} |"
-            row += f" {r.memory_max_mb:.2f} |"
-            row += f" {r.n_bias} |"
-            row += f" {r.n_mss_mean:.1f} |"
-            row += f" {r.n_kb_mean:.1f} |"
-            lines.append(row)
-
-    return "\n".join(lines)
+def generate_accuracy_table(results: Dict, mode: str, fmt: str) -> str:
+    """Accuracy by Sampling Strategy (mean ± std)."""
+    title = "Accuracy by Sampling Strategy"
+    if fmt == 'md':
+        return _compact_grid_md(f"Table: {title}", results, mode,
+                                lambda r: f"{r.mean_accuracy:.4f} ± {r.std_accuracy:.4f}")
+    return _compact_grid_latex(title, "accuracy", results, mode,
+                               lambda r: f"{r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f}")
 
 
-def generate_performance_table_latex(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate performance metrics table in LaTeX format.
-    """
-    lines = []
-    lines.append("% Table: Performance Metrics ({})".format(mode.capitalize()))
-    lines.append("\\begin{table}[htbp]")
-    lines.append("\\centering")
-    lines.append("\\caption{Performance Metrics (" + mode.capitalize() + ")}")
-    lines.append("\\label{tab:performance_" + mode + "}")
-    lines.append("\\begin{tabular}{llrrrrrr}")
-    lines.append("\\toprule")
-    lines.append("KB & Strategy & Runtime (ms) & \\#Checks & Memory (MB) & $|B|$ & $|MSS|$ & $|KB|$ \\\\")
-    lines.append("\\midrule")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
-
-        first_row = True
-        for strategy in STRATEGIES:
-            if strategy not in results[model] or mode not in results[model][strategy]:
-                continue
-
-            r = results[model][strategy][mode]
-            kb_col = kb_name if first_row else ""
-            row = f"{kb_col} & {STRATEGY_NAMES[strategy]} &"
-            row += f" {r.runtime_mean_ms:.2f} $\\pm$ {r.runtime_std_ms:.2f} &"
-            row += f" {r.checks_mean:.0f} $\\pm$ {r.checks_std:.0f} &"
-            row += f" {r.memory_max_mb:.2f} &"
-            row += f" {r.n_bias} &"
-            row += f" {r.n_mss_mean:.1f} &"
-            row += f" {r.n_kb_mean:.1f} \\\\"
-            lines.append(row)
-            first_row = False
-
-        if not first_row:
-            lines.append("\\midrule")
-
-    # Remove last midrule
-    if lines[-1] == "\\midrule":
-        lines = lines[:-1]
-
-    lines.append("\\bottomrule")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    return "\n".join(lines)
+def generate_accuracy_compact(results: Dict, mode: str) -> str:
+    """Compact accuracy (fewer decimals, MD only)."""
+    return _compact_grid_md("Table: Accuracy (Compact)", results, mode,
+                            lambda r: f"{r.mean_accuracy:.2f}±{r.std_accuracy:.2f}")
 
 
-def generate_incremental_comparison_md(results: Dict) -> str:
-    """
-    Generate table comparing incremental vs non-incremental modes.
-    """
-    lines = []
-    lines.append("## Table: Incremental vs Non-Incremental Comparison")
-    lines.append("")
-    lines.append("| KB | Strategy | Mode | Accuracy | Runtime (ms) | #Checks |")
-    lines.append("|:---|:---|:---|---:|---:|---:|")
+def generate_fold_metrics_table(results: Dict, mode: str, fmt: str) -> str:
+    """Fold-level Precision/Recall/F1."""
+    title = "Precision / Recall / F1"
+    cell = lambda r: f"{r.precision_mean:.2f}/{r.recall_mean:.2f}/{r.f1_mean:.2f}"
+    if fmt == 'md':
+        return _compact_grid_md(f"Table: Fold Metrics ({title})", results, mode, cell)
+    return _compact_grid_latex(title, "fold_metrics", results, mode, cell)
 
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
 
-        for strategy in STRATEGIES:
-            if strategy not in results[model]:
-                continue
+def generate_runtime_compact(results: Dict, mode: str) -> str:
+    """Compact runtime table (MD only)."""
+    def cell(r):
+        if r.runtime_mean_ms > 1000:
+            return f"{r.runtime_mean_ms/1000:.2f}s"
+        return f"{r.runtime_mean_ms:.0f}"
+    return _compact_grid_md("Table: Runtime (ms)", results, mode, cell, align='---:')
 
-            for mode in ['incremental', 'non-incremental']:
-                if mode not in results[model][strategy]:
+
+def generate_checks_compact(results: Dict, mode: str) -> str:
+    """Compact consistency checks (MD only)."""
+    return _compact_grid_md("Table: Consistency Checks", results, mode,
+                            lambda r: f"{r.checks_mean:.0f}", align='---:')
+
+
+def generate_strategy_eval_table(results: Dict, mode: str, fmt: str, eval_strategy: str) -> str:
+    """Strategy evaluation on intersected KB (Acc/Prec/Rec/F1)."""
+    title = f"Strategy Eval ({eval_strategy.capitalize()}) on Intersected KB"
+
+    if eval_strategy == 'description':
+        cell = lambda r: (
+            f"{r.desc_precision:.2f}/{r.desc_recall:.2f}/{r.desc_f1:.2f}"
+            if r.has_strategy_eval else "-"
+        )
+    else:
+        cell = lambda r: (
+            f"{r.clause_precision:.2f}/{r.clause_recall:.2f}/{r.clause_f1:.2f}"
+            if r.has_strategy_eval else "-"
+        )
+
+    if fmt == 'md':
+        return _compact_grid_md(f"Table: {title}", results, mode, cell)
+    return _compact_grid_latex(title, f"eval_{eval_strategy}", results, mode, cell)
+
+
+# =============================================================================
+# Table Generators — Detail tables (KB × Strategy rows)
+# =============================================================================
+
+def generate_performance_table(results: Dict, mode: str, fmt: str) -> str:
+    """Performance metrics detail table."""
+    if fmt == 'md':
+        lines = [f"## Table: Performance Metrics ({mode.capitalize()})", "",
+                 "| KB | Strategy | Runtime (ms) | #Checks | Memory (MB) | n_bias | n_mss | n_kb |",
+                 "|:---|:---|---:|---:|---:|---:|---:|---:|"]
+        for kb in KB_NAMES:
+            for s in STRATEGIES:
+                r = _get_result(results, kb, s, mode)
+                if not r:
                     continue
+                lines.append(
+                    f"| {kb} | {STRATEGY_NAMES[s]} |"
+                    f" {r.runtime_mean_ms:.2f} ± {r.runtime_std_ms:.2f} |"
+                    f" {r.checks_mean:.0f} ± {r.checks_std:.0f} |"
+                    f" {r.memory_max_mb:.2f} | {r.n_bias} |"
+                    f" {r.n_mss_mean:.1f} | {r.n_kb_mean:.1f} |")
+        return "\n".join(lines)
 
-                r = results[model][strategy][mode]
-                mode_short = 'Inc' if mode == 'incremental' else 'Non-Inc'
-                row = f"| {kb_name} | {STRATEGY_NAMES[strategy]} | {mode_short} |"
-                row += f" {r.mean_accuracy:.4f} |"
-                row += f" {r.runtime_mean_ms:.2f} |"
-                row += f" {r.checks_mean:.0f} |"
-                lines.append(row)
-
-    return "\n".join(lines)
-
-
-def generate_incremental_comparison_latex(results: Dict) -> str:
-    """
-    Generate table comparing incremental vs non-incremental modes in LaTeX.
-    """
-    lines = []
-    lines.append("% Table: Incremental vs Non-Incremental Comparison")
-    lines.append("\\begin{table}[htbp]")
-    lines.append("\\centering")
-    lines.append("\\caption{Incremental vs Non-Incremental Comparison}")
-    lines.append("\\label{tab:inc_vs_noninc}")
-    lines.append("\\begin{tabular}{lllrrr}")
-    lines.append("\\toprule")
-    lines.append("KB & Strategy & Mode & Accuracy & Runtime (ms) & \\#Checks \\\\")
-    lines.append("\\midrule")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
-
-        first_kb_row = True
-        for strategy in STRATEGIES:
-            if strategy not in results[model]:
-                continue
-
-            first_strategy_row = True
-            for mode in ['incremental', 'non-incremental']:
-                if mode not in results[model][strategy]:
-                    continue
-
-                r = results[model][strategy][mode]
-                kb_col = kb_name if first_kb_row else ""
-                strategy_col = STRATEGY_NAMES[strategy] if first_strategy_row else ""
-                mode_short = 'Inc' if mode == 'incremental' else 'Non-Inc'
-
-                row = f"{kb_col} & {strategy_col} & {mode_short} &"
-                row += f" {r.mean_accuracy:.4f} &"
-                row += f" {r.runtime_mean_ms:.2f} &"
-                row += f" {r.checks_mean:.0f} \\\\"
-                lines.append(row)
-
-                first_kb_row = False
-                first_strategy_row = False
-
-        lines.append("\\midrule")
-
-    # Remove last midrule
-    if lines[-1] == "\\midrule":
-        lines = lines[:-1]
-
-    lines.append("\\bottomrule")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    return "\n".join(lines)
-
-
-def generate_kb_summary_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate KB summary table showing intersected KB statistics.
-    """
-    lines = []
-    lines.append("## Table: KB Summary ({})".format(mode.capitalize()))
-    lines.append("")
-    lines.append("| KB | Strategy | n_bias | n_kb (mean) | n_intersected | Reduction |")
-    lines.append("|:---|:---|---:|---:|---:|---:|")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
-
-        for strategy in STRATEGIES:
-            if strategy not in results[model] or mode not in results[model][strategy]:
-                continue
-
-            r = results[model][strategy][mode]
-            reduction = (1 - r.n_kb_mean / r.n_bias) * 100 if r.n_bias > 0 else 0
-
-            row = f"| {kb_name} | {STRATEGY_NAMES[strategy]} |"
-            row += f" {r.n_bias} |"
-            row += f" {r.n_kb_mean:.1f} |"
-            row += f" {r.n_intersected} |"
-            row += f" {reduction:.1f}% |"
-            lines.append(row)
-
-    return "\n".join(lines)
-
-
-def generate_kb_summary_latex(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate KB summary table in LaTeX.
-    """
-    lines = []
-    lines.append("% Table: KB Summary ({})".format(mode.capitalize()))
-    lines.append("\\begin{table}[htbp]")
-    lines.append("\\centering")
-    lines.append("\\caption{KB Summary (" + mode.capitalize() + ")}")
-    lines.append("\\label{tab:kb_summary_" + mode + "}")
-    lines.append("\\begin{tabular}{llrrrr}")
-    lines.append("\\toprule")
-    lines.append("KB & Strategy & $|B|$ & $|KB|$ (mean) & $|KB_{\\cap}|$ & Reduction \\\\")
-    lines.append("\\midrule")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
-
+    # LaTeX
+    body = []
+    for kb in KB_NAMES:
         first_row = True
-        for strategy in STRATEGIES:
-            if strategy not in results[model] or mode not in results[model][strategy]:
+        for s in STRATEGIES:
+            r = _get_result(results, kb, s, mode)
+            if not r:
                 continue
-
-            r = results[model][strategy][mode]
-            reduction = (1 - r.n_kb_mean / r.n_bias) * 100 if r.n_bias > 0 else 0
-
-            kb_col = kb_name if first_row else ""
-            row = f"{kb_col} & {STRATEGY_NAMES[strategy]} &"
-            row += f" {r.n_bias} &"
-            row += f" {r.n_kb_mean:.1f} &"
-            row += f" {r.n_intersected} &"
-            row += f" {reduction:.1f}\\% \\\\"
-            lines.append(row)
+            kb_col = kb if first_row else ""
+            body.append(
+                f"{kb_col} & {STRATEGY_NAMES[s]} &"
+                f" {r.runtime_mean_ms:.2f} $\\pm$ {r.runtime_std_ms:.2f} &"
+                f" {r.checks_mean:.0f} $\\pm$ {r.checks_std:.0f} &"
+                f" {r.memory_max_mb:.2f} & {r.n_bias} &"
+                f" {r.n_mss_mean:.1f} & {r.n_kb_mean:.1f} \\\\")
             first_row = False
-
         if not first_row:
-            lines.append("\\midrule")
-
-    # Remove last midrule
-    if lines[-1] == "\\midrule":
-        lines = lines[:-1]
-
-    lines.append("\\bottomrule")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    return "\n".join(lines)
+            body.append("\\midrule")
+    if body and body[-1] == "\\midrule":
+        body.pop()
+    return _latex_wrap("Performance Metrics", "performance", "llrrrrrr",
+                       "KB & Strategy & Runtime (ms) & \\#Checks & Memory (MB) & $|B|$ & $|MSS|$ & $|KB|$ \\\\",
+                       body, mode)
 
 
-def generate_accuracy_compact_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate compact accuracy table similar to paper Table 9.
-    Shows mean ± std for each KB/strategy combination.
-    """
-    lines = []
-    lines.append("## Table: Accuracy (Compact) - {} Mode".format(mode.capitalize()))
-    lines.append("")
+def generate_kb_summary(results: Dict, mode: str, fmt: str) -> str:
+    """KB summary table (bias/kb/intersected/reduction)."""
+    def _reduction(r):
+        return (1 - r.n_kb_mean / r.n_bias) * 100 if r.n_bias > 0 else 0
 
-    # Header
-    header = "| KB |"
-    for s in STRATEGIES:
-        header += f" {STRATEGY_NAMES[s]} |"
-    lines.append(header)
+    if fmt == 'md':
+        lines = [f"## Table: KB Summary ({mode.capitalize()})", "",
+                 "| KB | Strategy | n_bias | n_kb (mean) | n_intersected | Reduction |",
+                 "|:---|:---|---:|---:|---:|---:|"]
+        for kb in KB_NAMES:
+            for s in STRATEGIES:
+                r = _get_result(results, kb, s, mode)
+                if not r:
+                    continue
+                lines.append(
+                    f"| {kb} | {STRATEGY_NAMES[s]} |"
+                    f" {r.n_bias} | {r.n_kb_mean:.1f} |"
+                    f" {r.n_intersected} | {_reduction(r):.1f}% |")
+        return "\n".join(lines)
 
-    # Separator
-    sep = "|:---|"
-    for _ in STRATEGIES:
-        sep += ":---:|"
-    lines.append(sep)
+    # LaTeX
+    body = []
+    for kb in KB_NAMES:
+        first_row = True
+        for s in STRATEGIES:
+            r = _get_result(results, kb, s, mode)
+            if not r:
+                continue
+            kb_col = kb if first_row else ""
+            body.append(
+                f"{kb_col} & {STRATEGY_NAMES[s]} &"
+                f" {r.n_bias} & {r.n_kb_mean:.1f} &"
+                f" {r.n_intersected} & {_reduction(r):.1f}\\% \\\\")
+            first_row = False
+        if not first_row:
+            body.append("\\midrule")
+    if body and body[-1] == "\\midrule":
+        body.pop()
+    return _latex_wrap("KB Summary", "kb_summary", "llrrrr",
+                       "KB & Strategy & $|B|$ & $|KB|$ (mean) & $|KB_{\\cap}|$ & Reduction \\\\",
+                       body, mode)
 
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
 
-        row = f"| {kb_name} |"
-        for strategy in STRATEGIES:
-            if strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                # Format: mean ± std (without too many decimals)
-                row += f" {r.mean_accuracy:.2f}±{r.std_accuracy:.2f} |"
-            else:
-                row += " - |"
-        lines.append(row)
+def generate_incremental_comparison(results: Dict, fmt: str) -> str:
+    """Incremental vs Non-Incremental comparison table."""
+    if fmt == 'md':
+        lines = ["## Table: Incremental vs Non-Incremental Comparison", "",
+                 "| KB | Strategy | Mode | Accuracy | Runtime (ms) | #Checks |",
+                 "|:---|:---|:---|---:|---:|---:|"]
+        for kb in KB_NAMES:
+            for s in STRATEGIES:
+                for mode in ['incremental', 'non-incremental']:
+                    r = _get_result(results, kb, s, mode)
+                    if not r:
+                        continue
+                    ms = 'Inc' if mode == 'incremental' else 'Non-Inc'
+                    lines.append(
+                        f"| {kb} | {STRATEGY_NAMES[s]} | {ms} |"
+                        f" {r.mean_accuracy:.4f} | {r.runtime_mean_ms:.2f} |"
+                        f" {r.checks_mean:.0f} |")
+        return "\n".join(lines)
 
-    return "\n".join(lines)
+    # LaTeX
+    body = []
+    for kb in KB_NAMES:
+        first_kb = True
+        for s in STRATEGIES:
+            first_s = True
+            for mode in ['incremental', 'non-incremental']:
+                r = _get_result(results, kb, s, mode)
+                if not r:
+                    continue
+                kb_col = kb if first_kb else ""
+                s_col = STRATEGY_NAMES[s] if first_s else ""
+                ms = 'Inc' if mode == 'incremental' else 'Non-Inc'
+                body.append(
+                    f"{kb_col} & {s_col} & {ms} &"
+                    f" {r.mean_accuracy:.4f} & {r.runtime_mean_ms:.2f} &"
+                    f" {r.checks_mean:.0f} \\\\")
+                first_kb = False
+                first_s = False
+        body.append("\\midrule")
+    if body and body[-1] == "\\midrule":
+        body.pop()
+    return _latex_wrap("Incremental vs Non-Incremental Comparison", "inc_vs_noninc",
+                       "lllrrr",
+                       "KB & Strategy & Mode & Accuracy & Runtime (ms) & \\#Checks \\\\",
+                       body)
 
 
 # =============================================================================
-# Paper Tables (Tables 7-12 format)
+# Paper Tables (Tables 7, 9, 10, 11)
 # =============================================================================
 
-def generate_table7_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate Table 7: AcqMSS #consistency checks and runtime (in msec).
-
-    Format from paper:
-    | Strategy | |E+| | |E-| | KB1 | KB2 | KB3 | KB4 |
-
-    Values: #checks / runtime(ms)
-    """
-    lines = []
-    lines.append("## Table 7: AcqMSS #consistency checks and runtime (msec) - {} Mode".format(mode.capitalize()))
-    lines.append("")
-    lines.append("| Strategy | |E+| | |E-| | KB1 | KB2 | KB3 | KB4 |")
-    lines.append("|:---|---:|---:|:---:|:---:|:---:|:---:|")
-
-    for strategy in STRATEGIES:
-        # Get |E+| and |E-| from first available model for this strategy
+def generate_table7(results: Dict, mode: str, fmt: str) -> str:
+    """Table 7: AcqMSS #consistency checks and runtime (msec)."""
+    def _row_data(strategy):
         n_pos, n_neg = '-', '-'
-        for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-            model = KB_REVERSE.get(kb_name)
-            if model and model in results and strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                if r.n_positive > 0 or r.n_negative > 0:
-                    n_pos = str(r.n_positive)
-                    n_neg = str(r.n_negative)
-                    break
+        for kb in KB_NAMES:
+            r = _get_result(results, kb, strategy, mode)
+            if r and (r.n_positive > 0 or r.n_negative > 0):
+                n_pos, n_neg = str(r.n_positive), str(r.n_negative)
+                break
+        cells = []
+        for kb in KB_NAMES:
+            r = _get_result(results, kb, strategy, mode)
+            cells.append(f"{r.checks_mean:.0f} / {r.runtime_mean_ms:.1f}" if r else "-")
+        return n_pos, n_neg, cells
 
-        row = f"| {STRATEGY_NAMES[strategy]} | {n_pos} | {n_neg} |"
-        for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-            model = KB_REVERSE.get(kb_name)
-            if model and model in results and strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                # Format: #checks / runtime
-                row += f" {r.checks_mean:.0f} / {r.runtime_mean_ms:.1f} |"
-            else:
-                row += " - |"
-        lines.append(row)
+    title = "AcqMSS #consistency checks and runtime (msec)"
+    if fmt == 'md':
+        lines = [f"## Table 7: {title} - {mode.capitalize()} Mode", "",
+                 "| Strategy | |E+| | |E-| | KB1 | KB2 | KB3 | KB4 |",
+                 "|:---|---:|---:|:---:|:---:|:---:|:---:|"]
+        for s in STRATEGIES:
+            np, nn, cells = _row_data(s)
+            lines.append(f"| {STRATEGY_NAMES[s]} | {np} | {nn} | " + " | ".join(cells) + " |")
+        return "\n".join(lines)
 
-    return "\n".join(lines)
-
-
-def generate_table7_latex(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate Table 7 in LaTeX format.
-    """
-    lines = []
-    lines.append("% Table 7: AcqMSS #consistency checks and runtime (msec)")
-    lines.append("\\begin{table}[htbp]")
-    lines.append("\\centering")
-    lines.append("\\caption{AcqMSS \\#consistency checks and runtime (msec) - " + mode.capitalize() + "}")
-    lines.append("\\label{tab:table7_" + mode + "}")
-    lines.append("\\begin{tabular}{lrrcccc}")
-    lines.append("\\toprule")
-    lines.append("Strategy & $|E^+|$ & $|E^-|$ & KB1 & KB2 & KB3 & KB4 \\\\")
-    lines.append("\\midrule")
-
-    for strategy in STRATEGIES:
-        # Get |E+| and |E-| from first available model for this strategy
-        n_pos, n_neg = '-', '-'
-        for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-            model = KB_REVERSE.get(kb_name)
-            if model and model in results and strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                if r.n_positive > 0 or r.n_negative > 0:
-                    n_pos = str(r.n_positive)
-                    n_neg = str(r.n_negative)
-                    break
-
-        row = f"{STRATEGY_NAMES[strategy]} & {n_pos} & {n_neg}"
-        for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-            model = KB_REVERSE.get(kb_name)
-            if model and model in results and strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                row += f" & {r.checks_mean:.0f} / {r.runtime_mean_ms:.1f}"
-            else:
-                row += " & -"
-        row += " \\\\"
-        lines.append(row)
-
-    lines.append("\\bottomrule")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    return "\n".join(lines)
-
-
-def generate_table9_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate Table 9: Accuracy with Random Sampling (RS).
-
-    Shows accuracy for RS strategies: rs_1n, rs_2n, rs_3n, rs_m
-    """
-    rs_strategies = ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m']
-
-    lines = []
-    lines.append("## Table 9: Accuracy with Random Sampling (RS) - {} Mode".format(mode.capitalize()))
-    lines.append("")
-    lines.append("| Strategy | KB1 | KB2 | KB3 | KB4 |")
-    lines.append("|:---|:---:|:---:|:---:|:---:|")
-
-    for strategy in rs_strategies:
-        row = f"| {STRATEGY_NAMES[strategy]} |"
-        for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-            model = KB_REVERSE.get(kb_name)
-            if model and model in results and strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                row += f" {r.mean_accuracy:.4f} ± {r.std_accuracy:.4f} |"
-            else:
-                row += " - |"
-        lines.append(row)
-
-    return "\n".join(lines)
-
-
-def generate_table9_latex(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate Table 9 in LaTeX format.
-    """
-    rs_strategies = ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m']
-
-    lines = []
-    lines.append("% Table 9: Accuracy with Random Sampling (RS)")
-    lines.append("\\begin{table}[htbp]")
-    lines.append("\\centering")
-    lines.append("\\caption{Accuracy with Random Sampling (RS) - " + mode.capitalize() + "}")
-    lines.append("\\label{tab:table9_" + mode + "}")
-    lines.append("\\begin{tabular}{lcccc}")
-    lines.append("\\toprule")
-    lines.append("Strategy & KB1 & KB2 & KB3 & KB4 \\\\")
-    lines.append("\\midrule")
-
-    for strategy in rs_strategies:
-        row = f"{STRATEGY_NAMES[strategy]}"
-        for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-            model = KB_REVERSE.get(kb_name)
-            if model and model in results and strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                row += f" & {r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f}"
-            else:
-                row += " & -"
-        row += " \\\\"
-        lines.append(row)
-
-    lines.append("\\bottomrule")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    return "\n".join(lines)
-
-
-def generate_table10_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate Table 10: Accuracy with 2-wise coverage (2-COV).
-    """
-    lines = []
-    lines.append("## Table 10: Accuracy with 2-wise coverage (2-COV) - {} Mode".format(mode.capitalize()))
-    lines.append("")
-    lines.append("| KB | Accuracy |")
-    lines.append("|:---|:---:|")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if model and model in results and '2cov' in results[model] and mode in results[model]['2cov']:
-            r = results[model]['2cov'][mode]
-            lines.append(f"| {kb_name} | {r.mean_accuracy:.4f} ± {r.std_accuracy:.4f} |")
-        else:
-            lines.append(f"| {kb_name} | - |")
-
-    return "\n".join(lines)
-
-
-def generate_table10_latex(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate Table 10 in LaTeX format.
-    """
-    lines = []
-    lines.append("% Table 10: Accuracy with 2-wise coverage (2-COV)")
-    lines.append("\\begin{table}[htbp]")
-    lines.append("\\centering")
-    lines.append("\\caption{Accuracy with 2-wise coverage (2-COV) - " + mode.capitalize() + "}")
-    lines.append("\\label{tab:table10_" + mode + "}")
-    lines.append("\\begin{tabular}{lc}")
-    lines.append("\\toprule")
-    lines.append("KB & Accuracy \\\\")
-    lines.append("\\midrule")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if model and model in results and '2cov' in results[model] and mode in results[model]['2cov']:
-            r = results[model]['2cov'][mode]
-            lines.append(f"{kb_name} & {r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f} \\\\")
-        else:
-            lines.append(f"{kb_name} & - \\\\")
-
-    lines.append("\\bottomrule")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    return "\n".join(lines)
-
-
-def generate_table11_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate Table 11: Accuracy with Feature Frequency (FF).
-    """
-    lines = []
-    lines.append("## Table 11: Accuracy with Feature Frequency (FF) - {} Mode".format(mode.capitalize()))
-    lines.append("")
-    lines.append("| KB | Accuracy |")
-    lines.append("|:---|:---:|")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if model and model in results and 'ff' in results[model] and mode in results[model]['ff']:
-            r = results[model]['ff'][mode]
-            lines.append(f"| {kb_name} | {r.mean_accuracy:.4f} ± {r.std_accuracy:.4f} |")
-        else:
-            lines.append(f"| {kb_name} | - |")
-
-    return "\n".join(lines)
-
-
-def generate_table11_latex(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate Table 11 in LaTeX format.
-    """
-    lines = []
-    lines.append("% Table 11: Accuracy with Feature Frequency (FF)")
-    lines.append("\\begin{table}[htbp]")
-    lines.append("\\centering")
-    lines.append("\\caption{Accuracy with Feature Frequency (FF) - " + mode.capitalize() + "}")
-    lines.append("\\label{tab:table11_" + mode + "}")
-    lines.append("\\begin{tabular}{lc}")
-    lines.append("\\toprule")
-    lines.append("KB & Accuracy \\\\")
-    lines.append("\\midrule")
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if model and model in results and 'ff' in results[model] and mode in results[model]['ff']:
-            r = results[model]['ff'][mode]
-            lines.append(f"{kb_name} & {r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f} \\\\")
-        else:
-            lines.append(f"{kb_name} & - \\\\")
-
-    lines.append("\\bottomrule")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    return "\n".join(lines)
-
-
-def generate_runtime_compact_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate compact runtime table.
-    Shows runtime mean ± std for each KB/strategy combination.
-    """
-    lines = []
-    lines.append("## Table: Runtime (ms) - {} Mode".format(mode.capitalize()))
-    lines.append("")
-
-    # Header
-    header = "| KB |"
+    # LaTeX
+    body = []
     for s in STRATEGIES:
-        header += f" {STRATEGY_NAMES[s]} |"
-    lines.append(header)
+        np, nn, cells = _row_data(s)
+        body.append(f"{STRATEGY_NAMES[s]} & {np} & {nn} & " + " & ".join(cells) + " \\\\")
+    return _latex_wrap(f"AcqMSS \\#consistency checks and runtime (msec) - {mode.capitalize()}",
+                       f"table7_{mode}", "lrrcccc",
+                       "Strategy & $|E^+|$ & $|E^-|$ & KB1 & KB2 & KB3 & KB4 \\\\",
+                       body)
 
-    # Separator
-    sep = "|:---|"
-    for _ in STRATEGIES:
-        sep += "---:|"
-    lines.append(sep)
 
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
+def generate_table9(results: Dict, mode: str, fmt: str) -> str:
+    """Table 9: Accuracy with Random Sampling (RS)."""
+    rs = ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m']
+    title = "Accuracy with Random Sampling (RS)"
 
-        row = f"| {kb_name} |"
-        for strategy in STRATEGIES:
-            if strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                # Format runtime in seconds if > 1000ms
-                if r.runtime_mean_ms > 1000:
-                    row += f" {r.runtime_mean_ms/1000:.2f}s |"
-                else:
-                    row += f" {r.runtime_mean_ms:.0f} |"
+    if fmt == 'md':
+        lines = [f"## Table 9: {title} - {mode.capitalize()} Mode", "",
+                 "| Strategy | KB1 | KB2 | KB3 | KB4 |",
+                 "|:---|:---:|:---:|:---:|:---:|"]
+        for s in rs:
+            row = f"| {STRATEGY_NAMES[s]} |"
+            for kb in KB_NAMES:
+                r = _get_result(results, kb, s, mode)
+                row += f" {r.mean_accuracy:.4f} ± {r.std_accuracy:.4f} |" if r else " - |"
+            lines.append(row)
+        return "\n".join(lines)
+
+    # LaTeX
+    body = []
+    for s in rs:
+        row = STRATEGY_NAMES[s]
+        for kb in KB_NAMES:
+            r = _get_result(results, kb, s, mode)
+            row += f" & {r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f}" if r else " & -"
+        body.append(row + " \\\\")
+    return _latex_wrap(f"{title} - {mode.capitalize()}", f"table9_{mode}",
+                       "lcccc", "Strategy & KB1 & KB2 & KB3 & KB4 \\\\", body)
+
+
+def generate_single_strategy_table(
+    results: Dict, mode: str, fmt: str, strategy: str, table_num: int, title: str
+) -> str:
+    """Tables 10/11: single-strategy accuracy table (2-COV or FF)."""
+    if fmt == 'md':
+        lines = [f"## Table {table_num}: {title} - {mode.capitalize()} Mode", "",
+                 "| KB | Accuracy |", "|:---|:---:|"]
+        for kb in KB_NAMES:
+            r = _get_result(results, kb, strategy, mode)
+            if r:
+                lines.append(f"| {kb} | {r.mean_accuracy:.4f} ± {r.std_accuracy:.4f} |")
             else:
-                row += " - |"
-        lines.append(row)
+                lines.append(f"| {kb} | - |")
+        return "\n".join(lines)
 
-    return "\n".join(lines)
+    # LaTeX
+    body = []
+    for kb in KB_NAMES:
+        r = _get_result(results, kb, strategy, mode)
+        if r:
+            body.append(f"{kb} & {r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f} \\\\")
+        else:
+            body.append(f"{kb} & - \\\\")
+    return _latex_wrap(f"{title} - {mode.capitalize()}", f"table{table_num}_{mode}",
+                       "lc", "KB & Accuracy \\\\", body)
 
 
-def generate_checks_compact_md(results: Dict, mode: str = 'incremental') -> str:
-    """
-    Generate compact consistency checks table.
-    """
-    lines = []
-    lines.append("## Table: Consistency Checks - {} Mode".format(mode.capitalize()))
-    lines.append("")
-
-    # Header
-    header = "| KB |"
-    for s in STRATEGIES:
-        header += f" {STRATEGY_NAMES[s]} |"
-    lines.append(header)
-
-    # Separator
-    sep = "|:---|"
-    for _ in STRATEGIES:
-        sep += "---:|"
-    lines.append(sep)
-
-    for kb_name in ['KB1', 'KB2', 'KB3', 'KB4']:
-        model = KB_REVERSE.get(kb_name)
-        if not model or model not in results:
-            continue
-
-        row = f"| {kb_name} |"
-        for strategy in STRATEGIES:
-            if strategy in results[model] and mode in results[model][strategy]:
-                r = results[model][strategy][mode]
-                row += f" {r.checks_mean:.0f} |"
-            else:
-                row += " - |"
-        lines.append(row)
-
-    return "\n".join(lines)
-
+# =============================================================================
+# Main
+# =============================================================================
 
 def main():
     parser = argparse.ArgumentParser(description='Extract evaluation results and generate tables')
@@ -922,87 +600,75 @@ def main():
     # Summary
     print(f"\nLoaded results:")
     for model in sorted(results.keys()):
-        strategies = sorted(results[model].keys())
+        strats = sorted(results[model].keys())
         modes = set()
-        for s in strategies:
+        for s in strats:
             modes.update(results[model][s].keys())
-        print(f"  {model}: {len(strategies)} strategies, modes: {sorted(modes)}")
+        print(f"  {model}: {len(strats)} strategies, modes: {sorted(modes)}")
 
-    # Generate tables
     print(f"\nGenerating tables to: {output_dir}")
+    modes_to_gen = ['incremental', 'non-incremental'] if args.mode == 'both' else [args.mode]
 
-    modes_to_generate = ['incremental', 'non-incremental'] if args.mode == 'both' else [args.mode]
+    md_content = [
+        "# Evaluation Results\n",
+        f"Generated from: {results_dir}\n",
+        "KB Mapping: KB1=REAL-FM-7, KB2=fqa, KB3=arcade, KB4=REAL-FM-4\n",
+    ]
+    latex_content = [
+        "% Evaluation Results",
+        "% KB Mapping: KB1=REAL-FM-7, KB2=fqa, KB3=arcade, KB4=REAL-FM-4",
+        "\\usepackage{booktabs}", "",
+    ]
 
-    md_content = []
-    latex_content = []
+    for mode in modes_to_gen:
+        # Paper Tables
+        md_content.append(f"\n# Paper Tables ({mode.capitalize()})")
+        for gen in [
+            generate_table7,
+            generate_table9,
+            lambda r, m, f: generate_single_strategy_table(r, m, f, '2cov', 10, 'Accuracy with 2-COV'),
+            lambda r, m, f: generate_single_strategy_table(r, m, f, 'ff', 11, 'Accuracy with FF'),
+        ]:
+            md_content.append("\n" + gen(results, mode, 'md'))
+            latex_content.append("\n" + gen(results, mode, 'latex'))
 
-    md_content.append("# Evaluation Results\n")
-    md_content.append(f"Generated from: {results_dir}\n")
-    md_content.append("KB Mapping: KB1=REAL-FM-7, KB2=fqa, KB3=arcade, KB4=REAL-FM-4\n")
-
-    latex_content.append("% Evaluation Results")
-    latex_content.append("% KB Mapping: KB1=REAL-FM-7, KB2=fqa, KB3=arcade, KB4=REAL-FM-4")
-    latex_content.append("\\usepackage{booktabs}")
-    latex_content.append("")
-
-    for mode in modes_to_generate:
-        # =====================================================================
-        # Paper Tables (Tables 7, 9, 10, 11)
-        # =====================================================================
-        md_content.append("\n# Paper Tables ({})".format(mode.capitalize()))
-
-        # Table 7: AcqMSS #consistency checks and runtime
-        md_content.append("\n" + generate_table7_md(results, mode))
-        latex_content.append("\n" + generate_table7_latex(results, mode))
-
-        # Table 9: Accuracy with Random Sampling (RS)
-        md_content.append("\n" + generate_table9_md(results, mode))
-        latex_content.append("\n" + generate_table9_latex(results, mode))
-
-        # Table 10: Accuracy with 2-COV
-        md_content.append("\n" + generate_table10_md(results, mode))
-        latex_content.append("\n" + generate_table10_latex(results, mode))
-
-        # Table 11: Accuracy with FF
-        md_content.append("\n" + generate_table11_md(results, mode))
-        latex_content.append("\n" + generate_table11_latex(results, mode))
-
-        # =====================================================================
         # Additional Tables
-        # =====================================================================
-        md_content.append("\n# Additional Tables ({})".format(mode.capitalize()))
+        md_content.append(f"\n# Additional Tables ({mode.capitalize()})")
+        md_content.append("\n" + generate_fold_metrics_table(results, mode, 'md'))
+        latex_content.append("\n" + generate_fold_metrics_table(results, mode, 'latex'))
+        md_content.append("\n" + generate_accuracy_compact(results, mode))
+        md_content.append("\n" + generate_accuracy_table(results, mode, 'md'))
+        latex_content.append("\n" + generate_accuracy_table(results, mode, 'latex'))
+        md_content.append("\n" + generate_runtime_compact(results, mode))
+        md_content.append("\n" + generate_checks_compact(results, mode))
+        md_content.append("\n" + generate_performance_table(results, mode, 'md'))
+        latex_content.append("\n" + generate_performance_table(results, mode, 'latex'))
+        md_content.append("\n" + generate_kb_summary(results, mode, 'md'))
+        latex_content.append("\n" + generate_kb_summary(results, mode, 'latex'))
 
-        # Accuracy tables (compact)
-        md_content.append("\n" + generate_accuracy_compact_md(results, mode))
-        md_content.append("\n" + generate_accuracy_table_md(results, mode))
-        latex_content.append("\n" + generate_accuracy_table_latex(results, mode))
+        # Strategy evaluation tables (only if any result has eval data)
+        has_eval = any(
+            r.has_strategy_eval
+            for model_strats in results.values()
+            for strat_modes in model_strats.values()
+            for r in strat_modes.values()
+            if r.mode == mode
+        )
+        if has_eval:
+            md_content.append(f"\n# Strategy Evaluation ({mode.capitalize()})")
+            for eval_strat in ['description', 'clause']:
+                md_content.append("\n" + generate_strategy_eval_table(results, mode, 'md', eval_strat))
+                latex_content.append("\n" + generate_strategy_eval_table(results, mode, 'latex', eval_strat))
 
-        # Runtime tables (compact)
-        md_content.append("\n" + generate_runtime_compact_md(results, mode))
-
-        # Consistency checks (compact)
-        md_content.append("\n" + generate_checks_compact_md(results, mode))
-
-        # Performance tables (detailed)
-        md_content.append("\n" + generate_performance_table_md(results, mode))
-        latex_content.append("\n" + generate_performance_table_latex(results, mode))
-
-        # KB Summary
-        md_content.append("\n" + generate_kb_summary_md(results, mode))
-        latex_content.append("\n" + generate_kb_summary_latex(results, mode))
-
-    # Incremental vs Non-incremental comparison
     if args.mode == 'both':
-        md_content.append("\n" + generate_incremental_comparison_md(results))
-        latex_content.append("\n" + generate_incremental_comparison_latex(results))
+        md_content.append("\n" + generate_incremental_comparison(results, 'md'))
+        latex_content.append("\n" + generate_incremental_comparison(results, 'latex'))
 
-    # Write Markdown file
     md_file = output_dir / "results_tables.md"
     with open(md_file, 'w') as f:
         f.write("\n".join(md_content))
     print(f"  Markdown tables: {md_file}")
 
-    # Write LaTeX file
     latex_file = output_dir / "results_tables.tex"
     with open(latex_file, 'w') as f:
         f.write("\n".join(latex_content))
