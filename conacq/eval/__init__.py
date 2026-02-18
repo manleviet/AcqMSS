@@ -31,7 +31,7 @@ Example usage:
 from .metrics import EvaluationMetrics, compute_metrics
 
 # Data loaders
-from .bias_loader import BiasData, BiasConstraint
+from conacq.bias import Bias, BiasIO
 from .result_loader import ConGenResultData
 from conacq.oracle.ground_truth import GroundTruthData
 
@@ -58,7 +58,7 @@ from .cross_validation import (
 )
 
 # Fold I/O
-from .fold_io import FoldData, generate_folds, save_folds, load_folds, apply_folds
+from .folds import FoldData, generate_folds, save_folds, load_folds, apply_folds
 
 # Main evaluator
 from .evaluator import Evaluator, EvaluationStrategy, EvaluationResult
@@ -77,9 +77,9 @@ __all__ = [
     'EvaluationMetrics',
     'compute_metrics',
 
-    # Data loaders
-    'BiasData',
-    'BiasConstraint',
+    # Data loaders (Bias/BiasIO re-exported from conacq.bias)
+    'Bias',
+    'BiasIO',
     'ConGenResultData',
     'GroundTruthData',
 

@@ -9,7 +9,7 @@ This module defines the core data structures used in constraint acquisition:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Set, Tuple
 from enum import Enum
 
 
@@ -80,11 +80,45 @@ class Bias:
     features: List[Feature]
 
     def get_constraint_by_id(self, cid: str) -> Optional[Constraint]:
-        """Get constraint by ID"""
+        """Get constraint by ID (O(1) via cached dict)."""
+        return self._constraint_dict.get(cid)
+
+    @property
+    def _constraint_dict(self) -> Dict[str, 'Constraint']:
+        """Lazy cached constraint lookup dict."""
+        if not hasattr(self, '_cached_constraint_dict'):
+            self._cached_constraint_dict = {c.id: c for c in self.constraints}
+        return self._cached_constraint_dict
+
+    def has_constraint(self, cid: str) -> bool:
+        """Check if constraint ID exists."""
+        return cid in self._constraint_dict
+
+    def get_description(self, cid: str) -> str:
+        """Get description for a constraint ID."""
+        c = self._constraint_dict.get(cid)
+        return c.description if c else ""
+
+    def get_clauses(self, cid: str) -> List[List[int]]:
+        """Get CNF clauses for a constraint ID."""
+        c = self._constraint_dict.get(cid)
+        return c.clauses if c else []
+
+    def get_all_clause_tuples(self) -> Set[Tuple[int, ...]]:
+        """Get all clauses as normalized sorted tuples."""
+        result: Set[Tuple[int, ...]] = set()
         for c in self.constraints:
-            if c.id == cid:
-                return c
-        return None
+            for clause in c.clauses:
+                result.add(tuple(sorted(clause)))
+        return result
+
+    def get_all_descriptions(self) -> Set[str]:
+        """Get all constraint descriptions."""
+        return {c.description for c in self.constraints}
+
+    def get_constraint_ids_by_description(self, description: str) -> List[str]:
+        """Find constraint IDs matching a description."""
+        return [c.id for c in self.constraints if c.description == description]
 
     def to_cnf(self) -> List[List[int]]:
         """Get all CNF clauses from all constraints"""

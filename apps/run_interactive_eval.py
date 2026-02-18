@@ -29,8 +29,8 @@ from conacq.algorithms.interactive import (
     InteractiveLearner,
     InteractiveResult
 )
+from conacq.bias import BiasIO
 from conacq.eval import (
-    BiasData,
     load_folds,
     n_fold_cross_validation_interactive,
     generate_cv_report,
@@ -209,7 +209,7 @@ def process_model(model_config: ModelConfig, output_dir: Path,
                 print(f"\n  --- Cross-Validation ({n_folds} folds) ---")
 
             examples = ExampleIO.load_json(model_config.examples)
-            bias = BiasData.from_json(Path(model_config.bias))
+            bias = BiasIO.load_from_json(str(model_config.bias))
 
             # Load pre-generated folds (per-model)
             fold_data = None
@@ -229,8 +229,8 @@ def process_model(model_config: ModelConfig, output_dir: Path,
                 positive_examples=[e.assignments for e in examples.positive],
                 negative_examples=[e.assignments for e in examples.negative],
                 n_folds=n_folds,
-                bias_clauses={cid: c.clauses for cid, c in bias.constraints.items()},
-                feature_ids=bias.features,
+                bias_clauses=bias.to_constraint_map(),
+                feature_ids=bias.feature_ids,
                 fm_path=model_config.oracle,
                 bias_path=model_config.bias,
                 seed=seed,

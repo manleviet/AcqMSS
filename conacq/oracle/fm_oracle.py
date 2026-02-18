@@ -14,7 +14,7 @@ from conacq.oracle.bg_data import BGData
 from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel
 from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler
+from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
 
 class FeatureModelOracle(Oracle):
@@ -66,6 +66,8 @@ class FeatureModelOracle(Oracle):
 
     # --- Oracle ABC implementation ---
 
+    @measure_time('oracle_is_valid')
+    @count_calls('oracle_is_valid_calls')
     def is_valid(self, assignments: Dict[str, bool]) -> bool:
         """Check if configuration is valid (satisfies FM constraints).
 

@@ -13,7 +13,7 @@ from enum import Enum
 import logging
 
 from conacq.oracle.ground_truth import GroundTruthData
-from .bias_loader import BiasData
+from conacq.bias import Bias, BiasIO
 from .result_loader import ConGenResultData
 from .metrics import EvaluationMetrics, compute_metrics
 
@@ -68,18 +68,18 @@ class Evaluator:
     2. Clause-based: Compare CNF clauses (semantic)
     """
 
-    def __init__(self, oracle: GroundTruthData, bias: BiasData):
+    def __init__(self, oracle: GroundTruthData, bias: Bias):
         """
         Initialize evaluator with oracle and bias data.
 
         Args:
             oracle: GroundTruthData extracted from feature model
-            bias: BiasData loaded from bias JSON
+            bias: Bias loaded from bias JSON
         """
         self.oracle = oracle
         self.bias = bias
         logging.debug('Evaluator initialized: oracle=%d descriptions, bias=%d constraints',
-                      len(oracle.descriptions), len(bias.constraints))
+                      len(oracle.descriptions), len(bias))
 
     def evaluate(
             self,
@@ -121,8 +121,8 @@ class Evaluator:
         for cid in result.kb_constraints:
             if cid.startswith('ne_'):
                 continue  # Skip NE constraints
-            if cid in self.bias.constraints:
-                desc = self.bias.constraints[cid].description
+            if self.bias.has_constraint(cid):
+                desc = self.bias.get_description(cid)
                 acquired_descriptions.add(desc)
                 kb_to_description[cid] = desc
 
@@ -174,9 +174,9 @@ class Evaluator:
         for cid in result.kb_constraints:
             if cid.startswith('ne_'):
                 continue
-            if cid in self.bias.constraints:
+            if self.bias.has_constraint(cid):
                 constraint_clauses = []
-                for clause in self.bias.constraints[cid].clauses:
+                for clause in self.bias.get_clauses(cid):
                     normalized = tuple(sorted(clause))
                     kb_clauses.add(normalized)
                     constraint_clauses.append(normalized)
@@ -189,7 +189,7 @@ class Evaluator:
                 kb_clauses.add(normalized)
 
         # Get bias clause set
-        bias_clauses = self.bias.get_all_clauses()
+        bias_clauses = self.bias.get_all_clause_tuples()
 
         # Compute metrics
         metrics = compute_metrics(kb_clauses, self.oracle.clause_set, bias_clauses)
@@ -269,5 +269,5 @@ class Evaluator:
             Evaluator instance
         """
         oracle = GroundTruthData.from_uvl(Path(oracle_path))
-        bias = BiasData.from_json(Path(bias_path))
+        bias = BiasIO.load_from_json(str(bias_path))
         return cls(oracle, bias)

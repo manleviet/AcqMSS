@@ -20,7 +20,7 @@ import time
 from .metrics import EvaluationMetrics
 from .accuracy import AccuracyCalculator
 from conacq.runners import ConGenRunner
-from .fold_io import FoldData, generate_folds, apply_folds
+from .folds import FoldData, generate_folds, apply_folds
 from .performance_metrics import (
     PerformanceMetrics,
     AggregatedPerformanceMetrics,

@@ -10,7 +10,8 @@ from pathlib import Path
 from conacq.eval import (
     EvaluationMetrics,
     compute_metrics,
-    BiasData,
+    Bias,
+    BiasIO,
     ConGenResultData,
     AccuracyCalculator,
     AccuracyResult,
@@ -143,8 +144,8 @@ class TestComputeMetrics:
         assert metrics.false_negatives == 1  # (5, 6)
 
 
-class TestBiasData:
-    """Test BiasData loading."""
+class TestBiasLoading:
+    """Test Bias loading via BiasIO."""
 
     def test_load_from_json(self, tmp_path):
         """Test loading bias from JSON file."""
@@ -167,11 +168,11 @@ class TestBiasData:
         }
         ''')
 
-        bias = BiasData.from_json(bias_json)
+        bias = BiasIO.load_from_json(str(bias_json))
 
         assert len(bias.features) == 2
-        assert bias.features['A'] == 1
-        assert len(bias.constraints) == 1
+        assert bias.feature_ids['A'] == 1
+        assert len(bias) == 1
         assert bias.get_description('c1') == "A --mandatory--> B"
 
     def test_get_clauses(self, tmp_path):
@@ -181,12 +182,12 @@ class TestBiasData:
         {
             "features": [],
             "constraints": [
-                {"id": "c1", "operator": "test", "clauses": [[1, 2], [3]], "description": "test"}
+                {"id": "c1", "operator": "mandatory", "clauses": [[1, 2], [3]], "description": "test"}
             ]
         }
         ''')
 
-        bias = BiasData.from_json(bias_json)
+        bias = BiasIO.load_from_json(str(bias_json))
         clauses = bias.get_clauses('c1')
 
         assert len(clauses) == 2
@@ -415,15 +416,15 @@ class TestIntegration:
         """Test accuracy calculation with real examples."""
         from conacq.examples import ExampleIO
 
-        bias = BiasData.from_json(BIAS_PATH)
+        bias = BiasIO.load_from_json(str(BIAS_PATH))
         examples = ExampleIO.load_json(EXAMPLES_RS_1N_PATH)
         result = ConGenResultData.from_json(RESULT_PATH)
 
         # Build KB clauses
         kb_clauses = []
         for cid in result.kb_constraints:
-            if cid in bias.constraints:
-                kb_clauses.extend(bias.constraints[cid].clauses)
+            if bias.has_constraint(cid):
+                kb_clauses.extend(bias.get_clauses(cid))
 
         with AccuracyCalculator(kb_clauses) as calc:
             pos_assignments = [e.assignments for e in examples.positive]

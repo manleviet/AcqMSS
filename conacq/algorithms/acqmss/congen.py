@@ -95,7 +95,7 @@ class ConGen:
         # Step 3: if IsConsistent(E⁺, NE, BG) then
         inconsistent = self.checker.is_consistent_test_cases(
             set_neg_tv + set_bg,  # NE ∪ BG
-            set_tc,           # E+
+            set_tc,  # E+
             stop_at_first_violation=True
         )
         self.profiler.increment("paper_consistency_checks")

@@ -172,15 +172,17 @@ class BiasIO:
     @staticmethod
     def _constraint_from_dict(c_data: dict, feature_map: dict) -> Constraint:
         """Deserialize a Constraint from a JSON dict and feature lookup map."""
-        parent = feature_map.get(c_data['parent']) if c_data['parent'] else None
-        children = [feature_map[name] for name in c_data['children']]
+        parent_name = c_data.get('parent', '')
+        parent = feature_map.get(parent_name) if parent_name else None
+        children = [feature_map[name] for name in c_data.get('children', []) if name in feature_map]
+        operator_str = c_data.get('operator', '')
         return Constraint(
             id=c_data['id'],
-            operator=OperatorType(c_data['operator']) if c_data['operator'] else None,
+            operator=OperatorType(operator_str) if operator_str else None,
             parent=parent,
             children=children,
-            clauses=c_data['clauses'],
-            description=c_data['description']
+            clauses=c_data.get('clauses', []),
+            description=c_data.get('description', '')
         )
 
     @staticmethod
