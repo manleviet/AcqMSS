@@ -140,7 +140,7 @@ def process_model(
             print(f"\nLoading: {fm_path}")
 
         oracle = FeatureModelOracle(fm_path)
-        n_features = len(oracle.get_features())
+        n_features = len(oracle.get_variables())
 
         # Use pre-computed values from config if available
         valid_configs = model_config.get('valid_configs')

@@ -16,7 +16,7 @@ from .fm_data import FMData
 from .fm_oracle import FeatureModelOracle
 from .user_prompt import UserPromptOracle
 from .cached import CachedOracle
-from .ground_truth import GroundTruthData, OracleData
+from .ground_truth import GroundTruthData
 from .fm_oracle_model import FMOracleModel, OneShotModel
 from .constraint_description import extract_constraint_descriptions
 
@@ -28,7 +28,6 @@ __all__ = [
     'UserPromptOracle',
     'CachedOracle',
     'GroundTruthData',
-    'OracleData',  # backward compat alias
     'FMOracleModel',
     'OneShotModel',
     'extract_constraint_descriptions',

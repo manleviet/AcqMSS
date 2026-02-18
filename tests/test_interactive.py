@@ -199,7 +199,7 @@ class TestFeatureModelOracle:
     def test_oracle_invalid_config(self, oracle):
         """Test oracle rejects invalid configuration."""
         # Create an invalid config (all features false including root)
-        features = oracle.get_features()
+        features = oracle.get_variables()
         invalid_config = {f: False for f in features}
         assert oracle.ask(invalid_config) is False
 
@@ -212,7 +212,7 @@ class TestCachedOracle:
         cached = CachedOracle(oracle)
 
         # First query — use a real feature name from the FM
-        features = list(oracle.get_features())
+        features = list(oracle.get_variables())
         config = {features[0]: True}
         result1 = cached.ask(config)
         stats1 = cached.get_cache_stats()

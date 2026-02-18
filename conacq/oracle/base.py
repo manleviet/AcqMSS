@@ -34,3 +34,9 @@ class Oracle(ABC):
     def ask(self, query: Dict[str, bool]) -> bool:
         """Alias for is_valid() (interactive compatibility)."""
         return self.is_valid(query)
+
+    def get_variables(self):
+        pass
+
+    def complete_configuration(self, partial: Dict[str, bool]):
+        pass

@@ -30,7 +30,7 @@ def extract_constraint_descriptions(fm) -> Set[str]:
     descriptions = set()
 
     # Hierarchical constraints from feature relationships
-    for feature in fm.get_features():
+    for feature in fm.get_variables():
         for relation in feature.get_relations():
             if relation.is_mandatory():
                 for child in relation.children:

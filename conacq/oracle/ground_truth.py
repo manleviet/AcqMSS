@@ -69,7 +69,3 @@ class GroundTruthData:
     def __repr__(self) -> str:
         return (f"GroundTruthData(descriptions={len(self.descriptions)}, "
                 f"clauses={len(self.clauses)}, features={len(self.feature_map)})")
-
-
-# Backward compatibility alias
-OracleData = GroundTruthData

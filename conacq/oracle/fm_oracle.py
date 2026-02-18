@@ -53,7 +53,7 @@ class FeatureModelOracle(Oracle):
 
         # Lazy-loaded for description extraction (most callers never need this)
         self._fm = None
-        self._constraint_descriptions_cache: Optional[Set[str]] = None
+        # self._constraint_descriptions_cache: Optional[Set[str]] = None
 
     # TODO: need check
     @property
@@ -92,7 +92,7 @@ class FeatureModelOracle(Oracle):
             Frozen FMData with all FM metadata
         """
         return FMData(
-            features=self.get_features(),
+            features=self.get_variables(),
             feature_ids=self.get_feature_ids(),
             root_feature=self.get_root_feature(),
             num_constraints=self.get_num_constraints(),
@@ -103,8 +103,7 @@ class FeatureModelOracle(Oracle):
         """Return root BG assumption data for ConGen."""
         return self._oracle_model.bg_data
 
-    # TODO: need check
-    def get_features(self) -> Set[str]:
+    def get_variables(self) -> Set[str]:
         """Get all feature names."""
         return set(self._oracle_model.variables.keys())
 
@@ -113,7 +112,6 @@ class FeatureModelOracle(Oracle):
         """Get feature name to SAT variable ID mapping."""
         return dict(self._oracle_model.variables)
 
-    # TODO: need check
     def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
         """Complete a partial configuration to a full valid one via SAT solving.
 
@@ -133,7 +131,7 @@ class FeatureModelOracle(Oracle):
             assumptions.append(fid if value else -fid)
 
         solver = Solver(name=self.solver_name)
-        for clause in self._oracle_model.get_raw_fm_clauses():
+        for clause in self._oracle_model.get_fm_clauses():
             solver.add_clause(clause)
 
         try:
@@ -176,7 +174,7 @@ class FeatureModelOracle(Oracle):
     # TODO: need check
     def get_cnf_clauses(self) -> List[List[int]]:
         """Get the raw ground truth CNF clauses (without assumption guards)."""
-        return self._oracle_model.get_raw_fm_clauses()
+        return self._oracle_model.get_fm_clauses()
 
     # TODO: need check
     def get_num_constraints(self) -> int:

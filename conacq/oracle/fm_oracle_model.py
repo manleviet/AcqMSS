@@ -98,9 +98,8 @@ class FMOracleModel:
         """Get the list of assumption literals."""
         return self.task.assumptions
 
-    # TODO: need check
-    def get_raw_fm_clauses(self) -> List[List[int]]:
-        """Get raw FM CNF clauses (without assumption guards).
+    def get_fm_clauses(self) -> List[List[int]]:
+        """Get FM CNF clauses (without assumption guards).
 
         Returns the original clauses from constraint_map, not the
         assumption-guarded versions stored in task.set_kb.

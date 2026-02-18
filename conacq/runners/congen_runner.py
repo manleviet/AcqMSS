@@ -191,7 +191,8 @@ class ConGenRunner:
                     if checker is not None:
                         checker.cleanup()
 
-            runtime_ms = profiler.get_metric('congen_total_time', 0)
+            timer_values = profiler.get_metric('congen_total_time', [0])
+            runtime_ms = timer_values[0] * 1000 if timer_values else 0
             memory_peak_mb = peak / (1024 * 1024)
             consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
             profiler_snapshot = profiler.to_dict()

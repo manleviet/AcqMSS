@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict
 
 from conacq.examples.data_structures import Example, ExampleSet, ExampleType
+from conacq.oracle import Oracle
 from conacq.oracle.fm_oracle import FeatureModelOracle
 
 
@@ -22,7 +23,7 @@ class ExampleGenerator(ABC):
         features: Set of all feature names
     """
 
-    def __init__(self, oracle: FeatureModelOracle):
+    def __init__(self, oracle: Oracle):
         """
         Initialize generator with a FeatureModelOracle.
 
@@ -30,7 +31,7 @@ class ExampleGenerator(ABC):
             oracle: FeatureModelOracle for classifying examples
         """
         self.oracle = oracle
-        self.features = oracle.get_features()
+        self.features = oracle.get_variables()
 
     @abstractmethod
     def generate(self, **kwargs) -> ExampleSet:
