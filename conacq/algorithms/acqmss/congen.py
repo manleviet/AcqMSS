@@ -21,9 +21,7 @@ Reference: Paper Algorithm 1 (steps 2-9, NE pre-computed)
 Mode-agnostic: works identically regardless of checker type.
 """
 
-import json
 import logging
-from pathlib import Path
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 
@@ -46,21 +44,6 @@ class ConGenResult:
     bg_clauses: List[List[int]] = field(default_factory=list)  # BG clauses (e.g., [[1]])
     metadata: Dict = field(default_factory=dict)
 
-
-def resolve_congen_names(result: ConGenResult, provider) -> Dict[str, List[str]]:
-    """Resolve assumption IDs to human-readable names.
-
-    Args:
-        result: CONGENResult with raw assumption IDs
-        provider: Object with get_description(assumption_id) method
-
-    Returns:
-        Dict with 'kb' and 'redundant' name lists
-    """
-    return {
-        'kb': [provider.get_description(a) for a in result.kb_assumption_ids],
-        'redundant': [provider.get_description(a) for a in result.redundant_ids],
-    }
 
 
 class ConGen:
@@ -170,39 +153,3 @@ class ConGen:
         logging.debug('<<< ConGen return KB=%d', len(kb))
         return self.result
 
-    def save_result(self, filepath: str, description_provider=None):
-        """Save result to JSON file.
-
-        Args:
-            filepath: Output file path
-            description_provider: Optional provider to resolve names for output.
-                If None, raw assumption IDs are serialized.
-        """
-        if self.result is None:
-            raise ValueError("No result to save. Run acquire() first.")
-
-        if description_provider is not None:
-            names = resolve_congen_names(self.result, description_provider)
-            kb_output = names['kb']
-            redundant_output = names['redundant']
-        else:
-            kb_output = self.result.kb_assumption_ids
-            redundant_output = self.result.redundant_ids
-
-        data = {
-            'kb_constraints': kb_output,
-            'redundant_constraints': redundant_output,
-            'statistics': {
-                'n_bias': self.result.n_bias,
-                'n_mss': self.result.n_mss,
-                'n_kb': self.result.n_kb,
-            },
-            'bg_clauses': self.result.bg_clauses,
-            'metadata': self.result.metadata,
-        }
-
-        filepath = Path(filepath)
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(filepath, 'w') as f:
-            json.dump(data, f, indent=2)

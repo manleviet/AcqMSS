@@ -20,7 +20,6 @@ class ExampleGenerator(ABC):
     Attributes:
         oracle: FeatureModelOracle for classifying and completing examples
         features: Set of all feature names
-        feature_ids: Mapping from feature names to SAT variable IDs
     """
 
     def __init__(self, oracle: FeatureModelOracle):
@@ -31,9 +30,7 @@ class ExampleGenerator(ABC):
             oracle: FeatureModelOracle for classifying examples
         """
         self.oracle = oracle
-        fm_data = oracle.get_fm_data()
-        self.features = fm_data.features
-        self.feature_ids = fm_data.feature_ids
+        self.features = oracle.get_features()
 
     @abstractmethod
     def generate(self, **kwargs) -> ExampleSet:

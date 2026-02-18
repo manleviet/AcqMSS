@@ -11,7 +11,7 @@ Also saves:
 - Intersected KB (constraints common to all folds)
 """
 
-from typing import List, Dict, Set, Optional
+from typing import List, Dict, Set, Optional, Any
 from dataclasses import dataclass, field
 import random
 import logging
@@ -46,6 +46,8 @@ class CrossValidationFoldResult:
     n_train_neg: int
     n_test_pos: int
     n_test_neg: int
+    # Full profiler snapshot (pass-through, not aggregated)
+    profiler_data: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -59,6 +61,7 @@ class CrossValidationFoldResult:
                 'memory_peak_mb': self.performance.memory_peak_mb,
                 'n_mss': self.performance.n_mss,
                 'n_kb': self.performance.n_kb,
+                'profiler': self.profiler_data,
             },
             'kb_constraints': self.kb_constraints,
             'redundant_constraints': self.redundant_constraints,
@@ -227,7 +230,8 @@ def _run_cv_loop(
             n_train_pos=len(train_pos),
             n_train_neg=len(train_neg),
             n_test_pos=len(test_pos),
-            n_test_neg=len(test_neg)
+            n_test_neg=len(test_neg),
+            profiler_data=getattr(run_result, 'profiler_data', {})
         ))
 
         n_queries = getattr(run_result, 'n_queries', None)
@@ -326,7 +330,7 @@ def n_fold_cross_validation(
         bias_path=bias_path,
         fm_path=fm_path,
         solver_name=solver_name,
-        is_incremental=is_incremental
+        use_incremental=is_incremental
     )
     return _run_cv_loop(
         runner=runner, variables=runner.model.variables,

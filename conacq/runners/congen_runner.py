@@ -6,8 +6,8 @@ Runs ConGen directly to:
 2. Collect performance metrics (#checks, runtime, memory, n_mss, n_kb)
 """
 
-from typing import List, Dict, Optional
-from dataclasses import dataclass
+from typing import List, Dict, Optional, Any
+from dataclasses import dataclass, field
 import random
 import time
 import tracemalloc
@@ -17,7 +17,7 @@ from conacq.algorithms.acqmss.congen import ConGen
 from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
 from conacq.oracle import FeatureModelOracle
 from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import Profiler
+from explanation.operations.algorithms.profiler import Profiler, profiler_session, ProfilerPreset
 
 from conacq.eval.performance_metrics import PerformanceMetrics
 
@@ -37,6 +37,7 @@ class ConGenRunResult:
         runtime_ms: Execution time in milliseconds
         consistency_checks: Number of SAT solver calls
         memory_peak_mb: Peak memory usage in MB
+        profiler_data: Full profiler snapshot (counters, timers, gauges)
     """
     # KB result
     kb_constraints: List[str]
@@ -50,6 +51,7 @@ class ConGenRunResult:
     runtime_ms: float
     consistency_checks: int
     memory_peak_mb: float
+    profiler_data: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -63,6 +65,7 @@ class ConGenRunResult:
                 'runtime_ms': self.runtime_ms,
                 'consistency_checks': self.consistency_checks,
                 'memory_peak_mb': self.memory_peak_mb,
+                'profiler': self.profiler_data,
             }
         }
 
@@ -96,7 +99,7 @@ class ConGenRunner:
             bias_path: str,
             fm_path: str,
             solver_name: str = 'glucose4',
-            is_incremental: bool = True
+            use_incremental: bool = True
     ):
         """
         Initialize runner with file paths. Builds model once (without examples).
@@ -105,22 +108,22 @@ class ConGenRunner:
             bias_path: Path to bias JSON file
             fm_path: Path to feature model (.uvl) file
             solver_name: SAT solver name
-            is_incremental: Use incremental solver mode
+            use_incremental: Use incremental solver mode
         """
         self.solver_name = solver_name
-        self.is_incremental = is_incremental
+        self.use_incremental = use_incremental
 
         # Build model (bias only)
         self.model = (ConGenModelBuilder
                       .from_bias(bias_path)
-                      .use_incremental(is_incremental)
+                      .use_incremental(use_incremental)
                       .build())
 
         # Create oracle (reused across folds)
         self.oracle = FeatureModelOracle(fm_path, use_incremental=False)
 
         # Keep original bias order for shuffle restore
-        self._original_constraint_order = list(self.model.constraint_map.keys())
+        self._original_bias_constraint_order = list(self.model.constraint_map.keys())
 
     def run(
             self,
@@ -143,89 +146,84 @@ class ConGenRunner:
                       len(positive_examples), len(negative_examples))
 
         # Create profiler to collect metrics
-        profiler = Profiler()
-        profiler.start()
+        with profiler_session(ProfilerPreset.BENCHMARK) as profiler:
+            # Start memory tracking
+            tracemalloc.start()
+            with profiler.timer("congen_total_time"):
+                checker = None
+                try:
+                    # Shuffle bias ordering if seed provided
+                    if shuffle_seed is not None:
+                        keys = list(self._original_bias_constraint_order)
+                        random.Random(shuffle_seed).shuffle(keys)
+                        self.model.constraint_map = {k: self.model.constraint_map[k] for k in keys}
+                        logging.debug('Shuffled bias with seed=%d', shuffle_seed)
 
-        # Start memory tracking
-        tracemalloc.start()
-        start_time = time.perf_counter()
+                    # Prepare for this fold's examples (runs GenerateNE)
+                    self.model.prepare(
+                        oracle=self.oracle,
+                        positive_examples=positive_examples,
+                        negative_examples=negative_examples
+                    )
+                    task = self.model.task
 
-        checker = None
-        try:
-            # Shuffle bias ordering if seed provided
-            if shuffle_seed is not None:
-                keys = list(self._original_constraint_order)
-                random.Random(shuffle_seed).shuffle(keys)
-                self.model.constraint_map = {k: self.model.constraint_map[k] for k in keys}
-                logging.debug('Shuffled bias with seed=%d', shuffle_seed)
+                    # Create checker via factory
+                    checker = CheckerFactory.create_from_model(
+                        self.model, self.solver_name, profiler
+                    )
 
-            # Prepare for this fold's examples (runs GenerateNE)
-            self.model.prepare(
-                oracle=self.oracle,
-                positive_examples=positive_examples,
-                negative_examples=negative_examples
+                    # Run ConGen
+                    congen = ConGen(checker, profiler)
+                    result = congen.acquire(
+                        set_b=task.set_c,
+                        set_bg=task.set_b,
+                        set_tc=task.set_tc,
+                        set_neg_tv=task.set_neg_tv,
+                        negation_map=task.negation_map,
+                    )
+
+                finally:
+                    # Stop memory tracking
+                    current, peak = tracemalloc.get_traced_memory()
+                    tracemalloc.stop()
+
+                    # Cleanup checker
+                    if checker is not None:
+                        checker.cleanup()
+
+            runtime_ms = profiler.get_metric('congen_total_time', 0)
+            memory_peak_mb = peak / (1024 * 1024)
+            consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
+            profiler_snapshot = profiler.to_dict()
+
+            # Get KB clauses: assumption_id → name → clauses
+            provider = self.model.description_provider
+            kb_clauses = []
+            kb_names = []
+            redundant_names = []
+            for aid in result.kb_assumption_ids:
+                cname = provider.get_description(aid)
+                kb_names.append(cname)
+                if cname in self.model.constraint_map:
+                    kb_clauses.extend(self.model.constraint_map[cname])
+            for aid in result.redundant_ids:
+                redundant_names.append(provider.get_description(aid))
+
+            run_result = ConGenRunResult(
+                kb_constraints=kb_names,
+                kb_clauses=kb_clauses,
+                redundant_constraints=redundant_names,
+                n_bias=result.n_bias,
+                n_mss=result.n_mss,
+                n_kb=result.n_kb,
+                runtime_ms=runtime_ms,
+                consistency_checks=consistency_checks,
+                memory_peak_mb=memory_peak_mb,
+                profiler_data=profiler_snapshot
             )
-            task = self.model.task
 
-            # Create checker via factory
-            checker = CheckerFactory.create_from_model(
-                self.model, self.solver_name, profiler
-            )
-
-            # Run ConGen
-            congen = ConGen(checker, profiler)
-            result = congen.acquire(
-                set_b=task.set_c,
-                set_bg=task.set_b,
-                set_tc=task.set_tc,
-                set_neg_tv=task.set_neg_tv,
-                negation_map=task.negation_map,
-            )
-
-        finally:
-            # Stop timing and memory tracking
-            end_time = time.perf_counter()
-            current, peak = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-
-            # Stop profiler
-            profiler.stop()
-
-            # Cleanup checker
-            if checker is not None:
-                checker.cleanup()
-
-        runtime_ms = (end_time - start_time) * 1000
-        memory_peak_mb = peak / (1024 * 1024)
-        consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
-
-        # Get KB clauses: assumption_id → name → clauses
-        provider = self.model.description_provider
-        kb_clauses = []
-        kb_names = []
-        redundant_names = []
-        for aid in result.kb_assumption_ids:
-            cname = provider.get_description(aid)
-            kb_names.append(cname)
-            if cname in self.model.constraint_map:
-                kb_clauses.extend(self.model.constraint_map[cname])
-        for aid in result.redundant_ids:
-            redundant_names.append(provider.get_description(aid))
-
-        run_result = ConGenRunResult(
-            kb_constraints=kb_names,
-            kb_clauses=kb_clauses,
-            redundant_constraints=redundant_names,
-            n_bias=result.n_bias,
-            n_mss=result.n_mss,
-            n_kb=result.n_kb,
-            runtime_ms=runtime_ms,
-            consistency_checks=consistency_checks,
-            memory_peak_mb=memory_peak_mb
-        )
-
-        logging.debug('<<< ConGenRunner: KB=%d, runtime=%.2fms, checks=%d',
-                      result.n_kb, runtime_ms, consistency_checks)
+            logging.debug('<<< ConGenRunner: KB=%d, runtime=%.2fms, checks=%d',
+                          result.n_kb, runtime_ms, consistency_checks)
 
         return run_result
 

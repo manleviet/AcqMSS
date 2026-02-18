@@ -80,6 +80,7 @@ class Reduce:
             # TODO: try removing root
             test_set = set_bg + kb_without_c + [neg_c]
             is_consistent = self.checker.is_consistent(test_set)
+            self.profiler.increment("redundancy_consistency_checks")
             self.profiler.increment("paper_consistency_checks")
 
             logging.debug('Checking c=%s: consistent(BG ∪ KB-{c} ∪ {¬c}) = %s',

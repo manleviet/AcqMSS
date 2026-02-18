@@ -269,12 +269,6 @@ class InteractiveLearner:
 
         return result
 
-    def save_result(self, filepath: str) -> None:
-        """Save learning result to file."""
-        if self._quacq.result is not None:
-            self._quacq.result.save(filepath)
-        else:
-            raise ValueError("No result to save. Run learn() first.")
 
     def evaluate(self, result: InteractiveResult) -> Dict:
         """

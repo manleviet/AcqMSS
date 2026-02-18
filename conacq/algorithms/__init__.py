@@ -24,7 +24,6 @@ from .acqmss import (
     GenerateNE,
     ConGen,
     ConGenResult,
-    resolve_congen_names,
     ConGenModel,
     ConGenModelBuilder,
 )
@@ -52,7 +51,6 @@ __all__ = [
     'GenerateNE',
     'ConGen',
     'ConGenResult',
-    'resolve_congen_names',
     'ConGenModel',
     'ConGenModelBuilder',
     # Interactive learning (QuAcq)
