@@ -341,6 +341,47 @@ class TestPerformanceMetrics:
         assert agg.n_runs == 1
         assert agg.runtime_std_ms == 0.0
 
+    def test_aggregate_extended_metrics(self):
+        """Test aggregating extended profiler metrics."""
+        metrics_list = [
+            PerformanceMetrics(
+                runtime_ms=100, consistency_checks=50,
+                memory_peak_mb=10, n_mss=20, n_kb=5,
+                congen_runtime_ms=90, acqmss_runtime_ms=60,
+                acqmss_calls=10, reduce_runtime_ms=20,
+                solver_time_ms=50, is_consistent_calls=30,
+                is_consistent_test_cases_calls=5,
+                redundancy_consistency_checks=15,
+            ),
+            PerformanceMetrics(
+                runtime_ms=200, consistency_checks=70,
+                memory_peak_mb=15, n_mss=25, n_kb=7,
+                congen_runtime_ms=180, acqmss_runtime_ms=120,
+                acqmss_calls=20, reduce_runtime_ms=40,
+                solver_time_ms=100, is_consistent_calls=50,
+                is_consistent_test_cases_calls=7,
+                redundancy_consistency_checks=25,
+            ),
+        ]
+
+        agg = aggregate_metrics(metrics_list)
+
+        # Verify extended runtime metrics
+        assert agg.congen_runtime_mean_ms == 135  # (90 + 180) / 2
+        assert agg.congen_runtime_min_ms == 90
+        assert agg.congen_runtime_max_ms == 180
+        assert agg.acqmss_runtime_mean_ms == 90  # (60 + 120) / 2
+        assert agg.reduce_runtime_mean_ms == 30  # (20 + 40) / 2
+        assert agg.solver_time_mean_ms == 75  # (50 + 100) / 2
+
+        # Verify extended counter metrics
+        assert agg.acqmss_calls_mean == 15  # (10 + 20) / 2
+        assert agg.acqmss_calls_min == 10
+        assert agg.acqmss_calls_max == 20
+        assert agg.is_consistent_calls_mean == 40  # (30 + 50) / 2
+        assert agg.is_consistent_tc_calls_mean == 6  # (5 + 7) / 2
+        assert agg.redundancy_checks_mean == 20  # (15 + 25) / 2
+
     def test_aggregate_empty_list(self):
         """Test that empty list raises error."""
         with pytest.raises(ValueError):

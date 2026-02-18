@@ -47,10 +47,21 @@ class ConGenRunResult:
     n_mss: int
     n_kb: int
 
-    # Performance metrics
+    # Core performance metrics
     runtime_ms: float
     consistency_checks: int
     memory_peak_mb: float
+
+    # Extended profiler metrics
+    congen_runtime_ms: float = 0.0
+    acqmss_runtime_ms: float = 0.0
+    acqmss_calls: int = 0
+    reduce_runtime_ms: float = 0.0
+    solver_time_ms: float = 0.0
+    is_consistent_calls: int = 0
+    is_consistent_test_cases_calls: int = 0
+    redundancy_consistency_checks: int = 0
+
     profiler_data: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -65,6 +76,14 @@ class ConGenRunResult:
                 'runtime_ms': self.runtime_ms,
                 'consistency_checks': self.consistency_checks,
                 'memory_peak_mb': self.memory_peak_mb,
+                'congen_runtime_ms': self.congen_runtime_ms,
+                'acqmss_runtime_ms': self.acqmss_runtime_ms,
+                'acqmss_calls': self.acqmss_calls,
+                'reduce_runtime_ms': self.reduce_runtime_ms,
+                'solver_time_ms': self.solver_time_ms,
+                'is_consistent_calls': self.is_consistent_calls,
+                'is_consistent_test_cases_calls': self.is_consistent_test_cases_calls,
+                'redundancy_consistency_checks': self.redundancy_consistency_checks,
                 'profiler': self.profiler_data,
             }
         }
@@ -76,7 +95,15 @@ class ConGenRunResult:
             consistency_checks=self.consistency_checks,
             memory_peak_mb=self.memory_peak_mb,
             n_mss=self.n_mss,
-            n_kb=self.n_kb
+            n_kb=self.n_kb,
+            congen_runtime_ms=self.congen_runtime_ms,
+            acqmss_runtime_ms=self.acqmss_runtime_ms,
+            acqmss_calls=self.acqmss_calls,
+            reduce_runtime_ms=self.reduce_runtime_ms,
+            solver_time_ms=self.solver_time_ms,
+            is_consistent_calls=self.is_consistent_calls,
+            is_consistent_test_cases_calls=self.is_consistent_test_cases_calls,
+            redundancy_consistency_checks=self.redundancy_consistency_checks,
         )
 
 
@@ -191,10 +218,22 @@ class ConGenRunner:
                     if checker is not None:
                         checker.cleanup()
 
+            # Extract core metrics
             timer_values = profiler.get_metric('congen_total_time', [0])
             runtime_ms = timer_values[0] * 1000 if timer_values else 0
             memory_peak_mb = peak / (1024 * 1024)
             consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
+
+            # Extract extended profiler metrics (timers are lists, sum all calls)
+            congen_runtime_ms = sum(profiler.get_metric('congen_runtime', [0])) * 1000
+            acqmss_runtime_ms = sum(profiler.get_metric('acqmss_runtime', [0])) * 1000
+            reduce_runtime_ms = sum(profiler.get_metric('reduce_runtime', [0])) * 1000
+            solver_time_ms = sum(profiler.get_metric('solver_time', [0])) * 1000
+            acqmss_calls = profiler.get_metric('acqmss_calls', 0)
+            is_consistent_calls = profiler.get_metric('is_consistent_calls', 0)
+            is_consistent_test_cases_calls = profiler.get_metric('is_consistent_test_cases_calls', 0)
+            redundancy_consistency_checks = profiler.get_metric('redundancy_consistency_checks', 0)
+
             profiler_snapshot = profiler.to_dict()
 
             # Get KB clauses: assumption_id → name → clauses
@@ -220,6 +259,14 @@ class ConGenRunner:
                 runtime_ms=runtime_ms,
                 consistency_checks=consistency_checks,
                 memory_peak_mb=memory_peak_mb,
+                congen_runtime_ms=congen_runtime_ms,
+                acqmss_runtime_ms=acqmss_runtime_ms,
+                acqmss_calls=acqmss_calls,
+                reduce_runtime_ms=reduce_runtime_ms,
+                solver_time_ms=solver_time_ms,
+                is_consistent_calls=is_consistent_calls,
+                is_consistent_test_cases_calls=is_consistent_test_cases_calls,
+                redundancy_consistency_checks=redundancy_consistency_checks,
                 profiler_data=profiler_snapshot
             )
 

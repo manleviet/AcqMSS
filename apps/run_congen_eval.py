@@ -35,6 +35,8 @@ from conacq.eval import (
 )
 from conacq.eval.result_loader import ConGenResultData
 from conacq.examples import ExampleIO
+from conacq.bias import Bias, BiasIO
+from conacq.oracle.ground_truth import GroundTruthData
 
 
 @dataclass
@@ -45,6 +47,16 @@ class ModelConfig:
     bias: str
     examples: str = None
     folds_path: str = None
+
+
+def enrich_constraints(ids: List[str], bias: Bias) -> List[Dict[str, str]]:
+    """Convert constraint ID list to [{id, description}] using bias lookup."""
+    return [{"id": cid, "description": bias.get_description(cid)} for cid in ids]
+
+
+def enrich_constraint_descriptions(items: List[str]) -> List[Dict[str, str]]:
+    """Wrap bare description strings (e.g. missed_constraints) as [{id: null, description}]."""
+    return [{"id": None, "description": desc} for desc in items]
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
@@ -94,15 +106,13 @@ def get_strategies(strategy_config: str) -> List[EvaluationStrategy]:
 def evaluate_cv_with_strategy(
         cv_result: CrossValidationResult,
         strategies: List[EvaluationStrategy],
-        oracle_path: str,
-        bias_path: str,
+        evaluator: Evaluator,
 ) -> Tuple[List[Dict], Dict]:
     """Evaluate fold KBs + intersected KB with strategies.
 
     Returns: (fold_evaluations, intersected_evaluation)
     Each fold_evaluation is a dict mapping strategy name -> EvaluationResult.to_dict().
     """
-    evaluator = Evaluator.from_files(Path(oracle_path), Path(bias_path))
 
     fold_evaluations = []
     for fold in cv_result.fold_results:
@@ -139,6 +149,59 @@ def evaluate_cv_with_strategy(
     return fold_evaluations, intersected_eval
 
 
+def _enrich_eval_dict(eval_dict: Dict, bias: Bias):
+    """Enrich an evaluation result dict's constraint lists with descriptions."""
+    eval_dict['kb_constraints'] = enrich_constraints(
+        eval_dict['kb_constraints'], bias)
+    eval_dict['matched_constraints'] = enrich_constraints(
+        eval_dict['matched_constraints'], bias)
+    eval_dict['extra_constraints'] = enrich_constraints(
+        eval_dict['extra_constraints'], bias)
+    eval_dict['missed_constraints'] = enrich_constraint_descriptions(
+        eval_dict['missed_constraints'])
+
+
+def _print_constraint_list(label: str, items: List[Dict], indent: str = "    "):
+    """Print a list of {id, description} constraint dicts."""
+    if not items:
+        print(f"{indent}{label}: (none)")
+        return
+    print(f"{indent}{label} ({len(items)}):")
+    for c in items:
+        cid = c.get('id') or '—'
+        desc = c.get('description', '')
+        print(f"{indent}  {cid}: {desc}")
+
+
+def _print_enriched_constraints(
+        cv_dict: Dict,
+        intersected_eval: Dict,
+        strategies: List[EvaluationStrategy] = None,
+):
+    """Print constraint details with descriptions (verbose mode)."""
+    # Print per-fold KB constraints
+    for fold_dict in cv_dict['folds']:
+        fi = fold_dict['fold_index'] + 1
+        print(f"\n  Fold {fi} Constraints:")
+        _print_constraint_list("KB", fold_dict['kb_constraints'])
+        _print_constraint_list("Redundant", fold_dict['redundant_constraints'])
+
+    # Print intersected KB
+    print(f"\n  Intersected KB Constraints:")
+    _print_constraint_list("KB", cv_dict['intersected_kb'])
+
+    # Print strategy evaluation details
+    if strategies and intersected_eval:
+        for strategy in strategies:
+            sname = strategy.value
+            if sname in intersected_eval:
+                print(f"\n  Strategy '{sname}' (Intersected KB):")
+                eval_dict = intersected_eval[sname]
+                _print_constraint_list("Matched", eval_dict['matched_constraints'])
+                _print_constraint_list("Missed", eval_dict['missed_constraints'])
+                _print_constraint_list("Extra", eval_dict['extra_constraints'])
+
+
 def evaluate_model(
         model_config: ModelConfig,
         eval_config: Dict,
@@ -170,6 +233,9 @@ def evaluate_model(
         print(f"\n{'=' * 60}")
         print(f"Evaluating: {model_name}")
         print(f"{'=' * 60}")
+
+        # Load bias once for enrichment + evaluator
+        bias = BiasIO.load_from_json(model_config.bias)
 
         if verbose:
             print(f"  Oracle: {model_config.oracle}")
@@ -207,6 +273,12 @@ def evaluate_model(
                 else:
                     print(f"  WARNING: folds_path not found: {model_config.folds_path}, using on-the-fly generation")
 
+            # Build evaluator once (reuse bias, avoid loading twice)
+            evaluator = None
+            if strategies:
+                oracle = GroundTruthData.from_uvl(Path(model_config.oracle))
+                evaluator = Evaluator(oracle, bias)
+
             for is_incremental in solver_modes:
                 mode_name = "incremental" if is_incremental else "non-incremental"
                 print(f"\n--- Mode: {mode_name.upper()} ---")
@@ -231,10 +303,27 @@ def evaluate_model(
                 # Serialize CV result and inject strategy evaluation
                 cv_dict = cv_result.to_dict()
 
-                if strategies:
+                # Enrich fold constraint lists with descriptions
+                for fold_dict in cv_dict['folds']:
+                    fold_dict['kb_constraints'] = enrich_constraints(
+                        fold_dict['kb_constraints'], bias)
+                    fold_dict['redundant_constraints'] = enrich_constraints(
+                        fold_dict['redundant_constraints'], bias)
+                cv_dict['intersected_kb'] = enrich_constraints(
+                    cv_dict['intersected_kb'], bias)
+
+                intersected_eval = {}
+                if strategies and evaluator:
                     fold_evals, intersected_eval = evaluate_cv_with_strategy(
-                        cv_result, strategies, model_config.oracle, model_config.bias
+                        cv_result, strategies, evaluator
                     )
+                    # Enrich strategy evaluation constraint lists
+                    for fold_eval in fold_evals:
+                        for eval_dict in fold_eval.values():
+                            _enrich_eval_dict(eval_dict, bias)
+                    for eval_dict in intersected_eval.values():
+                        _enrich_eval_dict(eval_dict, bias)
+
                     # Inject per-fold strategy evaluation
                     for i, fold_eval in enumerate(fold_evals):
                         cv_dict['folds'][i]['strategy_evaluation'] = fold_eval
@@ -248,6 +337,10 @@ def evaluate_model(
                         if intersected_eval.get(sname):
                             m = intersected_eval[sname]['metrics']
                             print(f"    {sname}: P={m['precision']:.4f}, R={m['recall']:.4f}, F1={m['f1_score']:.4f}")
+
+                # Verbose: print constraints with descriptions
+                if verbose:
+                    _print_enriched_constraints(cv_dict, intersected_eval, strategies)
 
                 # Save CV JSON with eval data
                 output_file = output_dir / f"{model_name}_cv_{mode_name}.json"
@@ -268,7 +361,7 @@ def evaluate_model(
                         'model': model_name,
                         'mode': mode_name,
                         'strategies': [s.value for s in strategies],
-                        'intersected_kb': cv_result.intersected_kb,
+                        'intersected_kb': cv_dict['intersected_kb'],
                         'evaluation': intersected_eval,
                     }
                     with open(intersected_eval_file, 'w') as f:
