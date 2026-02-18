@@ -1,6 +1,6 @@
 # ConGen - Constraint Acquisition With Maximum Satisfiable Subsets
 
-**Last Updated**: 2026-02-17
+**Last Updated**: 2026-02-18
 
 **Paper:** Leviet M. — MSS-based Passive Constraint Acquisition for Feature Models
 
@@ -330,13 +330,14 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 ## Implementation Details Beyond Paper
 
 1. **ConGenModel.prepare()**: Runs GenerateNE internally — callers don't invoke it separately
-2. **Builder pattern**: `ConGenModelBuilder` encapsulates file loading + model construction
+2. **Builder pattern**: `ConGenModelBuilder` encapsulates file loading + model construction (auto-prepares if oracle+examples set)
 3. **CheckerModel protocol**: `get_kb()`, `get_assumptions()`, `use_incremental` for CheckerFactory
 4. **Assumption-based representation**: All data as `List[int]` assumption IDs, solver mode-agnostic
 5. **negation_map**: `Dict[int, int]` maps assumption ID → negated form for REDUCE
 6. **Tseitin encoding**: Used to negate CNF clauses for REDUCE redundancy checks
-7. **CV fold reuse**: `model.prepare(fold_pos, fold_neg)` supports multiple fold evaluations
-8. **Profiler integration**: `@measure_time`, `@count_calls` decorators on all algorithm methods
+7. **BGData extraction**: Post-preparation, `FMOracleModel.get_bg_data()` returns frozen dataclass with root constraint + negation map
+8. **CV fold reuse**: `model.prepare(fold_pos, fold_neg)` supports multiple fold evaluations
+9. **Profiler integration**: `@measure_time`, `@count_calls` decorators on all algorithm methods
 
 ## Shared Infrastructure with QuAcq
 

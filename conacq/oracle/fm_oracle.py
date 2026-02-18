@@ -189,16 +189,16 @@ class FeatureModelOracle(Oracle):
         return self._oracle_model.next_available_id
 
     # TODO: need check
-    def get_constraint_descriptions(self) -> Set[str]:
-        """Extract constraint descriptions from FM (cached).
-
-        Returns:
-            Set of constraint descriptions
-        """
-        if self._constraint_descriptions_cache is None:
-            from conacq.oracle.constraint_description import extract_constraint_descriptions
-            self._constraint_descriptions_cache = extract_constraint_descriptions(self.fm)
-        return self._constraint_descriptions_cache
+    # def get_constraint_descriptions(self) -> Set[str]:
+    #     """Extract constraint descriptions from FM (cached).
+    #
+    #     Returns:
+    #         Set of constraint descriptions
+    #     """
+    #     if self._constraint_descriptions_cache is None:
+    #         from conacq.oracle.constraint_description import extract_constraint_descriptions
+    #         self._constraint_descriptions_cache = extract_constraint_descriptions(self.fm)
+    #     return self._constraint_descriptions_cache
 
     def __repr__(self):
         return f"FeatureModelOracle(features={len(self._oracle_model.variables)})"

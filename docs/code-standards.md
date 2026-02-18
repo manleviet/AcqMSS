@@ -1,6 +1,6 @@
 # AcqMSS Code Standards & Guidelines
 
-**Last Updated**: 2026-02-17
+**Last Updated**: 2026-02-18
 
 ## Language & Environment
 
@@ -320,6 +320,15 @@ Extract duplicated logic into static/class methods. Example: `InteractiveTask.vi
 
 `InteractiveLearner` provides high-level facade for QuAcq learning modes (oracle-based or example-based). QuAcq processes negative examples with FindScope/FindC to identify violated constraints.
 
+### 8. CheckerModel Protocol (Duck Typing)
+
+Classes implementing `CheckerModel` must provide:
+- `get_kb() -> List[List[int]]` — Return CNF clauses
+- `get_assumptions() -> List[int]` — Return all possible assumptions
+- `use_incremental: bool` — Flag for solver mode preference
+
+Both `ConGenModel` and `FMOracleModel` implement this protocol for integration with `CheckerFactory`.
+
 ## Oracle Module Conventions
 
 **Package**: `conacq/oracle/` — Minimal, focused oracle abstraction
@@ -332,20 +341,26 @@ Extract duplicated logic into static/class methods. Example: `InteractiveTask.vi
    - Fields: `features`, `feature_ids`, `root_feature`, `num_constraints`, `next_available_id`, `feature_count` property
    - Created by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers
 
-2. **FeatureModelOracle**: Main FM oracle
+2. **BGData** (`@dataclass(frozen=True)`): Root background knowledge constraint data
+   - Fields: `set_kb` (assumption-guarded clauses), `assumptions` (tuple of root and negated IDs), `negation_map`, `descriptions`, `next_available_id`
+   - Created by `FMOracleModel.get_bg_data()` after task preparation
+   - Enables ConGen to cleanly allocate assumption IDs without overlap with oracle assumptions
+
+3. **FeatureModelOracle**: Main FM oracle
    - ABC methods: `is_valid()`, `ask()`
    - FM extensions: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`
    - Delegates to `FMOracleModel` for consistency checking
    - Uses incremental solver by default
 
-3. **FMOracleModel**: Assumption-guarded FM model
+4. **FMOracleModel**: Assumption-guarded FM model
    - FM clauses in `set_kb` (always active)
    - Feature assignments as assumption-guarded unit clauses: `[-a_pos_i, fid]`, `[-a_neg_i, -fid]`
    - Satisfies `CheckerModel` protocol for `CheckerFactory`
+   - Exposes `bg_data` property and `get_bg_data()` method to extract root constraint
 
-4. **UserPromptOracle**: Interactive human oracle (implements `is_valid()` only)
+5. **UserPromptOracle**: Interactive human oracle (implements `is_valid()` only)
 
-5. **CachedOracle**: Transparent caching wrapper (caches `is_valid()`, delegates FM methods)
+6. **CachedOracle**: Transparent caching wrapper (caches `is_valid()`, delegates FM methods)
 
 **Design Principles**:
 - Minimal ABC (only `is_valid()`)

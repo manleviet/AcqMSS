@@ -1,6 +1,6 @@
 # AcqMSS Documentation
 
-**Last Updated**: 2026-02-17
+**Last Updated**: 2026-02-18
 
 Welcome to the comprehensive documentation for AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets). This directory contains technical documentation for developers, researchers, and contributors.
 
@@ -279,7 +279,7 @@ congen.md (ALGORITHM DETAILS)
 | project-overview-pdr.md | 352 | 17 KB | ✅ Updated 2026-02-17 |
 | project-roadmap.md | 347 | 14 KB | ✅ Updated 2026-02-17 |
 | quacq.md | 193 | 7 KB | ✅ Updated 2026-02-17 |
-| **TOTAL** | **3,367** | **133 KB** | ✅ **All under 800 LOC** |
+| **TOTAL** | **3,404** | **135 KB** | ✅ **All under 800 LOC** |
 
 All files are within size constraints (≤800 LOC per file) and follow documentation standards.
 
@@ -355,6 +355,7 @@ Documentation is updated when:
 - **New features added** — Document architecture and usage
 
 **Version History:**
+- v1.5 (2026-02-18): ConGenModelBuilder auto-prepare pattern, BGData class, runner details, cross-validation refactoring documentation
 - v1.4 (2026-02-17): Updated for oracle refactoring (ABC slimmed, FMData introduced, FeatureModelOracle extended), runners/ package move, CheckerFactory import path correction
 - v1.3 (2026-02-16): Added congen.md, cross-linked all docs
 - v1.2 (2026-02-16): Update for variable naming refactor (neg_c_map → negation_map), CheckerFactory API update

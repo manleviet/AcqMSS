@@ -1,8 +1,8 @@
 # AcqMSS Codebase Summary
 
-**Total Python Code**: ~19,532 lines across ~97 files
-**Main Packages**: conacq (~9,900 LOC) + explanation (~6,100 LOC) + apps (~3,700 LOC) + tests (~3,000+ LOC)
-**Last Updated**: 2026-02-17
+**Total Python Code**: ~20,900 lines across ~101 files
+**Main Packages**: conacq (~9,272 LOC) + explanation (~4,600 LOC) + apps (~3,300 LOC) + tests (~3,745 LOC)
+**Last Updated**: 2026-02-18
 
 ## Package Structure
 
@@ -62,13 +62,13 @@ Sampling strategies, example generation, and query generation for learning:
 | `example_provider.py` | ~120 | ExampleProvider: batch example interface (moved from oracle/) |
 | `__init__.py` | ~1 | Package exports with lazy-loaded QueryGenerator |
 
-**Oracle Sub-package** (`conacq/oracle/`, 10 files, ~998 LOC):
+**Oracle Sub-package** (`conacq/oracle/`, 10 files, ~1,000 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `base.py` | 47 | Oracle ABC: minimal interface. Only abstract: `is_valid(assignments)`. Concrete: `ask()` alias. |
 | `fm_data.py` | 25 | FMData: frozen dataclass for FM metadata (features, feature_ids, root_feature, num_constraints, next_available_id). Decouples metadata from oracle. |
-| `bg_data.py` | 27 | BGData: frozen dataclass for background knowledge root constraint + negation pair. Extracted post-preparation from Oracle for ConGen consumption. |
+| `bg_data.py` | 27 | BGData: frozen dataclass for background knowledge root constraint + negation pair. Extracted post-preparation from Oracle for ConGen consumption. Enables assumption ID allocation without overlap. |
 | `fm_oracle.py` | 200+ | FeatureModelOracle: FM oracle implementation. ABC methods: `is_valid()`, `ask()`. FM-specific: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`. |
 | `fm_oracle_model.py` | 280+ | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol. Exposes `bg_data` property + `get_bg_data()` for ConGen to extract root BG constraint. |
 | `constraint_description.py` | 120 | CTC description extraction from FM (requires/excludes/hierarchical) |
@@ -321,11 +321,11 @@ CONGEN and QuAcq learning results:
 
 | Component | LOC | Files | Avg File Size | Status |
 |-----------|-----|-------|---------------|--------|
-| conacq/ | ~9,900 | ~50 | ~198 | ✅ Core algorithms |
-| explanation/ | ~6,100 | ~35 | ~174 | ✅ SAT infrastructure |
-| apps/ | ~3,702 | 9 | ~411 | ✅ CLI applications |
-| tests/ | ~3,500+ | 8 | ~437 | ✅ Comprehensive coverage |
-| **Total** | **~19,532** | **~97** | **~201** | ✅ **Production ready** |
+| conacq/ | ~9,272 | ~50 | ~185 | ✅ Core algorithms |
+| explanation/ | ~4,600 | ~35 | ~131 | ✅ SAT infrastructure |
+| apps/ | ~3,300 | 9 | ~367 | ✅ CLI applications |
+| tests/ | ~3,745 | 8 | ~468 | ✅ Comprehensive coverage |
+| **Total** | **~20,900** | **~101** | **~207** | ✅ **Production ready** |
 
 **Recent Changes** (Oracle Interface Refactoring - commit c978d66):
 

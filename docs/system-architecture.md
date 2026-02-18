@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-17 (oracle refactor, runners move)
+**Last Updated**: 2026-02-18 (BGData, ConGenModelBuilder auto-prepare, cross-validation refactor)
 
 ## High-Level Overview
 
