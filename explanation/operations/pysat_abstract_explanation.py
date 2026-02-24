@@ -152,6 +152,22 @@ class PySATAbstractExplanation(Operation):
         """
         return self.result_messages
 
+    def get_diagnoses(self) -> List[List]:
+        """Get raw diagnosis constraint sets from HSDAG.
+
+        Returns:
+            List of diagnoses (each a list of constraints), or empty if HSDAG not executed.
+        """
+        return self.hsdag.get_diagnoses() if self.hsdag else []
+
+    def get_conflicts(self) -> List[List]:
+        """Get raw conflict sets from HSDAG.
+
+        Returns:
+            List of conflicts (each a list of constraints), or empty if HSDAG not executed.
+        """
+        return self.hsdag.get_conflicts() if self.hsdag else []
+
     def _create_checker(self, model: DiagnosisModel) -> ConsistencyChecker:
         """Create consistency checker from model.
 
