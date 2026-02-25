@@ -63,6 +63,9 @@ from .folds import FoldData, generate_folds, save_folds, load_folds, apply_folds
 # Main evaluator
 from .kb_comparator import KBComparator, ComparationStrategy, ComparationResult
 
+# Pipeline config
+from .config import ModelConfig, load_pipeline_config, parse_models, find_kb_files
+
 # Report generation
 from .report import (
     generate_evaluation_report,
@@ -117,6 +120,12 @@ __all__ = [
     'save_folds',
     'load_folds',
     'apply_folds',
+
+    # Pipeline config
+    'ModelConfig',
+    'load_pipeline_config',
+    'parse_models',
+    'find_kb_files',
 
     # Reports
     'generate_evaluation_report',

@@ -179,7 +179,8 @@ def save_kb_result(
         n_mss: int,
         n_kb: int,
         output_path: Path,
-        metadata: dict = None
+        bg_clauses: Optional[list] = None,
+        metadata: Optional[dict] = None
 ) -> None:
     """
     Save KB result to JSON file.
@@ -194,11 +195,13 @@ def save_kb_result(
         n_mss: Size of MSS before REDUCE
         n_kb: Final KB size
         output_path: Path to save JSON file
+        bg_clauses: Background knowledge clauses (e.g., [[1]] for root)
         metadata: Optional metadata dict
     """
     data = {
         'kb_constraints': kb_constraints,
         'redundant_constraints': redundant_constraints,
+        'bg_clauses': bg_clauses or [],
         'statistics': {
             'n_bias': n_bias,
             'n_mss': n_mss,

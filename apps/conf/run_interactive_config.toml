@@ -1,0 +1,23 @@
+# Interactive (QuAcq) Constraint Acquisition Configuration
+# Run with: python -m apps.run_interactive apps/conf/run_interactive_config.toml -v
+
+[general]
+seed = 82
+output_dir = "data/results/interactive"
+verbose = true
+
+[interactive]
+# Maximum number of membership queries
+max_queries = 1000
+
+# Mode: "automated" (Oracle answers using FM) or "interactive" (human expert)
+mode = "automated"
+
+# SAT solver name
+solver_name = "glucose4"
+
+# Models to process
+[[models]]
+name = "REAL-FM-7"
+oracle = "data/fms/REAL-FM-7.uvl"
+bias = "data/bias/REAL-FM-7-bias.json"
