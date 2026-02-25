@@ -1,5 +1,5 @@
 # ConGen Configuration
-# Run with: PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml
+# Run with: python -m apps.run_congen apps/conf/run_congen_config.toml
 
 [general]
 seed = 82

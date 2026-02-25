@@ -411,28 +411,31 @@ PYTHONPATH=. pytest tests/test_diagnosis.py::test_fastdiag -v -s
 
 ```bash
 # Generate bias files from feature model
-PYTHONPATH=. python apps/generate_bias_config.py data/fms/model.uvl -v
-PYTHONPATH=. python apps/generate_bias_files.py data/bias-config/model.yaml
+python -m apps.generate_bias_config data/fms/model.uvl -v
+python -m apps.generate_bias_files data/bias-config/model.yaml
 
 # Generate test examples
-PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml
+python -m apps.generate_examples apps/conf/generate_examples_config.toml
 
-# Run ConGen cross-validation (primary evaluation path)
-PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v
+# Run unified cross-validation (ConGen + Interactive)
+python -m apps.run_cv apps/conf/run_cv_config.toml -v
 
-# Run ConGen single run (dev/debug only)
-PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
-PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml --non-incremental
+# Run pure QuAcq learning (no CV, no evaluation)
+python -m apps.run_interactive apps/conf/run_interactive_config.toml -v
+python -m apps.run_interactive apps/conf/run_interactive_config.toml --interactive
 
-# Run QuAcq (interactive learning)
-PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v
-PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml --interactive
+# Compare learned KB against oracle FM
+python -m apps.run_compare --kb data/results/model_kb.json --bias data/bias/model-bias.json --oracle data/fms/model.uvl -v
 
-# Run QuAcq with cross-validation
-PYTHONPATH=. python apps/run_interactive_eval.py apps/conf/run_interactive_eval_config.toml -v --cv
+# Describe KB constraints
+python -m apps.describe_kb --kb data/results/model_kb.json --bias data/bias/model-bias.json
 
-# Extract results and generate reports (includes fold metrics)
-PYTHONPATH=. python apps/extract_results.py <results_dir> -v
+# Single-run ConGen (debug tool)
+python -m apps.run_congen apps/conf/run_congen_config.toml -v
+python -m apps.run_congen apps/conf/run_congen_config.toml --non-incremental
+
+# Extract and generate final reports (includes fold metrics)
+python -m apps.extract_results <results_dir> -v
 ```
 
 ## File Size Analysis

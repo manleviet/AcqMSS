@@ -1,7 +1,7 @@
 # Configuration for generating test case examples from feature models
 # Based on AcqMSS paper sampling methods (Section "Sampling Methods")
 #
-# Usage: PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml
+# Usage: python -m apps.generate_examples apps/conf/generate_examples_config.toml
 
 [general]
 # Random seed for reproducibility

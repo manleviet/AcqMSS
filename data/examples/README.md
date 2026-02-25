@@ -37,5 +37,5 @@ Generated examples for constraint acquisition evaluation (AcqMSS paper).
 ## Usage
 
 ```bash
-PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml
+python -m apps.generate_examples apps/conf/generate_examples_config.toml
 ```

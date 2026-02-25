@@ -8,7 +8,7 @@ Sampling methods (from AcqMSS paper):
 - Feature Frequency (FF): each feature appears True/False in E+/E-
 
 Usage:
-    PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml
+    python -m apps.generate_examples apps/conf/generate_examples_config.toml
 """
 
 import argparse

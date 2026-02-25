@@ -3,7 +3,7 @@
 Extract evaluation results and generate tables for the paper.
 
 Usage:
-    PYTHONPATH=. python apps/extract_results.py [--results-dir data/results] [--output-dir paper/tables]
+    python -m apps.extract_results [--results-dir data/results] [--output-dir paper/tables]
 
 Tables generated:
     - Paper Tables 7, 9, 10, 11 (consistency checks, accuracy by strategy)

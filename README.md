@@ -28,17 +28,17 @@ PYTHONPATH=. pytest tests/ -k "fastdiag" -v          # Pattern match
 
 ```bash
 # 1. Generate bias from feature model
-PYTHONPATH=. python apps/generate_bias_config.py data/fms/arcade-game.uvl -v
-PYTHONPATH=. python apps/generate_bias_files.py data/bias-config/arcade-game.yaml
+python -m apps.generate_bias_config data/fms/arcade-game.uvl -v
+python -m apps.generate_bias_files data/bias-config/arcade-game.yaml
 
 # 2. Generate test examples (E+/E-)
-PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml -v
+python -m apps.generate_examples apps/conf/generate_examples_config.toml -v
 
 # 3. Learn constraints (ConGen passive learning)
-PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
+python -m apps.run_congen apps/conf/run_congen_config.toml -v
 
-# 4. Evaluate results
-PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml -v
+# 4. Compare learned KB against oracle
+python -m apps.run_compare apps/conf/run_compare_config.toml -v
 ```
 
 ## Two Learning Paradigms

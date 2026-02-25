@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 """
-Run ConGen constraint acquisition algorithm.
+Run ConGen constraint acquisition — just for testing
+
+No evaluation, no CV, no enrichment. Use run_cv.py for CV
+and run_compare.py for evaluation.
 
 Usage:
-    PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml
-    PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml --non-incremental
+    python -m apps.run_congen apps/conf/run_congen_config.toml
+    python -m apps.run_congen apps/conf/run_congen_config.toml --non-incremental
 """
 
 import argparse

@@ -41,7 +41,7 @@ PYTHONPATH=. pytest tests/ -v                        # All tests
 PYTHONPATH=. pytest tests/test_congen.py -v          # Specific file
 PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
 
-# Key apps pattern: PYTHONPATH=. python apps/<script> <toml-config> -v
+# Key apps pattern: python -m apps.<module> <toml-config> -v
 # See README.md for full workflow commands
 ```
 

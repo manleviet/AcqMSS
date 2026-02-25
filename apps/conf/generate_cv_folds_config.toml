@@ -1,5 +1,5 @@
 # CV Fold Generation Configuration
-# Run with: PYTHONPATH=. python apps/generate_cv_folds.py apps/conf/generate_cv_folds_config.toml
+# Run with: python -m apps.generate_cv_folds apps/conf/generate_cv_folds_config.toml
 
 [folds]
 seed = 82
