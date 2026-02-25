@@ -14,44 +14,11 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
-from dataclasses import dataclass
-
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
 
 from conacq.runners import ConGenRunner
 from conacq.examples import ExampleIO
 from conacq.eval.report import save_kb_result
-
-
-@dataclass
-class ModelConfig:
-    """Configuration for a single model"""
-    path: str
-    bias: str
-    examples: str
-
-
-def load_config(config_path: str) -> Dict[str, Any]:
-    """Load TOML configuration file."""
-    with open(config_path, 'rb') as f:
-        return tomllib.load(f)
-
-
-def parse_models(config: Dict) -> List[ModelConfig]:
-    """Parse models list from config"""
-    models_data = config.get('models', [])
-    return [
-        ModelConfig(
-            path=m['path'],
-            bias=m['bias'],
-            examples=m['examples']
-        )
-        for m in models_data
-    ]
+from conacq.eval.config import ModelConfig, load_pipeline_config, parse_models
 
 
 def extract_sampling_type(examples_path: str) -> str:
@@ -76,7 +43,7 @@ def extract_sampling_type(examples_path: str) -> str:
 
 
 def process_model(model_config: ModelConfig, output_dir: Path,
-                  seed: int, verbose: bool, is_incremental: bool = True,
+                  seed: int, verbose: bool, use_incremental: bool = True,
                   solver_name: str = 'glucose4') -> bool:
     """Process a single model with ConGen via ConGenRunner.
 
@@ -85,7 +52,7 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         output_dir: Directory to save results
         seed: Random seed (unused, for compatibility)
         verbose: Enable verbose output
-        is_incremental: Use incremental solver mode
+        use_incremental: Use incremental solver mode
         solver_name: SAT solver name
 
     Returns:
@@ -93,15 +60,15 @@ def process_model(model_config: ModelConfig, output_dir: Path,
     """
     runner = None
     try:
-        model_name = Path(model_config.path).stem
+        model_name = model_config.name
         sampling_type = extract_sampling_type(model_config.examples)
 
         if verbose:
             print(f"\nProcessing: {model_name}")
-            print(f"  FM: {model_config.path}")
+            print(f"  FM: {model_config.oracle}")
             print(f"  Bias: {model_config.bias}")
             print(f"  Examples: {model_config.examples}")
-            print(f"  Mode: {'incremental' if is_incremental else 'non-incremental'}")
+            print(f"  Mode: {'incremental' if use_incremental else 'non-incremental'}")
 
         # Load examples
         examples = ExampleIO.load_json(model_config.examples)
@@ -109,8 +76,8 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         neg = [e.assignments for e in examples.negative]
 
         # Run ConGen via runner
-        runner = ConGenRunner(model_config.bias, model_config.path,
-                              solver_name, is_incremental)
+        runner = ConGenRunner(model_config.bias, model_config.oracle,
+                              solver_name, use_incremental)
         result = runner.run(pos, neg)
 
         if verbose:
@@ -134,6 +101,7 @@ def process_model(model_config: ModelConfig, output_dir: Path,
             n_mss=result.n_mss,
             n_kb=result.n_kb,
             output_path=output_file,
+            bg_clauses=result.bg_clauses,
         )
 
         if verbose:
@@ -142,7 +110,7 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         return True
 
     except Exception as e:
-        print(f"Error processing {model_config.path}: {e}")
+        print(f"Error processing {model_config.oracle}: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -158,8 +126,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
-    PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v
-    PYTHONPATH=. python apps/run_congen.py apps/conf/run_congen_config.toml -v --non-incremental
+    python -m apps.run_congen apps/conf/run_congen_config.toml -v
+    python -m apps.run_congen apps/conf/run_congen_config.toml -v --non-incremental
         """
     )
     parser.add_argument('config', help='Path to TOML configuration file')
@@ -182,7 +150,7 @@ Example:
         print(f"Error: Config not found: {args.config}")
         sys.exit(1)
 
-    config = load_config(args.config)
+    config = load_pipeline_config(args.config)
 
     # Parse settings
     general = config.get('general', {})
@@ -198,8 +166,8 @@ Example:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    is_incremental = not args.non_incremental
-    mode_str = "incremental" if is_incremental else "non-incremental"
+    use_incremental = not args.non_incremental
+    mode_str = "incremental" if use_incremental else "non-incremental"
 
     print("=" * 60)
     print("ConGen Constraint Acquisition")
@@ -213,7 +181,7 @@ Example:
     success_count = 0
     for model in models:
         if process_model(model, output_dir, seed, verbose,
-                         is_incremental=is_incremental, solver_name=args.solver):
+                         use_incremental=use_incremental, solver_name=args.solver):
             success_count += 1
 
     print()

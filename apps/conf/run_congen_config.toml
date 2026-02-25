@@ -8,6 +8,7 @@ verbose = true
 
 # Feature models to process
 [[models]]
-path = "data/fms/REAL-FM-7.uvl"
+name = "REAL-FM-7_rs_1n"
+oracle = "data/fms/REAL-FM-7.uvl"
 bias = "data/bias/REAL-FM-7-bias.json"
 examples = "data/examples/REAL-FM-7_rs_1n.json"
