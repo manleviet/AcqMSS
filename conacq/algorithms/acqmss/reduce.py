@@ -77,7 +77,6 @@ class Reduce:
             neg_c = negation_map[c]
 
             # Check inconsistent(BG ∪ (KB - {c}) ∪ {¬c})
-            # TODO: try removing root
             test_set = set_bg + kb_without_c + [neg_c]
             is_consistent = self.checker.is_consistent(test_set)
             self.profiler.increment("redundancy_consistency_checks")

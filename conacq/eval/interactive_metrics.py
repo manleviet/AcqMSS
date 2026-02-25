@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .evaluator import Evaluator, EvaluationStrategy
+from .kb_comparator import KBComparator, ComparationStrategy
 from .result_loader import ConGenResultData
 
 
@@ -156,9 +156,9 @@ class ComparisonResult:
         }
 
 
-class InteractiveEvaluator:
+class InteractiveKBComparator:
     """
-    Evaluator for interactive constraint acquisition.
+    KBComparator for interactive constraint acquisition.
 
     Computes metrics for QuAcq results and compares with ConGen.
     """
@@ -173,12 +173,12 @@ class InteractiveEvaluator:
         """
         self.oracle_path = Path(oracle_path)
         self.bias_path = Path(bias_path)
-        self.evaluator = Evaluator.from_files(self.oracle_path, self.bias_path)
+        self.comparator = KBComparator.from_files(self.oracle_path, self.bias_path)
 
     def evaluate_interactive_result(
             self,
             result_path: str,
-            strategy: EvaluationStrategy = EvaluationStrategy.DESCRIPTION
+            strategy: ComparationStrategy = ComparationStrategy.DESCRIPTION
     ) -> InteractiveMetrics:
         """
         Evaluate an interactive learning result.
@@ -200,14 +200,14 @@ class InteractiveEvaluator:
         congen_result = ConGenResultData(
             kb_constraints=kb_constraints,
             redundant_constraints=[],
-            n_bias=len(self.evaluator.bias.constraints),
+            n_bias=len(self.comparator.bias.constraints),
             n_mss=0,
             n_kb=result_data.get('n_kb', len(kb_constraints)),
             bg_clauses=result_data.get('bg_clauses', [])
         )
 
         # Evaluate using specified strategy
-        eval_result = self.evaluator.evaluate(congen_result, strategy)
+        eval_result = self.comparator.compare(congen_result, strategy)
         metrics = eval_result.metrics
 
         return InteractiveMetrics(
@@ -241,11 +241,11 @@ class InteractiveEvaluator:
         """
         desc_metrics = self.evaluate_interactive_result(
             result_path,
-            EvaluationStrategy.DESCRIPTION
+            ComparationStrategy.DESCRIPTION
         )
         clause_metrics = self.evaluate_interactive_result(
             result_path,
-            EvaluationStrategy.CLAUSE
+            ComparationStrategy.CLAUSE
         )
 
         return {
@@ -288,7 +288,7 @@ class InteractiveEvaluator:
         )
 
         # Evaluate
-        eval_result = self.evaluator.evaluate(congen_result)
+        eval_result = self.comparator.compare(congen_result)
         metrics = eval_result.metrics
 
         # Count examples

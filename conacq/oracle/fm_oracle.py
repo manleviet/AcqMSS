@@ -153,17 +153,14 @@ class FeatureModelOracle(Oracle):
                 for name, fid in self._oracle_model.variables.items()}
 
     # Convenience getters (delegate to model)
-    # TODO: need check
     def get_kb(self) -> List[List[int]]:
         """Get the full knowledge base with assumptions."""
         return self._oracle_model.task.set_kb
 
-    # TODO: need check
     def get_assumptions(self) -> List[int]:
         """Get the list of assumption literals."""
         return self._oracle_model.task.assumptions
 
-    # TODO: need check
     def get_c(self) -> List[int]:
         """Get the set of constraint assumptions (FM constraints only, excluding feature assignments)."""
         return self._oracle_model.get_c()
@@ -172,6 +169,11 @@ class FeatureModelOracle(Oracle):
     def get_root_feature(self) -> str:
         """Get root feature name."""
         return self.fm.root.name
+
+    def get_root_clauses(self) -> List[List[int]]:
+        """Get raw background knowledge clauses (root constraint)."""
+        root = self.get_root_feature()
+        return list(self._oracle_model.constraint_map[root])
 
     # TODO: need check
     def get_cnf_clauses(self) -> List[List[int]]:
@@ -187,18 +189,6 @@ class FeatureModelOracle(Oracle):
     def get_next_available_id(self) -> int:
         """Get starting Tseitin variable ID from FM model."""
         return self._oracle_model.next_available_id
-
-    # TODO: need check
-    # def get_constraint_descriptions(self) -> Set[str]:
-    #     """Extract constraint descriptions from FM (cached).
-    #
-    #     Returns:
-    #         Set of constraint descriptions
-    #     """
-    #     if self._constraint_descriptions_cache is None:
-    #         from conacq.oracle.constraint_description import extract_constraint_descriptions
-    #         self._constraint_descriptions_cache = extract_constraint_descriptions(self.fm)
-    #     return self._constraint_descriptions_cache
 
     def __repr__(self):
         return f"FeatureModelOracle(features={len(self._oracle_model.variables)})"

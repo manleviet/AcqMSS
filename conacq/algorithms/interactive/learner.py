@@ -16,7 +16,7 @@ from conacq.example_generators import ExampleProvider
 from .quacq import QuAcq
 from conacq.bias.bias_io import BiasIO
 from conacq.bias.data_structures import Bias
-from conacq.eval.evaluator import Evaluator, EvaluationStrategy
+from conacq.eval.kb_comparator import KBComparator, ComparationStrategy
 from conacq.eval.result_loader import ConGenResultData
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, use_global_profiler, ProfilerPreset, AbstractProfiler
@@ -293,13 +293,13 @@ class InteractiveLearner:
                 "Use from_files() to create the learner."
             )
 
-        # Create evaluator from files
-        evaluator = Evaluator.from_files(
+        # Create comparator from files
+        comparator = KBComparator.from_files(
             Path(self._fm_path),
             Path(self._bias_path)
         )
 
-        # Create a result-like object for the evaluator
+        # Create a result-like object for the comparator
         # Wrap background assumptions as unit clauses for clause-based eval
         bg_clauses = [[lit] for lit in self.task.background] if self.task.background else []
         congen_result = ConGenResultData(
@@ -312,10 +312,10 @@ class InteractiveLearner:
         )
 
         # Evaluate with description-based strategy
-        desc_eval = evaluator.evaluate(congen_result, EvaluationStrategy.DESCRIPTION)
+        desc_eval = comparator.compare(congen_result, ComparationStrategy.DESCRIPTION)
 
         # Evaluate with clause-based strategy
-        clause_eval = evaluator.evaluate(congen_result, EvaluationStrategy.CLAUSE)
+        clause_eval = comparator.compare(congen_result, ComparationStrategy.CLAUSE)
 
         evaluation = {
             'description': desc_eval.to_dict(),

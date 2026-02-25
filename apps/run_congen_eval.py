@@ -29,8 +29,8 @@ from conacq.eval import (
     generate_cv_report,
     save_cv_kb_files,
     load_folds,
-    Evaluator,
-    EvaluationStrategy,
+    KBComparator,
+    ComparationStrategy,
     CrossValidationResult,
 )
 from conacq.eval.result_loader import ConGenResultData
@@ -92,43 +92,43 @@ def get_solver_modes(mode_config: str) -> List[bool]:
         return [True]
 
 
-def get_strategies(strategy_config: str) -> List[EvaluationStrategy]:
+def get_strategies(strategy_config: str) -> List[ComparationStrategy]:
     """Parse strategy config into list of EvaluationStrategy."""
     if strategy_config == 'all':
-        return [EvaluationStrategy.DESCRIPTION, EvaluationStrategy.CLAUSE]
+        return [ComparationStrategy.DESCRIPTION, ComparationStrategy.CLAUSE]
     elif strategy_config == 'description':
-        return [EvaluationStrategy.DESCRIPTION]
+        return [ComparationStrategy.DESCRIPTION]
     elif strategy_config == 'clause':
-        return [EvaluationStrategy.CLAUSE]
-    return [EvaluationStrategy.DESCRIPTION]
+        return [ComparationStrategy.CLAUSE]
+    return [ComparationStrategy.DESCRIPTION]
 
 
-def evaluate_cv_with_strategy(
+def compare_cv_with_strategy(
         cv_result: CrossValidationResult,
-        strategies: List[EvaluationStrategy],
-        evaluator: Evaluator,
+        strategies: List[ComparationStrategy],
+        comparator: KBComparator,
 ) -> Tuple[List[Dict], Dict]:
-    """Evaluate fold KBs + intersected KB with strategies.
+    """Compare fold KBs + intersected KB with GroundTruth.
 
-    Returns: (fold_evaluations, intersected_evaluation)
-    Each fold_evaluation is a dict mapping strategy name -> EvaluationResult.to_dict().
+    Returns: (fold_comparations, intersected_comparation)
+    Each fold_comparation is a dict mapping strategy name -> EvaluationResult.to_dict().
     """
 
-    fold_evaluations = []
+    fold_comparations = []
     for fold in cv_result.fold_results:
-        fold_eval = {}
+        fold_comp = {}
         result_data = ConGenResultData(
             kb_constraints=fold.kb_constraints,
             redundant_constraints=fold.redundant_constraints,
             n_bias=fold.n_bias,
             n_mss=fold.n_mss,
             n_kb=fold.n_kb,
-            bg_clauses=[]
+            bg_clauses=fold.bg_clauses
         )
         for strategy in strategies:
-            eval_result = evaluator.evaluate(result_data, strategy)
-            fold_eval[strategy.value] = eval_result.to_dict()
-        fold_evaluations.append(fold_eval)
+            com_result = comparator.compare(result_data, strategy)  ## TODO: đổi tên
+            fold_comp[strategy.value] = com_result.to_dict()
+        fold_comparations.append(fold_comp)
 
     # Evaluate intersected KB
     intersected_eval = {}
@@ -140,13 +140,13 @@ def evaluate_cv_with_strategy(
             n_bias=first_fold.n_bias,
             n_mss=0,
             n_kb=len(cv_result.intersected_kb),
-            bg_clauses=[]
+            bg_clauses=first_fold.bg_clauses
         )
         for strategy in strategies:
-            eval_result = evaluator.evaluate(intersected_data, strategy)
-            intersected_eval[strategy.value] = eval_result.to_dict()
+            com_result = comparator.compare(intersected_data, strategy)
+            intersected_eval[strategy.value] = com_result.to_dict()
 
-    return fold_evaluations, intersected_eval
+    return fold_comparations, intersected_eval
 
 
 def _enrich_eval_dict(eval_dict: Dict, bias: Bias):
@@ -176,7 +176,7 @@ def _print_constraint_list(label: str, items: List[Dict], indent: str = "    "):
 def _print_enriched_constraints(
         cv_dict: Dict,
         intersected_eval: Dict,
-        strategies: List[EvaluationStrategy] = None,
+        strategies: List[ComparationStrategy] = None,
 ):
     """Print constraint details with descriptions (verbose mode)."""
     # Print per-fold KB constraints
@@ -207,7 +207,7 @@ def evaluate_model(
         eval_config: Dict,
         output_dir: Path,
         verbose: bool,
-        strategies: List[EvaluationStrategy] = None,
+        strategies: List[ComparationStrategy] = None,
 ) -> bool:
     """
     Evaluate a single model via cross-validation.
@@ -234,7 +234,7 @@ def evaluate_model(
         print(f"Evaluating: {model_name}")
         print(f"{'=' * 60}")
 
-        # Load bias once for enrichment + evaluator
+        # Load bias once for enrichment + comparator
         bias = BiasIO.load_from_json(model_config.bias)
 
         if verbose:
@@ -273,11 +273,11 @@ def evaluate_model(
                 else:
                     print(f"  WARNING: folds_path not found: {model_config.folds_path}, using on-the-fly generation")
 
-            # Build evaluator once (reuse bias, avoid loading twice)
-            evaluator = None
+            # Build comparator once (reuse bias, avoid loading twice)
+            comparator = None
             if strategies:
-                oracle = GroundTruthData.from_uvl(Path(model_config.oracle))
-                evaluator = Evaluator(oracle, bias)
+                oracle = GroundTruthData.from_uvl(Path(model_config.oracle))  # groundtruth
+                comparator = KBComparator(oracle, bias)
 
             for is_incremental in solver_modes:
                 mode_name = "incremental" if is_incremental else "non-incremental"
@@ -313,10 +313,10 @@ def evaluate_model(
                     cv_dict['intersected_kb'], bias)
 
                 intersected_eval = {}
-                if strategies and evaluator:
-                    fold_evals, intersected_eval = evaluate_cv_with_strategy(
-                        cv_result, strategies, evaluator
-                    )
+                if strategies and comparator:
+                    fold_evals, intersected_eval = compare_cv_with_strategy(
+                        cv_result, strategies, comparator
+                    )  # TODO: đổi tên
                     # Enrich strategy evaluation constraint lists
                     for fold_eval in fold_evals:
                         for eval_dict in fold_eval.values():
@@ -326,7 +326,7 @@ def evaluate_model(
 
                     # Inject per-fold strategy evaluation
                     for i, fold_eval in enumerate(fold_evals):
-                        cv_dict['folds'][i]['strategy_evaluation'] = fold_eval
+                        cv_dict['folds'][i]['strategy_evaluation'] = fold_eval  # TODO: đổi tên
                     # Add intersected evaluation at top level
                     cv_dict['intersected_evaluation'] = intersected_eval
 

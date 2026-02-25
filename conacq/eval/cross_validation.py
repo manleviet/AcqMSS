@@ -37,6 +37,7 @@ class CrossValidationFoldResult:
     performance: PerformanceMetrics
     # KB data
     kb_constraints: List[str]
+    bg_clauses: List[List[int]]  # Background knowledge clauses (root constraint)
     redundant_constraints: List[str]
     n_bias: int
     n_mss: int
@@ -64,6 +65,7 @@ class CrossValidationFoldResult:
                 'profiler': self.profiler_data,
             },
             'kb_constraints': self.kb_constraints,
+            'bg_clauses': self.bg_clauses,
             'redundant_constraints': self.redundant_constraints,
             'statistics': {
                 'n_bias': self.n_bias,
@@ -78,6 +80,7 @@ class CrossValidationFoldResult:
         """Convert to KB file format."""
         return {
             'kb_constraints': self.kb_constraints,
+            'bg_clauses': self.bg_clauses,
             'redundant_constraints': self.redundant_constraints,
             'statistics': {
                 'n_bias': self.n_bias,
@@ -209,8 +212,9 @@ def _run_cv_loop(
         perf = run_result.get_performance_metrics()
         performance_list.append(perf)
 
-        # Test: calculate accuracy on held-out fold
-        with AccuracyCalculator(run_result.kb_clauses, variables, solver_name) as calculator:
+        # Test: calculate accuracy on held-out fold (union BG for root constraint)
+        bg_clauses = getattr(run_result, 'bg_clauses', [])
+        with AccuracyCalculator(run_result.kb_clauses + bg_clauses, variables, solver_name) as calculator:
             accuracy_result = calculator.calculate(test_pos, test_neg)
 
         fold_accuracy = accuracy_result.metrics.accuracy
@@ -223,6 +227,7 @@ def _run_cv_loop(
             metrics=accuracy_result.metrics,
             performance=perf,
             kb_constraints=run_result.kb_constraints,
+            bg_clauses=getattr(run_result, 'bg_clauses', []),
             redundant_constraints=getattr(run_result, 'redundant_constraints', []),
             n_bias=run_result.n_bias,
             n_mss=getattr(run_result, 'n_mss', 0),

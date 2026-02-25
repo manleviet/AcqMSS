@@ -5,7 +5,7 @@ This module provides tools to evaluate the quality of learned KBs by comparing
 with the Oracle (original Feature Model) and calculating accuracy metrics.
 
 Main components:
-- Evaluator: Main class for evaluating ConGen results
+- KBComparator: Main class for evaluating ConGen results
 - AccuracyCalculator: Calculate accuracy of KB against test examples
 - n_fold_cross_validation: Cross-validation for generalizability assessment
 - ConGenRunner: Run ConGen with performance metrics collection
@@ -21,9 +21,9 @@ Metrics (Formula 1 from paper):
 - F1 = 2 * P * R / (P + R)
 
 Example usage:
-    >>> from conacq.eval import Evaluator, EvaluationStrategy
-    >>> evaluator = Evaluator.from_bias_and_fm_fide('model.uvl', 'bias.json')
-    >>> result = evaluator.evaluate(congen_result, EvaluationStrategy.DESCRIPTION)
+    >>> from conacq.eval import KBComparator, ComparationStrategy
+    >>> evaluator = KBComparator.from_bias_and_fm_fide('model.uvl', 'bias.json')
+    >>> result = evaluator.compare(congen_result, ComparationStrategy.DESCRIPTION)
     >>> print(f"Accuracy: {result.metrics.accuracy:.4f}")
 """
 
@@ -61,7 +61,7 @@ from .cross_validation import (
 from .folds import FoldData, generate_folds, save_folds, load_folds, apply_folds
 
 # Main evaluator
-from .evaluator import Evaluator, EvaluationStrategy, EvaluationResult
+from .kb_comparator import KBComparator, ComparationStrategy, ComparationResult
 
 # Report generation
 from .report import (
@@ -106,10 +106,10 @@ __all__ = [
     'CrossValidationResult',
     'CrossValidationFoldResult',
 
-    # Evaluator
-    'Evaluator',
-    'EvaluationStrategy',
-    'EvaluationResult',
+    # KBComparator
+    'KBComparator',
+    'ComparationStrategy',
+    'ComparationResult',
 
     # Fold I/O
     'FoldData',

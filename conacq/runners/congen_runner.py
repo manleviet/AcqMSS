@@ -42,6 +42,7 @@ class ConGenRunResult:
     # KB result
     kb_constraints: List[str]
     kb_clauses: List[List[int]]
+    bg_clauses: List[List[int]]  # Background knowledge clauses (root constraint)
     redundant_constraints: List[str]
     n_bias: int
     n_mss: int
@@ -68,6 +69,7 @@ class ConGenRunResult:
         """Convert to dictionary for JSON serialization."""
         return {
             'kb_constraints': self.kb_constraints,
+            'bg_clauses': self.bg_clauses,
             'redundant_constraints': self.redundant_constraints,
             'n_bias': self.n_bias,
             'n_mss': self.n_mss,
@@ -236,6 +238,9 @@ class ConGenRunner:
 
             profiler_snapshot = profiler.to_dict()
 
+            # Extract BG clauses (root constraint) for evaluation
+            bg_clauses = self.oracle.get_root_clauses()
+
             # Get KB clauses: assumption_id → name → clauses
             provider = self.model.description_provider
             kb_clauses = []
@@ -252,6 +257,7 @@ class ConGenRunner:
             run_result = ConGenRunResult(
                 kb_constraints=kb_names,
                 kb_clauses=kb_clauses,
+                bg_clauses=bg_clauses,
                 redundant_constraints=redundant_names,
                 n_bias=result.n_bias,
                 n_mss=result.n_mss,

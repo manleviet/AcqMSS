@@ -1,7 +1,7 @@
 """
-Main evaluator for ConGen results.
+Main comparator for ConGen results.
 
-Supports two evaluation strategies:
+Supports two comparation strategies:
 1. Description-based (recommended): Compare constraint descriptions
 2. Clause-based: Compare CNF clauses (semantic)
 """
@@ -18,16 +18,16 @@ from .result_loader import ConGenResultData
 from .metrics import EvaluationMetrics, compute_metrics
 
 
-class EvaluationStrategy(Enum):
-    """Evaluation strategy."""
+class ComparationStrategy(Enum):
+    """Comparation strategy."""
     DESCRIPTION = "description"  # Compare constraint descriptions (recommended)
     CLAUSE = "clause"            # Compare CNF clauses (semantic)
 
 
 @dataclass
-class EvaluationResult:
+class ComparationResult:
     """
-    Complete evaluation result.
+    Complete comparation result.
 
     Attributes:
         strategy: Which strategy was used
@@ -59,9 +59,9 @@ class EvaluationResult:
         }
 
 
-class Evaluator:
+class KBComparator:
     """
-    Evaluate ConGen results against Oracle FM.
+    Compare ConGen results against Oracle FM.
 
     Supports two strategies:
     1. Description-based (recommended): Compare constraint descriptions
@@ -70,7 +70,7 @@ class Evaluator:
 
     def __init__(self, oracle: GroundTruthData, bias: Bias):
         """
-        Initialize evaluator with oracle and bias data.
+        Initialize comparator with oracle and bias data.
 
         Args:
             oracle: GroundTruthData extracted from feature model
@@ -78,35 +78,35 @@ class Evaluator:
         """
         self.oracle = oracle
         self.bias = bias
-        logging.debug('Evaluator initialized: oracle=%d descriptions, bias=%d constraints',
+        logging.debug('KBComparator initialized: oracle=%d descriptions, bias=%d constraints',
                       len(oracle.descriptions), len(bias))
 
-    def evaluate(
+    def compare(
             self,
             result: ConGenResultData,
-            strategy: EvaluationStrategy = EvaluationStrategy.DESCRIPTION
-    ) -> EvaluationResult:
+            strategy: ComparationStrategy = ComparationStrategy.DESCRIPTION
+    ) -> ComparationResult:
         """
-        Evaluate ConGen result against Oracle.
+        Compare ConGen result against Oracle.
 
         Args:
             result: ConGenResultData with kb_constraints
             strategy: DESCRIPTION (recommended) or CLAUSE
 
         Returns:
-            EvaluationResult with metrics and details
+            ComparationResult with metrics and details
         """
-        logging.debug('>>> Evaluator.evaluate(kb=%d, strategy=%s)',
+        logging.debug('>>> KBComparator.evaluate(kb=%d, strategy=%s)',
                       len(result.kb_constraints), strategy.value)
 
-        if strategy == EvaluationStrategy.DESCRIPTION:
-            return self._evaluate_by_description(result)
+        if strategy == ComparationStrategy.DESCRIPTION:
+            return self._compare_by_description(result)
         else:
-            return self._evaluate_by_clause(result)
+            return self._compare_by_clause(result)
 
-    def _evaluate_by_description(self, result: ConGenResultData) -> EvaluationResult:
+    def _compare_by_description(self, result: ConGenResultData) -> ComparationResult:
         """
-        Evaluate using description-based strategy.
+        Compare using description-based strategy.
 
         1. Get FM descriptions from oracle
         2. Get KB descriptions from bias
@@ -146,8 +146,8 @@ class Evaluator:
         # KB reduction ratio
         reduction = 1 - (result.n_kb / result.n_bias) if result.n_bias > 0 else 0
 
-        eval_result = EvaluationResult(
-            strategy=EvaluationStrategy.DESCRIPTION.value,
+        com_result = ComparationResult(
+            strategy=ComparationStrategy.DESCRIPTION.value,
             metrics=metrics,
             kb_constraints=result.kb_constraints,
             matched_constraints=matched,
@@ -159,11 +159,11 @@ class Evaluator:
         logging.debug('<<< Description: P=%.3f, R=%.3f, F1=%.3f',
                       metrics.precision, metrics.recall, metrics.f1_score)
 
-        return eval_result
+        return com_result
 
-    def _evaluate_by_clause(self, result: ConGenResultData) -> EvaluationResult:
+    def _compare_by_clause(self, result: ConGenResultData) -> ComparationResult:
         """
-        Evaluate using clause-based strategy.
+        Compare using clause-based strategy.
 
         1. Convert KB constraints to CNF clauses (sorted for normalization)
         2. Compare with oracle clause set
@@ -202,8 +202,8 @@ class Evaluator:
         # KB reduction ratio
         reduction = 1 - (result.n_kb / result.n_bias) if result.n_bias > 0 else 0
 
-        eval_result = EvaluationResult(
-            strategy=EvaluationStrategy.CLAUSE.value,
+        com_result = ComparationResult(
+            strategy=ComparationStrategy.CLAUSE.value,
             metrics=metrics,
             kb_constraints=result.kb_constraints,
             matched_constraints=matched,
@@ -215,7 +215,7 @@ class Evaluator:
         logging.debug('<<< Clause: P=%.3f, R=%.3f, F1=%.3f',
                       metrics.precision, metrics.recall, metrics.f1_score)
 
-        return eval_result
+        return com_result
 
     def _find_matched_constraints(
             self,
@@ -257,16 +257,16 @@ class Evaluator:
         return extra
 
     @classmethod
-    def from_files(cls, oracle_path: Path, bias_path: Path) -> 'Evaluator':
+    def from_files(cls, oracle_path: Path, bias_path: Path) -> 'KBComparator':
         """
-        Create Evaluator from file paths.
+        Create KBComparator from file paths.
 
         Args:
             oracle_path: Path to feature model (.uvl)
             bias_path: Path to bias JSON file
 
         Returns:
-            Evaluator instance
+            KBComparator instance
         """
         oracle = GroundTruthData.from_uvl(Path(oracle_path))
         bias = BiasIO.load_from_json(str(bias_path))

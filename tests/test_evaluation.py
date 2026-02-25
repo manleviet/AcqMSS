@@ -17,8 +17,8 @@ from conacq.eval import (
     AccuracyResult,
     PerformanceMetrics,
     aggregate_metrics,
-    Evaluator,
-    EvaluationStrategy,
+    KBComparator,
+    ComparationStrategy,
     generate_evaluation_report,
     generate_accuracy_report,
 )
@@ -390,9 +390,9 @@ class TestReportGeneration:
 
     def test_generate_evaluation_report(self):
         """Test evaluation report generation."""
-        from conacq.eval import EvaluationResult
+        from conacq.eval import ComparationResult
 
-        result = EvaluationResult(
+        result = ComparationResult(
             strategy='description',
             metrics=EvaluationMetrics(
                 true_positives=5,
@@ -440,10 +440,10 @@ class TestIntegration:
 
     def test_evaluate_real_fm_7(self):
         """Test evaluation with REAL-FM-7 data."""
-        evaluator = Evaluator.from_files(FM_PATH, BIAS_PATH)
+        comparator = KBComparator.from_files(FM_PATH, BIAS_PATH)
         result = ConGenResultData.from_json(RESULT_PATH)
 
-        eval_result = evaluator.evaluate(result, EvaluationStrategy.DESCRIPTION)
+        eval_result = comparator.compare(result, ComparationStrategy.DESCRIPTION)
 
         # Basic sanity checks
         assert eval_result.metrics.accuracy >= 0
@@ -483,15 +483,15 @@ class TestIntegration:
 
     def test_clause_eval_includes_bg_clauses(self):
         """Verify bg_clauses are unioned with kb_clauses in clause eval."""
-        evaluator = Evaluator.from_files(FM_PATH, BIAS_PATH)
+        comparator = KBComparator.from_files(FM_PATH, BIAS_PATH)
 
         # Get root feature ID from oracle
-        root_id = evaluator.oracle.feature_map[evaluator.oracle.root_feature]
+        root_id = comparator.oracle.feature_map[comparator.oracle.root_feature]
 
         # Result with NO KB but WITH bg_clauses containing root
         result_with_bg = ConGenResultData(
             kb_constraints=[],
-            n_bias=len(evaluator.bias.constraints),
+            n_bias=len(comparator.bias.constraints),
             n_kb=0,
             bg_clauses=[[root_id]]
         )
@@ -499,13 +499,13 @@ class TestIntegration:
         # Result with NO KB and NO bg_clauses
         result_without_bg = ConGenResultData(
             kb_constraints=[],
-            n_bias=len(evaluator.bias.constraints),
+            n_bias=len(comparator.bias.constraints),
             n_kb=0,
             bg_clauses=[]
         )
 
-        eval_with = evaluator.evaluate(result_with_bg, EvaluationStrategy.CLAUSE)
-        eval_without = evaluator.evaluate(result_without_bg, EvaluationStrategy.CLAUSE)
+        eval_with = comparator.compare(result_with_bg, ComparationStrategy.CLAUSE)
+        eval_without = comparator.compare(result_without_bg, ComparationStrategy.CLAUSE)
 
         # With bg_clauses: root clause should be TP → more TP, fewer FN
         assert eval_with.metrics.true_positives >= eval_without.metrics.true_positives

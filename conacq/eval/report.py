@@ -8,20 +8,20 @@ from pathlib import Path
 from typing import Optional
 import json
 
-from .evaluator import EvaluationResult
+from .kb_comparator import ComparationResult
 from .accuracy import AccuracyResult
 from .cross_validation import CrossValidationResult
 
 
 def generate_evaluation_report(
-        result: EvaluationResult,
+        result: ComparationResult,
         output_path: Optional[Path] = None
 ) -> str:
     """
     Generate evaluation report.
 
     Args:
-        result: EvaluationResult from Evaluator
+        result: EvaluationResult from KBComparator
         output_path: Optional path to save JSON report
 
     Returns:
