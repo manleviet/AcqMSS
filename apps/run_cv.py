@@ -184,7 +184,11 @@ Example:
 
                 # Save unified CV JSON (with descriptions and eval placeholders)
                 unified = generate_unified_cv_dict(cv_result, bias)
-                cv_file = output_dir / f"{model_config.name}_cv_{mode_name}.json"
+                # Include query_mode in filename for interactive to avoid overwrites
+                if algorithm == 'interactive':
+                    cv_file = output_dir / f"{model_config.name}_cv_{mode_name}_{query_mode}.json"
+                else:
+                    cv_file = output_dir / f"{model_config.name}_cv_{mode_name}.json"
                 cv_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(cv_file, 'w') as f:
                     json.dump(unified, f, indent=2)

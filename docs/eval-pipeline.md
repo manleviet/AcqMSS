@@ -148,7 +148,11 @@ data/results/congen/          ← algorithm = "congen"
 └── REAL-FM-7_rs_1n_cv_non-incremental.json              # CV summary (accuracy, metrics)
 
 data/results/interactive/     ← algorithm = "interactive"
-└── ...                                                   # Same structure
+├── REAL-FM-7_rs_1n_non-incremental_fold1_kb.json        # KB learned from fold 1
+├── REAL-FM-7_rs_1n_non-incremental_fold2_kb.json        # KB learned from fold 2
+├── REAL-FM-7_rs_1n_non-incremental_fold3_kb.json        # KB learned from fold 3
+├── REAL-FM-7_rs_1n_non-incremental_intersected_kb.json  # Intersection of fold KBs
+└── REAL-FM-7_rs_1n_cv_non-incremental_example_only.json # CV summary (with query_mode suffix)
 ```
 
 ### [6] run_compare.py — Optional KB Evaluation

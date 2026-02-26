@@ -372,9 +372,13 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
 
 ### Unified CV JSON Structure
 
-**Filename**: `{model}_{algorithm}_{strategy}_{mode}_cv_{fold_count}.json`
+**Filename format**:
+- ConGen: `{model}_{strategy}_{mode}_cv.json` (no algorithm suffix, algorithm is determined from directory)
+- Interactive: `{model}_{strategy}_{mode}_cv_{query_mode}.json` (includes query_mode: example_only, example_first, etc.)
 
-**Example**: `arcade-game_CONGEN_RS_incremental_cv_10.json`
+**Examples**:
+- ConGen: `arcade-game_RS_incremental_cv.json`
+- Interactive: `arcade-game_RS_incremental_cv_example_only.json`
 
 **Contents**:
 ```json
