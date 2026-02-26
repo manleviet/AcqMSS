@@ -359,8 +359,6 @@ def n_fold_cross_validation_interactive(
         positive_examples: List[Dict[str, bool]],
         negative_examples: List[Dict[str, bool]],
         n_folds: int,
-        bias_clauses: Dict[str, List[List[int]]],
-        feature_ids: Dict[str, int],
         fm_path: str,
         bias_path: str,
         seed: int,
@@ -380,8 +378,6 @@ def n_fold_cross_validation_interactive(
         positive_examples: List of E+ ({feature: True/False})
         negative_examples: List of E- ({feature: True/False})
         n_folds: Number of folds
-        bias_clauses: {constraint_id: clauses} from bias file
-        feature_ids: {feature_name: SAT_variable_id}
         fm_path: Path to feature model (.uvl)
         bias_path: Path to bias file (.json)
         seed: Random seed for fold generation and training shuffle (required)
@@ -398,16 +394,14 @@ def n_fold_cross_validation_interactive(
     from conacq.runners import InteractiveRunner  # lazy import
 
     runner = InteractiveRunner(
-        bias_clauses=bias_clauses,
-        feature_ids=feature_ids,
-        fm_path=fm_path,
         bias_path=bias_path,
+        fm_path=fm_path,
         solver_name=solver_name,
         max_queries=max_queries,
         query_mode=query_mode
     )
     return _run_cv_loop(
-        runner=runner, variables=feature_ids,
+        runner=runner, variables=runner.feature_ids,
         positive_examples=positive_examples,
         negative_examples=negative_examples,
         n_folds=n_folds, seed=seed,

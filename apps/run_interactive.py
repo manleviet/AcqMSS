@@ -15,13 +15,9 @@ import logging
 import sys
 from pathlib import Path
 
-from conacq.algorithms.interactive import InteractiveLearner
+from conacq.runners import InteractiveRunner
 from conacq.eval.config import load_pipeline_config, parse_models
 from conacq.eval.report import save_kb_result
-from explanation.operations.algorithms.profiler import (
-    use_global_profiler,
-    ProfilerPreset
-)
 
 
 def process_model(model_config, output_dir: Path, max_queries: int,
@@ -29,10 +25,18 @@ def process_model(model_config, output_dir: Path, max_queries: int,
     """Process a single model with interactive learning.
 
     Returns:
-        InteractiveResult from learning, or None on error
+        InteractiveRunResult from runner, or None on error
     """
     try:
         model_name = model_config.name
+
+        # Create runner (loads bias internally)
+        runner = InteractiveRunner(
+            bias_path=model_config.bias,
+            fm_path=model_config.oracle,
+            solver_name=solver_name,
+            max_queries=max_queries
+        )
 
         if verbose:
             print(f"\nProcessing: {model_name}")
@@ -40,58 +44,47 @@ def process_model(model_config, output_dir: Path, max_queries: int,
             print(f"  Bias: {model_config.bias}")
             print(f"  Mode: {mode}")
             print(f"  Max queries: {max_queries}")
-
-        # Create learner
-        learner = InteractiveLearner.from_files(
-            fm_path=model_config.oracle,
-            bias_path=model_config.bias,
-            solver_name=solver_name,
-            enable_profiling=True
-        )
-
-        if verbose:
-            print(f"  Bias constraints: {len(learner.task.bias)}")
-            print(f"  Features: {len(learner.task.feature_ids)}")
+            print(f"  Bias constraints: {len(runner.bias_clauses)}")
+            print(f"  Features: {len(runner.feature_ids)}")
             print()
             print("  Starting interactive learning...")
 
-        # Run learning
-        result = learner.learn(mode=mode, max_queries=max_queries)
+        # Run learning (oracle mode — 'automated' or 'interactive')
+        run_result = runner.run(mode=mode)
 
         if verbose:
             print(f"\n  Results:")
-            print(f"    Queries asked: {result.n_queries}")
-            print(f"    KB size: {result.n_kb}")
-            print(f"    Convergence: {result.convergence_reason}")
-            print(f"    Runtime: {result.runtime_ms:.2f} ms")
-            if result.kb_constraints:
+            print(f"    Queries asked: {run_result.n_queries}")
+            print(f"    KB size: {run_result.n_kb}")
+            print(f"    Convergence: {run_result.convergence_reason}")
+            print(f"    Runtime: {run_result.runtime_ms:.2f} ms")
+            if run_result.kb_constraints:
                 print(f"    Constraints:")
-                for c in result.kb_constraints[:10]:
+                for c in run_result.kb_constraints[:10]:
                     print(f"      - {c}")
-                if len(result.kb_constraints) > 10:
-                    print(f"      ... and {len(result.kb_constraints) - 10} more")
+                if len(run_result.kb_constraints) > 10:
+                    print(f"      ... and {len(run_result.kb_constraints) - 10} more")
 
         # Save KB result (unified format with bg_clauses)
         output_file = output_dir / f"{model_name}_interactive_kb.json"
-        # bg_clauses from task background (root feature literal as unit clause)
-        bg_clauses = [[lit] for lit in learner.task.background] if learner.task.background else []
         save_kb_result(
-            kb_constraints=result.kb_constraints,
-            redundant_constraints=getattr(result, 'redundant_constraints', []),
-            n_bias=getattr(result, 'n_bias', 0),
+            kb_constraints=run_result.kb_constraints,
+            redundant_constraints=[],
+            n_bias=run_result.n_bias,
             n_mss=0,
-            n_kb=result.n_kb,
+            n_kb=run_result.n_kb,
             output_path=output_file,
-            bg_clauses=bg_clauses,
-            metadata={'n_queries': result.n_queries,
-                      'convergence_reason': result.convergence_reason,
-                      'runtime_ms': result.runtime_ms}
+            bg_clauses=run_result.bg_clauses,
+            metadata={'n_queries': run_result.n_queries,
+                      'convergence_reason': run_result.convergence_reason,
+                      'runtime_ms': run_result.runtime_ms}
         )
 
         if verbose:
             print(f"\n  Saved: {output_file}")
 
-        return result
+        runner.cleanup()
+        return run_result
 
     except Exception as e:
         print(f"Error processing {model_config.oracle}: {e}")
@@ -148,10 +141,6 @@ Example:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Setup profiler
-    profiler = use_global_profiler(ProfilerPreset.BENCHMARK)
-    profiler.start()
-
     print("=" * 60)
     print("Interactive (QuAcq) Constraint Acquisition")
     print("=" * 60)
@@ -172,8 +161,6 @@ Example:
         if result and (result.n_kb > 0 or result.convergence_reason in ['empty_bias', 'no_query']):
             success_count += 1
 
-    profiler.stop()
-
     # Print summary
     print()
     print("=" * 60)
@@ -192,9 +179,6 @@ Example:
     print("-" * 70)
     print(f"Completed: {success_count}/{len(models)} models")
     print("=" * 60)
-
-    if verbose:
-        profiler.print_summary()
 
     if success_count < len(models):
         sys.exit(1)

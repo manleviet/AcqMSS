@@ -163,8 +163,6 @@ Example:
                         positive_examples=pos,
                         negative_examples=neg,
                         n_folds=actual_n_folds,
-                        bias_clauses=bias.to_constraint_map(),
-                        feature_ids=bias.feature_ids,
                         fm_path=model_config.oracle,
                         bias_path=model_config.bias,
                         seed=seed,

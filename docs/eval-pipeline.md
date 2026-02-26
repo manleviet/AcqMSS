@@ -132,8 +132,8 @@ shuffle_bias = true
 
 | Config | Algorithm | Internal call | Input |
 |---|---|---|---|
-| `algorithm = "congen"` | ConGen (passive) | `ConGenRunner.run()` | Examples E+/E- |
-| `algorithm = "interactive"` | QuAcq (example-based) | `InteractiveRunner.run()` → `QuAcq.learn_from_examples()` | Same examples — fair comparison |
+| `algorithm = "congen"` | ConGen (passive) | `ConGenRunner(bias_path, fm_path, ...).run()` | Examples E+/E- |
+| `algorithm = "interactive"` | QuAcq (example-based) | `InteractiveRunner(bias_path, fm_path, ...).run(pos_examples, neg_examples, mode='example_only')` | Same examples — fair comparison |
 
 **Output files per model (example: REAL-FM-7_rs_1n, 3-fold, non-incremental):**
 

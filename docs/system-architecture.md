@@ -475,7 +475,8 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
 ### 2. QuAcq (Interactive/Active Learning)
 - **Oracle mode**: Queries user for membership (interactive)
 - **Example mode**: Uses pre-collected E+/E- (batch, no oracle)
-- **CV support**: `n_fold_cross_validation_interactive()` + `InteractiveRunner`
+- **CV support**: `n_fold_cross_validation_interactive(positive_examples, negative_examples, fm_path, bias_path, ...)` with `InteractiveRunner(bias_path, fm_path, ...)`
+- **Dual-mode run()**: Dispatch to oracle or example paths based on `mode` parameter
 - FindScope/FindC: O(|S| * log|X| + |Gamma|) queries per constraint
 - Complexity: O(|C_T| * (log|X| + |Gamma|)) total queries
 
