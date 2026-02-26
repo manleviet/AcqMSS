@@ -64,15 +64,15 @@ from .folds import FoldData, generate_folds, save_folds, load_folds, apply_folds
 from .kb_comparator import KBComparator, ComparationStrategy, ComparationResult
 
 # Pipeline config
-from .config import ModelConfig, load_pipeline_config, parse_models, find_kb_files
+from .config import ModelConfig, load_pipeline_config, parse_models, find_kb_files, find_cv_files
 
 # Report generation
 from .report import (
     generate_evaluation_report,
     generate_accuracy_report,
     generate_cv_report,
+    generate_unified_cv_dict,
     save_kb_result,
-    save_cv_kb_files
 )
 
 __all__ = [
@@ -126,11 +126,12 @@ __all__ = [
     'load_pipeline_config',
     'parse_models',
     'find_kb_files',
+    'find_cv_files',
 
     # Reports
     'generate_evaluation_report',
     'generate_accuracy_report',
     'generate_cv_report',
+    'generate_unified_cv_dict',
     'save_kb_result',
-    'save_cv_kb_files',
 ]

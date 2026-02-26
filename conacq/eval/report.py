@@ -2,12 +2,14 @@
 Report generation for ConGen evaluation.
 
 Generates formatted reports and saves results to JSON.
+Includes unified CV output dict builder for single-file export.
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 import json
 
+from conacq.bias import Bias
 from .kb_comparator import ComparationResult
 from .accuracy import AccuracyResult
 from .cross_validation import CrossValidationResult
@@ -214,58 +216,51 @@ def save_kb_result(
     _save_json(data, output_path)
 
 
-def save_cv_kb_files(
-        cv_result: CrossValidationResult,
-        output_dir: Path,
-        model_name: str,
-        mode_name: str
-) -> dict:
-    """
-    Save KB files from cross-validation.
+def _enrich_constraints(constraint_ids: List[str], bias: Bias) -> List[dict]:
+    """Convert constraint ID list to [{id, description}]."""
+    result = []
+    for cid in constraint_ids:
+        desc = bias.get_description(cid) if bias.has_constraint(cid) else cid
+        result.append({"id": cid, "description": desc})
+    return result
 
-    Saves:
-    1. KB for each fold: {model_name}_{mode}_fold{i}_kb.json
-    2. Intersected KB: {model_name}_{mode}_intersected_kb.json
+
+def generate_unified_cv_dict(
+        cv_result: CrossValidationResult,
+        bias: Bias
+) -> dict:
+    """Build unified CV output dict with descriptions and eval placeholders.
 
     Args:
-        cv_result: CrossValidationResult with fold_results and intersected_kb
-        output_dir: Output directory
-        model_name: Model name for file naming
-        mode_name: Mode name (incremental/non-incremental)
+        cv_result: CrossValidationResult from CV loop
+        bias: Bias for resolving constraint descriptions
 
     Returns:
-        Dict with paths to saved files
+        Dict ready for JSON serialization as unified CV output
     """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    folds = []
+    for fr in cv_result.fold_results:
+        fold_dict = fr.to_dict()
+        fold_dict['kb_constraints'] = _enrich_constraints(fr.kb_constraints, bias)
+        fold_dict['evaluation'] = None
+        folds.append(fold_dict)
 
-    saved_files = {'fold_kbs': [], 'intersected_kb': None}
-
-    # Save KB for each fold
-    for fold_result in cv_result.fold_results:
-        fold_path = output_dir / f"{model_name}_{mode_name}_fold{fold_result.fold_index + 1}_kb.json"
-        _save_json(fold_result.to_kb_dict(), fold_path)
-        saved_files['fold_kbs'].append(str(fold_path))
-
-    # Save intersected KB
-    intersected_path = output_dir / f"{model_name}_{mode_name}_intersected_kb.json"
-    intersected_data = {
-        'kb_constraints': cv_result.intersected_kb,
-        'bg_clauses': cv_result.bg_clauses,
-        'statistics': {
+    return {
+        'n_folds': cv_result.n_folds,
+        'fold_accuracies': cv_result.fold_accuracies,
+        'mean_accuracy': cv_result.mean_accuracy,
+        'std_accuracy': cv_result.std_accuracy,
+        'total_runtime_ms': cv_result.total_runtime_ms,
+        'intersected_kb': {
+            'kb_constraints': _enrich_constraints(cv_result.intersected_kb, bias),
+            'bg_clauses': cv_result.bg_clauses,
             'n_kb': len(cv_result.intersected_kb),
-            'n_folds': cv_result.n_folds,
-            'fold_kb_sizes': [fr.n_kb for fr in cv_result.fold_results],
+            'evaluation': None,
         },
-        'cv_accuracy': {
-            'mean': cv_result.mean_accuracy,
-            'std': cv_result.std_accuracy,
-        }
+        'folds': folds,
+        'performance': cv_result.performance.to_dict(),
+        'summary': None,
     }
-    _save_json(intersected_data, intersected_path)
-    saved_files['intersected_kb'] = str(intersected_path)
-
-    return saved_files
 
 
 def _format_list(items: list, max_items: int = 10) -> str:

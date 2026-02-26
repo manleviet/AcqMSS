@@ -1,6 +1,6 @@
 # AcqMSS Project Roadmap
 
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-02-25
 
 ## Executive Summary
 
@@ -8,7 +8,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 
 **Status**: Production-ready for research and development use
 **Version**: 1.0
-**Last Updated**: 2026-02-17
+**Last Updated**: 2026-02-25
 
 ## Development Phases
 
@@ -79,11 +79,14 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ generate_bias_config.py — FM → YAML bias config
 - ✅ generate_bias_files.py — YAML config → JSON/CNF
 - ✅ generate_examples.py — FM → E+/E- examples
-- ✅ run_congen.py — Execute CONGEN learning (dev/debug tool)
-- ✅ run_interactive_eval.py — Execute QuAcq learning
-- ✅ run_congen_eval.py — n-fold cross-validation (CV mode only; pre-computed result evaluation removed)
+- ✅ generate_cv_folds.py — Pre-generate CV fold assignments
+- ✅ run_congen.py — Single ConGen run (dev/debug tool)
+- ✅ run_cv.py — Unified n-fold CV for ConGen + Interactive (main evaluation)
+- ✅ run_interactive.py — Single QuAcq run (original mode)
+- ✅ run_compare.py — Compare learned KB vs ground truth FM
+- ✅ describe_kb.py — Resolve constraint IDs to descriptions
 - ✅ extract_results.py — Generate reports with fold metrics (precision/recall/F1/specificity mean±std; DRY-refactored to 621 LOC)
-- ✅ TOML configuration system (7 configuration files; evaluate_congen_config.toml removed)
+- ✅ TOML configuration system (11 configuration files)
 - ✅ 7 reference feature models (14-6,467 features)
 
 ### Phase 5: QuAcq Enhancement ✅ COMPLETE
@@ -131,13 +134,20 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ Pipeline simplified: removed evaluate_congen_results.py + evaluate_congen_config.toml; run_congen_eval.py now CV-only; extract_results.py extended with fold metrics and DRY-refactored (1,139→621 LOC)
 
 **In Progress**:
-- 📝 Documentation finalization
+- 📝 Documentation finalization (apps/ invocation pattern, architecture diagrams, metrics updates)
 
 **Planned**:
 - 📝 API documentation (Sphinx/pdoc integration)
 - 📝 Troubleshooting guide (common issues, solutions)
 - 📝 Configuration reference (all TOML parameters)
 - 🧹 Code cleanup and linting (ruff, mypy)
+
+**Recent Additions** (Feb 2026):
+- ✅ Pipeline scripts refactoring: 4 monolithic scripts → 6 focused SRP scripts
+  - Deleted: `run_congen_eval.py`, `run_interactive_eval.py` (merged functionality)
+  - New: `run_cv.py` (unified CV), `run_interactive.py` (learning only), `run_compare.py` (evaluation), `describe_kb.py` (KB enrichment)
+  - New module: `conacq/eval/config.py` (shared config loading)
+  - Cleaner separation: learning → evaluation → reporting
 
 **Expected Completion**: End of February 2026
 
@@ -149,9 +159,9 @@ AcqMSS is a mature research system with core functionality fully implemented and
 |-----------|-----|-------|---------------|--------|
 | conacq/ | ~9,272 | ~50 | 85% | ✅ Complete (includes runners/) |
 | explanation/ | ~4,600 | ~35 | 90% | ✅ Complete |
-| apps/ | ~3,100 | 8 | 60% | ✅ Complete |
-| tests/ | ~3,745 | 8 | — | ✅ Complete (307/309 passing) |
-| **Total** | **~19,532** | **~97** | **80%** | ✅ **Complete** |
+| apps/ | ~3,025 | 11 | 60% | ✅ Complete |
+| tests/ | ~3,745 | 8 | — | ✅ Complete (308/310 passing) |
+| **Total** | **~20,900** | **~104** | **80%** | ✅ **Complete** |
 
 ### Performance Benchmarks
 
@@ -348,5 +358,5 @@ pytest tests/test_diagnosis.py -k "with_profiling" -v
 ---
 
 **Document Version**: 1.2
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-02-25
 **Maintained By**: Development Team

@@ -9,9 +9,10 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Application Layer (apps/)                                   │
-│ generate_bias_config.py, generate_examples.py,              │
-│ run_congen.py, run_interactive_eval.py,                     │
-│ run_congen_eval.py (CV only), extract_results.py            │
+│ generate_bias_config.py, generate_bias_files.py,            │
+│ generate_examples.py, generate_cv_folds.py,                 │
+│ run_congen.py, run_cv.py, run_interactive.py,               │
+│ run_compare.py, describe_kb.py, extract_results.py          │
 └─────────────────┬───────────────────────────────────────────┘
                   │ TOML Configuration Files
                   ▼
@@ -247,17 +248,19 @@ class Oracle(ABC):
 
 #### acqmss/eval/ — Evaluation Framework
 
-**Purpose**: Measure accuracy of learned constraints against ground truth.
+**Purpose**: Measure accuracy of learned constraints against ground truth; unified CV output pipeline.
 
 **Components**:
 - `cross_validation.py` — n-fold CV orchestration (CONGEN & Interactive modes)
 - `accuracy.py` — Calculate accuracy, precision, recall, F1
-- `evaluator.py` — Strategy-based evaluation (description/clause) against oracle FM
+- `kb_comparator.py` — Strategy-based comparison (description/clause) against oracle FM + `ComparationResult.to_enriched_dict()`
+- `config.py` — Pipeline config (ModelConfig, find_cv_files, find_kb_files)
+- `result_loader.py` — Load evaluation results + `ConGenResultData.from_dict()`
 
 **Runners** (`acqmss/runners/`, re-exported from `acqmss.eval` for backward compat):
 - `congen_runner.py` — CONGEN pipeline runner with metrics
 - `interactive_runner.py` — QuAcq pipeline runner (analogous to CONGENRunner)
-- `report.py` — Generate CSV/JSON/LaTeX/Markdown reports
+- `report.py` — Generate CSV/JSON/LaTeX/Markdown reports; unified CV dict builder (`generate_unified_cv_dict`, `_enrich_constraints`)
 - `interactive_metrics.py` — QuAcq-specific metrics (query counts, convergence)
 
 **Metrics**:
@@ -362,6 +365,96 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
 - Instantiate SAT solver
 
 **Critical**: The variable mapping MUST come from flamapy's variable assignment (tree traversal order), NOT alphabetical sorting. The Oracle uses flamapy's variable mapping as the authoritative source to ensure feature_ids match the SAT variable IDs in CNF clauses.
+
+## Unified CV Output Pipeline
+
+**Architecture Change** (commit 260226): CV pipeline now produces single JSON file per experiment (not 45+ files).
+
+### Unified CV JSON Structure
+
+**Filename**: `{model}_{algorithm}_{strategy}_{mode}_cv_{fold_count}.json`
+
+**Example**: `arcade-game_CONGEN_RS_incremental_cv_10.json`
+
+**Contents**:
+```json
+{
+  "metadata": {
+    "model": "arcade-game",
+    "algorithm": "CONGEN",
+    "strategy": "RS",
+    "mode": "incremental",
+    "num_folds": 10,
+    "timestamp": "2026-02-26T13:27:00"
+  },
+  "folds": [
+    {
+      "fold_index": 0,
+      "metrics": {
+        "accuracy": 0.95,
+        "precision": 0.92,
+        "recall": 0.98,
+        "f1_score": 0.95
+      },
+      "learned_kb": [
+        {"id": 1, "clause": [1, 2, -3], "description": "..."},
+        ...
+      ],
+      "evaluation": {
+        "true_positives": 45,
+        "false_positives": 2,
+        "true_negatives": 200,
+        "false_negatives": 1
+      }
+    },
+    ...
+  ],
+  "summary": {
+    "mean_accuracy": 0.93,
+    "std_accuracy": 0.02,
+    "mean_kb_size": 42,
+    "std_kb_size": 3.5
+  }
+}
+```
+
+### Processing Pipeline
+
+**Stage 1**: `run_cv.py`
+- Loads config (models, strategies, modes)
+- Runs n-fold CV for each combination
+- Generates unified JSON per experiment
+- No external KB files written
+
+**Stage 2**: `run_compare.py` (config mode, optional)
+- Reads unified CV JSON files
+- Enriches with constraint descriptions via `_enrich_constraints()`
+- Compares learned KBs across folds via `ComparationResult.to_enriched_dict()`
+- Writes enriched evaluation back (idempotent, same filename)
+- Fallback: Reads legacy external eval files if unified JSON not found
+
+**Stage 3**: `extract_results.py`
+- Reads unified CV JSON files via `ConGenResultData.from_dict()`
+- Aggregates fold metrics (mean, std, min, max)
+- Generates final reports (Markdown, LaTeX)
+- Embeds fold-level accuracy/precision/recall/F1 in output
+
+### Key Functions
+
+| Function | Module | Purpose |
+|----------|--------|---------|
+| `generate_unified_cv_dict()` | report.py | Build unified CV output dict from CV results |
+| `_enrich_constraints()` | report.py | Add constraint descriptions to KB within CV dict |
+| `ComparationResult.to_enriched_dict()` | kb_comparator.py | Serialize comparison with full constraint details |
+| `ConGenResultData.from_dict()` | result_loader.py | Deserialize CV result from dict (for extract_results.py) |
+| `find_cv_files()` | config.py | Locate unified CV JSON files (`*_cv_*.json` pattern) |
+
+### Backward Compatibility
+
+- `extract_results.py` reads embedded evaluation first (preferred)
+- Falls back to external eval files if unified JSON unavailable
+- Legacy CV result files still supported
+- Old `run_compare.py` mode (KB comparison) unchanged
 
 ## Two Learning Paradigms
 

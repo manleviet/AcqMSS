@@ -1,8 +1,8 @@
 # AcqMSS Codebase Summary
 
-**Total Python Code**: ~20,900 lines across ~101 files
-**Main Packages**: conacq (~9,272 LOC) + explanation (~4,600 LOC) + apps (~3,300 LOC) + tests (~3,745 LOC)
-**Last Updated**: 2026-02-18
+**Total Python Code**: ~20,900 lines across ~104 files
+**Main Packages**: conacq (~9,272 LOC) + explanation (~4,600 LOC) + apps (~3,025 LOC) + tests (~3,745 LOC)
+**Last Updated**: 2026-02-25
 
 ## Package Structure
 
@@ -114,21 +114,21 @@ Pipeline runners for constraint acquisition algorithms (extracted from eval/):
 | `interactive_runner.py` | 197 | QuAcq pipeline runner with metrics collection |
 | `__init__.py` | ~14 | Package exports |
 
-#### conacq/eval/ — Evaluation Framework (~2,346 LOC, 11 files)
+#### conacq/eval/ — Evaluation Framework (~2,480 LOC, 12 files)
 
-Cross-validation and accuracy metrics:
+Cross-validation, accuracy metrics, and unified CV output pipeline:
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `cross_validation.py` | 504 | n-fold CV (CONGEN + Interactive) with pre-generated fold support |
 | `interactive_metrics.py` | 391 | QuAcq-specific metrics (query count, convergence) |
-| `evaluator.py` | 267 | Evaluation orchestrator for CONGEN/QuAcq results |
-| `report.py` | 281 | Generate CSV/JSON/LaTeX/Markdown reports |
+| `kb_comparator.py` | 267 | Compare learned KB vs GroundTruth FM (replaces evaluator.py) + `ComparationResult.to_enriched_dict()` |
+| `report.py` | 281 | Generate CSV/JSON/LaTeX/Markdown reports; unified CV dict builder (`generate_unified_cv_dict`, `_enrich_constraints`) |
 | `accuracy.py` | 170 | Accuracy/precision/recall/F1 calculation |
 | `performance_metrics.py` | 140 | Runtime, SAT checks, memory metrics |
-| `fold_io.py` | 145 | Shared CV fold generation/save/load for fair comparison |
-| `bias_loader.py` | 112 | Load bias constraints from files |
-| `result_loader.py` | 84 | Load evaluation results |
+| `config.py` | ~120 | Shared pipeline config utilities (ModelConfig, load_pipeline_config, parse_models, find_kb_files, find_cv_files) |
+| `folds.py` | 145 | Shared CV fold generation/save/load for fair comparison |
+| `result_loader.py` | 84 | Load evaluation results; added `ConGenResultData.from_dict()` classmethod |
 | `oracle_extractor.py` | 102 | Extract oracle data for interactive learning |
 
 ### explanation/ — SAT Solver Infrastructure (~6,100 LOC, ~35 files)
@@ -187,27 +187,36 @@ Feature model to SAT conversion:
 | `dimacs_to_configuration.py` | 59 | DIMACS variable assignments → Configuration |
 | `testsuite_reader.py` | 42 | Read test suites from files |
 
-### apps/ — Standalone Applications (~3,100 LOC, 8 files)
+### apps/ — Standalone Applications (~3,025 LOC, 11 files)
 
-CLI applications for constraint acquisition pipeline:
+CLI applications for constraint acquisition pipeline. Uses `python -m apps.X` invocation pattern.
 
 | File | LOC | Purpose |
 |-----|-----|---------|
-| `extract_results.py` | 621 | Post-process results, generate Markdown/LaTeX reports (with fold metrics: precision/recall/F1/specificity mean±std) |
+| `__init__.py` | ~1 | Package marker (enables python -m invocation) |
+| `extract_results.py` | 621 | Post-process results, generate Markdown/LaTeX reports (reads embedded evaluation from unified CV format or falls back to external eval files) |
 | `generate_bias_config.py` | 536 | Feature model → YAML bias configuration |
 | `generate_examples.py` | 325 | Generate E+/E- examples with sampling strategies |
 | `generate_bias_files.py` | 302 | YAML bias config → JSON/CNF files |
 | `run_congen.py` | 217 | Execute CONGEN learning pipeline (dev/debug tool) |
-| `run_interactive_eval.py` | 337 | Execute QuAcq interactive learning with CV support |
-| `run_congen_eval.py` | ~370 | Execute n-fold CV + strategy evaluation (description/clause) against oracle FM |
+| `run_cv.py` | ~420 | Unified n-fold CV for ConGen and Interactive; outputs single JSON per (model x strategy x mode) |
+| `run_interactive.py` | ~350 | Pure QuAcq learning → KB files (no CV, no evaluation) |
+| `run_compare.py` | ~270 | Config mode: reads/enriches unified CV JSONs (idempotent write-back); KB mode: compare learned KB vs GroundTruth FM |
+| `describe_kb.py` | ~150 | Resolve constraint IDs to human-readable descriptions |
 | `generate_cv_folds.py` | 68 | CLI to pre-generate CV folds for reproducible evaluation |
 
-**Config Files** (`conf/`, 7 TOML files):
+**Config Files** (`conf/`, 11 TOML files):
+- `generate_bias_config.toml` — Bias config generation settings
+- `generate_bias_files_config.toml` — Bias JSON/CNF generation settings
 - `generate_examples_config.toml` — Example generation settings
-- `run_congen_config.toml` — CONGEN execution settings
-- `run_interactive_eval_config.toml` — QuAcq execution settings
-- `run_congen_eval_config.toml` — Cross-validation settings
-- Plus 3 additional task-specific configs
+- `generate_cv_folds_config.toml` — CV fold generation settings
+- `run_congen_config.toml` — Single ConGen run settings
+- `run_cv_config.toml` — Unified CV settings (ConGen + Interactive)
+- `run_interactive_config.toml` — Interactive-only learning settings
+- `run_compare_config.toml` — KB comparison settings
+- `describe_kb_config.toml` — KB description settings
+- `extract_results_config.toml` — Results extraction settings
+- `test_eval_config.toml` — Test evaluation settings
 
 ### tests/ — Test Suite (~3,500+ LOC, 8 files)
 
@@ -322,9 +331,9 @@ CONGEN and QuAcq learning results:
 |-----------|-----|-------|---------------|--------|
 | conacq/ | ~9,272 | ~50 | ~185 | ✅ Core algorithms |
 | explanation/ | ~4,600 | ~35 | ~131 | ✅ SAT infrastructure |
-| apps/ | ~3,100 | 8 | ~388 | ✅ CLI applications |
+| apps/ | ~3,025 | 11 | ~275 | ✅ CLI applications |
 | tests/ | ~3,745 | 8 | ~468 | ✅ Comprehensive coverage |
-| **Total** | **~20,900** | **~101** | **~207** | ✅ **Production ready** |
+| **Total** | **~20,900** | **~104** | **~201** | ✅ **Production ready** |
 
 **Recent Changes** (Oracle Interface Refactoring - commit c978d66):
 
@@ -407,7 +416,13 @@ PYTHONPATH=. pytest tests/test_diagnosis.py::test_fastdiag -v -s
 
 ## Main Applications
 
-**Pipeline**: `run_congen_eval.py` (CV + strategy evaluation) → `extract_results.py` (reports + eval tables). `run_congen.py` is a dev/debug tool.
+**Unified CV Pipeline** (replaces 45+ file outputs with single JSON per experiment):
+1. `run_cv.py` — Unified n-fold CV for ConGen and/or Interactive → single JSON per (model x strategy x mode)
+2. `run_compare.py` (config mode) — Reads unified CV JSONs, compares folds, writes enriched evaluation back
+3. `describe_kb.py` — Enrich KB with human-readable descriptions
+4. `extract_results.py` — Post-process unified CV JSONs, generate final reports with fold metrics
+5. `run_congen.py` / `run_interactive.py` — Single-run tools for debugging
+6. `run_compare.py` (KB mode) — Compare single learned KB vs GroundTruth FM
 
 ```bash
 # Generate bias files from feature model

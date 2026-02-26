@@ -33,6 +33,29 @@ class ConGenResultData:
     metadata: Dict = field(default_factory=dict)
 
     @classmethod
+    def from_dict(cls, data: dict) -> 'ConGenResultData':
+        """Construct from in-memory dict (fold data from unified JSON).
+
+        Handles both enriched [{"id", "description"}] and legacy ["c1"] formats.
+        """
+        kb_raw = data.get('kb_constraints', [])
+        if kb_raw and isinstance(kb_raw[0], dict):
+            kb_ids = [c['id'] for c in kb_raw]
+        else:
+            kb_ids = kb_raw
+
+        stats = data.get('statistics', {})
+        return cls(
+            kb_constraints=kb_ids,
+            redundant_constraints=data.get('redundant_constraints', []),
+            n_bias=stats.get('n_bias', 0),
+            n_mss=stats.get('n_mss', 0),
+            n_kb=stats.get('n_kb', len(kb_ids)),
+            bg_clauses=data.get('bg_clauses', []),
+            metadata=data.get('metadata', {})
+        )
+
+    @classmethod
     def from_json(cls, json_path: Path) -> 'ConGenResultData':
         """
         Load result from JSON file.

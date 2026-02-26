@@ -1,6 +1,6 @@
 # AcqMSS Project Overview & Product Development Requirements (PDR)
 
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-02-25
 
 ## Executive Summary
 
@@ -205,13 +205,18 @@ Build a **production-ready constraint acquisition framework** that:
 ### Two-Layer Architecture
 
 ```
-Application Layer (apps/)
-  ├── generate_bias_config.py
-  ├── generate_examples.py
-  ├── run_congen.py             # dev/debug tool
-  ├── run_interactive_eval.py
-  ├── run_congen_eval.py        # CV mode only
-  └── extract_results.py        # reports with fold metrics
+Application Layer (apps/) — 11 files
+  ├── generate_bias_config.py   # FM → YAML config
+  ├── generate_bias_files.py    # YAML → JSON/CNF
+  ├── generate_examples.py      # FM → E+/E- examples
+  ├── generate_cv_folds.py      # Generate CV fold assignments
+  ├── run_congen.py             # Single ConGen run (dev/debug)
+  ├── run_cv.py                 # n-fold CV (ConGen + Interactive)
+  ├── run_interactive.py        # Single QuAcq run
+  ├── run_compare.py            # Eval KB vs ground truth
+  ├── describe_kb.py            # KB description enrichment
+  ├── extract_results.py        # Generate reports + fold metrics
+  └── __init__.py               # Package marker
        ↓
 Core Algorithms (conacq/)
   ├── CONGEN (GenerateNE → ACQMSS → REDUCE)

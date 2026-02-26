@@ -82,6 +82,24 @@ def parse_models(config: Dict) -> List[ModelConfig]:
     return result
 
 
+def find_cv_files(cv_path: Path) -> List[Path]:
+    """Find unified CV JSON files from path.
+
+    Matches *_cv_*.json pattern (unified CV output files).
+
+    Args:
+        cv_path: Path to a single CV file or directory containing CV files
+
+    Returns:
+        List of matching Path objects, sorted alphabetically
+    """
+    if cv_path.is_file() and cv_path.name.endswith('.json'):
+        return [cv_path]
+    if cv_path.is_dir():
+        return sorted(cv_path.glob('*_cv_*.json'))
+    return []
+
+
 def find_kb_files(kb_path: Path) -> List[Path]:
     """Find KB JSON files from path (single file or directory).
 

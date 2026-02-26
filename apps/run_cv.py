@@ -20,7 +20,7 @@ from conacq.eval import (
     n_fold_cross_validation,
     n_fold_cross_validation_interactive,
     generate_cv_report,
-    save_cv_kb_files,
+    generate_unified_cv_dict,
     load_folds,
 )
 from conacq.eval.config import load_pipeline_config, parse_models
@@ -127,6 +127,9 @@ Example:
                 print(f"  Examples: {model_config.examples}")
                 print(f"  E+: {len(pos)}, E-: {len(neg)}")
 
+            # Load bias once per model (for description resolution and interactive)
+            bias = BiasIO.load_from_json(model_config.bias)
+
             # Load pre-generated folds if available
             fold_data = None
             actual_n_folds = n_folds
@@ -156,7 +159,6 @@ Example:
                         shuffle_bias=shuffle_bias
                     )
                 elif algorithm == 'interactive':
-                    bias = BiasIO.load_from_json(model_config.bias)
                     cv_result = n_fold_cross_validation_interactive(
                         positive_examples=pos,
                         negative_examples=neg,
@@ -180,20 +182,14 @@ Example:
                 cv_report = generate_cv_report(cv_result)
                 print(cv_report)
 
-                # Save CV JSON (IDs only, no enrichment)
-                cv_dict = cv_result.to_dict()
+                # Save unified CV JSON (with descriptions and eval placeholders)
+                unified = generate_unified_cv_dict(cv_result, bias)
                 cv_file = output_dir / f"{model_config.name}_cv_{mode_name}.json"
                 cv_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(cv_file, 'w') as f:
-                    json.dump(cv_dict, f, indent=2)
-                print(f"  CV result: {cv_file}")
-
-                # Save fold KB files + intersected KB
-                saved_kbs = save_cv_kb_files(cv_result, output_dir,
-                                             model_config.name, mode_name)
-                print(f"  Saved {len(saved_kbs['fold_kbs'])} fold KB files")
+                    json.dump(unified, f, indent=2)
+                print(f"  Unified CV: {cv_file}")
                 print(f"  Intersected KB: {len(cv_result.intersected_kb)} constraints")
-                print(f"  -> {saved_kbs['intersected_kb']}")
 
             success_count += 1
 

@@ -58,6 +58,30 @@ class ComparationResult:
             'kb_reduction_ratio': self.kb_reduction_ratio,
         }
 
+    def to_enriched_dict(self, bias) -> dict:
+        """Produce evaluation dict with id+description for TP/FP/FN.
+
+        Args:
+            bias: Bias instance for resolving constraint descriptions
+        """
+        def _enrich_ids(ids):
+            return [{"id": cid,
+                     "description": bias.get_description(cid) if bias.has_constraint(cid) else cid}
+                    for cid in ids]
+
+        # For description strategy, missed_constraints are descriptions (no IDs)
+        if self.strategy == ComparationStrategy.DESCRIPTION.value:
+            fn = [{"id": None, "description": d} for d in self.missed_constraints]
+        else:
+            fn = [{"id": None, "description": str(c)} for c in self.missed_constraints]
+
+        return {
+            'metrics': self.metrics.to_dict(),
+            'tp': _enrich_ids(self.matched_constraints),
+            'fp': _enrich_ids(self.extra_constraints),
+            'fn': fn,
+        }
+
 
 class KBComparator:
     """
