@@ -214,7 +214,6 @@ Application Layer (apps/) — 11 files
   ├── run_cv.py                 # n-fold CV (ConGen + Interactive)
   ├── run_interactive.py        # Single QuAcq run
   ├── run_compare.py            # Eval KB vs ground truth
-  ├── describe_kb.py            # KB description enrichment
   ├── extract_results.py        # Generate reports + fold metrics
   └── __init__.py               # Package marker
        ↓

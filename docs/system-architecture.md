@@ -12,7 +12,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 │ generate_bias_config.py, generate_bias_files.py,            │
 │ generate_examples.py, generate_cv_folds.py,                 │
 │ run_congen.py, run_cv.py, run_interactive.py,               │
-│ run_compare.py, describe_kb.py, extract_results.py          │
+│ run_compare.py, extract_results.py                          │
 └─────────────────┬───────────────────────────────────────────┘
                   │ TOML Configuration Files
                   ▼

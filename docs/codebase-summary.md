@@ -202,10 +202,9 @@ CLI applications for constraint acquisition pipeline. Uses `python -m apps.X` in
 | `run_cv.py` | ~420 | Unified n-fold CV for ConGen and Interactive; outputs single JSON per (model x strategy x mode) |
 | `run_interactive.py` | ~350 | Pure QuAcq learning → KB files (no CV, no evaluation) |
 | `run_compare.py` | ~270 | Config mode: reads/enriches unified CV JSONs (idempotent write-back); KB mode: compare learned KB vs GroundTruth FM |
-| `describe_kb.py` | ~150 | Resolve constraint IDs to human-readable descriptions |
 | `generate_cv_folds.py` | 68 | CLI to pre-generate CV folds for reproducible evaluation |
 
-**Config Files** (`conf/`, 11 TOML files):
+**Config Files** (`conf/`, 10 TOML files):
 - `generate_bias_config.toml` — Bias config generation settings
 - `generate_bias_files_config.toml` — Bias JSON/CNF generation settings
 - `generate_examples_config.toml` — Example generation settings
@@ -214,7 +213,6 @@ CLI applications for constraint acquisition pipeline. Uses `python -m apps.X` in
 - `run_cv_config.toml` — Unified CV settings (ConGen + Interactive)
 - `run_interactive_config.toml` — Interactive-only learning settings
 - `run_compare_config.toml` — KB comparison settings
-- `describe_kb_config.toml` — KB description settings
 - `extract_results_config.toml` — Results extraction settings
 - `test_eval_config.toml` — Test evaluation settings
 
@@ -419,10 +417,9 @@ PYTHONPATH=. pytest tests/test_diagnosis.py::test_fastdiag -v -s
 **Unified CV Pipeline** (replaces 45+ file outputs with single JSON per experiment):
 1. `run_cv.py` — Unified n-fold CV for ConGen and/or Interactive → single JSON per (model x strategy x mode)
 2. `run_compare.py` (config mode) — Reads unified CV JSONs, compares folds, writes enriched evaluation back
-3. `describe_kb.py` — Enrich KB with human-readable descriptions
-4. `extract_results.py` — Post-process unified CV JSONs, generate final reports with fold metrics
-5. `run_congen.py` / `run_interactive.py` — Single-run tools for debugging
-6. `run_compare.py` (KB mode) — Compare single learned KB vs GroundTruth FM
+3. `extract_results.py` — Post-process unified CV JSONs, generate final reports with fold metrics
+4. `run_congen.py` / `run_interactive.py` — Single-run tools for debugging
+5. `run_compare.py` (KB mode) — Compare single learned KB vs GroundTruth FM
 
 ```bash
 # Generate bias files from feature model
@@ -441,9 +438,6 @@ python -m apps.run_interactive apps/conf/run_interactive_config.toml --interacti
 
 # Compare learned KB against oracle FM
 python -m apps.run_compare --kb data/results/model_kb.json --bias data/bias/model-bias.json --oracle data/fms/model.uvl -v
-
-# Describe KB constraints
-python -m apps.describe_kb --kb data/results/model_kb.json --bias data/bias/model-bias.json
 
 # Single-run ConGen (debug tool)
 python -m apps.run_congen apps/conf/run_congen_config.toml -v

@@ -21,7 +21,6 @@ Feature Model (.uvl)
 ```
 run_congen.py       → single ConGen run (debug/demo), 1 KB file per model
 run_interactive.py  → single QuAcq run (debug/demo), 1 KB file per model
-describe_kb.py      → human-readable KB descriptions
 ```
 
 ---
@@ -234,7 +233,7 @@ python -m apps.run_congen apps/conf/run_congen_config.toml -v
 | | |
 |---|---|
 | **Output per model** | 1 file: `{model}_{strategy}_kb.json` |
-| **Use case** | Debug, inspect learned KB, input for run_compare.py / describe_kb.py |
+| **Use case** | Debug, inspect learned KB, input for run_compare.py |
 
 ### run_interactive.py — Single QuAcq Run (Original Mode)
 
@@ -249,16 +248,6 @@ python -m apps.run_interactive apps/conf/run_interactive_config.toml -v
 | **Output per model** | 1 file: `{model}_interactive_kb.json` |
 | **Modes** | `automated` (FM oracle answers) or `--interactive` (human answers) |
 | **Use case** | Demo interactive learning, test QuAcq algorithm |
-
-### describe_kb.py — KB Description
-
-Resolves constraint IDs to human-readable descriptions using bias lookup.
-
-```bash
-python -m apps.describe_kb \
-  --kb data/results/model_kb.json \
-  --bias data/bias/model-bias.json -v
-```
 
 ---
 
@@ -291,7 +280,7 @@ All scripts use `save_kb_result()` producing identical JSON format:
 }
 ```
 
-Compatible with `run_compare.py` and `describe_kb.py` regardless of source script.
+Compatible with `run_compare.py` regardless of source script.
 
 ---
 

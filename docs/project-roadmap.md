@@ -84,9 +84,8 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ run_cv.py — Unified n-fold CV for ConGen + Interactive (main evaluation)
 - ✅ run_interactive.py — Single QuAcq run (original mode)
 - ✅ run_compare.py — Compare learned KB vs ground truth FM
-- ✅ describe_kb.py — Resolve constraint IDs to descriptions
 - ✅ extract_results.py — Generate reports with fold metrics (precision/recall/F1/specificity mean±std; DRY-refactored to 621 LOC)
-- ✅ TOML configuration system (11 configuration files)
+- ✅ TOML configuration system (10 configuration files)
 - ✅ 7 reference feature models (14-6,467 features)
 
 ### Phase 5: QuAcq Enhancement ✅ COMPLETE
@@ -145,7 +144,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 **Recent Additions** (Feb 2026):
 - ✅ Pipeline scripts refactoring: 4 monolithic scripts → 6 focused SRP scripts
   - Deleted: `run_congen_eval.py`, `run_interactive_eval.py` (merged functionality)
-  - New: `run_cv.py` (unified CV), `run_interactive.py` (learning only), `run_compare.py` (evaluation), `describe_kb.py` (KB enrichment)
+  - New: `run_cv.py` (unified CV), `run_interactive.py` (learning only), `run_compare.py` (evaluation)
   - New module: `conacq/eval/config.py` (shared config loading)
   - Cleaner separation: learning → evaluation → reporting
 
