@@ -251,6 +251,7 @@ def save_cv_kb_files(
     intersected_path = output_dir / f"{model_name}_{mode_name}_intersected_kb.json"
     intersected_data = {
         'kb_constraints': cv_result.intersected_kb,
+        'bg_clauses': cv_result.bg_clauses,
         'statistics': {
             'n_kb': len(cv_result.intersected_kb),
             'n_folds': cv_result.n_folds,

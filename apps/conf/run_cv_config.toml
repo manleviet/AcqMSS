@@ -1,16 +1,16 @@
-# Evaluation Configuration
-# Run with: PYTHONPATH=. python apps/run_congen_eval.py apps/conf/run_congen_eval_config.toml
+# Unified Cross-Validation Configuration
+# Run with: python -m apps.run_cv apps/conf/run_cv_config.toml -v
 
 [general]
 seed = 82
-output_dir = "data/results/congen"
+output_dir = "data/results"
 verbose = true
 
 [evaluation]
-# Evaluation strategies: "all" (both), "description", or "clause"
-strategy = "all"
+# Algorithm: "congen" or "interactive"
+algorithm = "congen"
 
-# Number of folds for cross-validation (0 = no CV)
+# Number of folds for cross-validation
 n_folds = 3
 
 # Solver settings
@@ -19,8 +19,16 @@ solver_name = "glucose4"
 # Solver modes: "all" (both), "incremental", or "non-incremental"
 solver_mode = "non-incremental"
 
-# Shuffle bias ordering per fold (requires per-model folds_path with shuffle_seeds)
+# Shuffle bias ordering per fold
 shuffle_bias = true
+
+# Interactive-specific settings (only used when algorithm = "interactive")
+[evaluation.interactive]
+max_queries = 1000  # Maximum number of membership queries
+# Query generation mode for example-based learning:
+#   "example_only" - only draw queries from example pool (stops when pool empty)
+#   "example_first" - examples first, then SAT-generated queries from bias (up to max_queries)
+query_mode = "example_only"
 
 # =============================================================================
 # Models to evaluate
@@ -30,6 +38,7 @@ shuffle_bias = true
 # =============================================================================
 # REAL-FM-7 (14 features, 80 valid configs)
 # =============================================================================
+
 [[models]]
 name = "REAL-FM-7_rs_1n"
 oracle = "data/fms/REAL-FM-7.uvl"
@@ -72,9 +81,10 @@ bias = "data/bias/REAL-FM-7-bias.json"
 examples = "data/examples/REAL-FM-7_ff.json"
 folds_path = "data/folds/REAL-FM-7_ff_folds.json"
 
-## =============================================================================
-## REAL-FM-4 (12 features)
-## =============================================================================
+### =============================================================================
+### REAL-FM-4 (12 features)
+### =============================================================================
+#
 #[[models]]
 #name = "REAL-FM-4_rs_1n"
 #oracle = "data/fms/REAL-FM-4.uvl"
@@ -117,9 +127,10 @@ folds_path = "data/folds/REAL-FM-7_ff_folds.json"
 #examples = "data/examples/REAL-FM-4_ff.json"
 #folds_path = "data/folds/REAL-FM-4_ff_folds.json"
 #
-## =============================================================================
-## arcade-game (14 features)
-## =============================================================================
+### =============================================================================
+### arcade-game (14 features)
+### =============================================================================
+#
 #[[models]]
 #name = "arcade-game_rs_1n"
 #oracle = "data/fms/arcade-game.uvl"
@@ -162,9 +173,10 @@ folds_path = "data/folds/REAL-FM-7_ff_folds.json"
 #examples = "data/examples/arcade-game_ff.json"
 #folds_path = "data/folds/arcade-game_ff_folds.json"
 #
-## =============================================================================
-## fqa (6 features)
-## =============================================================================
+### =============================================================================
+### fqa (6 features)
+### =============================================================================
+#
 #[[models]]
 #name = "fqa_rs_1n"
 #oracle = "data/fms/fqa.uvl"
@@ -210,6 +222,7 @@ folds_path = "data/folds/REAL-FM-7_ff_folds.json"
 ## =============================================================================
 ## busybox-1.18.0 (854 features) - Large model, may take longer
 ## =============================================================================
+#
 #[[models]]
 #name = "busybox-1.18.0_rs_1n"
 #oracle = "data/fms/busybox-1.18.0.uvl"

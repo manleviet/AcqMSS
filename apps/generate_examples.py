@@ -221,7 +221,7 @@ Sampling Strategies (from paper):
     balanced  - Balanced RS (equal E+/E-, not in paper)
 
 Example:
-    PYTHONPATH=. python apps/generate_examples.py apps/conf/generate_examples_config.toml
+    python -m apps.generate_examples apps/conf/generate_examples_config.toml
         """
     )
 

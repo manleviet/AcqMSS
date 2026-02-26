@@ -238,21 +238,9 @@ class ConGenRunner:
 
             profiler_snapshot = profiler.to_dict()
 
-            # Extract BG clauses (root constraint) for evaluation
-            bg_clauses = self.oracle.get_root_clauses()
-
-            # Get KB clauses: assumption_id → name → clauses
-            provider = self.model.description_provider
-            kb_clauses = []
-            kb_names = []
-            redundant_names = []
-            for aid in result.kb_assumption_ids:
-                cname = provider.get_description(aid)
-                kb_names.append(cname)
-                if cname in self.model.constraint_map:
-                    kb_clauses.extend(self.model.constraint_map[cname])
-            for aid in result.redundant_ids:
-                redundant_names.append(provider.get_description(aid))
+            # Resolve assumption IDs → clauses/names via model
+            bg_clauses, kb_clauses, kb_names, redundant_names = \
+                self.model.resolve_result(result)
 
             run_result = ConGenRunResult(
                 kb_constraints=kb_names,

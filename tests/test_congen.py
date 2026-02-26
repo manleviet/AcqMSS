@@ -105,9 +105,6 @@ class TestCONGEN:
             assert result.n_kb >= 0
             assert isinstance(result.kb_assumption_ids, list)
 
-            # Verify bg_clauses is not empty (contains background knowledge)
-            assert len(result.bg_clauses) > 0, "Background knowledge should not be empty"
-
             print(f"\nConGen Incremental Result (RS 1n):")
             print(f"  Bias: {result.n_bias}")
             print(f"  MSS: {result.n_mss}")
@@ -152,9 +149,6 @@ class TestCONGEN:
             assert result.n_kb >= 0
             assert isinstance(result.kb_assumption_ids, list)
 
-            # Verify bg_clauses is not empty (contains background knowledge)
-            assert len(result.bg_clauses) > 0, "Background knowledge should not be empty"
-
             print(f"\nConGen Non-Incremental Result (RS 1n):")
             print(f"  Bias: {result.n_bias}")
             print(f"  MSS: {result.n_mss}")
@@ -197,9 +191,6 @@ class TestCONGEN:
             assert result is not None
             # n_bias excludes FM constraints (moved to BG in migration)
             assert result.n_bias > 0
-
-            # Verify bg_clauses is not empty (contains background knowledge)
-            assert len(result.bg_clauses) > 0, "Background knowledge should not be empty"
 
             print(f"\nConGen Incremental Result (FF):")
             print(f"  Bias: {result.n_bias}")

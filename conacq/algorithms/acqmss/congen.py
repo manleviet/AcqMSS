@@ -41,7 +41,6 @@ class ConGenResult:
     n_bias: int  # Number of bias constraints
     n_mss: int  # Size of MSS before Reduce
     n_kb: int  # Size of final KB
-    bg_clauses: List[List[int]] = field(default_factory=list)  # BG clauses (e.g., [[1]])
     metadata: Dict = field(default_factory=dict)
 
 
@@ -102,14 +101,12 @@ class ConGen:
 
         if len(inconsistent) > 0:
             logging.debug('<<< ConGen return Phi (E+ inconsistent with NE ∪ BG)')
-            bg_clauses = [[lit] for lit in set_bg]
             self.result = ConGenResult(
                 kb_assumption_ids=[],
                 redundant_ids=[],
                 n_bias=len(set_b),
                 n_mss=0,
                 n_kb=0,
-                bg_clauses=bg_clauses,
                 metadata={'error': 'E+ inconsistent with NE ∪ BG'}
             )
             return self.result
@@ -135,15 +132,12 @@ class ConGen:
         )
         logging.debug('Reduce: %d redundant, %d in final KB', len(redundant), len(kb))
 
-        bg_clauses = [[lit] for lit in set_bg]  # TODO: check lại
-
         self.result = ConGenResult(
             kb_assumption_ids=kb,
             redundant_ids=redundant,
             n_bias=len(set_b),
             n_mss=len(b_prime),
             n_kb=len(kb),
-            bg_clauses=bg_clauses,
             metadata={
                 'n_neg_tv': len(set_neg_tv),
                 'n_e_pos': len(set_tc),

@@ -113,6 +113,8 @@ class CrossValidationResult:
     performance: AggregatedPerformanceMetrics
     # Intersected KB
     intersected_kb: List[str] = field(default_factory=list)
+    # Background clauses (root constraint, same across all folds)
+    bg_clauses: List[str] = field(default_factory=list)
     # Total CV runtime (ms)
     total_runtime_ms: float = 0.0
 
@@ -124,6 +126,7 @@ class CrossValidationResult:
             'mean_accuracy': self.mean_accuracy,
             'std_accuracy': self.std_accuracy,
             'intersected_kb': self.intersected_kb,
+            'bg_clauses': self.bg_clauses,
             'n_intersected': len(self.intersected_kb),
             'total_runtime_ms': self.total_runtime_ms,
             'folds': [fr.to_dict() for fr in self.fold_results],
@@ -279,6 +282,9 @@ def _run_cv_loop(
     logging.info('%s CV: accuracy = %.4f +/- %.4f, total_time = %.2f ms',
                  label, mean_acc, std_acc, total_runtime_ms)
 
+    # bg_clauses are identical across folds (from feature model root constraint)
+    bg_clauses = fold_results[0].bg_clauses if fold_results else []
+
     return CrossValidationResult(
         n_folds=n_folds,
         fold_accuracies=fold_accuracies,
@@ -287,6 +293,7 @@ def _run_cv_loop(
         fold_results=fold_results,
         performance=agg_performance,
         intersected_kb=intersected_kb,
+        bg_clauses=bg_clauses,
         total_runtime_ms=total_runtime_ms
     )
 

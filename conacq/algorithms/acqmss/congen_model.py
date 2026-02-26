@@ -14,7 +14,7 @@ Call prepare(oracle) before accessing task or description_provider.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
@@ -22,6 +22,7 @@ from .task_preparation import ConGenTask
 
 if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
+    from .congen import ConGenResult
 
 
 class ConGenModel:
@@ -56,6 +57,7 @@ class ConGenModel:
         # Populated after prepare()
         self._task: Optional[ConGenTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
+        self._root_constraint: Optional[List[List[int]]] = None
 
     @property
     def use_incremental(self) -> bool:
@@ -168,6 +170,39 @@ class ConGenModel:
             return self.task.set_neg_tc
         return []
 
+    def _resolve_ids(self, assumption_ids: List[int]) -> Tuple[List[List[int]], List[str]]:
+        """Resolve assumption IDs to clauses and names via constraint_map.
+
+        Args:
+            assumption_ids: Assumption IDs to resolve.
+
+        Returns:
+            (clauses, names) — clauses from constraint_map, names from description_provider.
+        """
+        provider = self.description_provider
+        clauses: List[List[int]] = []
+        names: List[str] = []
+        for aid in assumption_ids:
+            name = provider.get_description(aid)
+            names.append(name)
+            if name in self.constraint_map:
+                clauses.extend(self.constraint_map[name])
+        return clauses, names
+
+    def resolve_result(self, result: ConGenResult) -> Tuple[List[List[int]], List[List[int]], List[str], List[str]]:
+        """Resolve a ConGenResult into clauses and names.
+
+        Args:
+            result: ConGenResult with assumption IDs.
+
+        Returns:
+            (bg_clauses, kb_clauses, kb_names, redundant_names)
+        """
+        bg_clauses = self._root_constraint or []
+        kb_clauses, kb_names = self._resolve_ids(result.kb_assumption_ids)
+        _, redundant_names = self._resolve_ids(result.redundant_ids)
+        return bg_clauses, kb_clauses, kb_names, redundant_names
+
     def prepare(
             self,
             oracle: FeatureModelOracle,
@@ -205,6 +240,7 @@ class ConGenModel:
         assert isinstance(output.task, ConGenTask)
         self._task = output.task
         self._description_provider = output.description_provider
+        self._root_constraint = oracle.get_root_clauses()
 
         return self._task
 
