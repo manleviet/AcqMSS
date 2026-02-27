@@ -8,14 +8,13 @@ Supports two modes:
 Follows rebuild-per-run lifecycle: oracle in __init__(), fresh model+task per run() via builder.
 """
 
-from typing import List, Dict, Optional, Tuple
-from dataclasses import dataclass, field
+import logging
 import random
 import time
 import tracemalloc
-import logging
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional, Tuple
 
-from conacq.eval.performance_metrics import PerformanceMetrics
 from .base_runner import BaseRunResult, BaseRunner
 
 

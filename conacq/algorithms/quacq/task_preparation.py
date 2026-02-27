@@ -157,7 +157,7 @@ class QuAcqTaskPreparation:
         """Prepare QuAcqTask from model and oracle.
 
         Args:
-            model: InteractiveModel with bias constraint_map
+            model: QuAcqModel with bias constraint_map
             oracle: FeatureModelOracle for BG data and feature IDs
 
         Returns:

@@ -63,7 +63,3 @@ __all__ = [
     # DiscriminatingGenerator
     'DiscriminatingGenerator',
 ]
-
-# Re-import backward-compat aliases for explicit export
-from .quacq_model import InteractiveModel  # noqa: F401
-from .task_preparation import QuAcqTaskPreparation as InteractiveTaskPreparation  # noqa: F401

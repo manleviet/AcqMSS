@@ -95,6 +95,3 @@ class QuAcqModel:
             if name in self.constraint_map:
                 clauses.extend(self.constraint_map[name])
         return names, clauses
-
-# Backward-compat alias for legacy code
-InteractiveModel = QuAcqModel

@@ -657,7 +657,7 @@ class TestBackgroundClauses:
         assert task1.background_clauses[0] != task2.background_clauses[0]
 
     def test_prepare_populates_background_clauses(self, prepared_model):
-        """InteractiveTaskPreparation.prepare() populates background_clauses."""
+        """QuAcqTaskPreparation.prepare() populates background_clauses."""
         task = prepared_model.task
         assert isinstance(task.background_clauses, list)
         assert len(task.background_clauses) > 0

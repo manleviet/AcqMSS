@@ -53,7 +53,6 @@ class FeatureModelOracle(Oracle):
 
         # Lazy-loaded for description extraction (most callers never need this)
         self._fm = None
-        # self._constraint_descriptions_cache: Optional[Set[str]] = None
 
     # TODO: need check
     @property

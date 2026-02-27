@@ -80,7 +80,7 @@ def process_model(model_config, eval_config, quacq_config, congen_config,
             use_incremental=congen_config.get('use_incremental', True)
         )
 
-        comparator = KBComparator.from_bias_and_fm_fide(
+        comparator = KBComparator.from_files(
             model_config.oracle, model_config.bias)
         ground_truth = GroundTruthData.from_uvl(model_config.oracle)
 

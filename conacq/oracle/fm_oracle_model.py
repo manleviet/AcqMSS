@@ -143,19 +143,6 @@ class FMOracleModel:
 
         return self._task
 
-    # TODO: need remove
-    @classmethod
-    def from_fm_data(cls, constraint_map: Dict[str, List[List[int]]],
-                     variables: Dict[str, int],
-                     next_available_id: int) -> 'FMOracleModel':
-        """Factory: create from FM data and prepare."""
-        model = cls()
-        model.constraint_map = constraint_map
-        model.variables = variables
-        model.next_available_id = next_available_id
-        model.prepare()
-        return model
-
     @classmethod
     def from_fm(cls, fm_path: str) -> 'FMOracleModel':
         """Factory: create from FM and prepare."""

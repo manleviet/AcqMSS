@@ -378,7 +378,7 @@ CONGEN and QuAcq learning results:
 - `Evaluator` — High-level evaluation orchestration
 
 ### 6. Builder Pattern
-- `ConGenModelBuilder.from_bias_and_fm_uvl()` / `from_bias_and_fm_fide()` — Builder-pattern model construction
+- `ConGenModelBuilder.from_bias()` — Builder-pattern model construction
 - Solver instantiation via consistent factories
 
 ## Codebase Statistics

@@ -10,4 +10,4 @@ This package provides tools for constraint acquisition from feature models:
 from . import examples
 from . import algorithms
 
-__all__ = ['testcases', 'algorithms']
+__all__ = ['examples', 'algorithms']

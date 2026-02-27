@@ -22,7 +22,7 @@ Metrics (Formula 1 from paper):
 
 Example usage:
     >>> from conacq.eval import KBComparator, ComparationStrategy
-    >>> evaluator = KBComparator.from_bias_and_fm_fide('model.uvl', 'bias.json')
+    >>> evaluator = KBComparator.from_files('model.uvl', 'bias.json')
     >>> result = evaluator.compare(congen_result, ComparationStrategy.DESCRIPTION)
     >>> print(f"Accuracy: {result.metrics.accuracy:.4f}")
 """
