@@ -5,7 +5,7 @@ Supports two modes:
 - Oracle mode ('automated'/'interactive'): via QuAcqModel + QuAcq.learn()
 - Example mode ('example_only'/'example_first'): via QuAcqModel + QuAcq.learn_from_examples()
 
-Follows rebuild-per-run lifecycle: oracle in __init__(), fresh model+task per run() via builder.
+Builds model once in __init__(), re-prepares per run() for fresh task.
 """
 
 import logging
@@ -15,7 +15,9 @@ import tracemalloc
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
 
+from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
+from ..algorithms import QuAcq
 
 
 @dataclass
@@ -68,7 +70,7 @@ class QuAcqRunner(BaseRunner):
             use_incremental: bool = True
     ):
         """
-        Initialize runner with file paths. Builds oracle once.
+        Initialize runner with file paths. Builds model once (expensive negation here).
 
         Args:
             bias_path: Path to bias file (.json)
@@ -80,12 +82,13 @@ class QuAcqRunner(BaseRunner):
         """
         super().__init__(bias_path, fm_path, solver_name, use_incremental=use_incremental)
 
-        # Store builder config (model rebuilt each run via builder)
-        self._use_incremental = use_incremental
-
-        # Cache feature IDs from bias (avoids re-reading file on every access)
-        from conacq.bias import BiasIO
-        self._feature_ids = BiasIO.load_from_json(bias_path).feature_ids
+        # Build model once (expensive negation computed here, not per run)
+        from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
+        self.model = (QuAcqModelBuilder
+                      .from_bias(bias_path)
+                      .with_oracle(self.oracle)
+                      .use_incremental(use_incremental)
+                      .build())
 
         self.max_queries = max_queries
         self.query_mode = query_mode
@@ -93,7 +96,7 @@ class QuAcqRunner(BaseRunner):
     @property
     def feature_ids(self) -> Dict[str, int]:
         """Feature name -> SAT variable ID mapping from bias."""
-        return self._feature_ids
+        return self.model.variables
 
     def run(
             self,
@@ -138,76 +141,79 @@ class QuAcqRunner(BaseRunner):
 
         logging.debug('>>> QuAcqRunner.run(mode=%s)', mode)
 
-        # Start memory tracking
-        tracemalloc.start()
-        start_time = time.perf_counter()
+        # Create profiler to collect metrics
+        with profiler_session(ProfilerPreset.BENCHMARK) as profiler:
+            # Start memory tracking
+            tracemalloc.start()
+            with profiler.timer("quacq_total_time"):
+                try:
+                    # Re-prepare model for this run (fresh task, reuses negation)
+                    self.model.prepare(self.oracle)
+                    task = self.model.task
 
-        try:
-            from conacq.algorithms.quacq.quacq import QuAcq
-            from explanation.operations.algorithms.profiler import (
-                profiler_session, ProfilerPreset
+                    if shuffle_seed is not None:
+                        random.Random(shuffle_seed).shuffle(task.set_c)
+                        logging.debug('Shuffled bias (set_c) with seed=%d', shuffle_seed)
+
+                    # Create ExampleProvider hoặc QueryGenerator via factory based on mode
+
+                    quacq = QuAcq(self.solver_name, profiler)
+
+                    if is_oracle_mode:
+                        result = self._run_oracle_mode(
+                            quacq, task, self.oracle, self.model.description_provider, mode)
+                    else:
+                        result = self._run_example_mode(
+                            quacq, task, self.oracle, self.model.description_provider,
+                            positive_examples, negative_examples,
+                            mode, shuffle_seed)
+
+                finally:
+                    current, peak = tracemalloc.get_traced_memory()
+                    tracemalloc.stop()
+
+            # Extract core metrics
+            timer_values = profiler.get_metric('quacq_total_time', [0])
+            runtime_ms = timer_values[0] * 1000 if timer_values else 0
+            memory_peak_mb = peak / (1024 * 1024)
+            consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
+
+            # Extract extended profiler metrics (timers are lists, sum all calls)
+            # congen_runtime_ms = sum(profiler.get_metric('congen_runtime', [0])) * 1000
+            # acqmss_runtime_ms = sum(profiler.get_metric('acqmss_runtime', [0])) * 1000
+            # reduce_runtime_ms = sum(profiler.get_metric('reduce_runtime', [0])) * 1000
+            # solver_time_ms = sum(profiler.get_metric('solver_time', [0])) * 1000
+            # acqmss_calls = profiler.get_metric('acqmss_calls', 0)
+            # is_consistent_calls = profiler.get_metric('is_consistent_calls', 0)
+            # is_consistent_test_cases_calls = profiler.get_metric('is_consistent_test_cases_calls', 0)
+            # redundancy_consistency_checks = profiler.get_metric('redundancy_consistency_checks', 0)
+
+            profiler_snapshot = profiler.to_dict()
+
+            # Resolve KB clauses and BG clauses
+            _, kb_clauses = self.model.resolve_kb(result.kb_assumption_ids)
+            bg_clauses = self.oracle.get_root_clauses()
+            # Resolve assumption IDs -> clauses/names via model
+            # bg_clauses, kb_clauses, kb_names, redundant_names = \
+            #     self.model.resolve_result(result)
+
+            run_result = QuAcqRunResult(
+                kb_constraints=result.kb_constraints,
+                kb_clauses=kb_clauses,
+                bg_clauses=bg_clauses,
+                n_bias=len(self.model.constraint_map),
+                n_kb=result.n_kb,
+                n_queries=result.n_queries,
+                convergence_reason=result.convergence_reason,
+                runtime_ms=runtime_ms,
+                consistency_checks=consistency_checks,
+                memory_peak_mb=memory_peak_mb,
+                profiler_data=profiler_snapshot,
+                query_history=result.query_history
             )
 
-            with profiler_session(ProfilerPreset.BENCHMARK) as profiler:
-                # Build fresh model per run via builder
-                from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
-                model = (QuAcqModelBuilder
-                         .from_bias(self.bias_path)
-                         .with_oracle(self.oracle)
-                         .use_incremental(self._use_incremental)
-                         .build())
-                task = model.task
-
-                if shuffle_seed is not None:
-                    random.Random(shuffle_seed).shuffle(task.set_c)
-                    logging.debug('Shuffled bias (set_c) with seed=%d', shuffle_seed)
-
-                quacq = QuAcq(self.solver_name, profiler)
-
-                if is_oracle_mode:
-                    result = self._run_oracle_mode(
-                        quacq, task, self.oracle, model.description_provider, mode)
-                else:
-                    result = self._run_example_mode(
-                        quacq, task, self.oracle, model.description_provider,
-                        positive_examples, negative_examples,
-                        mode, shuffle_seed)
-
-                # Resolve KB clauses and BG clauses
-                _, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
-                bg_clauses = self.oracle.get_root_clauses()
-
-                profiler_snapshot = profiler.to_dict()
-                consistency_checks = profiler.get_metric(
-                    'paper_consistency_checks',
-                    result.consistency_checks
-                )
-
-        finally:
-            end_time = time.perf_counter()
-            current, peak = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-
-        runtime_ms = (end_time - start_time) * 1000
-        memory_peak_mb = peak / (1024 * 1024)
-
-        run_result = QuAcqRunResult(
-            kb_constraints=result.kb_constraints,
-            kb_clauses=kb_clauses,
-            bg_clauses=bg_clauses,
-            n_bias=len(model.constraint_map),
-            n_kb=result.n_kb,
-            n_queries=result.n_queries,
-            convergence_reason=result.convergence_reason,
-            runtime_ms=runtime_ms,
-            consistency_checks=consistency_checks,
-            memory_peak_mb=memory_peak_mb,
-            profiler_data=profiler_snapshot,
-            query_history=result.query_history
-        )
-
-        logging.debug('<<< QuAcqRunner: KB=%d, queries=%d, runtime=%.2fms',
-                      result.n_kb, result.n_queries, runtime_ms)
+            logging.debug('<<< QuAcqRunner: KB=%d, queries=%d, runtime=%.2fms',
+                          result.n_kb, result.n_queries, runtime_ms)
 
         return run_result
 

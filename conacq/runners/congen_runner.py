@@ -117,9 +117,6 @@ class ConGenRunner(BaseRunner):
                       .use_incremental(use_incremental)
                       .build())
 
-        # Keep original bias order for shuffle restore
-        self._original_bias_constraint_order = list(self.model.constraint_map.keys())
-
     @property
     def feature_ids(self) -> Dict[str, int]:
         """Feature name -> SAT variable ID mapping."""
@@ -152,13 +149,6 @@ class ConGenRunner(BaseRunner):
             with profiler.timer("congen_total_time"):
                 checker = None
                 try:
-                    # Shuffle bias ordering if seed provided
-                    if shuffle_seed is not None:
-                        keys = list(self._original_bias_constraint_order)
-                        random.Random(shuffle_seed).shuffle(keys)
-                        self.model.constraint_map = {k: self.model.constraint_map[k] for k in keys}
-                        logging.debug('Shuffled bias with seed=%d', shuffle_seed)
-
                     # Prepare for this fold's examples (runs GenerateNE)
                     self.model.prepare(
                         oracle=self.oracle,
@@ -166,6 +156,11 @@ class ConGenRunner(BaseRunner):
                         negative_examples=negative_examples
                     )
                     task = self.model.task
+
+                    # Shuffle bias iteration order if seed provided
+                    if shuffle_seed is not None:
+                        random.Random(shuffle_seed).shuffle(task.set_c)
+                        logging.debug('Shuffled set_c with seed=%d', shuffle_seed)
 
                     # Create checker via factory
                     checker = CheckerFactory.create_from_model(

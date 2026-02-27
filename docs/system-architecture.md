@@ -224,19 +224,28 @@ class Oracle(ABC):
 
 **Purpose**: Unified lifecycle for running constraint acquisition algorithms with resource management.
 
-**Unified Lifecycle Pattern** (NEW):
+**Unified Lifecycle Pattern** (commit 260228):
 ```
-runner = ConGenRunner(bias_path, fm_path)  # __init__: build once, oracle created
+# ConGenRunner: build once, prepare+shuffle per fold, cleanup once
+runner = ConGenRunner(bias_path, fm_path)  # __init__: build model+oracle
 try:
-    result1 = runner.run(pos_examples_fold_1, neg_examples_fold_1)  # run many
-    result2 = runner.run(pos_examples_fold_2, neg_examples_fold_2)  # oracle reused
+    result1 = runner.run(pos_fold_1, neg_fold_1, shuffle_seed=42)  # prepare → shuffle → run
+    result2 = runner.run(pos_fold_2, neg_fold_2, shuffle_seed=43)  # prepare → shuffle → run
 finally:
-    runner.cleanup()  # cleanup once: release oracle resources
+    runner.cleanup()  # cleanup once
+
+# QuAcqRunner: same pattern
+runner = QuAcqRunner(bias_path, fm_path)  # __init__: build model+oracle
+try:
+    result1 = runner.run(pos_fold_1, neg_fold_1, mode='example_only', shuffle_seed=42)
+    result2 = runner.run(pos_fold_2, neg_fold_2, mode='example_only', shuffle_seed=43)
+finally:
+    runner.cleanup()
 ```
 
 **BaseRunner ABC**:
-- `__init__(bias_path, fm_path, solver_name, use_incremental=True)` — Build once: load bias, create oracle with configured solver mode
-- `run(**kwargs)` (abstract) — Run many: execute acquisition algorithm
+- `__init__(bias_path, fm_path, solver_name, use_incremental=True)` — Build once: load bias, create oracle with configured solver mode, build model
+- `run(**kwargs)` (abstract) — Run many: execute acquisition algorithm (prepare → shuffle → acquire)
 - `cleanup()` — Cleanup once: release oracle resources
 - `feature_ids` property — Get feature→SAT variable mapping
 
@@ -248,12 +257,20 @@ finally:
 - Method: `get_performance_metrics()` returns PerformanceMetrics (with `n_mss=None` for interactive, actual value for ConGen)
 
 **ConGenRunner** (inherits BaseRunner):
+- `__init__`: Builds ConGenModel via ConGenModelBuilder (requires oracle for negation at build time)
 - `run(positive_examples, negative_examples, shuffle_seed=None)` → `ConGenRunResult`
+  - Per-fold: `model.prepare(oracle, E+, E-)`
+  - Shuffle: `random.Random(shuffle_seed).shuffle(task.set_c)` after prepare
+  - Run ConGen with shuffled bias iteration order
 - Calls `cleanup()` in CV wrapper functions via try/finally
 
 **QuAcqRunner** (inherits BaseRunner):
-- `run(mode='example_only', ...)` → `QuAcqRunResult`
-- Dispatches to oracle or example paths based on mode
+- `__init__`: Builds QuAcqModel via QuAcqModelBuilder (requires oracle for negation at build time, auto-prepares)
+- `run(positive_examples=None, negative_examples=None, mode='example_only', shuffle_seed=None)` → `QuAcqRunResult`
+  - Per-run: `model.prepare(oracle)` (fresh task, reuses built negation)
+  - Shuffle: `random.Random(shuffle_seed).shuffle(task.set_c)` after prepare
+  - Dispatch to oracle or example path based on mode
+- Modes: 'automated'/'interactive' (oracle), 'example_only'/'example_first' (examples)
 
 **Runners re-exported from `conacq.eval`** (for backward compat):
 - `BaseRunner`, `BaseRunResult` exported from `conacq/runners/__init__.py`
@@ -586,35 +603,36 @@ Both paradigms use:
 ### ConGen Learning Flow
 ```
 Bias (JSON) + Feature Model (UVL) + Examples
-    ├─→ ConGenModelBuilder.from_bias(bias_path)
+    ├─→ [__init__] ConGenModelBuilder.from_bias(bias_path)
     │   ├─ .with_oracle(oracle)          # Required for build()
-    │   ├─ .with_examples(path)          # optional: enables auto-prepare
     │   ├─ .use_incremental(True/False)
     │   └─ .build() → ConGenModel
     │       ├─ [BUILD TIME] Compute negation: bias constraints → negated_constraint_map (Tseitin, idempotent)
     │       ├─ Store next_available_id (final tseitin var) in model
-    │       └─ Auto-prepare if oracle+examples set, else unprepared
+    │       └─ No auto-prepare (for CV reuse pattern)
     │
-    ├─→ FeatureModelOracle.from(fm_path)
+    ├─→ [__init__] FeatureModelOracle.from(fm_path)
     │   └─ Builds FMOracleModel with assumption-guarded FM clauses
     │
-    └─→ ConGenModel.prepare(oracle, pos_examples, neg_examples)
-        ├─ [PREPARE TIME] GenerateNE: E- → NE (assumption IDs) [internal to prepare()]
-        ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
-        ├─ ConGenTaskPreparation: Create unified task from bias + NE
-        │   ├─ Use model.next_available_id (from build time)
-        │   └─ set_kb: CNF with assumption literals
-        │   └─ set_c: Bias assumption IDs
-        │   └─ set_tc: E+ assumption IDs
-        │   └─ set_neg_tv: NE assumption IDs (populated by GenerateNE)
-        └─ Task ready for ConGen
-
-    └─→ CheckerFactory.create_from_model(model)
-        └─ Returns Incremental or NonIncremental checker
-
-    └─→ ConGen Algorithm (mode-agnostic)
-        ├─ acquire(set_b, set_bg, set_tc, set_neg_tv, ...)
-        ├─ ACQMSS: Bias → MSS via KBDiag
+    ├─→ [run] ConGenModel.prepare(oracle, pos_examples, neg_examples)
+    │   ├─ [PREPARE TIME] GenerateNE: E- → NE (assumption IDs) [internal to prepare()]
+    │   ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
+    │   └─ ConGenTaskPreparation: Create unified task from bias + NE
+    │       ├─ Use model.next_available_id (from build time)
+    │       └─ set_kb: CNF with assumption literals
+    │       └─ set_c: Bias assumption IDs (will be shuffled after prepare)
+    │       └─ set_tc: E+ assumption IDs
+    │       └─ set_neg_tv: NE assumption IDs (populated by GenerateNE)
+    │
+    ├─→ [run] Shuffle bias iteration order (if shuffle_seed provided)
+    │   └─ random.Random(seed).shuffle(task.set_c)
+    │
+    ├─→ [run] CheckerFactory.create_from_model(model)
+    │   └─ Returns Incremental or NonIncremental checker
+    │
+    └─→ [run] ConGen Algorithm (mode-agnostic)
+        ├─ acquire(set_b, set_bg, set_tc, set_neg_tv, negation_map, ...)
+        ├─ ACQMSS: Bias (set_c) → MSS via KBDiag
         └─ REDUCE: MSS → KB (assumption IDs)
 
 Result: CONGENResult (KB constraint names + assumption IDs)
@@ -622,42 +640,46 @@ Result: CONGENResult (KB constraint names + assumption IDs)
         └─ Accuracy/Precision/Recall metrics
 ```
 
-**Key Changes** (commit 260227 - negation build-time refactoring):
-- **Negation at Build Time**: ConGenModelBuilder.build() computes negation (idempotent, read-only for prepare())
+**Key Changes** (commit 260228 - unified shuffle-after-prepare):
+- **Build-time Negation**: ConGenModelBuilder.build() computes negation at model construction (idempotent)
 - **Prepare is Idempotent**: ConGenModel.prepare() no longer writes negated_constraint_map; only reads from model
+- **Shuffle After Prepare**: Both runners shuffle task.set_c AFTER prepare(), not before (enables CV reuse)
 - **next_available_id Stored**: Model stores tseitin var offset for reuse across multiple prepare() calls
-- **ConGenModel**: Pure data container (no FM fields). Build once, prepare multiple times.
-- **Oracle**: Created separately, passed to `build()` and `prepare()`. Enables CV reuse without rebuilding.
-- **GenerateNE**: Now internal to `prepare()` (callers no longer invoke directly).
+- **ConGenModel**: Pure data container (no FM fields). Build once, prepare multiple times per fold.
+- **Oracle**: Created once in __init__, passed to build() and prepare(). Enables CV reuse without rebuild.
+- **GenerateNE**: Now internal to prepare() (callers no longer invoke directly).
 - **Mode-Agnostic Design**: ConGen, ACQMSS, REDUCE contain no solver-mode branching.
 
 ### QuAcq Interactive/Batch Flow (Paper-Aligned with oracle.is_valid())
 
-**Architecture** (commit 260227 - negation at build time):
+**Architecture** (commit 260228 - unified shuffle-after-prepare):
 ```
 Feature Model + Bias + Oracle (required for both modes)
-    ├─→ QuAcqModelBuilder.from_bias(bias_path)
+    ├─→ [__init__] QuAcqModelBuilder.from_bias(bias_path)
     │   ├─ .with_oracle(oracle)          # Required
     │   ├─ .use_incremental(True/False)  # Optional
     │   └─ .build()
     │       ├─ [BUILD TIME] Compute negation: bias constraints → negated_constraint_map (Tseitin)
     │       ├─ Store next_available_id (final tseitin var) in model
-    │       └─ Auto-prepare with configured oracle
+    │       └─ Auto-prepare with configured oracle (initial preparation at build time)
     │
-    └─→ QuAcqModel (prepared, task ready)
-        └─ QuAcqTaskPreparation.prepare(model, oracle) creates QuAcqTask
-            ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
-            ├─ Inherits from DiagnosisTask: set_kb, assumptions, negation_map, set_b, set_c
-            ├─ Copy BG data from Oracle (Parts 1-3) → set_b (assumption IDs)
-            ├─ Store raw BG clauses (no guards) → background_clauses
-            ├─ Use negated forms from model (not recomputing Tseitin)
-            ├─ Assign assumption IDs (Part 5: paired original+negated)
-            ├─ Store raw clauses per assumption ID
-            │   ├─ constraint_clauses: assumption_id → raw CNF
-            │   └─ negated_clauses: assumption_id → negated CNF (from model.negated_constraint_map)
-            └─ QuAcqTask ready (bias: Set[int], learned_kb: List[int], inherited fields)
+    ├─→ [run] QuAcqModel.prepare(oracle) - fresh task per run
+    │   └─ QuAcqTaskPreparation.prepare(model, oracle) creates QuAcqTask
+    │       ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
+    │       ├─ Inherits from DiagnosisTask: set_kb, assumptions, negation_map, set_b, set_c
+    │       ├─ Copy BG data from Oracle (Parts 1-3) → set_b (assumption IDs)
+    │       ├─ Store raw BG clauses (no guards) → background_clauses
+    │       ├─ Use negated forms from model (not recomputing Tseitin)
+    │       ├─ Assign assumption IDs (Part 5: paired original+negated)
+    │       ├─ Store raw clauses per assumption ID
+    │       │   ├─ constraint_clauses: assumption_id → raw CNF
+    │       │   └─ negated_clauses: assumption_id → negated CNF (from model.negated_constraint_map)
+    │       └─ QuAcqTask ready (bias: Set[int], learned_kb: List[int], inherited fields)
     │
-    └─→ QuAcq Algorithm (oracle or example mode, both use oracle.is_valid())
+    ├─→ [run] Shuffle bias iteration order (if shuffle_seed provided)
+    │   └─ random.Random(seed).shuffle(task.set_c)
+    │
+    └─→ [run] QuAcq Algorithm (oracle or example mode, both use oracle.is_valid())
         ├─ Oracle mode: QuAcq.learn(task, oracle_mode='automated'/'interactive')
         │   └─ GenerateQuery → oracle.is_valid() → Update KB with assumption IDs
         │
@@ -686,6 +708,14 @@ Result: QuAcqResult with dual representation + query history
     ├─ query_history: List[(config, answer, source)] — Tagged queries ('main', 'findscope', 'findc')
     └─ consistency_checks: int — Profiling data
 ```
+
+**Key Changes** (commit 260228 - unified shuffle-after-prepare):
+- **Build-time Negation**: QuAcqModelBuilder.build() computes negation (idempotent, like ConGen)
+- **Per-run Prepare**: model.prepare(oracle) refreshes task for each run (new assumption IDs per run)
+- **Shuffle After Prepare**: Shuffle task.set_c AFTER prepare(), matching ConGen pattern
+- **next_available_id Stored**: Model stores tseitin var offset for reuse across multiple prepare() calls
+- **Idempotent Negation Maps**: Both prepare() calls read negated_constraint_map (never write to it)
+- **Unified Pattern**: ConGen and QuAcq follow identical lifecycle (build-once → prepare+shuffle per run)
 
 **File Organization** (Consolidated in conacq/algorithms/quacq/):
 - **task_preparation.py**: `QuAcqTask` class (inherits DiagnosisTask) + `QuAcqTaskPreparation`

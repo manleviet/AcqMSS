@@ -273,39 +273,46 @@ class ConGen:
 
 # Usage with ConGenModelBuilder (fluent pattern)
 
-# Pattern 1: Auto-prepare (oracle + examples set at build time)
+# Pattern: Build once, prepare+shuffle per fold (cross-validation)
 oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (ConGenModelBuilder
          .from_bias('data/bias/model.json')
-         .with_oracle(oracle)
-         .with_examples('data/examples/model.json')
-         .build())  # Returns prepared model (ready to use)
+         .with_oracle(oracle)  # Required for build-time negation
+         .use_incremental(True)
+         .build())  # Returns unprepared model (negation computed at build time)
 
-# Pattern 2: Manual prepare (cross-validation reuse)
-model = ConGenModelBuilder.from_bias('data/bias/model.json').build()  # Unprepared
-oracle = FeatureModelOracle('data/fms/model.uvl')
-model.prepare(oracle, positive_examples=pos, negative_examples=neg)  # GenerateNE called internally
-
-# Create checker and run ConGen
-from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
-
-checker = CheckerFactory.create_from_model(model, profiler)
-congen = ConGen(checker, profiler)
-result = congen.acquire(
-    set_b=model.task.set_c,
-    set_bg=model.task.set_b,
-    set_tc=model.task.set_tc,
-    set_neg_tv=model.task.set_neg_tv,
-    negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
-)
-
-# For cross-validation: build once, prepare per fold
-model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
-oracle = FeatureModelOracle('data/fms/model.uvl')
-for fold_pos, fold_neg in folds:
+# Cross-validation pattern: build once, prepare multiple times
+import random
+for fold_idx, (fold_pos, fold_neg) in enumerate(folds):
+    # Step 1: Prepare for this fold's examples (GenerateNE called internally)
     model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
+
+    # Step 2: Shuffle bias iteration order (after prepare, for reproducibility)
+    shuffle_seed = fold_idx + 42
+    random.Random(shuffle_seed).shuffle(model.task.set_c)
+
+    # Step 3: Create checker and run ConGen
+    from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
     checker = CheckerFactory.create_from_model(model, profiler)
-    # Use model.task for this fold
+    congen = ConGen(checker, profiler)
+    result = congen.acquire(
+        set_b=model.task.set_c,
+        set_bg=model.task.set_b,
+        set_tc=model.task.set_tc,
+        set_neg_tv=model.task.set_neg_tv,
+        negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
+    )
+
+# Alternative: Use ConGenRunner facade (recommended for production)
+from conacq.runners import ConGenRunner
+
+runner = ConGenRunner('data/bias/model.json', 'data/fms/model.uvl')
+try:
+    for fold_idx, (fold_pos, fold_neg) in enumerate(folds):
+        result = runner.run(fold_pos, fold_neg, shuffle_seed=fold_idx + 42)
+        # Result contains KB and metrics
+finally:
+    runner.cleanup()
 ```
 
 **Benefits**:

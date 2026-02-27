@@ -7,8 +7,9 @@ from .nwise_coverage import NWiseCoverageGenerator, TwoCoverageGenerator
 from .example_provider import ExampleProvider
 
 # QueryGenerator is lazily imported to avoid circular dependency:
-# example_generators/__init__ -> query_generator -> algorithms.interactive.task
-# -> algorithms/__init__ -> interactive/__init__ -> example_generators (partial)
+# example_generators/__init__ -> query_generator -> algorithms.quacq._task_compat
+# -> algorithms/__init__ -> acqmss/__init__ -> quacq/__init__ -> quacq.py
+# -> quacq.py imports from example_generators (circular!)
 
 
 def __getattr__(name):

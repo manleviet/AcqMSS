@@ -148,9 +148,9 @@ Pipeline runners with unified lifecycle (build-once/run-many/cleanup-once):
 | `__init__.py` | ~18 | Package exports |
 
 **BaseRunner Architecture** (NEW):
-- ABC defining lifecycle: `__init__` (oracle built once) → `run()` (may be called multiple times) → `cleanup()` (release resources)
-- Oracle created once in `__init__`, reused across all `run()` calls
-- Enforces consistent initialization across ConGen and Interactive runners
+- ABC defining lifecycle: `__init__` (oracle + model built once) → `run()` (may be called multiple times) → `cleanup()` (release resources)
+- Oracle and model created once in `__init__`, reused across all `run()` calls
+- Enforces consistent initialization across ConGen and QuAcq runners
 - `cleanup()` method releases oracle resources
 
 **BaseRunResult** (NEW):
@@ -160,13 +160,23 @@ Pipeline runners with unified lifecycle (build-once/run-many/cleanup-once):
 
 **ConGenRunner** (inherits BaseRunner):
 - File-path-based constructor: `ConGenRunner(bias_path, fm_path, solver_name='glucose4')`
+- `__init__`: Builds model once via ConGenModelBuilder (requires oracle for negation computation)
 - `run(positive_examples, negative_examples, shuffle_seed=None)` returns `ConGenRunResult` with MSS count
-- Supports bias shuffle seed for reproducibility
+  - Per-fold lifecycle: prepare() → shuffle set_c after prepare() → run ConGen
+  - Supports bias shuffle seed for reproducibility
+  - Oracle reused across folds (no rebuild)
 
 **QuAcqRunner** (inherits BaseRunner):
 - File-path-based constructor: `QuAcqRunner(bias_path, fm_path, ...)`
+- `__init__`: Builds model once via QuAcqModelBuilder (requires oracle for negation computation, auto-prepares)
+- Per-run lifecycle: re-prepare() → shuffle set_c after prepare() → dispatch to oracle/example mode
 - Dual-mode `run(mode, ...)`: dispatches to oracle ('automated'/'interactive') or example ('example_only'/'example_first') paths
 - Returns `QuAcqRunResult` with KB constraints, metrics, and profiler data
+
+**Unified Shuffle Pattern** (NEW - commit 260228):
+- Both runners now follow identical shuffle lifecycle: prepare() → shuffle set_c → run algorithm
+- Shuffle seed controls bias iteration order after preparation (not before)
+- Enables reproducible CV experiments without model rebuild
 
 #### conacq/eval/ — Evaluation Framework (~2,760 LOC, 14 files)
 
