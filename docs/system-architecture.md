@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-18 (BGData, ConGenModelBuilder auto-prepare, cross-validation refactor)
+**Last Updated**: 2026-02-26 (BG assumption bug fix: background_clauses field, dual storage pattern)
 
 ## High-Level Overview
 
@@ -246,20 +246,55 @@ class Oracle(ABC):
 - Alphabetical sorting would cause critical mismatch with clause literals
 - Source of truth: `FmToPysat.variables` from FM→SAT conversion
 
-#### acqmss/eval/ — Evaluation Framework
+#### conacq/runners/ — Execution Runners
+
+**Purpose**: Unified lifecycle for running constraint acquisition algorithms with resource management.
+
+**Unified Lifecycle Pattern** (NEW):
+```
+runner = ConGenRunner(bias_path, fm_path)  # __init__: build once, oracle created
+try:
+    result1 = runner.run(pos_examples_fold_1, neg_examples_fold_1)  # run many
+    result2 = runner.run(pos_examples_fold_2, neg_examples_fold_2)  # oracle reused
+finally:
+    runner.cleanup()  # cleanup once: release oracle resources
+```
+
+**BaseRunner ABC**:
+- `__init__(bias_path, fm_path, solver_name)` — Build once: load bias, create oracle
+- `run(**kwargs)` (abstract) — Run many: execute acquisition algorithm
+- `cleanup()` — Cleanup once: release oracle resources
+- `feature_ids` property — Get feature→SAT variable mapping
+
+**BaseRunResult** (9 shared fields):
+- KB output: `kb_constraints` (str names), `kb_clauses` (CNF), `bg_clauses` (root constraint)
+- Size metrics: `n_bias` (original), `n_kb` (learned)
+- Performance: `runtime_ms`, `consistency_checks` (SAT calls), `memory_peak_mb`
+- Profiling: `profiler_data` (full profiler snapshot)
+- Method: `get_performance_metrics()` returns PerformanceMetrics (with `n_mss=None` for interactive, actual value for ConGen)
+
+**ConGenRunner** (inherits BaseRunner):
+- `run(positive_examples, negative_examples, shuffle_seed=None)` → `ConGenRunResult`
+- Calls `cleanup()` in CV wrapper functions via try/finally
+
+**InteractiveRunner** (inherits BaseRunner):
+- `run(mode='example_only', ...)` → `InteractiveRunResult`
+- Dispatches to oracle or example paths based on mode
+
+**Runners re-exported from `conacq.eval`** (for backward compat):
+- `BaseRunner`, `BaseRunResult` exported from `conacq/runners/__init__.py`
+- Then re-exported from `conacq/eval/__init__.py`
+
+#### conacq/eval/ — Evaluation Framework
 
 **Purpose**: Measure accuracy of learned constraints against ground truth; unified CV output pipeline.
 
 **Components**:
-- `cross_validation.py` — n-fold CV orchestration (CONGEN & Interactive modes)
+- `cross_validation.py` — n-fold CV orchestration (CONGEN & Interactive modes); calls `runner.cleanup()` via try/finally
 - `accuracy.py` — Calculate accuracy, precision, recall, F1
 - `kb_comparator.py` — Strategy-based comparison (description/clause) against oracle FM + `ComparationResult.to_enriched_dict()`
 - `config.py` — Pipeline config (ModelConfig, find_cv_files, find_kb_files)
 - `result_loader.py` — Load evaluation results + `ConGenResultData.from_dict()`
-
-**Runners** (`acqmss/runners/`, re-exported from `acqmss.eval` for backward compat):
-- `congen_runner.py` — CONGEN pipeline runner with metrics
-- `interactive_runner.py` — QuAcq pipeline runner (analogous to CONGENRunner)
 - `report.py` — Generate CSV/JSON/LaTeX/Markdown reports; unified CV dict builder (`generate_unified_cv_dict`, `_enrich_constraints`)
 - `interactive_metrics.py` — QuAcq-specific metrics (query counts, convergence)
 
@@ -271,9 +306,10 @@ Recall    = TP / (TP + FN)
 F1        = 2 * P * R / (P + R)
 ```
 
-**Comparison Strategies**:
-- **description** — Compare constraint natural language descriptions
-- **clause** — Compare CNF clauses exactly
+**Comparison Strategies** (in `kb_comparator.py`):
+- **description** — Compare constraint natural language descriptions (recommended)
+- **clause** — Compare CNF clauses exactly (structural)
+- **semantic** — SAT-based bidirectional entailment (KB ≡ C_T equivalence)
 
 ### explanation/ — SAT Solver Infrastructure
 
@@ -291,18 +327,31 @@ class DiagnosisModel:
     solver: Solver              # PySAT solver instance
 
 class DiagnosisTask:
-    """Base task with assumptions."""
+    """Base task with assumptions (inherited by TestCaseTask and QuAcqTask)."""
     assumptions: list[int]      # Control literals
     set_kb: list[list[int]]     # CNF with assumption literals
-
-class CONGENTask(TestCaseTask):
-    """Task for ConGen - unified assumption-based format."""
+    set_b: list[int]            # Background assumption IDs
     set_c: list[int]            # Bias assumption IDs
+    negation_map: Dict[int, int]   # Negation map: assumption_id → negated_id
+
+class TestCaseTask(DiagnosisTask):
+    """Task for test case scenarios (inherits from DiagnosisTask)."""
     set_tc: list[int]           # E+ assumption IDs
     set_tv: list[int]           # E- assumption IDs
-    set_neg_tv: list[int]           # Negated example assumption IDs
-    set_b: list[int]            # Background assumption IDs
-    negation_map: Dict[int, int]   # Negation map: assumption_id → negated_id
+
+class ConGenTask(TestCaseTask):
+    """Task for ConGen - unified assumption-based format (inherits from TestCaseTask)."""
+    set_neg_tv: list[int]       # Negated example assumption IDs
+
+class QuAcqTask(DiagnosisTask):
+    """Task for QuAcq interactive learning (inherits from DiagnosisTask)."""
+    bias: set[int]              # Remaining bias assumption IDs
+    learned_kb: list[int]       # Learned constraint assumption IDs
+    background_clauses: list[list[int]]  # Raw BG CNF (no guards)
+    feature_ids: dict[str, int] # Feature name → SAT var ID
+    id_to_feature: dict[int, str] # SAT var ID → feature name
+    constraint_clauses: dict[int, list[list[int]]]  # constraint_id → raw clauses
+    negated_clauses: dict[int, list[list[int]]]  # constraint_id → negated clauses
 ```
 
 #### explanation/operations/ — Diagnosis Algorithms
@@ -366,9 +415,90 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
 
 **Critical**: The variable mapping MUST come from flamapy's variable assignment (tree traversal order), NOT alphabetical sorting. The Oracle uses flamapy's variable mapping as the authoritative source to ensure feature_ids match the SAT variable IDs in CNF clauses.
 
+## QuAcq → ConGen Evaluation Pipeline (NEW)
+
+**Purpose**: Compare QuAcq (interactive) and ConGen (passive) via progressive query budgets to understand when ConGen reaches QuAcq KB quality.
+
+**Architecture**:
+```
+QuAcq (automated)
+    ├─ Run oracle-based learning
+    ├─ Record query history with source tags ('main', 'findc')
+    ├─ Final KB and metrics
+    └─ Query history → assignment lists
+
+Converter (query_converter.py)
+    ├─ queries_to_assignment_lists() — Extract E+/E- from history
+    └─ queries_to_examples() — Convert to ExampleSet format
+
+Progressive Evaluator (progressive_evaluation.py)
+    ├─ For each checkpoint [10%, 25%, 50%, 75%, 100%]:
+    │   ├─ Slice query history to N% of total queries
+    │   ├─ ConGen.run(E+_N%, E-_N%)
+    │   ├─ Three comparisons (KB vs C_T):
+    │   │   ├─ Description strategy (constraint names)
+    │   │   ├─ Clause strategy (CNF matching)
+    │   │   └─ Semantic strategy (SAT-based equivalence)
+    │   └─ Metrics: accuracy, precision, recall, F1, KB size
+    └─ Collect CheckpointResult for each % level
+
+Final Comparison
+    ├─ QuAcq final KB (all queries)
+    ├─ ConGen final KB (100% checkpoint)
+    └─ Semantic equivalence: KB ≡ C_T via bidirectional entailment
+```
+
+**Key Strategies**:
+
+1. **Description-Based** (recommended): Compare constraint text descriptions
+   - Pros: Human-readable, tolerant of syntactic variations
+   - Cons: Requires constraint descriptions in bias
+
+2. **Clause-Based**: Compare CNF clauses structurally
+   - Pros: Syntactically precise
+   - Cons: Semantically identical but reordered clauses count as mismatches
+
+3. **Semantic-Based** (NEW): SAT-based bidirectional entailment
+   - KB ⊨ C_T: For each c in C_T, (KB + BG + ¬c) is UNSAT
+   - C_T ⊨ KB: For each c in KB, (C_T + ¬c) is UNSAT
+   - Equivalence: Both directions hold → KB ≡ C_T
+   - Implementation: `SemanticEquivalenceChecker` uses pysat directly
+
+**Execution** (`run_evaluation.py`):
+```bash
+python -m apps.run_evaluation apps/conf/run_evaluation_config.toml -v
+```
+
+**Output** (`{model}_evaluation.json`):
+```json
+{
+  "metadata": {"model": "arcade-game", "timestamp": "...", "checkpoints_pct": [10, 25, 50, 75, 100]},
+  "quacq": {"n_queries": 150, "n_kb": 32, "convergence_reason": "bias_exhausted", "runtime_ms": 5230},
+  "progressive": [
+    {
+      "checkpoint_pct": 10,
+      "n_queries": 15,
+      "n_kb": 8,
+      "comparison": {
+        "description": {"metrics": {"accuracy": 0.75, ...}, "matched_constraints": [...], ...},
+        "clause": {...},
+        "semantic": {"is_equivalent": false, "kb_entails_ct": true, "ct_entails_kb": false}
+      }
+    },
+    ...
+  ],
+  "quacq": {
+    "comparison": {
+      "description": {...},
+      "semantic": {"is_equivalent": true}
+    }
+  }
+}
+```
+
 ## Unified CV Output Pipeline
 
-**Architecture Change** (commit 260226): CV pipeline now produces single JSON file per experiment (not 45+ files).
+**Architecture** (commit 260226): CV pipeline now produces single JSON file per experiment (not 45+ files).
 
 ### Unified CV JSON Structure
 
@@ -460,23 +590,28 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
 - Legacy CV result files still supported
 - Old `run_compare.py` mode (KB comparison) unchanged
 
-## Two Learning Paradigms
+## Two Learning Paradigms (Unified via Assumption IDs)
 
 ### 1. ConGen (Passive/Batch Learning)
 - Input: Pre-collected E+/E- examples
 - No user interaction required
 - Learns constraint KB in one pass (GenerateNE called by `ConGenModel.prepare()`, then ACQMSS → REDUCE)
 - **ConGenModel**: Pure data container (bias + solver config). Oracle injected at `prepare()` time.
-- **Preparation**: `model.prepare(oracle, positive_examples, negative_examples)` generates NE and populates task.
+- **Preparation**: `model.prepare(oracle, positive_examples, negative_examples)` generates NE and populates `ConGenTask` (assumption-based).
 - **Reusable**: Build once, prepare multiple times per fold for cross-validation without rebuilding.
 - ConGenModel satisfies CheckerModel protocol (`get_kb()`, `get_assumptions()`, solver config)
+- **Task Representation**: `ConGenTask` with assumption IDs (set_c, set_tc, set_neg_tv, negation_map)
 - Complexity: O(|B| * SAT checks)
 
-### 2. QuAcq (Interactive/Active Learning)
-- **Oracle mode**: Queries user for membership (interactive)
-- **Example mode**: Uses pre-collected E+/E- (batch, no oracle)
-- **CV support**: `n_fold_cross_validation_interactive(positive_examples, negative_examples, fm_path, bias_path, ...)` with `InteractiveRunner(bias_path, fm_path, ...)`
-- **Dual-mode run()**: Dispatch to oracle or example paths based on `mode` parameter
+### 2. QuAcq (Interactive/Active Learning) — NOW UNIFIED WITH ASSUMPTION IDs
+- **Architecture**: `InteractiveModel` (dual to ConGenModel) + `QuAcqTask` (dual to ConGenTask)
+- **Both use int assumption IDs** for constraint identification (matching ConGen semantics)
+- **Oracle mode**: Queries user for membership via `QuAcq.learn(oracle_mode='automated'/'interactive')`
+- **Example mode**: Uses pre-collected E+/E- via `QuAcq.learn_from_examples(positive_examples, negative_examples)`
+- **CV support**: `n_fold_cross_validation_interactive()` with `InteractiveRunner(bias_path, fm_path, ...)`
+- **Dual-mode runner**: `InteractiveRunner.run(mode)` dispatches to oracle or example paths
+- **Task Representation**: `QuAcqTask` with assumption IDs (bias: Set[int], learned_kb: List[int])
+- **Result Representation**: `QuAcqResult` with dual fields (kb_constraints: str names, kb_assumption_ids: int IDs)
 - FindScope/FindC: O(|S| * log|X| + |Gamma|) queries per constraint
 - Complexity: O(|C_T| * (log|X| + |Gamma|)) total queries
 
@@ -530,18 +665,61 @@ Result: CONGENResult (KB constraint names + assumption IDs)
 - **GenerateNE**: Now internal to `prepare()` (callers no longer invoke directly).
 - **Mode-Agnostic Design**: ConGen, ACQMSS, REDUCE contain no solver-mode branching.
 
-### QuAcq Interactive/Batch Flow
+### QuAcq Interactive/Batch Flow (Now Using Assumption IDs + Dual Storage)
 
-**Example-Based Mode (IJCAI13 FindScope/FindC)**:
+**Architecture**:
 ```
-Feature Model + Bias + E+/E- Examples
-    └─→ QuAcq.learn_from_examples() (loop)
-        ├─ For each e in E-:
-        │   ├─ FindScope: Binary search via partial queries (O(|S| * log|X|))
-        │   ├─ FindC: Discriminate candidates with scope (O(|Gamma|))
-        │   └─ Add found constraint to KB
-        └─ Termination: All E- processed or bias exhausted
+Feature Model + Bias + Oracle (optional for example mode)
+    ├─→ InteractiveModel.from_bias(bias_path)
+    │   └─ Load bias constraints from JSON
+    │
+    ├─→ Oracle: FeatureModelOracle.from(fm_path)
+    │   └─ Extract FM + BG data (assumption-guarded)
+    │
+    ├─→ InteractiveModel.prepare(oracle)
+    │   └─ InteractiveTaskPreparation.prepare() creates QuAcqTask
+    │       ├─ Inherits from DiagnosisTask: set_kb, assumptions, negation_map, set_b, set_c
+    │       ├─ Copy BG data from Oracle (Parts 1-3) → set_b (assumption IDs)
+    │       ├─ Store raw BG clauses (no guards) → background_clauses
+    │       ├─ Negate bias constraints (Tseitin, Part 4)
+    │       ├─ Assign assumption IDs (Part 5: paired original+negated)
+    │       ├─ Store raw clauses per assumption ID
+    │       │   ├─ constraint_clauses: assumption_id → raw CNF
+    │       │   └─ negated_clauses: assumption_id → negated CNF
+    │       └─ QuAcqTask ready (bias: Set[int], learned_kb: List[int], inherited fields)
+    │
+    └─→ QuAcq Algorithm (oracle or example mode)
+        ├─ Oracle mode: QuAcq.learn(task, oracle_mode='automated'/'interactive')
+        │   └─ GenerateQuery → Oracle.ask() → Update KB with assumption IDs
+        └─ Example mode: QuAcq.learn_from_examples(task, E+, E-)
+            ├─ For each e in E-:
+            │   ├─ FindScope: Binary search via partial queries (O(|S| * log|X|))
+            │   │   └─ Uses get_bg_clauses() for correct BG violation detection
+            │   ├─ FindC: Discriminate candidates with scope (O(|Gamma|))
+            │   │   └─ Uses raw constraint_clauses for SAT discrimination
+            │   └─ Add found constraint (assumption ID) to KB
+            └─ Termination: All E- processed or bias exhausted
+
+Result: QuAcqResult with dual representation
+    ├─ kb_constraints: List[str] — Resolved via DescriptionProvider
+    └─ kb_assumption_ids: List[int] — Primary representation for SAT operations
 ```
+
+**Key Changes** (Inheritance Refactoring):
+- **QuAcqTask Inheritance**: Now inherits from DiagnosisTask
+  - Removed duplicate fields: `set_kb`, `assumptions`, `negation_map` (now inherited)
+  - Focused on interactive-specific fields: `bias`, `learned_kb`, `background_clauses`
+  - Field naming: `set_b` (inherited) for BG assumption IDs, `background_clauses` for raw BG CNF
+  - Fixes: Correct field semantics via inheritance structure
+- **Shared Duck-Typing Helpers** (`_task_compat.py`):
+  - `get_bg_clauses(task)` — Normalize BG clause extraction for both task types
+  - `get_clause_map(task)` — Normalize constraint→clauses mapping
+  - `get_negated_clauses(task, c_id)` — Normalize negated clause lookup
+- **InteractiveModel**: Parallel to ConGenModel for interactive learning
+- **QuAcqResult**: Dual representation (names + IDs) for compatibility
+- **Shared REDUCE**: Direct reuse without `_reduce_kb()` conversion layer
+- **DescriptionProvider**: Maps assumption IDs to constraint names
+- **Exception Handling**: `_apply_reduce()` narrowed from `except Exception` → `except (RuntimeError, KeyError, ValueError)`
 
 ## Integration Points
 
@@ -612,7 +790,14 @@ Result: feature_ids matches SAT variable IDs in CNF
 - Good for cross-validation and solver comparison
 - Subprocess overhead (~100-500ms per call)
 
-## Performance Characteristics
+## Performance Metrics
+
+### PerformanceMetrics Updates
+
+**PerformanceMetrics.n_mss** (NEW: `Optional[int] = None`):
+- ConGenRunner: Sets actual MSS count from ACQMSS
+- InteractiveRunner: None (no MSS concept in interactive learning)
+- Enables unified metrics across both runners while supporting ConGen-specific measurements
 
 ### Algorithm Complexity
 
