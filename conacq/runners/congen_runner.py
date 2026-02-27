@@ -110,9 +110,10 @@ class ConGenRunner(BaseRunner):
         """
         super().__init__(bias_path, fm_path, solver_name, use_incremental=use_incremental)
 
-        # Build model (bias only)
+        # Build model (bias + negation, no examples yet)
         self.model = (ConGenModelBuilder
                       .from_bias(bias_path)
+                      .with_oracle(self.oracle)
                       .use_incremental(use_incremental)
                       .build())
 

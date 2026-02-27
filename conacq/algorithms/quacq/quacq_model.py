@@ -35,10 +35,12 @@ class QuAcqModel:
     def __init__(self) -> None:
         # Constraint name -> raw CNF clauses
         self.constraint_map: Dict[str, List[List[int]]] = {}
-        # Constraint NOT(name) -> negated CNF clauses (populated at prepare())
+        # Constraint NOT(name) -> negated CNF clauses (populated by builder)
         self.negated_constraint_map: Dict[str, List[List[int]]] = {}
         # Feature name -> SAT variable ID (from bias)
         self.variables: Dict[str, int] = {}
+        # Next available assumption ID (set by builder after negation)
+        self.next_available_id: int = 0
         # Store incremental preference for CheckerModel protocol
         self.use_incremental: bool = True
 

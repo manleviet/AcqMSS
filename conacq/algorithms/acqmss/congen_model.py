@@ -42,7 +42,7 @@ class ConGenModel:
         # map feature names to IDs (for debugging and description generation)
         self.variables: Dict[str, int] = {}
         # Used as starting ID for assumption literals to avoid conflicts.
-        # Initialized from oracle at prepare() time.
+        # Set by builder at build time (after negation computation).
         self.next_available_id: int = 1000
 
         # CheckerModel protocol attributes

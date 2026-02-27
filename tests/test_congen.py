@@ -316,23 +316,26 @@ class TestConGenModelBuilder:
                  .build())
         assert model.task is not None
 
-    def test_build_without_oracle_returns_unprepared(self):
-        """build() without oracle → unprepared model."""
+    def test_build_without_oracle_raises(self):
+        """build() without oracle → ValueError."""
         if not BIAS_PATH.exists():
             pytest.skip("Bias file not found")
 
-        model = ConGenModelBuilder.from_bias(str(BIAS_PATH)).build()
-        assert model.task is None
+        with pytest.raises(ValueError, match="Oracle required"):
+            ConGenModelBuilder.from_bias(str(BIAS_PATH)).build()
 
     def test_cv_re_prepare(self):
-        """Pattern 3: build once, prepare per fold."""
+        """Pattern 3: build once with oracle, prepare per fold."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
         from conacq.examples import ExampleIO
 
-        model = ConGenModelBuilder.from_bias(str(BIAS_PATH)).build()
         oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        model = (ConGenModelBuilder
+                 .from_bias(str(BIAS_PATH))
+                 .with_oracle(oracle)
+                 .build())
         examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]

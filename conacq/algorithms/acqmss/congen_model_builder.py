@@ -31,7 +31,9 @@ class ConGenModelBuilder:
                  .build())  # Returns prepared model
 
         # Pattern 3: CV build-once, prepare per fold
-        model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
+        model = (ConGenModelBuilder.from_bias('data/bias/model.json')
+                 .with_oracle(oracle)
+                 .build())
         for fold_pos, fold_neg in folds:
             model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
     """
@@ -94,15 +96,16 @@ class ConGenModelBuilder:
     def build(self) -> ConGenModel:
         """Build and return configured ConGenModel.
 
-        Auto-prepares if both oracle and examples are set.
-        Otherwise returns unprepared model for manual prepare().
+        Computes negation at build time (requires oracle).
+        Auto-prepares if examples are also set.
 
         Raises:
-            ValueError: If bias path missing
+            ValueError: If bias path or oracle missing
         """
         self._validate()
 
         from conacq.bias import BiasIO
+        from explanation.operations.algorithms.utils import negate_cnf_tseitin
 
         bias = BiasIO.load_from_json(self._bias_path)
 
@@ -111,8 +114,15 @@ class ConGenModelBuilder:
         model.variables = bias.feature_ids
         model._use_incremental = self._use_incremental
 
-        # Auto-prepare when oracle + examples present
-        if self._oracle and self._has_examples():
+        # Compute negation at build time (requires oracle for next_available_id)
+        next_tseitin_var = self._oracle.get_bg_data().next_available_id
+        for key, c in model.constraint_map.items():
+            neg_clauses, next_tseitin_var = negate_cnf_tseitin(c, next_tseitin_var)
+            model.negated_constraint_map[f"NOT({key})"] = neg_clauses
+        model.next_available_id = next_tseitin_var
+
+        # Auto-prepare when examples present
+        if self._has_examples():
             pos, neg = self._resolve_examples()
             model.prepare(
                 oracle=self._oracle,
@@ -137,6 +147,8 @@ class ConGenModelBuilder:
         """Validate builder state."""
         if self._bias_path is None:
             raise ValueError("Bias path required (use from_bias())")
+        if self._oracle is None:
+            raise ValueError("Oracle required (use with_oracle())")
 
     def _resolve_examples(self) -> Tuple[List[Dict[str, bool]], List[Dict[str, bool]]]:
         """Load examples from path or return direct data."""

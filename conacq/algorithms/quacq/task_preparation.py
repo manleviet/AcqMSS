@@ -18,8 +18,6 @@ from explanation.models.task_preparation import (
     prepare_kb,
     _ASSUMPTION_PAIR_STRIDE,
 )
-from explanation.operations.algorithms.utils import negate_cnf_tseitin
-
 if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
     from .quacq_model import QuAcqModel
@@ -174,19 +172,12 @@ class QuAcqTaskPreparation:
         for aid, desc in bg_data.descriptions.items():
             provider.add_constraint_description(aid, desc)
         result.set_b = list(bg_data.assumptions)
-        id_assumption = bg_data.next_available_id
 
         # Store raw BG clauses (without assumption guards) for _find_conflict
         result.background_clauses = oracle.get_root_clauses()
 
-        # Step 1: Negate bias constraints using Tseitin transformation
-        next_tseitin_var = id_assumption
-        for key, c in model.constraint_map.items():
-            neg_clauses, next_tseitin_var = negate_cnf_tseitin(c, next_tseitin_var)
-            model.negated_constraint_map[f"NOT({key})"] = neg_clauses
-
-        # Step 2: Assign assumption IDs via prepare_kb()
-        id_assumption = next_tseitin_var
+        # Step 1: Assign assumption IDs (negated forms from builder)
+        id_assumption = model.next_available_id
         bias_start_pos = len(result.assumptions)
         id_assumption = prepare_kb(
             result, provider, model.constraint_map,

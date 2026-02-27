@@ -18,7 +18,6 @@ from explanation.models.task_preparation import (
     prepare_kb,
     _ASSUMPTION_PAIR_STRIDE,
 )
-from explanation.operations.algorithms.utils import negate_cnf_tseitin
 from .generate_ne import GenerateNE
 
 if TYPE_CHECKING:
@@ -92,16 +91,10 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         result.negation_map.update(bg_data.negation_map)
         for aid, desc in bg_data.descriptions.items():
             provider.add_constraint_description(aid, desc)
-        id_assumption = bg_data.next_available_id
 
-        # Step 1: Prepare bias constraints as set_c (with negated forms for REDUCE)
+        # Step 1: Prepare bias constraints as set_c (negated forms from builder)
         bias_start_pos = len(result.assumptions)
-        next_tseitin_var = id_assumption
-        for key, c in model.constraint_map.items():
-            neg_clauses, next_tseitin_var = negate_cnf_tseitin(c, next_tseitin_var)
-            model.negated_constraint_map[f"NOT({key})"] = neg_clauses
-
-        id_assumption = next_tseitin_var
+        id_assumption = model.next_available_id
         id_assumption = prepare_kb(
             result, provider, model.constraint_map,
             id_assumption, model.negated_constraint_map)
@@ -120,8 +113,9 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             id_assumption = self._prepare_negative_examples(
                 result, provider, model, oracle, testsuite, id_assumption)
 
-        # Store next available assumption ID
-        model.next_available_id = id_assumption
+        # NOTE: Do NOT update model.next_available_id here.
+        # model.next_available_id was set by the builder at build time and should remain fixed.
+        # Updating it here would cause subsequent prepare() calls to allocate IDs from wrong range.
 
         logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, set_tv=%d',
                       len(result.set_c), len(result.set_tc), len(result.set_tv))

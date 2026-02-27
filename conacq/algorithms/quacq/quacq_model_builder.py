@@ -46,7 +46,7 @@ class QuAcqModelBuilder:
     def build(self) -> QuAcqModel:
         """Build and return prepared QuAcqModel.
 
-        Always auto-prepares using the configured oracle.
+        Computes negation at build time, then auto-prepares.
 
         Raises:
             ValueError: If bias path or oracle missing
@@ -54,6 +54,7 @@ class QuAcqModelBuilder:
         self._validate()
 
         from conacq.bias import BiasIO
+        from explanation.operations.algorithms.utils import negate_cnf_tseitin
 
         bias = BiasIO.load_from_json(self._bias_path)
 
@@ -61,6 +62,13 @@ class QuAcqModelBuilder:
         model.constraint_map = bias.to_constraint_map()
         model.variables = bias.feature_ids
         model.use_incremental = self._use_incremental
+
+        # Compute negation at build time (before prepare)
+        next_tseitin_var = self._oracle.get_bg_data().next_available_id
+        for key, c in model.constraint_map.items():
+            neg_clauses, next_tseitin_var = negate_cnf_tseitin(c, next_tseitin_var)
+            model.negated_constraint_map[f"NOT({key})"] = neg_clauses
+        model.next_available_id = next_tseitin_var
 
         model.prepare(self._oracle)
         return model
