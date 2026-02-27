@@ -21,8 +21,8 @@ Primary constraint discovery algorithms:
 | `reduce.py` | 155 | REDUCE: redundancy elimination via consistency checking |
 | `generate_ne.py` | 193 | GenerateNE: negated example generation (internal to ConGenModel.prepare()) |
 | `task_preparation.py` | 435 | Task hierarchy (DiagnosisTask → TestCaseTask → ConGenTask) + unified prep |
-| `congen_model.py` | 186 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Call prepare(oracle) before use |
-| `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern. Auto-prepares when oracle+examples set; otherwise returns unprepared model |
+| `congen_model.py` | 186 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Stores negated_constraint_map + next_available_id (computed at build time). Call prepare(oracle) before use. |
+| `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern. Requires oracle. build() computes negation (idempotent), auto-prepares when oracle+examples set. Returns unprepared model otherwise. |
 | (Total: 1,331 LOC for main algorithms) |
 | (Subtotal: 1,439 LOC including both paradigm-specific builders) |
 
@@ -33,8 +33,8 @@ Primary constraint discovery algorithms:
 | File | LOC | Purpose |
 |------|-----|---------|
 | `quacq.py` | 439 | QuAcq algorithm + QuAcqResult (oracle.is_valid() modes, assumption IDs) |
-| `quacq_model.py` | ~93 | QuAcqModel: dual to ConGenModel for interactive learning |
-| `quacq_model_builder.py` | ~74 | QuAcqModelBuilder: fluent builder, auto-prepares on build() |
+| `quacq_model.py` | ~93 | QuAcqModel: dual to ConGenModel for interactive learning. Stores negated_constraint_map + next_available_id (computed at build time). |
+| `quacq_model_builder.py` | ~74 | QuAcqModelBuilder: fluent builder, requires oracle. build() computes negation (idempotent), auto-prepares on build(). |
 | `task_preparation.py` | ~280 | QuAcqTask + QuAcqTaskPreparation: task hierarchy + preparation |
 | `_task_compat.py` | ~39 | Shared duck-typing helpers: get_clause_map(), get_negated_clauses(), get_bg_clauses() |
 | `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): oracle.is_valid() + DiscriminatingGenerator(C_L[Y]) |
@@ -132,9 +132,9 @@ Utilities for converting query histories and managing example formats:
 
 9. **CheckerModel Protocol**: `FMOracleModel` and `ConGenModel` implement `get_kb()`, `get_assumptions()`, `use_incremental` for compatibility with `CheckerFactory`.
 
-10. **Builder Pattern**: ConGenModelBuilder encapsulates bias loading and configuration. `build()` auto-prepares when `with_oracle()` + `with_examples()` are set; returns unprepared model otherwise. Call `model.prepare(oracle, examples)` manually for CV reuse patterns.
+10. **Builder Pattern** (commit 260227): ConGenModelBuilder encapsulates bias loading and configuration. Requires oracle via `with_oracle()` (needed for build-time negation computation). `build()` computes negation (idempotent) and auto-prepares when `with_examples()` is also set; returns unprepared model otherwise. Call `model.prepare(oracle, examples)` manually for CV reuse patterns.
 
-11. **Oracle Separation**: Oracle created independently and passed to `model.prepare()`. Enables cross-validation reuse without rebuilding model.
+11. **Oracle Required at Build Time**: Oracle passed to `with_oracle()` for negation computation in `build()`. Same oracle can be passed to `model.prepare()` for example preparation. Enables cross-validation reuse without rebuilding model.
 
 #### conacq/runners/ — Execution Runners (~480 LOC, 4 files)
 
@@ -480,13 +480,19 @@ CONGEN and QuAcq learning results:
 - ConGenTaskPreparation calls `oracle.get_bg_data()` to extract root constraint post-preparation
 - Enables clean separation: Oracle owns Parts 1-4 of assumption ID layout; ConGen starts allocation at `next_available_id`
 
+**Build-Time Negation** (commit 260227):
+- ConGenModelBuilder.build() now computes negation (idempotent) before prepare()
+- ConGenModel stores negated_constraint_map + next_available_id (populated at build time)
+- ConGenModel.prepare() is idempotent: reads negated_constraint_map, never writes to it
+- QuAcqModelBuilder.build() follows same pattern: negation at build time
+
 **Earlier Changes** (still in place):
-- ConGenModel pure data container (bias + solver config only)
-- ConGenModel.prepare(oracle, pos_examples, neg_examples)
-- ConGenModelBuilder.from_bias(path): returns unprepared model by default; auto-prepares if oracle+examples set via with_oracle()/with_examples()
+- ConGenModel pure data container (bias + solver config only + negation maps)
+- ConGenModel.prepare(oracle, pos_examples, neg_examples) - reads negation maps, doesn't write
+- ConGenModelBuilder requires oracle (new requirement) for build-time negation
 - GenerateNE internalized to ConGenModel.prepare()
 - FMOracleModel with assumption-guarded clauses
-- Cross-validation reuse pattern
+- Cross-validation reuse pattern (build once, prepare multiple times)
 
 ## Build & Test Commands
 

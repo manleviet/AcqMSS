@@ -587,17 +587,22 @@ Both paradigms use:
 ```
 Bias (JSON) + Feature Model (UVL) + Examples
     ├─→ ConGenModelBuilder.from_bias(bias_path)
-    │   ├─ .with_oracle(oracle)          # optional: enables auto-prepare
+    │   ├─ .with_oracle(oracle)          # Required for build()
     │   ├─ .with_examples(path)          # optional: enables auto-prepare
     │   ├─ .use_incremental(True/False)
-    │   └─ .build() → ConGenModel        # prepared if oracle+examples set, else unprepared
+    │   └─ .build() → ConGenModel
+    │       ├─ [BUILD TIME] Compute negation: bias constraints → negated_constraint_map (Tseitin, idempotent)
+    │       ├─ Store next_available_id (final tseitin var) in model
+    │       └─ Auto-prepare if oracle+examples set, else unprepared
     │
     ├─→ FeatureModelOracle.from(fm_path)
     │   └─ Builds FMOracleModel with assumption-guarded FM clauses
     │
     └─→ ConGenModel.prepare(oracle, pos_examples, neg_examples)
-        ├─ GenerateNE: E- → NE (assumption IDs) [internal to prepare()]
+        ├─ [PREPARE TIME] GenerateNE: E- → NE (assumption IDs) [internal to prepare()]
+        ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
         ├─ ConGenTaskPreparation: Create unified task from bias + NE
+        │   ├─ Use model.next_available_id (from build time)
         │   └─ set_kb: CNF with assumption literals
         │   └─ set_c: Bias assumption IDs
         │   └─ set_tc: E+ assumption IDs
@@ -617,32 +622,39 @@ Result: CONGENResult (KB constraint names + assumption IDs)
         └─ Accuracy/Precision/Recall metrics
 ```
 
-**Key Changes**:
+**Key Changes** (commit 260227 - negation build-time refactoring):
+- **Negation at Build Time**: ConGenModelBuilder.build() computes negation (idempotent, read-only for prepare())
+- **Prepare is Idempotent**: ConGenModel.prepare() no longer writes negated_constraint_map; only reads from model
+- **next_available_id Stored**: Model stores tseitin var offset for reuse across multiple prepare() calls
 - **ConGenModel**: Pure data container (no FM fields). Build once, prepare multiple times.
-- **Oracle**: Created separately, passed to `prepare()`. Enables CV reuse without rebuilding.
+- **Oracle**: Created separately, passed to `build()` and `prepare()`. Enables CV reuse without rebuilding.
 - **GenerateNE**: Now internal to `prepare()` (callers no longer invoke directly).
 - **Mode-Agnostic Design**: ConGen, ACQMSS, REDUCE contain no solver-mode branching.
 
 ### QuAcq Interactive/Batch Flow (Paper-Aligned with oracle.is_valid())
 
-**Architecture**:
+**Architecture** (commit 260227 - negation at build time):
 ```
 Feature Model + Bias + Oracle (required for both modes)
     ├─→ QuAcqModelBuilder.from_bias(bias_path)
     │   ├─ .with_oracle(oracle)          # Required
     │   ├─ .use_incremental(True/False)  # Optional
-    │   └─ .build()                      # Always auto-prepares with configured oracle
+    │   └─ .build()
+    │       ├─ [BUILD TIME] Compute negation: bias constraints → negated_constraint_map (Tseitin)
+    │       ├─ Store next_available_id (final tseitin var) in model
+    │       └─ Auto-prepare with configured oracle
     │
     └─→ QuAcqModel (prepared, task ready)
         └─ QuAcqTaskPreparation.prepare(model, oracle) creates QuAcqTask
+            ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
             ├─ Inherits from DiagnosisTask: set_kb, assumptions, negation_map, set_b, set_c
             ├─ Copy BG data from Oracle (Parts 1-3) → set_b (assumption IDs)
             ├─ Store raw BG clauses (no guards) → background_clauses
-            ├─ Negate bias constraints (Tseitin, Part 4)
+            ├─ Use negated forms from model (not recomputing Tseitin)
             ├─ Assign assumption IDs (Part 5: paired original+negated)
             ├─ Store raw clauses per assumption ID
             │   ├─ constraint_clauses: assumption_id → raw CNF
-            │   └─ negated_clauses: assumption_id → negated CNF
+            │   └─ negated_clauses: assumption_id → negated CNF (from model.negated_constraint_map)
             └─ QuAcqTask ready (bias: Set[int], learned_kb: List[int], inherited fields)
     │
     └─→ QuAcq Algorithm (oracle or example mode, both use oracle.is_valid())
