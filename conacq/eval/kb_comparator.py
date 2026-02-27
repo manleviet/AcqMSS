@@ -21,7 +21,8 @@ from .metrics import EvaluationMetrics, compute_metrics
 class ComparationStrategy(Enum):
     """Comparation strategy."""
     DESCRIPTION = "description"  # Compare constraint descriptions (recommended)
-    CLAUSE = "clause"            # Compare CNF clauses (semantic)
+    CLAUSE = "clause"            # Compare CNF clauses (structural)
+    SEMANTIC = "semantic"        # SAT-based semantic equivalence
 
 
 @dataclass
@@ -125,8 +126,12 @@ class KBComparator:
 
         if strategy == ComparationStrategy.DESCRIPTION:
             return self._compare_by_description(result)
-        else:
+        elif strategy == ComparationStrategy.CLAUSE:
             return self._compare_by_clause(result)
+        elif strategy == ComparationStrategy.SEMANTIC:
+            return self._compare_by_semantic(result)
+        else:
+            raise ValueError(f"Unknown strategy: {strategy}")
 
     def _compare_by_description(self, result: ConGenResultData) -> ComparationResult:
         """
@@ -279,6 +284,56 @@ class KBComparator:
                 if not any(c in self.oracle.clause_set for c in clauses):
                     extra.append(cid)
         return extra
+
+    def _compare_by_semantic(self, result: ConGenResultData) -> ComparationResult:
+        """Compare using SAT-based semantic equivalence.
+
+        Uses SemanticEquivalenceChecker for bidirectional entailment.
+        Maps semantic results to ComparationResult metrics.
+        """
+        from .semantic_equivalence import SemanticEquivalenceChecker
+
+        # Build KB clause lists from bias (same as clause strategy)
+        kb_clause_lists = []
+        for cid in result.kb_constraints:
+            if cid.startswith('ne_'):
+                continue
+            if self.bias.has_constraint(cid):
+                for clause in self.bias.get_clauses(cid):
+                    kb_clause_lists.append(list(clause))
+
+        ct_clause_lists = [list(c) for c in self.oracle.clauses]
+        bg_clauses = result.bg_clauses or []
+
+        checker = SemanticEquivalenceChecker(
+            kb_clauses=kb_clause_lists,
+            ct_clauses=ct_clause_lists,
+            bg_clauses=bg_clauses,
+        )
+        sem_result = checker.check_equivalence()
+
+        # Map to EvaluationMetrics: entailed ct = recall proxy, entailed kb = precision proxy
+        n_ct_entailed = sem_result.n_ct_checked - len(sem_result.unentailed_ct)
+        n_kb_entailed = sem_result.n_kb_checked - len(sem_result.unentailed_kb)
+
+        metrics = EvaluationMetrics(
+            true_positives=n_ct_entailed,
+            false_negatives=len(sem_result.unentailed_ct),
+            false_positives=len(sem_result.unentailed_kb),
+            true_negatives=0
+        )
+
+        reduction = 1 - (result.n_kb / result.n_bias) if result.n_bias > 0 else 0
+
+        return ComparationResult(
+            strategy=ComparationStrategy.SEMANTIC.value,
+            metrics=metrics,
+            kb_constraints=result.kb_constraints,
+            matched_constraints=[],
+            missed_constraints=[str(list(c)) for c in sem_result.unentailed_ct[:20]],
+            extra_constraints=[str(list(c)) for c in sem_result.unentailed_kb[:20]],
+            kb_reduction_ratio=reduction
+        )
 
     @classmethod
     def from_files(cls, oracle_path: Path, bias_path: Path) -> 'KBComparator':

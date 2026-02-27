@@ -8,7 +8,7 @@ output_dir = "data/results"
 verbose = true
 
 [compare]
-# Strategy: "all" (both), "description", or "clause"
+# Strategy: "all" (all 3), "description", "clause", or "semantic"
 strategy = "all"
 
 # =============================================================================

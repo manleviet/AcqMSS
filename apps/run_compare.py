@@ -32,13 +32,22 @@ from conacq.bias import BiasIO
 
 
 def get_strategies(strategy_config: str) -> List[ComparationStrategy]:
-    """Parse strategy config string into list of strategies."""
+    """Parse strategy config string into list of strategies.
+
+    Options: 'all' (all 3), 'description', 'clause', 'semantic'
+    """
     if strategy_config == 'all':
-        return [ComparationStrategy.DESCRIPTION, ComparationStrategy.CLAUSE]
+        return [
+            ComparationStrategy.DESCRIPTION,
+            ComparationStrategy.CLAUSE,
+            ComparationStrategy.SEMANTIC,
+        ]
     elif strategy_config == 'description':
         return [ComparationStrategy.DESCRIPTION]
     elif strategy_config == 'clause':
         return [ComparationStrategy.CLAUSE]
+    elif strategy_config == 'semantic':
+        return [ComparationStrategy.SEMANTIC]
     return [ComparationStrategy.DESCRIPTION]
 
 
@@ -261,7 +270,8 @@ Example:
     parser.add_argument('--kb', help='KB file or directory (CLI mode)')
     parser.add_argument('--bias', help='Path to bias JSON file (CLI mode)')
     parser.add_argument('--oracle', help='Path to feature model .uvl (CLI mode)')
-    parser.add_argument('--strategy', default='all', choices=['all', 'description', 'clause'],
+    parser.add_argument('--strategy', default='all',
+                        choices=['all', 'description', 'clause', 'semantic'],
                         help='Comparison strategy (default: all)')
     parser.add_argument('-o', '--output-dir', help='Output directory override')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
