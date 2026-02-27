@@ -82,7 +82,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ generate_cv_folds.py — Pre-generate CV fold assignments
 - ✅ run_congen.py — Single ConGen run (dev/debug tool)
 - ✅ run_cv.py — Unified n-fold CV for ConGen + Interactive (main evaluation)
-- ✅ run_interactive.py — Single QuAcq run (original mode)
+- ✅ run_quacq.py — Single QuAcq run (original mode)
 - ✅ run_compare.py — Compare learned KB vs ground truth FM
 - ✅ extract_results.py — Generate reports with fold metrics (precision/recall/F1/specificity mean±std; DRY-refactored to 621 LOC)
 - ✅ TOML configuration system (10 configuration files)
@@ -123,7 +123,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ Project overview updated with FindScope/FindC, oracle module, Phase 5 completion
 - ✅ Project roadmap updated with Phase 5 completion and metrics
 - ✅ Oracle refactoring documented (ABC slimmed, FMData introduced, FeatureModelOracle extended)
-- ✅ Runners package move documented (ConGenRunner, InteractiveRunner in conacq/runners/)
+- ✅ Runners package move documented (ConGenRunner, QuAcqRunner in conacq/runners/)
 - ✅ README.md updated (package name conacq, runners in structure)
 - ✅ quacq.md fixed (GenerateNE internal to prepare(), runners path corrected)
 - ✅ ConGenModelBuilder auto-prepare pattern documented (commit f3c501e)
@@ -133,7 +133,11 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ Pipeline simplified: removed evaluate_congen_results.py + evaluate_congen_config.toml; run_congen_eval.py now CV-only; extract_results.py extended with fold metrics and DRY-refactored (1,139→621 LOC)
 
 **In Progress**:
-- 📝 Documentation finalization (apps/ invocation pattern, architecture diagrams, metrics updates)
+- 📝 Documentation updates for QuAcq package file consolidation (commit 260227)
+  - ✅ Merged QuAcqTaskPreparation + QuAcqTask into task_preparation.py
+  - ✅ Merged QuAcqResult into quacq.py
+  - ✅ Deleted task.py (InteractiveTask) + learner.py (InteractiveLearner)
+  - ✅ Simplified _task_compat.py (removed deprecated fallback branches)
 
 **Planned**:
 - 📝 API documentation (Sphinx/pdoc integration)
@@ -144,7 +148,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 **Recent Additions** (Feb 2026):
 - ✅ Pipeline scripts refactoring: 4 monolithic scripts → 6 focused SRP scripts
   - Deleted: `run_congen_eval.py`, `run_interactive_eval.py` (merged functionality)
-  - New: `run_cv.py` (unified CV), `run_interactive.py` (learning only), `run_compare.py` (evaluation)
+  - New: `run_cv.py` (unified CV), `run_quacq.py` (learning only), `run_compare.py` (evaluation)
   - New module: `conacq/eval/config.py` (shared config loading)
   - Cleaner separation: learning → evaluation → reporting
 

@@ -1,8 +1,8 @@
-"""Tests for FMOracleModel and OneShotModel."""
+"""Tests for FMOracleModel."""
 
 import pytest
 
-from conacq.oracle.fm_oracle_model import FMOracleModel, OneShotModel
+from conacq.oracle.fm_oracle_model import FMOracleModel
 from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
 
 
@@ -76,39 +76,3 @@ class TestOracleModel:
         checker.cleanup()
 
 
-class TestOneShotModel:
-    def test_bakes_unit_clauses(self):
-        """OneShotModel bakes assumptions as unit clauses into set_kb."""
-        clauses = [[1, 2], [-1, 3]]
-        model = OneShotModel(clauses, [1, -2])
-
-        kb = model.get_kb()
-        assert [1] in kb
-        assert [-2] in kb
-        assert model.get_assumptions() == []
-        assert model.use_incremental is False
-
-    def test_satisfies_checker_model_protocol(self):
-        """OneShotModel satisfies CheckerModel Protocol."""
-        model = OneShotModel([[1, 2]])
-        assert isinstance(model, CheckerModel)
-
-    def test_no_assumptions_param(self):
-        """OneShotModel works without unit_assumptions."""
-        model = OneShotModel([[1, 2], [-1, 3]])
-        assert model.get_kb() == [[1, 2], [-1, 3]]
-        assert model.get_assumptions() == []
-
-    def test_oneshot_checker_sat(self):
-        """Factory creates NonIncremental checker; SAT case."""
-        model = OneShotModel([[1, 2]], [1])
-        checker = CheckerFactory.create_from_model(model, 'glucose4')
-        assert checker.is_consistent([]) is True
-        checker.cleanup()
-
-    def test_oneshot_checker_unsat(self):
-        """Factory creates NonIncremental checker; UNSAT case."""
-        model = OneShotModel([[1], [-1]])
-        checker = CheckerFactory.create_from_model(model, 'glucose4')
-        assert checker.is_consistent([]) is False
-        checker.cleanup()

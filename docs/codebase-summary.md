@@ -1,8 +1,8 @@
 # AcqMSS Codebase Summary
 
-**Total Python Code**: ~21,500 lines across ~104 files
-**Main Packages**: conacq (~9,900 LOC) + explanation (~4,600 LOC) + apps (~3,025 LOC) + tests (~3,745 LOC)
-**Last Updated**: 2026-02-26 (QuAcq assumption ID migration)
+**Total Python Code**: ~21,300 lines across ~99 files (consolidated from ~104 files after QuAcq file mergers)
+**Main Packages**: conacq (~9,700 LOC) + explanation (~4,600 LOC) + apps (~3,025 LOC) + tests (~3,745 LOC)
+**Last Updated**: 2026-02-27 (FindScope/FindC paper alignment: oracle.is_valid() + DiscriminatingGenerator)
 
 ## Package Structure
 
@@ -10,7 +10,7 @@
 
 Core acquisition logic organized into seven sub-packages:
 
-#### conacq/algorithms/ — Acquisition Algorithms (~2,771 LOC, 15 files)
+#### conacq/algorithms/ — Acquisition Algorithms (~2,845 LOC, 16 files)
 
 Primary constraint discovery algorithms:
 
@@ -23,37 +23,39 @@ Primary constraint discovery algorithms:
 | `task_preparation.py` | 435 | Task hierarchy (DiagnosisTask → TestCaseTask → ConGenTask) + unified prep |
 | `congen_model.py` | 186 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Call prepare(oracle) before use |
 | `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern. Auto-prepares when oracle+examples set; otherwise returns unprepared model |
+| (Total: 1,331 LOC for main algorithms) |
+| (Subtotal: 1,439 LOC including both paradigm-specific builders) |
 
-**Interactive Sub-package** (`interactive/`, 11 files, ~2,300 LOC):
+**QuAcq Sub-package** (`quacq/`, 9 files, ~1,900 LOC):
 
-**Assumption-Based Learning (Unified with ConGen)**:
+**Assumption-Based Learning (Unified with ConGen, Paper-Aligned Queries)**:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `quacq.py` | 439 | QuAcq: oracle-based + example-based learning modes with assumption IDs |
-| `interactive_model.py` | ~93 | InteractiveModel: dual to ConGenModel for interactive learning |
-| `quacq_task.py` | ~185 | QuAcqTask: inherits from DiagnosisTask, adds interactive-specific fields (bias, learned_kb, background_clauses) |
-| `interactive_task_preparation.py` | ~95 | InteractiveTaskPreparation: prepares QuAcqTask via prepare_kb() |
+| `quacq.py` | 439 | QuAcq algorithm + QuAcqResult (oracle.is_valid() modes, assumption IDs) |
+| `quacq_model.py` | ~93 | QuAcqModel: dual to ConGenModel for interactive learning |
+| `quacq_model_builder.py` | ~74 | QuAcqModelBuilder: fluent builder, auto-prepares on build() |
+| `task_preparation.py` | ~280 | QuAcqTask + QuAcqTaskPreparation: task hierarchy + preparation |
 | `_task_compat.py` | ~39 | Shared duck-typing helpers: get_clause_map(), get_negated_clauses(), get_bg_clauses() |
-| ~~`result.py`~~ | — | Removed: `QuAcqResult` moved into `quacq.py` |
-
-**Algorithms**:
-
-| File | LOC | Purpose |
-|------|-----|---------|
-| `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): constraint discrimination from scope |
-| `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): scope identification via partial queries |
-
-**Deprecated (String-Based IDs)**:
-
-| File | LOC | Purpose | Status |
-|------|-----|---------|--------|
-| `task.py` | 137 | InteractiveTask: string-based constraint names | Deprecated, use QuAcqTask |
-| `learner.py` | 426 | InteractiveLearner: high-level facade | Deprecated, use InteractiveModel + QuAcq |
-
-| File | LOC | Purpose |
-|------|-----|---------|
+| `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): oracle.is_valid() + DiscriminatingGenerator(C_L[Y]) |
+| `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): oracle.is_valid() partial queries, no SAT |
+| `discriminating_generator.py` | 66 | DiscriminatingGenerator (NEW): Paper Algorithm 3 line 5, C_L[Y] + BG, not FM |
 | `__init__.py` | ~60 | Package exports |
+
+**Changes (This Session - FindScope/FindC Refactoring - commit 260227)**:
+- ✅ Added `discriminating_generator.py` — DiscriminatingGenerator (Paper Algorithm 3 line 5, C_L[Y] + BG)
+- ✅ Updated `findscope.py` — Now uses oracle.is_valid() instead of SAT-based consistency check
+- ✅ Updated `findc.py` — Pool-based narrowing via oracle.is_valid(), SAT fallback to DiscriminatingGenerator
+- ✅ Updated `quacq.py` — Query recording with source tags ('main', 'findscope', 'findc')
+- ✅ Removed 5 dead methods from QuAcq: `_check_consistency_with_fm`, `_find_conflict`, `_quickxplain_constraints`, `_get_clauses_for_constraints`, `_is_consistent`
+- ✅ Deleted `OneShotModel` — No production usage after refactoring
+
+**Previous Session Changes**:
+- ✅ Merged `QuAcqTaskPreparation` into `task_preparation.py` (was `quacq_task.py`, renamed)
+- ✅ Merged `QuAcqResult` into `quacq.py` (deleted `result.py`)
+- ✅ Deleted `task.py` (`InteractiveTask`) — use `QuAcqTask` (assumes int IDs)
+- ✅ Deleted `learner.py` (`InteractiveLearner`) — use `QuAcqModelBuilder` path
+- ✅ Simplified `_task_compat.py` (removed InteractiveTask fallback branches)
 
 #### conacq/bias/ — Bias (Constraint) Generation (~1,176 LOC, 6 files)
 
@@ -87,7 +89,7 @@ Utilities for converting query histories and managing example formats:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `query_converter.py` | 64 | Convert InteractiveRunner query_history to ExampleSet or assignment lists for ConGen |
+| `query_converter.py` | 64 | Convert QuAcqRunner query_history to ExampleSet or assignment lists for ConGen |
 | `data_structures.py` | ~30 | Example, ExampleSet, ExampleType dataclasses |
 | `io_utils.py` | ~25 | I/O utilities for example persistence |
 | `__init__.py` | ~1 | Package exports |
@@ -142,7 +144,7 @@ Pipeline runners with unified lifecycle (build-once/run-many/cleanup-once):
 |------|-----|---------|
 | `base_runner.py` | ~110 | BaseRunner ABC + BaseRunResult (9 shared fields for both runners) |
 | `congen_runner.py` | 235 | ConGenRunner: CONGEN pipeline with profiling + bias shuffle seed support |
-| `interactive_runner.py` | 197 | InteractiveRunner: QuAcq dual-mode (oracle + example modes) |
+| `quacq_runner.py` | 197 | QuAcqRunner: QuAcq dual-mode (oracle + example modes) |
 | `__init__.py` | ~18 | Package exports |
 
 **BaseRunner Architecture** (NEW):
@@ -153,7 +155,7 @@ Pipeline runners with unified lifecycle (build-once/run-many/cleanup-once):
 
 **BaseRunResult** (NEW):
 - 9 shared fields: `kb_constraints`, `kb_clauses`, `bg_clauses`, `n_bias`, `n_kb`, `runtime_ms`, `consistency_checks`, `memory_peak_mb`, `profiler_data`
-- Both `ConGenRunResult` and `InteractiveRunResult` inherit from BaseRunResult
+- Both `ConGenRunResult` and `QuAcqRunResult` inherit from BaseRunResult
 - Provides `get_performance_metrics()` (with `n_mss=None` default; override in ConGenRunResult for actual MSS count)
 
 **ConGenRunner** (inherits BaseRunner):
@@ -161,10 +163,10 @@ Pipeline runners with unified lifecycle (build-once/run-many/cleanup-once):
 - `run(positive_examples, negative_examples, shuffle_seed=None)` returns `ConGenRunResult` with MSS count
 - Supports bias shuffle seed for reproducibility
 
-**InteractiveRunner** (inherits BaseRunner):
-- File-path-based constructor: `InteractiveRunner(bias_path, fm_path, ...)`
+**QuAcqRunner** (inherits BaseRunner):
+- File-path-based constructor: `QuAcqRunner(bias_path, fm_path, ...)`
 - Dual-mode `run(mode, ...)`: dispatches to oracle ('automated'/'interactive') or example ('example_only'/'example_first') paths
-- Returns `InteractiveRunResult` with KB constraints, metrics, and profiler data
+- Returns `QuAcqRunResult` with KB constraints, metrics, and profiler data
 
 #### conacq/eval/ — Evaluation Framework (~2,760 LOC, 14 files)
 
@@ -254,7 +256,7 @@ CLI applications for constraint acquisition pipeline. Uses `python -m apps.X` in
 | `generate_bias_files.py` | 302 | YAML bias config → JSON/CNF files |
 | `run_congen.py` | 217 | Execute CONGEN learning pipeline (dev/debug tool) |
 | `run_cv.py` | ~420 | Unified n-fold CV for ConGen and Interactive; outputs single JSON per (model x strategy x mode) |
-| `run_interactive.py` | ~350 | Pure QuAcq learning → KB files (no CV, no evaluation) |
+| `run_quacq.py` | ~350 | Pure QuAcq learning → KB files (no CV, no evaluation) |
 | `run_compare.py` | ~270 | Config mode: reads/enriches unified CV JSONs (idempotent write-back); KB mode: compare learned KB vs GroundTruth FM |
 | `run_evaluation.py` | 243 | QuAcq → ConGen pipeline: run QuAcq, feed progressive query subsets to ConGen, compare both KBs vs ground truth |
 | `generate_cv_folds.py` | 68 | CLI to pre-generate CV folds for reproducible evaluation |
@@ -266,7 +268,7 @@ CLI applications for constraint acquisition pipeline. Uses `python -m apps.X` in
 - `generate_cv_folds_config.toml` — CV fold generation settings
 - `run_congen_config.toml` — Single ConGen run settings
 - `run_cv_config.toml` — Unified CV settings (ConGen + Interactive)
-- `run_interactive_config.toml` — Interactive-only learning settings
+- `run_quacq_config.toml` — Interactive-only learning settings
 - `run_compare_config.toml` — KB comparison settings
 - `run_evaluation_config.toml` — QuAcq → ConGen evaluation pipeline settings
 - `extract_results_config.toml` — Results extraction settings
@@ -279,7 +281,7 @@ Comprehensive test coverage using pytest + @parameterized.expand:
 | File | LOC | Purpose |
 |------|-----|---------|
 | `test_diagnosis.py` | 1,416 | Diagnosis algorithms (FastDiag, QuickXPlain, KBDiag, WipeOutR, HSDAG) |
-| `test_interactive.py` | 603 | QuAcq interactive learning (oracle and example modes) |
+| `test_quacq.py` | 603 | QuAcq interactive learning (oracle and example modes) |
 | `test_evaluation.py` | 474 | Cross-validation and accuracy metric tests |
 | `test_profiler.py` | 536 | Profiling infrastructure tests |
 | `test_congen.py` | 349 | CONGEN learning tests (passive acquisition) |
@@ -383,11 +385,11 @@ CONGEN and QuAcq learning results:
 
 | Component | LOC | Files | Avg File Size | Status |
 |-----------|-----|-------|---------------|--------|
-| conacq/ | ~10,100 | ~52 | ~194 | ✅ Core algorithms (QuAcq unified + eval pipeline) |
+| conacq/ | ~10,170 | ~53 | ~192 | ✅ Core algorithms (QuAcq unified + eval pipeline + builder) |
 | explanation/ | ~4,600 | ~35 | ~131 | ✅ SAT infrastructure |
 | apps/ | ~3,300 | 12 | ~275 | ✅ CLI applications (+ run_evaluation.py) |
 | tests/ | ~3,745 | 8 | ~468 | ✅ Comprehensive coverage |
-| **Total** | **~21,900** | **~107** | **~205** | ✅ **Production ready** |
+| **Total** | **~21,970** | **~108** | **~203** | ✅ **Production ready** |
 
 **Recent Changes** (QuAcqTask Inheritance Refactoring - commit 260227):
 
@@ -417,14 +419,14 @@ CONGEN and QuAcq learning results:
 
 **Architecture Unification** (earlier):
 - QuAcq now uses **int assumption IDs** (identical to ConGen)
-- `InteractiveRunner` dispatches to oracle or example modes via `run(mode)`
+- `QuAcqRunner` dispatches to oracle or example modes via `run(mode)`
 - `QuAcqResult` has dual representation: kb_constraints (str names) + kb_assumption_ids (int IDs)
 - Both QuAcqTask and ConGenTask use same negation_map and assumption layout
 - Shared REDUCE algorithm reuse — no more `_reduce_kb()` conversion layer
 
 **Deprecated Classes** (Backward compatible):
 - `InteractiveTask` → Use `QuAcqTask` (string-based names replaced by assumption IDs)
-- `InteractiveLearner` → Use `InteractiveModel` + `QuAcq` (clearer architecture)
+- `InteractiveLearner` → Use `QuAcqModel` + `QuAcq` (clearer architecture)
 
 **Earlier Changes** (Oracle Interface Refactoring - commit c978d66):
 
@@ -511,7 +513,7 @@ PYTHONPATH=. pytest tests/test_diagnosis.py::test_fastdiag -v -s
 1. `run_cv.py` — Unified n-fold CV for ConGen and/or Interactive → single JSON per (model x strategy x mode)
 2. `run_compare.py` (config mode) — Reads unified CV JSONs, compares folds, writes enriched evaluation back
 3. `extract_results.py` — Post-process unified CV JSONs, generate final reports with fold metrics
-4. `run_congen.py` / `run_interactive.py` — Single-run tools for debugging
+4. `run_congen.py` / `run_quacq.py` — Single-run tools for debugging
 5. `run_compare.py` (KB mode) — Compare single learned KB vs GroundTruth FM
 
 **QuAcq → ConGen Evaluation Pipeline** (NEW):
@@ -529,8 +531,8 @@ python -m apps.generate_examples apps/conf/generate_examples_config.toml
 python -m apps.run_cv apps/conf/run_cv_config.toml -v
 
 # Run pure QuAcq learning (no CV, no evaluation)
-python -m apps.run_interactive apps/conf/run_interactive_config.toml -v
-python -m apps.run_interactive apps/conf/run_interactive_config.toml --interactive
+python -m apps.run_quacq apps/conf/run_quacq_config.toml -v
+python -m apps.run_quacq apps/conf/run_quacq_config.toml --interactive
 
 # Compare learned KB against oracle FM
 python -m apps.run_compare --kb data/results/model_kb.json --bias data/bias/model-bias.json --oracle data/fms/model.uvl -v

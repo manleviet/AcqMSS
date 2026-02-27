@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """
-Run interactive (QuAcq) constraint acquisition — pure learning only.
+Run QuAcq constraint acquisition — pure learning only.
 
-No evaluation, no CV, no enrichment. Use run_cv.py for CV
-and run_compare.py for evaluation.
+No evaluation, no CV. Use run_cv.py for cross-validation
+and run_evaluation.py for QuAcq->ConGen pipeline evaluation.
 
 Usage:
-    python -m apps.run_interactive apps/conf/run_interactive_config.toml -v
-    python -m apps.run_interactive apps/conf/run_interactive_config.toml --interactive
+    python -m apps.run_quacq apps/conf/run_quacq_config.toml -v
+    python -m apps.run_quacq apps/conf/run_quacq_config.toml --interactive
 """
 
 import argparse
@@ -15,23 +15,29 @@ import logging
 import sys
 from pathlib import Path
 
-from conacq.runners import InteractiveRunner
+from conacq.runners import QuAcqRunner
 from conacq.eval.config import load_pipeline_config, parse_models
 from conacq.eval.report import save_kb_result
 
 
 def process_model(model_config, output_dir: Path, max_queries: int,
                   mode: str, verbose: bool, solver_name: str = 'glucose4'):
-    """Process a single model with interactive learning.
+    """Process a single model with QuAcq learning.
+
+    Supports all four modes:
+    - 'automated': FM oracle answers queries automatically
+    - 'interactive': human expert answers queries
+    - 'example_only': learn purely from provided examples
+    - 'example_first': use examples first, then oracle queries
 
     Returns:
-        InteractiveRunResult from runner, or None on error
+        QuAcqRunResult from runner, or None on error
     """
     try:
         model_name = model_config.name
 
         # Create runner (loads bias internally)
-        runner = InteractiveRunner(
+        runner = QuAcqRunner(
             bias_path=model_config.bias,
             fm_path=model_config.oracle,
             solver_name=solver_name,
@@ -44,13 +50,24 @@ def process_model(model_config, output_dir: Path, max_queries: int,
             print(f"  Bias: {model_config.bias}")
             print(f"  Mode: {mode}")
             print(f"  Max queries: {max_queries}")
-            print(f"  Bias constraints: {len(runner.bias_clauses)}")
+            print(f"  Bias constraints: {len(runner.model.constraint_map)}")
             print(f"  Features: {len(runner.feature_ids)}")
             print()
-            print("  Starting interactive learning...")
+            print("  Starting QuAcq learning...")
 
-        # Run learning (oracle mode — 'automated' or 'interactive')
-        run_result = runner.run(mode=mode)
+        # Mode dispatch: example modes require loading examples
+        if mode in ('example_only', 'example_first'):
+            if not model_config.examples:
+                raise ValueError(
+                    f"Mode '{mode}' requires 'examples' path in [[models]] config"
+                )
+            from conacq.examples import ExampleIO
+            examples = ExampleIO.load_json(model_config.examples)
+            pos = [e.assignments for e in examples.positive]
+            neg = [e.assignments for e in examples.negative]
+            run_result = runner.run(positive_examples=pos, negative_examples=neg, mode=mode)
+        else:
+            run_result = runner.run(mode=mode)
 
         if verbose:
             print(f"\n  Results:")
@@ -66,7 +83,7 @@ def process_model(model_config, output_dir: Path, max_queries: int,
                     print(f"      ... and {len(run_result.kb_constraints) - 10} more")
 
         # Save KB result (unified format with bg_clauses)
-        output_file = output_dir / f"{model_name}_interactive_kb.json"
+        output_file = output_dir / f"{model_name}_quacq_kb.json"
         save_kb_result(
             kb_constraints=run_result.kb_constraints,
             redundant_constraints=[],
@@ -95,12 +112,14 @@ def process_model(model_config, output_dir: Path, max_queries: int,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run interactive (QuAcq) constraint acquisition",
+        description="Run QuAcq constraint acquisition",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
-    python -m apps.run_interactive apps/conf/run_interactive_config.toml -v
-    python -m apps.run_interactive apps/conf/run_interactive_config.toml --interactive
+    python -m apps.run_quacq apps/conf/run_quacq_config.toml -v
+    python -m apps.run_quacq apps/conf/run_quacq_config.toml --interactive
+
+Modes: automated | interactive | example_only | example_first
         """
     )
     parser.add_argument('config', help='Path to TOML configuration file')
@@ -124,15 +143,15 @@ Example:
 
     config = load_pipeline_config(args.config)
 
-    # Parse settings
+    # Parse settings from [quacq] section
     general = config.get('general', {})
-    interactive_config = config.get('interactive', {})
+    quacq_config = config.get('quacq', {})
 
-    output_dir = Path(args.output_dir or general.get('output_dir', 'data/results/interactive'))
+    output_dir = Path(args.output_dir or general.get('output_dir', 'data/results/quacq'))
     verbose = args.verbose or general.get('verbose', False)
 
-    mode = 'interactive' if args.interactive else interactive_config.get('mode', 'automated')
-    max_queries = args.max_queries or interactive_config.get('max_queries', 1000)
+    mode = 'interactive' if args.interactive else quacq_config.get('mode', 'automated')
+    max_queries = args.max_queries or quacq_config.get('max_queries', 1000)
 
     models = parse_models(config)
     if not models:
@@ -142,7 +161,7 @@ Example:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("Interactive (QuAcq) Constraint Acquisition")
+    print("QuAcq Constraint Acquisition")
     print("=" * 60)
     print(f"Config: {args.config}")
     print(f"Output: {output_dir}")

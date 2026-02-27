@@ -12,7 +12,6 @@ ConGen (Passive/Batch Learning):
 Interactive Learning (QuAcq):
 - QuAcq: Interactive constraint acquisition via membership queries
 - QueryGenerator: SAT-based query generation
-- InteractiveLearner: High-level interface for interactive learning
 
 Task classes shared across incremental and non-incremental modes.
 """
@@ -27,15 +26,15 @@ from .congen_model import ConGenModel
 from .congen_model_builder import ConGenModelBuilder
 
 # Interactive learning components
-from ..interactive import (
-    InteractiveLearner,
+from ..quacq import (
     QuAcq,
-    InteractiveTask,
-    InteractiveResult,
+    QuAcqModel,
+    QuAcqModelBuilder,
+    QuAcqTask,
+    QuAcqResult,
     FeatureModelOracle,
     UserPromptOracle,
     CachedOracle,
-    run_interactive_learning
 )
 
 # Re-export explanation module classes for convenience
@@ -55,14 +54,14 @@ __all__ = [
     'ConGenModel',
     'ConGenModelBuilder',
     # Interactive learning (QuAcq)
-    'InteractiveLearner',
     'QuAcq',
-    'InteractiveTask',
-    'InteractiveResult',
+    'QuAcqModel',
+    'QuAcqModelBuilder',
+    'QuAcqTask',
+    'QuAcqResult',
     'FeatureModelOracle',
     'UserPromptOracle',
     'CachedOracle',
-    'run_interactive_learning',
     # Re-exports from explanation module
     'Assignment',
     'TestCase',

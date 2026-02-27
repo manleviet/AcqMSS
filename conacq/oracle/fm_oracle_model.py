@@ -2,9 +2,7 @@
 Oracle models for ConsistencyChecker integration.
 
 FMOracleModel: Assumption-guarded FM validation (incremental checker).
-OneShotModel: Baked unit clauses for one-shot SAT checks (non-incremental).
-
-Both satisfy CheckerModel Protocol for use with CheckerFactory.create_from_model().
+Satisfies CheckerModel Protocol for use with CheckerFactory.create_from_model().
 """
 
 from typing import Dict, List, Optional
@@ -269,21 +267,3 @@ class FMOracleTaskPreparation:
         )
 
 
-class OneShotModel:
-    """Minimal CheckerModel for one-shot SAT checks.
-
-    Bakes all clauses + unit assumptions into set_kb.
-    Satisfies CheckerModel Protocol for CheckerFactory.
-    """
-    use_incremental = False
-
-    def __init__(self, clauses: List[List[int]], unit_assumptions: List[int] = None):
-        self._set_kb = list(clauses)
-        if unit_assumptions:
-            self._set_kb.extend([lit] for lit in unit_assumptions)
-
-    def get_kb(self) -> List[List[int]]:
-        return self._set_kb
-
-    def get_assumptions(self) -> List[int]:
-        return []

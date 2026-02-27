@@ -46,7 +46,7 @@ High-level overview of what code exists where:
 - Package structure (conacq, explanation, apps, tests)
 - Detailed LOC breakdown per component
 - **conacq/oracle/**: Oracle ABC, FeatureModelOracle, FMData (9 files, ~929 LOC)
-- **conacq/runners/**: ConGenRunner, InteractiveRunner (3 files, ~446 LOC, moved from eval/)
+- **conacq/runners/**: ConGenRunner, QuAcqRunner (3 files, ~446 LOC, moved from eval/)
 - File inventory by purpose
 - Data directory structure (feature models, configurations, results)
 - Dependencies (runtime, development, optional)

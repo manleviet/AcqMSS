@@ -169,6 +169,7 @@ Example:
                         solver_name=solver_name,
                         max_queries=max_queries,
                         query_mode=query_mode,
+                        use_incremental=is_incremental,
                         fold_data=fold_data,
                         shuffle_bias=shuffle_bias
                     )

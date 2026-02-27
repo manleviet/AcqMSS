@@ -212,7 +212,7 @@ Application Layer (apps/) — 11 files
   ├── generate_cv_folds.py      # Generate CV fold assignments
   ├── run_congen.py             # Single ConGen run (dev/debug)
   ├── run_cv.py                 # n-fold CV (ConGen + Interactive)
-  ├── run_interactive.py        # Single QuAcq run
+  ├── run_quacq.py        # Single QuAcq run
   ├── run_compare.py            # Eval KB vs ground truth
   ├── extract_results.py        # Generate reports + fold metrics
   └── __init__.py               # Package marker

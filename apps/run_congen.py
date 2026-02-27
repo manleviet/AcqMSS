@@ -43,14 +43,13 @@ def extract_sampling_type(examples_path: str) -> str:
 
 
 def process_model(model_config: ModelConfig, output_dir: Path,
-                  seed: int, verbose: bool, use_incremental: bool = True,
+                  verbose: bool, use_incremental: bool = True,
                   solver_name: str = 'glucose4') -> bool:
     """Process a single model with ConGen via ConGenRunner.
 
     Args:
         model_config: Model configuration
         output_dir: Directory to save results
-        seed: Random seed (unused, for compatibility)
         verbose: Enable verbose output
         use_incremental: Use incremental solver mode
         solver_name: SAT solver name
@@ -154,7 +153,6 @@ Example:
 
     # Parse settings
     general = config.get('general', {})
-    seed = general.get('seed', 42)
     output_dir = Path(args.output_dir or general.get('output_dir', 'data/results'))
     verbose = args.verbose or general.get('verbose', False)
 
@@ -180,7 +178,7 @@ Example:
 
     success_count = 0
     for model in models:
-        if process_model(model, output_dir, seed, verbose,
+        if process_model(model, output_dir, verbose,
                          use_incremental=use_incremental, solver_name=args.solver):
             success_count += 1
 

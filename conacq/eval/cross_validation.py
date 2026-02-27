@@ -19,13 +19,13 @@ import time
 
 from .metrics import EvaluationMetrics
 from .accuracy import AccuracyCalculator
-from conacq.runners import ConGenRunner
 from .folds import FoldData, generate_folds, apply_folds
 from .performance_metrics import (
     PerformanceMetrics,
     AggregatedPerformanceMetrics,
     aggregate_metrics
 )
+from conacq.runners.base_runner import BaseRunner, BaseRunResult
 
 
 @dataclass
@@ -40,13 +40,14 @@ class CrossValidationFoldResult:
     bg_clauses: List[List[int]]  # Background knowledge clauses (root constraint)
     redundant_constraints: List[str]
     n_bias: int
-    n_mss: int
     n_kb: int
     # Train/test sizes
     n_train_pos: int
     n_train_neg: int
     n_test_pos: int
     n_test_neg: int
+    # Optional fields (after all required for dataclass ordering)
+    n_mss: Optional[int] = None
     # Full profiler snapshot (pass-through, not aggregated)
     profiler_data: Dict[str, Any] = field(default_factory=dict)
 
@@ -135,8 +136,7 @@ class CrossValidationResult:
 
 
 def _run_cv_loop(
-        runner,
-        variables: Dict[str, int],
+        runner: BaseRunner,
         positive_examples: List[Dict[str, bool]],
         negative_examples: List[Dict[str, bool]],
         n_folds: int,
@@ -150,8 +150,7 @@ def _run_cv_loop(
     """Shared CV loop for both ConGen and Interactive runners.
 
     Args:
-        runner: Duck-typed runner with run(pos, neg, shuffle_seed) method
-        variables: Feature variable mapping for AccuracyCalculator
+        runner: Runner with run(pos, neg, shuffle_seed) and feature_ids property
         positive_examples: List of E+ ({feature: True/False})
         negative_examples: List of E- ({feature: True/False})
         n_folds: Number of folds
@@ -162,6 +161,9 @@ def _run_cv_loop(
         fold_data: Optional pre-generated fold assignments
         shuffle_bias: Shuffle bias ordering per fold
     """
+    # Use runner.feature_ids (BaseRunner property)
+    variables = runner.feature_ids
+
     # Generate folds if not pre-provided
     folds_provided = fold_data is not None
     if not folds_provided:
@@ -216,30 +218,30 @@ def _run_cv_loop(
         performance_list.append(perf)
 
         # Test: calculate accuracy on held-out fold (union BG for root constraint)
-        bg_clauses = getattr(run_result, 'bg_clauses', [])
-        with AccuracyCalculator(run_result.kb_clauses + bg_clauses, variables, solver_name) as calculator:
+        with AccuracyCalculator(run_result.kb_clauses + run_result.bg_clauses,
+                                variables, solver_name) as calculator:
             accuracy_result = calculator.calculate(test_pos, test_neg)
 
         fold_accuracy = accuracy_result.metrics.accuracy
         fold_accuracies.append(fold_accuracy)
 
-        # Store fold result with KB data (getattr for runner-specific fields)
+        # Store fold result (getattr for runner-specific fields only)
         fold_results.append(CrossValidationFoldResult(
             fold_index=fold_idx,
             accuracy=fold_accuracy,
             metrics=accuracy_result.metrics,
             performance=perf,
             kb_constraints=run_result.kb_constraints,
-            bg_clauses=getattr(run_result, 'bg_clauses', []),
+            bg_clauses=run_result.bg_clauses,
             redundant_constraints=getattr(run_result, 'redundant_constraints', []),
             n_bias=run_result.n_bias,
-            n_mss=getattr(run_result, 'n_mss', 0),
             n_kb=run_result.n_kb,
             n_train_pos=len(train_pos),
             n_train_neg=len(train_neg),
             n_test_pos=len(test_pos),
             n_test_neg=len(test_neg),
-            profiler_data=getattr(run_result, 'profiler_data', {})
+            n_mss=getattr(run_result, 'n_mss', None),
+            profiler_data=run_result.profiler_data
         ))
 
         n_queries = getattr(run_result, 'n_queries', None)
@@ -338,21 +340,26 @@ def n_fold_cross_validation(
     Returns:
         CrossValidationResult with mean accuracy +/- std and KB data
     """
+    from conacq.runners import ConGenRunner
+
     runner = ConGenRunner(
         bias_path=bias_path,
         fm_path=fm_path,
         solver_name=solver_name,
         use_incremental=use_incremental
     )
-    return _run_cv_loop(
-        runner=runner, variables=runner.model.variables,
-        positive_examples=positive_examples,
-        negative_examples=negative_examples,
-        n_folds=n_folds, seed=seed,
-        solver_name=solver_name, label='ConGen',
-        shuffle_each_fold=shuffle_each_fold,
-        fold_data=fold_data, shuffle_bias=shuffle_bias
-    )
+    try:
+        return _run_cv_loop(
+            runner=runner,
+            positive_examples=positive_examples,
+            negative_examples=negative_examples,
+            n_folds=n_folds, seed=seed,
+            solver_name=solver_name, label='ConGen',
+            shuffle_each_fold=shuffle_each_fold,
+            fold_data=fold_data, shuffle_bias=shuffle_bias
+        )
+    finally:
+        runner.cleanup()
 
 
 def n_fold_cross_validation_interactive(
@@ -365,6 +372,7 @@ def n_fold_cross_validation_interactive(
         solver_name: str = 'glucose4',
         max_queries: int = 1000,
         query_mode: str = 'example_only',
+        use_incremental: bool = True,
         shuffle_each_fold: bool = True,
         fold_data: Optional[FoldData] = None,
         shuffle_bias: bool = False
@@ -372,7 +380,7 @@ def n_fold_cross_validation_interactive(
     """
     n-fold cross validation using interactive (QuAcq) learning.
 
-    Same CV loop as ConGen CV but using InteractiveRunner.
+    Same CV loop as ConGen CV but using QuAcqRunner.
 
     Args:
         positive_examples: List of E+ ({feature: True/False})
@@ -384,6 +392,7 @@ def n_fold_cross_validation_interactive(
         solver_name: SAT solver name
         max_queries: Maximum queries per fold
         query_mode: 'example_only' or 'example_first'
+        use_incremental: Use incremental solver mode
         shuffle_each_fold: Shuffle training examples before each fold
         fold_data: Optional pre-generated fold assignments
         shuffle_bias: Shuffle bias ordering per fold using fold_data.shuffle_seeds
@@ -391,21 +400,25 @@ def n_fold_cross_validation_interactive(
     Returns:
         CrossValidationResult with mean accuracy +/- std and KB data
     """
-    from conacq.runners import InteractiveRunner  # lazy import
+    from conacq.runners import QuAcqRunner
 
-    runner = InteractiveRunner(
+    runner = QuAcqRunner(
         bias_path=bias_path,
         fm_path=fm_path,
         solver_name=solver_name,
         max_queries=max_queries,
-        query_mode=query_mode
+        query_mode=query_mode,
+        use_incremental=use_incremental
     )
-    return _run_cv_loop(
-        runner=runner, variables=runner.feature_ids,
-        positive_examples=positive_examples,
-        negative_examples=negative_examples,
-        n_folds=n_folds, seed=seed,
-        solver_name=solver_name, label='Interactive',
-        shuffle_each_fold=shuffle_each_fold,
-        fold_data=fold_data, shuffle_bias=shuffle_bias
-    )
+    try:
+        return _run_cv_loop(
+            runner=runner,
+            positive_examples=positive_examples,
+            negative_examples=negative_examples,
+            n_folds=n_folds, seed=seed,
+            solver_name=solver_name, label='Interactive',
+            shuffle_each_fold=shuffle_each_fold,
+            fold_data=fold_data, shuffle_bias=shuffle_bias
+        )
+    finally:
+        runner.cleanup()

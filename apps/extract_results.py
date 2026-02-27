@@ -13,7 +13,9 @@ Tables generated:
 
 import argparse
 import json
+import re
 import statistics
+import tomllib
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
@@ -88,17 +90,21 @@ class CVResult:
 # Data Loading
 # =============================================================================
 
+_CV_PATTERN = re.compile(r'^(.+)_cv_(incremental|non-incremental)(?:_.+)?\.json$')
+
+
 def parse_filename(filename: str) -> Optional[Tuple[str, str, str]]:
-    """Parse CV result filename → (model, strategy, mode) or None."""
-    if not filename.endswith('_cv_incremental.json') and not filename.endswith('_cv_non-incremental.json'):
+    """Parse CV result filename → (model, strategy, mode) or None.
+
+    Handles both standard and interactive filenames:
+      model_cv_incremental.json
+      model_cv_incremental_example_only.json
+    """
+    m = _CV_PATTERN.match(filename)
+    if not m:
         return None
 
-    if filename.endswith('_cv_incremental.json'):
-        mode = 'incremental'
-        base = filename[:-len('_cv_incremental.json')]
-    else:
-        mode = 'non-incremental'
-        base = filename[:-len('_cv_non-incremental.json')]
+    base, mode = m.group(1), m.group(2)
 
     for strategy in STRATEGIES:
         if base.endswith(f'_{strategy}'):
@@ -158,7 +164,14 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
     spec_m, spec_s = _mean_std(fold_specificities)
 
     # Extract strategy evaluation on intersected KB
-    intersected_eval = data.get('intersected_evaluation', {})
+    # Priority: unified format (intersected_kb.evaluation) > old embedded format
+    intersected_data = data.get('intersected_kb', {})
+    if isinstance(intersected_data, dict):
+        intersected_eval = intersected_data.get('evaluation') or {}
+    else:
+        intersected_eval = {}
+    if not intersected_eval:
+        intersected_eval = data.get('intersected_evaluation', {})
     has_strategy_eval = bool(intersected_eval)
     desc_eval = intersected_eval.get('description', {}).get('metrics', {})
     clause_eval = intersected_eval.get('clause', {}).get('metrics', {})
@@ -175,9 +188,11 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         checks_std=checks.get('std', 0),
         memory_max_mb=memory.get('max_mb', 0),
         n_bias=n_bias,
-        n_mss_mean=kb_size.get('n_mss_mean', 0),
+        n_mss_mean=kb_size.get('n_mss_mean') or 0,
         n_kb_mean=kb_size.get('n_kb_mean', 0),
-        n_intersected=data.get('n_intersected', 0),
+        n_intersected=(intersected_data.get('n_kb', 0)
+                       if isinstance(intersected_data, dict)
+                       else data.get('n_intersected', 0)),
         total_runtime_ms=data.get('total_runtime_ms', 0),
         n_positive=n_positive, n_negative=n_negative,
         precision_mean=prec_m, precision_std=prec_s,
@@ -196,12 +211,69 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
     )
 
 
+def load_eval_result(eval_path: Path) -> Optional[Dict]:
+    """Load evaluation metrics from a *_eval.json file (from run_compare.py).
+
+    Returns:
+        Dict with 'description' and/or 'clause' strategy metrics, or None
+    """
+    try:
+        with open(eval_path) as f:
+            data = json.load(f)
+        return data.get('evaluation', {})
+    except Exception:
+        return None
+
+
+def _find_matching_eval(results_dir: Path, model: str, strategy: str, mode: str) -> Optional[Dict]:
+    """Find *_eval.json matching a CV result by model/strategy/mode.
+
+    Looks for patterns like:
+    - {model}_{strategy}_{mode}_intersected_kb_eval.json  (new run_compare output)
+    - {model}_{strategy}_intersected_eval_{mode}.json      (old run_congen_eval output)
+    """
+    # New format: run_compare.py saves {kb_stem}_eval.json
+    # KB stem for intersected: {model}_{strategy}_{mode}_intersected_kb
+    new_pattern = f"{model}_{strategy}_{mode}_intersected_kb_eval.json"
+    new_path = results_dir / new_pattern
+    if new_path.exists():
+        return load_eval_result(new_path)
+
+    # Old format from run_congen_eval.py
+    old_pattern = f"{model}_{strategy}_intersected_eval_{mode}.json"
+    old_path = results_dir / old_pattern
+    if old_path.exists():
+        return load_eval_result(old_path)
+
+    return None
+
+
 def load_all_results(results_dir: Path) -> Dict[str, Dict[str, Dict[str, CVResult]]]:
-    """Load all CV results. Returns: {model: {strategy: {mode: CVResult}}}"""
+    """Load all CV results. Returns: {model: {strategy: {mode: CVResult}}}
+
+    Priority: embedded eval in unified JSON > separate *_eval.json > nothing
+    """
     results = {}
     for filepath in results_dir.glob('*_cv_*.json'):
         result = load_cv_result(filepath)
         if result:
+            # Only look for external eval if embedded is absent
+            if not result.has_strategy_eval:
+                ext_eval = _find_matching_eval(results_dir, result.model,
+                                               result.strategy, result.mode)
+                if ext_eval:
+                    desc_eval = ext_eval.get('description', {}).get('metrics', {})
+                    clause_eval = ext_eval.get('clause', {}).get('metrics', {})
+                    result.desc_accuracy = desc_eval.get('accuracy', result.desc_accuracy)
+                    result.desc_precision = desc_eval.get('precision', result.desc_precision)
+                    result.desc_recall = desc_eval.get('recall', result.desc_recall)
+                    result.desc_f1 = desc_eval.get('f1_score', result.desc_f1)
+                    result.clause_accuracy = clause_eval.get('accuracy', result.clause_accuracy)
+                    result.clause_precision = clause_eval.get('precision', result.clause_precision)
+                    result.clause_recall = clause_eval.get('recall', result.clause_recall)
+                    result.clause_f1 = clause_eval.get('f1_score', result.clause_f1)
+                    result.has_strategy_eval = True
+
             results.setdefault(result.model, {}).setdefault(result.strategy, {})[result.mode] = result
     return results
 
@@ -581,18 +653,32 @@ def generate_single_strategy_table(
 # =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description='Extract evaluation results and generate tables')
-    parser.add_argument('--results-dir', type=str, default='data/results',
+    parser = argparse.ArgumentParser(
+        description='Extract evaluation results and generate tables',
+        epilog='Usage: PYTHONPATH=. python apps/extract_results.py apps/conf/extract_results_config.toml'
+    )
+    parser.add_argument('config', nargs='?', default=None,
+                        help='Path to TOML configuration file')
+    parser.add_argument('--results-dir', type=str, default=None,
                         help='Directory containing CV result JSON files')
-    parser.add_argument('--output-dir', type=str, default='paper/tables',
+    parser.add_argument('--output-dir', type=str, default=None,
                         help='Directory to save generated tables')
     parser.add_argument('--mode', type=str, choices=['incremental', 'non-incremental', 'both'],
-                        default='both', help='Solver mode to include in tables')
+                        default=None, help='Solver mode to include in tables')
     args = parser.parse_args()
 
-    results_dir = Path(args.results_dir)
-    output_dir = Path(args.output_dir)
+    # Load defaults from TOML config if provided
+    toml_config = {}
+    if args.config and Path(args.config).exists():
+        with open(args.config, 'rb') as f:
+            toml_config = tomllib.load(f)
+
+    general = toml_config.get('general', {})
+    results_dir = Path(args.results_dir or general.get('results_dir', 'data/results'))
+    output_dir = Path(args.output_dir or general.get('output_dir', 'paper/tables'))
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    mode = args.mode or general.get('mode', 'both')
 
     print(f"Loading results from: {results_dir}")
     results = load_all_results(results_dir)
@@ -607,7 +693,7 @@ def main():
         print(f"  {model}: {len(strats)} strategies, modes: {sorted(modes)}")
 
     print(f"\nGenerating tables to: {output_dir}")
-    modes_to_gen = ['incremental', 'non-incremental'] if args.mode == 'both' else [args.mode]
+    modes_to_gen = ['incremental', 'non-incremental'] if mode == 'both' else [mode]
 
     md_content = [
         "# Evaluation Results\n",
@@ -660,7 +746,7 @@ def main():
                 md_content.append("\n" + generate_strategy_eval_table(results, mode, 'md', eval_strat))
                 latex_content.append("\n" + generate_strategy_eval_table(results, mode, 'latex', eval_strat))
 
-    if args.mode == 'both':
+    if mode == 'both':
         md_content.append("\n" + generate_incremental_comparison(results, 'md'))
         latex_content.append("\n" + generate_incremental_comparison(results, 'latex'))
 

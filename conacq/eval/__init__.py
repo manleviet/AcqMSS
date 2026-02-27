@@ -45,9 +45,10 @@ from .performance_metrics import (
     aggregate_metrics
 )
 
-# Runners (re-exported from acqmss.runners for backward compat)
+# Runners (re-exported from conacq.runners for backward compat)
+from conacq.runners import BaseRunner, BaseRunResult
 from conacq.runners import ConGenRunner, ConGenRunResult
-from conacq.runners import InteractiveRunner, InteractiveRunResult
+from conacq.runners import QuAcqRunner, QuAcqRunResult
 
 # Cross-validation
 from .cross_validation import (
@@ -59,6 +60,12 @@ from .cross_validation import (
 
 # Fold I/O
 from .folds import FoldData, generate_folds, save_folds, load_folds, apply_folds
+
+# Semantic equivalence
+from .semantic_equivalence import SemanticEquivalenceChecker, SemanticResult
+
+# Progressive evaluation
+from .progressive_evaluation import ProgressiveEvaluator, ProgressiveResult, CheckpointResult
 
 # Main evaluator
 from .kb_comparator import KBComparator, ComparationStrategy, ComparationResult
@@ -95,19 +102,31 @@ __all__ = [
     'AggregatedPerformanceMetrics',
     'aggregate_metrics',
 
+    # Base runner
+    'BaseRunner',
+    'BaseRunResult',
+
     # ConGen runner
     'ConGenRunner',
     'ConGenRunResult',
 
-    # Interactive runner
-    'InteractiveRunner',
-    'InteractiveRunResult',
+    # QuAcq runner
+    'QuAcqRunner', 'QuAcqRunResult',
 
     # Cross-validation
     'n_fold_cross_validation',
     'n_fold_cross_validation_interactive',
     'CrossValidationResult',
     'CrossValidationFoldResult',
+
+    # Semantic equivalence
+    'SemanticEquivalenceChecker',
+    'SemanticResult',
+
+    # Progressive evaluation
+    'ProgressiveEvaluator',
+    'ProgressiveResult',
+    'CheckpointResult',
 
     # KBComparator
     'KBComparator',

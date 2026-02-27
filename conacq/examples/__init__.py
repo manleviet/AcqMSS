@@ -17,6 +17,7 @@ from conacq.example_generators import (
     TwoCoverageGenerator,
 )
 from .io_utils import ExampleIO
+from .query_converter import queries_to_examples, queries_to_assignment_lists
 
 __all__ = [
     # Data structures
@@ -33,4 +34,7 @@ __all__ = [
     'TwoCoverageGenerator',
     # I/O
     'ExampleIO',
+    # Query converter
+    'queries_to_examples',
+    'queries_to_assignment_lists',
 ]

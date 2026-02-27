@@ -80,7 +80,7 @@ result = congen.acquire(
 Learn constraints through interaction with an oracle (user or model):
 
 ```python
-from conacq.algorithms.interactive import InteractiveLearner
+from conacq.algorithms.quacq import InteractiveLearner
 
 learner = InteractiveLearner.from_files(
     fm_path='data/fms/arcade-game.uvl',
@@ -124,7 +124,7 @@ AcqMSS/
 │   ├── example_generators/    # RS, 2-COV, FF + QueryGenerator, ExampleProvider
 │   ├── examples/              # Example data structures + I/O utilities
 │   ├── oracle/                # Oracle ABC, FeatureModelOracle, FMData, cached
-│   ├── runners/               # ConGenRunner, InteractiveRunner (moved from eval/)
+│   ├── runners/               # ConGenRunner, QuAcqRunner (moved from eval/)
 │   └── eval/                  # Accuracy, cross-validation, evaluator
 ├── explanation/               # SAT solver infrastructure
 │   ├── models/                # DiagnosisModel, builder, task preparation

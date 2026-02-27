@@ -20,7 +20,7 @@ Feature Model (.uvl)
 
 ```
 run_congen.py       → single ConGen run (debug/demo), 1 KB file per model
-run_interactive.py  → single QuAcq run (debug/demo), 1 KB file per model
+run_quacq.py  → single QuAcq run (debug/demo), 1 KB file per model
 ```
 
 ---
@@ -133,7 +133,7 @@ shuffle_bias = true
 | Config | Algorithm | Internal call | Input |
 |---|---|---|---|
 | `algorithm = "congen"` | ConGen (passive) | `ConGenRunner(bias_path, fm_path, ...).run()` | Examples E+/E- |
-| `algorithm = "interactive"` | QuAcq (example-based) | `InteractiveRunner(bias_path, fm_path, ...).run(pos_examples, neg_examples, mode='example_only')` | Same examples — fair comparison |
+| `algorithm = "interactive"` | QuAcq (example-based) | `QuAcqRunner(bias_path, fm_path, ...).run(pos_examples, neg_examples, mode='example_only')` | Same examples — fair comparison |
 
 **Output files per model (example: REAL-FM-7_rs_1n, 3-fold, non-incremental):**
 
@@ -239,12 +239,12 @@ python -m apps.run_congen apps/conf/run_congen_config.toml -v
 | **Output per model** | 1 file: `{model}_{strategy}_kb.json` |
 | **Use case** | Debug, inspect learned KB, input for run_compare.py |
 
-### run_interactive.py — Single QuAcq Run (Original Mode)
+### run_quacq.py — Single QuAcq Run (Original Mode)
 
 Runs original QuAcq with QueryGenerator + Oracle. No examples needed — self-generates queries via SAT solving: `SAT(KB ∪ BG ∪ ¬c)`.
 
 ```bash
-python -m apps.run_interactive apps/conf/run_interactive_config.toml -v
+python -m apps.run_quacq apps/conf/run_quacq_config.toml -v
 ```
 
 | | |
@@ -259,7 +259,7 @@ python -m apps.run_interactive apps/conf/run_interactive_config.toml -v
 
 | Mode | Method | Used by | Input | Query source |
 |---|---|---|---|---|
-| **Original** | `QuAcq.learn()` | `run_interactive.py` | Oracle FM only | `QueryGenerator` (SAT-based) |
+| **Original** | `QuAcq.learn()` | `run_quacq.py` | Oracle FM only | `QueryGenerator` (SAT-based) |
 | **Example-based** | `QuAcq.learn_from_examples()` | `run_cv.py` (algorithm=interactive) | Examples E+/E- | `ExampleProvider` |
 
 Example-based mode exists for **fair comparison** with ConGen — both algorithms receive the same input examples.
@@ -320,7 +320,7 @@ data/
 | generate_examples.py | `apps/conf/generate_examples_config.toml` | Models + sampling strategies |
 | generate_cv_folds.py | `apps/conf/generate_cv_folds_config.toml` | Models + fold count |
 | run_congen.py | `apps/conf/run_congen_config.toml` | Single ConGen run (debug) |
-| run_interactive.py | `apps/conf/run_interactive_config.toml` | Single QuAcq run (debug) |
+| run_quacq.py | `apps/conf/run_quacq_config.toml` | Single QuAcq run (debug) |
 | run_cv.py | `apps/conf/run_cv_config.toml` | CV evaluation (main) |
 | run_compare.py | `apps/conf/run_compare_config.toml` | KB comparison (optional) |
 | extract_results.py | `apps/conf/extract_results_config.toml` | Table generation |

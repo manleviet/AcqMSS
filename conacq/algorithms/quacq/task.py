@@ -30,7 +30,7 @@ class InteractiveTask:
     Attributes:
         bias: List of remaining constraint IDs in the bias
         learned_kb: List of constraint IDs that have been learned
-        background: Background knowledge assumptions (BG)
+        set_b: Background knowledge assumptions (BG)
         feature_ids: Mapping from feature names to SAT variable IDs
         constraint_map: Mapping from constraint ID to its CNF clauses
         negated_constraint_map: Mapping from constraint ID to negated CNF clauses
@@ -44,7 +44,7 @@ class InteractiveTask:
     learned_kb: List[str] = field(default_factory=list)
 
     # Background knowledge (BG) as assumption literals
-    background: List[int] = field(default_factory=list)
+    set_b: List[int] = field(default_factory=list)
 
     # Feature name to SAT variable ID mapping
     feature_ids: Dict[str, int] = field(default_factory=dict)
@@ -92,10 +92,11 @@ class InteractiveTask:
         """Remove constraints from the bias."""
         self.bias -= set(constraint_ids)
 
-    def record_query(self, config: Dict[str, bool], answer: bool) -> None:
+    def record_query(self, config: Dict[str, bool], answer: bool,
+                     source: str = 'main') -> None:
         """Record a membership query and its answer."""
         self.n_queries += 1
-        self.query_history.append((config.copy(), answer))
+        self.query_history.append((config.copy(), answer, source))
 
     def config_to_assumptions(self, config: Dict[str, bool]) -> List[int]:
         """Convert configuration dict to SAT assumption literals."""
@@ -182,7 +183,7 @@ class InteractiveTask:
         return InteractiveTask(
             bias=set(self.bias),
             learned_kb=self.learned_kb.copy(),
-            background=self.background.copy(),
+            set_b=self.set_b.copy(),
             feature_ids=self.feature_ids.copy(),
             id_to_feature=self.id_to_feature.copy(),
             constraint_map={k: [c.copy() for c in v]

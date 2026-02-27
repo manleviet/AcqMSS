@@ -6,52 +6,31 @@ Runs ConGen directly to:
 2. Collect performance metrics (#checks, runtime, memory, n_mss, n_kb)
 """
 
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 import random
-import time
 import tracemalloc
 import logging
 
 from conacq.algorithms.acqmss.congen import ConGen
 from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
-from conacq.oracle import FeatureModelOracle
 from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import Profiler, profiler_session, ProfilerPreset
+from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
 
 from conacq.eval.performance_metrics import PerformanceMetrics
+from .base_runner import BaseRunResult, BaseRunner
 
 
 @dataclass
-class ConGenRunResult:
+class ConGenRunResult(BaseRunResult):
     """
     Result of running ConGen with metrics.
 
-    Attributes:
-        kb_constraints: List of constraint IDs in learned KB
-        kb_clauses: CNF clauses of the learned KB
-        redundant_constraints: List of redundant constraint IDs
-        n_bias: Original number of bias constraints
-        n_mss: Size of MSS before REDUCE
-        n_kb: Final KB size
-        runtime_ms: Execution time in milliseconds
-        consistency_checks: Number of SAT solver calls
-        memory_peak_mb: Peak memory usage in MB
-        profiler_data: Full profiler snapshot (counters, timers, gauges)
+    Inherits 9 shared fields from BaseRunResult.
+    Adds ConGen-specific: redundant_constraints, n_mss, extended profiler metrics.
     """
-    # KB result
-    kb_constraints: List[str]
-    kb_clauses: List[List[int]]
-    bg_clauses: List[List[int]]  # Background knowledge clauses (root constraint)
-    redundant_constraints: List[str]
-    n_bias: int
-    n_mss: int
-    n_kb: int
-
-    # Core performance metrics
-    runtime_ms: float
-    consistency_checks: int
-    memory_peak_mb: float
+    redundant_constraints: List[str] = field(default_factory=list)
+    n_mss: int = 0
 
     # Extended profiler metrics
     congen_runtime_ms: float = 0.0
@@ -63,35 +42,25 @@ class ConGenRunResult:
     is_consistent_test_cases_calls: int = 0
     redundancy_consistency_checks: int = 0
 
-    profiler_data: Dict[str, Any] = field(default_factory=dict)
-
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
-        return {
-            'kb_constraints': self.kb_constraints,
-            'bg_clauses': self.bg_clauses,
-            'redundant_constraints': self.redundant_constraints,
-            'n_bias': self.n_bias,
-            'n_mss': self.n_mss,
-            'n_kb': self.n_kb,
-            'performance': {
-                'runtime_ms': self.runtime_ms,
-                'consistency_checks': self.consistency_checks,
-                'memory_peak_mb': self.memory_peak_mb,
-                'congen_runtime_ms': self.congen_runtime_ms,
-                'acqmss_runtime_ms': self.acqmss_runtime_ms,
-                'acqmss_calls': self.acqmss_calls,
-                'reduce_runtime_ms': self.reduce_runtime_ms,
-                'solver_time_ms': self.solver_time_ms,
-                'is_consistent_calls': self.is_consistent_calls,
-                'is_consistent_test_cases_calls': self.is_consistent_test_cases_calls,
-                'redundancy_consistency_checks': self.redundancy_consistency_checks,
-                'profiler': self.profiler_data,
-            }
-        }
+        d = self._base_to_dict()
+        d['redundant_constraints'] = self.redundant_constraints
+        d['n_mss'] = self.n_mss
+        d['performance'].update({
+            'congen_runtime_ms': self.congen_runtime_ms,
+            'acqmss_runtime_ms': self.acqmss_runtime_ms,
+            'acqmss_calls': self.acqmss_calls,
+            'reduce_runtime_ms': self.reduce_runtime_ms,
+            'solver_time_ms': self.solver_time_ms,
+            'is_consistent_calls': self.is_consistent_calls,
+            'is_consistent_test_cases_calls': self.is_consistent_test_cases_calls,
+            'redundancy_consistency_checks': self.redundancy_consistency_checks,
+        })
+        return d
 
     def get_performance_metrics(self) -> PerformanceMetrics:
-        """Get performance metrics as PerformanceMetrics object."""
+        """Get performance metrics including ConGen-specific n_mss."""
         return PerformanceMetrics(
             runtime_ms=self.runtime_ms,
             consistency_checks=self.consistency_checks,
@@ -109,7 +78,7 @@ class ConGenRunResult:
         )
 
 
-class ConGenRunner:
+class ConGenRunner(BaseRunner):
     """
     Run ConGen and collect performance metrics.
 
@@ -139,8 +108,7 @@ class ConGenRunner:
             solver_name: SAT solver name
             use_incremental: Use incremental solver mode
         """
-        self.solver_name = solver_name
-        self.use_incremental = use_incremental
+        super().__init__(bias_path, fm_path, solver_name, use_incremental=use_incremental)
 
         # Build model (bias only)
         self.model = (ConGenModelBuilder
@@ -148,16 +116,18 @@ class ConGenRunner:
                       .use_incremental(use_incremental)
                       .build())
 
-        # Create oracle (reused across folds)
-        self.oracle = FeatureModelOracle(fm_path, use_incremental=False)
-
         # Keep original bias order for shuffle restore
         self._original_bias_constraint_order = list(self.model.constraint_map.keys())
 
+    @property
+    def feature_ids(self) -> Dict[str, int]:
+        """Feature name -> SAT variable ID mapping."""
+        return self.model.variables
+
     def run(
             self,
-            positive_examples: List[Dict[str, bool]],
-            negative_examples: List[Dict[str, bool]],
+            positive_examples: Optional[List[Dict[str, bool]]] = None,
+            negative_examples: Optional[List[Dict[str, bool]]] = None,
             shuffle_seed: Optional[int] = None
     ) -> ConGenRunResult:
         """
@@ -238,7 +208,7 @@ class ConGenRunner:
 
             profiler_snapshot = profiler.to_dict()
 
-            # Resolve assumption IDs → clauses/names via model
+            # Resolve assumption IDs -> clauses/names via model
             bg_clauses, kb_clauses, kb_names, redundant_names = \
                 self.model.resolve_result(result)
 
@@ -268,8 +238,3 @@ class ConGenRunner:
                           result.n_kb, runtime_ms, consistency_checks)
 
         return run_result
-
-    def cleanup(self):
-        """Release oracle resources."""
-        if hasattr(self, 'oracle') and self.oracle is not None:
-            self.oracle.cleanup()

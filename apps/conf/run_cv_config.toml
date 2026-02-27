@@ -8,7 +8,7 @@ verbose = true
 
 [evaluation]
 # Algorithm: "congen" or "interactive"
-algorithm = "congen"
+algorithm = "interactive"
 
 # Number of folds for cross-validation
 n_folds = 3

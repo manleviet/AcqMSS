@@ -17,7 +17,7 @@ from .fm_oracle import FeatureModelOracle
 from .user_prompt import UserPromptOracle
 from .cached import CachedOracle
 from .ground_truth import GroundTruthData
-from .fm_oracle_model import FMOracleModel, OneShotModel
+from .fm_oracle_model import FMOracleModel
 from .constraint_description import extract_constraint_descriptions
 
 __all__ = [
@@ -29,6 +29,5 @@ __all__ = [
     'CachedOracle',
     'GroundTruthData',
     'FMOracleModel',
-    'OneShotModel',
     'extract_constraint_descriptions',
 ]

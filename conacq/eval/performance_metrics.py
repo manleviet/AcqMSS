@@ -20,7 +20,7 @@ Extended metrics from profiler:
 """
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import statistics
 
 
@@ -61,8 +61,10 @@ class PerformanceMetrics:
     runtime_ms: float
     consistency_checks: int
     memory_peak_mb: float
-    n_mss: int
     n_kb: int
+
+    # n_mss: Optional — ConGen provides actual value, Interactive has None
+    n_mss: Optional[int] = None
 
     # Extended profiler metrics
     congen_runtime_ms: float = 0.0
@@ -119,9 +121,9 @@ class AggregatedPerformanceMetrics:
     memory_mean_mb: float
     memory_max_mb: float
 
-    # KB size statistics
-    n_mss_mean: float
-    n_kb_mean: float
+    # KB size statistics (n_mss_mean is None when all runs are Interactive)
+    n_mss_mean: Optional[float] = None
+    n_kb_mean: float = 0.0
 
     # ConGen runtime
     congen_runtime_mean_ms: float = 0.0
@@ -267,7 +269,7 @@ def aggregate_metrics(metrics_list: List[PerformanceMetrics]) -> AggregatedPerfo
     runtimes = [m.runtime_ms for m in metrics_list]
     checks = [m.consistency_checks for m in metrics_list]
     memories = [m.memory_peak_mb for m in metrics_list]
-    n_mss_list = [m.n_mss for m in metrics_list]
+    n_mss_list = [m.n_mss for m in metrics_list if m.n_mss is not None]
     n_kb_list = [m.n_kb for m in metrics_list]
 
     # Extended metrics
@@ -302,7 +304,7 @@ def aggregate_metrics(metrics_list: List[PerformanceMetrics]) -> AggregatedPerfo
         checks_max=max(checks),
         memory_mean_mb=statistics.mean(memories),
         memory_max_mb=max(memories),
-        n_mss_mean=statistics.mean(n_mss_list),
+        n_mss_mean=statistics.mean(n_mss_list) if n_mss_list else None,
         n_kb_mean=statistics.mean(n_kb_list),
         # Extended metrics
         congen_runtime_mean_ms=cg_mean,

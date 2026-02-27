@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-26 (BG assumption bug fix: background_clauses field, dual storage pattern)
+**Last Updated**: 2026-02-27 (QuAcq package file consolidation: merged result.py, task_preparation.py, removed deprecated files)
 
 ## High-Level Overview
 
@@ -11,7 +11,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 │ Application Layer (apps/)                                   │
 │ generate_bias_config.py, generate_bias_files.py,            │
 │ generate_examples.py, generate_cv_folds.py,                 │
-│ run_congen.py, run_cv.py, run_interactive.py,               │
+│ run_congen.py, run_cv.py, run_quacq.py,               │
 │ run_compare.py, extract_results.py                          │
 └─────────────────┬───────────────────────────────────────────┘
                   │ TOML Configuration Files
@@ -57,8 +57,8 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 
 ```python
 from conacq.algorithms import ConGen, ConGenModelBuilder
+from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
 from conacq.oracle import FeatureModelOracle
-from conacq.algorithms.interactive import QuAcq, InteractiveLearner
 from conacq.example_generators import QueryGenerator, ExampleProvider
 from explanation.operations.algorithms.checker import CheckerFactory
 
@@ -88,9 +88,13 @@ for fold_pos, fold_neg in folds:
     model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
     # Use model.task for this fold
 
-# Interactive learning
-learner = InteractiveLearner.from_files(fm_path='model.uvl', bias_path='bias.json')
-result = learner.learn(mode='automated')  # → KB + query history
+# Interactive learning — QuAcq with builder (recommended)
+oracle = FeatureModelOracle('data/fms/model.uvl')
+model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
+         .with_oracle(oracle)
+         .build())  # Returns prepared model, task ready
+quacq = QuAcq('glucose4')
+result = quacq.learn(model.task, oracle_mode='automated')  # → KB + query history
 
 # Query generation and example provision
 query = QueryGenerator.generate_discriminative_query(...)  # Canonical import
@@ -119,11 +123,11 @@ examples = ExampleProvider(...)  # Canonical import
    - Iterate over learned KB
    - Check if each constraint is necessary via consistency check
 
-5. **QuAcq** — Interactive and batch learning (two modes)
-   - **Oracle mode** (original): GenerateQuery → Oracle → Update KB
-   - **Example mode** (new): learn_from_examples() with FindScope/FindC
-   - FindScope: O(|S| * log|X|) queries per call
-   - FindC: O(|Gamma|) queries per call
+5. **QuAcq** — Interactive and batch learning (two modes, paper-aligned)
+   - **Oracle mode** (original): GenerateQuery → Oracle.ask() → Update KB
+   - **Example mode** (paper-faithful): FindScope + FindC via oracle.is_valid() + DiscriminatingGenerator(C_L[Y])
+   - FindScope: O(|S| * log|X|) queries per call (oracle.is_valid, not SAT)
+   - FindC: O(|Gamma|) queries per call (oracle.is_valid + DiscriminatingGenerator)
 
 #### acqmss/bias/ — Bias Generation
 
@@ -148,7 +152,7 @@ examples = ExampleProvider(...)  # Canonical import
 4. **ExampleProvider** — Batch example interface for learning (moved from oracle/)
 
 **Query Generation**:
-- **QueryGenerator** — Discriminative query generation for interactive learning (moved from algorithms/interactive/)
+- **QueryGenerator** — Discriminative query generation for interactive learning (moved from algorithms/quacq/)
   - Implements greedy selection of queries that maximize constraint distinction
   - Supports priority strategies: `clause_count_priority`, `literal_count_priority`
   - Lazy-loaded via `__getattr__` to avoid circular dependencies
@@ -156,7 +160,7 @@ examples = ExampleProvider(...)  # Canonical import
 **Import Notes**:
 - Canonical imports: `from acqmss.example_generators import QueryGenerator, ExampleProvider`
 - QueryGenerator uses lazy loading to resolve circular dependency:
-  - `example_generators/__init__` → `query_generator` → `algorithms.interactive.task`
+  - `example_generators/__init__` → `query_generator` → `algorithms.quacq.task`
   - Lazy loading defers import until first access via `__getattr__`
 
 #### acqmss/oracle/ — Oracle Implementations
@@ -261,7 +265,7 @@ finally:
 ```
 
 **BaseRunner ABC**:
-- `__init__(bias_path, fm_path, solver_name)` — Build once: load bias, create oracle
+- `__init__(bias_path, fm_path, solver_name, use_incremental=True)` — Build once: load bias, create oracle with configured solver mode
 - `run(**kwargs)` (abstract) — Run many: execute acquisition algorithm
 - `cleanup()` — Cleanup once: release oracle resources
 - `feature_ids` property — Get feature→SAT variable mapping
@@ -277,8 +281,8 @@ finally:
 - `run(positive_examples, negative_examples, shuffle_seed=None)` → `ConGenRunResult`
 - Calls `cleanup()` in CV wrapper functions via try/finally
 
-**InteractiveRunner** (inherits BaseRunner):
-- `run(mode='example_only', ...)` → `InteractiveRunResult`
+**QuAcqRunner** (inherits BaseRunner):
+- `run(mode='example_only', ...)` → `QuAcqRunResult`
 - Dispatches to oracle or example paths based on mode
 
 **Runners re-exported from `conacq.eval`** (for backward compat):
@@ -344,10 +348,18 @@ class ConGenTask(TestCaseTask):
     set_neg_tv: list[int]       # Negated example assumption IDs
 
 class QuAcqTask(DiagnosisTask):
-    """Task for QuAcq interactive learning (inherits from DiagnosisTask)."""
+    """Task for QuAcq interactive learning (inherits from DiagnosisTask).
+
+    Inheritance pattern:
+    - Inherits: set_kb, assumptions, set_b, set_c, negation_map from DiagnosisTask
+    - Adds: bias, learned_kb (interactive learning state)
+    - Adds: background_clauses (raw BG CNF for violation checking)
+    - Adds: constraint_clauses, negated_clauses (raw CNF per assumption ID)
+    - Adds: feature_ids, id_to_feature (feature mapping)
+    """
     bias: set[int]              # Remaining bias assumption IDs
     learned_kb: list[int]       # Learned constraint assumption IDs
-    background_clauses: list[list[int]]  # Raw BG CNF (no guards)
+    background_clauses: list[list[int]]  # Raw BG CNF (no guards) - extracted from Oracle
     feature_ids: dict[str, int] # Feature name → SAT var ID
     id_to_feature: dict[int, str] # SAT var ID → feature name
     constraint_clauses: dict[int, list[list[int]]]  # constraint_id → raw clauses
@@ -604,12 +616,12 @@ python -m apps.run_evaluation apps/conf/run_evaluation_config.toml -v
 - Complexity: O(|B| * SAT checks)
 
 ### 2. QuAcq (Interactive/Active Learning) — NOW UNIFIED WITH ASSUMPTION IDs
-- **Architecture**: `InteractiveModel` (dual to ConGenModel) + `QuAcqTask` (dual to ConGenTask)
+- **Architecture**: `QuAcqModel` (dual to ConGenModel) + `QuAcqTask` (dual to ConGenTask)
 - **Both use int assumption IDs** for constraint identification (matching ConGen semantics)
 - **Oracle mode**: Queries user for membership via `QuAcq.learn(oracle_mode='automated'/'interactive')`
 - **Example mode**: Uses pre-collected E+/E- via `QuAcq.learn_from_examples(positive_examples, negative_examples)`
-- **CV support**: `n_fold_cross_validation_interactive()` with `InteractiveRunner(bias_path, fm_path, ...)`
-- **Dual-mode runner**: `InteractiveRunner.run(mode)` dispatches to oracle or example paths
+- **CV support**: `n_fold_cross_validation_interactive()` with `QuAcqRunner(bias_path, fm_path, ...)`
+- **Dual-mode runner**: `QuAcqRunner.run(mode)` dispatches to oracle or example paths
 - **Task Representation**: `QuAcqTask` with assumption IDs (bias: Set[int], learned_kb: List[int])
 - **Result Representation**: `QuAcqResult` with dual fields (kb_constraints: str names, kb_assumption_ids: int IDs)
 - FindScope/FindC: O(|S| * log|X| + |Gamma|) queries per constraint
@@ -665,61 +677,67 @@ Result: CONGENResult (KB constraint names + assumption IDs)
 - **GenerateNE**: Now internal to `prepare()` (callers no longer invoke directly).
 - **Mode-Agnostic Design**: ConGen, ACQMSS, REDUCE contain no solver-mode branching.
 
-### QuAcq Interactive/Batch Flow (Now Using Assumption IDs + Dual Storage)
+### QuAcq Interactive/Batch Flow (Paper-Aligned with oracle.is_valid())
 
 **Architecture**:
 ```
-Feature Model + Bias + Oracle (optional for example mode)
-    ├─→ InteractiveModel.from_bias(bias_path)
-    │   └─ Load bias constraints from JSON
+Feature Model + Bias + Oracle (required for both modes)
+    ├─→ QuAcqModelBuilder.from_bias(bias_path)
+    │   ├─ .with_oracle(oracle)          # Required
+    │   ├─ .use_incremental(True/False)  # Optional
+    │   └─ .build()                      # Always auto-prepares with configured oracle
     │
-    ├─→ Oracle: FeatureModelOracle.from(fm_path)
-    │   └─ Extract FM + BG data (assumption-guarded)
+    └─→ QuAcqModel (prepared, task ready)
+        └─ QuAcqTaskPreparation.prepare(model, oracle) creates QuAcqTask
+            ├─ Inherits from DiagnosisTask: set_kb, assumptions, negation_map, set_b, set_c
+            ├─ Copy BG data from Oracle (Parts 1-3) → set_b (assumption IDs)
+            ├─ Store raw BG clauses (no guards) → background_clauses
+            ├─ Negate bias constraints (Tseitin, Part 4)
+            ├─ Assign assumption IDs (Part 5: paired original+negated)
+            ├─ Store raw clauses per assumption ID
+            │   ├─ constraint_clauses: assumption_id → raw CNF
+            │   └─ negated_clauses: assumption_id → negated CNF
+            └─ QuAcqTask ready (bias: Set[int], learned_kb: List[int], inherited fields)
     │
-    ├─→ InteractiveModel.prepare(oracle)
-    │   └─ InteractiveTaskPreparation.prepare() creates QuAcqTask
-    │       ├─ Inherits from DiagnosisTask: set_kb, assumptions, negation_map, set_b, set_c
-    │       ├─ Copy BG data from Oracle (Parts 1-3) → set_b (assumption IDs)
-    │       ├─ Store raw BG clauses (no guards) → background_clauses
-    │       ├─ Negate bias constraints (Tseitin, Part 4)
-    │       ├─ Assign assumption IDs (Part 5: paired original+negated)
-    │       ├─ Store raw clauses per assumption ID
-    │       │   ├─ constraint_clauses: assumption_id → raw CNF
-    │       │   └─ negated_clauses: assumption_id → negated CNF
-    │       └─ QuAcqTask ready (bias: Set[int], learned_kb: List[int], inherited fields)
-    │
-    └─→ QuAcq Algorithm (oracle or example mode)
+    └─→ QuAcq Algorithm (oracle or example mode, both use oracle.is_valid())
         ├─ Oracle mode: QuAcq.learn(task, oracle_mode='automated'/'interactive')
-        │   └─ GenerateQuery → Oracle.ask() → Update KB with assumption IDs
+        │   └─ GenerateQuery → oracle.is_valid() → Update KB with assumption IDs
+        │
         └─ Example mode: QuAcq.learn_from_examples(task, E+, E-)
             ├─ For each e in E-:
-            │   ├─ FindScope: Binary search via partial queries (O(|S| * log|X|))
-            │   │   └─ Uses get_bg_clauses() for correct BG violation detection
-            │   ├─ FindC: Discriminate candidates with scope (O(|Gamma|))
-            │   │   └─ Uses raw constraint_clauses for SAT discrimination
+            │   ├─ FindScope: Binary search via oracle.is_valid() (O(|S| * log|X|))
+            │   │   ├─ Partial query: oracle.is_valid({k: e[k] for k in R})
+            │   │   ├─ Prune bias if consistent (uses raw clause maps, not SAT)
+            │   │   └─ record_query(partial, answer, 'findscope')
+            │   │
+            │   ├─ FindC: Discriminate candidates (O(|Gamma|))
+            │   │   ├─ Pool-based: example_provider.next_example() → oracle.is_valid()
+            │   │   │   └─ Narrow via clause violation checks
+            │   │   ├─ Generator-based: DiscriminatingGenerator.generate(c_i, c_j, C_L[Y])
+            │   │   │   ├─ SAT formula: BG + C_L[Y] + c_i + neg(c_j)
+            │   │   │   ├─ Paper Algorithm 3 line 5 (not FM clauses)
+            │   │   │   └─ oracle.is_valid(config) to validate
+            │   │   └─ record_query(disc_e, answer, 'findc')
+            │   │
             │   └─ Add found constraint (assumption ID) to KB
             └─ Termination: All E- processed or bias exhausted
 
-Result: QuAcqResult with dual representation
+Result: QuAcqResult with dual representation + query history
     ├─ kb_constraints: List[str] — Resolved via DescriptionProvider
-    └─ kb_assumption_ids: List[int] — Primary representation for SAT operations
+    ├─ kb_assumption_ids: List[int] — Primary representation for SAT operations
+    ├─ query_history: List[(config, answer, source)] — Tagged queries ('main', 'findscope', 'findc')
+    └─ consistency_checks: int — Profiling data
 ```
 
-**Key Changes** (Inheritance Refactoring):
-- **QuAcqTask Inheritance**: Now inherits from DiagnosisTask
-  - Removed duplicate fields: `set_kb`, `assumptions`, `negation_map` (now inherited)
-  - Focused on interactive-specific fields: `bias`, `learned_kb`, `background_clauses`
-  - Field naming: `set_b` (inherited) for BG assumption IDs, `background_clauses` for raw BG CNF
-  - Fixes: Correct field semantics via inheritance structure
-- **Shared Duck-Typing Helpers** (`_task_compat.py`):
-  - `get_bg_clauses(task)` — Normalize BG clause extraction for both task types
-  - `get_clause_map(task)` — Normalize constraint→clauses mapping
-  - `get_negated_clauses(task, c_id)` — Normalize negated clause lookup
-- **InteractiveModel**: Parallel to ConGenModel for interactive learning
-- **QuAcqResult**: Dual representation (names + IDs) for compatibility
-- **Shared REDUCE**: Direct reuse without `_reduce_kb()` conversion layer
-- **DescriptionProvider**: Maps assumption IDs to constraint names
-- **Exception Handling**: `_apply_reduce()` narrowed from `except Exception` → `except (RuntimeError, KeyError, ValueError)`
+**File Organization** (Consolidated in conacq/algorithms/quacq/):
+- **task_preparation.py**: `QuAcqTask` class (inherits DiagnosisTask) + `QuAcqTaskPreparation`
+- **quacq.py**: `QuAcq` algorithm + `QuAcqResult` (oracle.is_valid(), query history with tags)
+- **findscope.py**: FindScope (Algorithm 2, oracle.is_valid() instead of SAT)
+- **findc.py**: FindC (Algorithm 3, oracle.is_valid() pool + DiscriminatingGenerator fallback)
+- **discriminating_generator.py**: DiscriminatingGenerator (NEW, C_L[Y] + BG, not FM)
+- **quacq_model.py**: QuAcqModel for interactive learning
+- **quacq_model_builder.py**: Fluent builder pattern
+- **_task_compat.py**: Shared helpers (get_bg_clauses, normalize clause maps)
 
 ## Integration Points
 
@@ -796,7 +814,7 @@ Result: feature_ids matches SAT variable IDs in CNF
 
 **PerformanceMetrics.n_mss** (NEW: `Optional[int] = None`):
 - ConGenRunner: Sets actual MSS count from ACQMSS
-- InteractiveRunner: None (no MSS concept in interactive learning)
+- QuAcqRunner: None (no MSS concept in interactive learning)
 - Enables unified metrics across both runners while supporting ConGen-specific measurements
 
 ### Algorithm Complexity
@@ -830,7 +848,7 @@ Combined effect: 500-1000x speedup over naive approach for large models.
 tests/
 ├── test_diagnosis.py        # FastDiag, QuickXPlain, KBDiag, WipeOutR
 ├── test_congen.py           # CONGEN, ACQMSS, REDUCE, GenerateNE
-├── test_interactive.py      # QuAcq, InteractiveLearner, QueryGenerator
+├── test_quacq.py      # QuAcq, InteractiveLearner, QueryGenerator
 ├── test_evaluation.py       # CrossValidation, AccuracyCalculator
 ├── test_profiler.py         # Profiling infrastructure
 └── test_*.py                # Other component tests
