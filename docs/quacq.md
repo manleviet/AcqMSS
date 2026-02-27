@@ -55,10 +55,10 @@ Learn from pre-collected positive/negative examples without an interactive oracl
 
 Finds the scope (variable set) of a violated constraint using a QuickXPlain-like technique — binary split on variable set, ask partial queries on each half via oracle.is_valid().
 
-**Implementation Changes (NEW)** (commit 260227):
-- Now uses `oracle.is_valid(partial)` instead of SAT-based `_check_partial_consistency()`
+**Implementation Details** (commit 260227):
+- Uses `oracle.is_valid(partial)` for membership queries on variable subsets
 - All partial queries recorded via `record_query(partial, answer, 'findscope')` callback
-- Bias pruning uses raw clause maps (no SAT solver needed)
+- Bias pruning uses raw clause maps (no SAT solver needed for scope determination)
 - Paper-aligned: membership queries only, no SAT discrimination
 
 **Process**:
@@ -146,9 +146,9 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 
 **Core Implementation**:
 - `conacq/algorithms/quacq/quacq.py` — QuAcq algorithm + QuAcqResult (oracle/example modes, dual representation, oracle.is_valid())
-- `conacq/algorithms/quacq/findscope.py` — FindScope (Algorithm 2, 134 LOC, oracle.is_valid() instead of SAT)
-- `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, 208 LOC, oracle.is_valid() pool + DiscriminatingGenerator)
-- `conacq/algorithms/quacq/discriminating_generator.py` — DiscriminatingGenerator (NEW, 66 LOC, C_L[Y] + BG)
+- `conacq/algorithms/quacq/findscope.py` — FindScope (Algorithm 2, 94 LOC, oracle.is_valid() instead of SAT)
+- `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, 187 LOC, oracle.is_valid() pool + DiscriminatingGenerator)
+- `conacq/algorithms/quacq/discriminating_generator.py` — DiscriminatingGenerator (NEW, 65 LOC, C_L[Y] + BG)
 - `conacq/algorithms/quacq/quacq_model.py` — QuAcqModel (dual to ConGenModel) for interactive learning
 - `conacq/algorithms/quacq/quacq_model_builder.py` — QuAcqModelBuilder (fluent builder, auto-prepares on build())
 - `conacq/algorithms/quacq/task_preparation.py` — QuAcqTask + QuAcqTaskPreparation (consolidated, inherited from DiagnosisTask)
@@ -157,9 +157,9 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 - `conacq/example_generators/` — Query generation and batch examples (query_generator.py, example_provider.py)
 
 **Evaluation Support**:
-- `conacq/eval/fold_io.py` — Shared CV fold generation for CONGEN/QuAcq comparison (145 LOC)
-- `conacq/runners/quacq_runner.py` — QuAcq pipeline runner (197 LOC, moved from eval/)
-- `conacq/eval/interactive_metrics.py` — QuAcq-specific metrics (391 LOC)
+- `conacq/eval/fold_io.py` — Shared CV fold generation for CONGEN/QuAcq comparison
+- `conacq/runners/quacq_runner.py` — QuAcq pipeline runner (238 LOC, moved from eval/)
+- `conacq/eval/cross_validation.py` — Cross-validation framework (424 LOC)
 - `apps/generate_cv_folds.py` — CLI to pre-generate folds (68 LOC)
 
 **Two Paradigms** (Now Unified via Assumption IDs):
@@ -263,15 +263,15 @@ Key Classes (in conacq/algorithms/quacq/):
 
 ## Oracle Implementations
 
-**Base Classes** (acqmss/oracle/base.py):
+**Base Classes** (conacq/oracle/base.py):
 - `Oracle` — Abstract base class for configuration validators
 
-**Concrete Oracles** (acqmss/oracle/):
+**Concrete Oracles** (conacq/oracle/):
 - `FeatureModelOracle` — FM-based oracle using flamapy (fm_oracle.py)
 - `UserPromptOracle` — Interactive user oracle (prompts on command line) (user_prompt.py)
 - `CachedOracle` — Caching wrapper to avoid re-asking same query (cached.py)
 
-**Query & Example Generation** (acqmss/example_generators/):
+**Query & Example Generation** (conacq/example_generators/):
 - `QueryGenerator` — Discriminative query generation (moved from algorithms/interactive/) (query_generator.py)
 - `ExampleProvider` — Batch example interface for FindC algorithm (moved from oracle/) (example_provider.py)
 
@@ -311,14 +311,8 @@ print(f"Learned KB: {result.kb_constraints}")
 print(f"Queries: {result.n_queries}")
 ```
 
-**Migration Path** (from deprecated InteractiveLearner):
+**Current Recommended Pattern**:
 ```python
-# OLD (deprecated)
-from conacq.algorithms.quacq import InteractiveLearner
-learner = InteractiveLearner.from_files(fm_path=..., bias_path=...)
-result = learner.learn(mode='automated')
-
-# NEW (preferred with builder)
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
 from conacq.oracle import FeatureModelOracle
 
@@ -340,7 +334,7 @@ Both CONGEN and QuAcq support n-fold cross-validation with shared infrastructure
 
 ```python
 # Shared fold generation and loading
-from acqmss.eval.fold_io import generate_folds, load_folds, save_folds
+from conacq.eval.fold_io import generate_folds, load_folds, save_folds
 
 # Pre-generate folds once for reproducible evaluation
 folds = generate_folds(E_plus, E_minus, n_splits=5, seed=42)

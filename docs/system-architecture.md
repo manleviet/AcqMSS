@@ -17,7 +17,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
                   │ TOML Configuration Files
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Core Acquisition Algorithms (acqmss/)                       │
+│ Core Acquisition Algorithms (conacq/)                       │
 │ ├─ CONGEN: GenerateNE → ACQMSS → REDUCE (internal NE gen)  │
 │ ├─ QuAcq: GenerateQuery → Oracle → Update KB                │
 │ ├─ Bias generation from feature models                      │
@@ -47,11 +47,11 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 
 ## Package Organization
 
-### acqmss/ — Constraint Acquisition Core
+### conacq/ — Constraint Acquisition Core
 
 **Purpose**: Implement constraint discovery algorithms independent of SAT solver details.
 
-#### acqmss/algorithms/ — Acquisition Algorithms
+#### conacq/algorithms/ — Acquisition Algorithms
 
 **Core API**:
 
@@ -129,7 +129,7 @@ examples = ExampleProvider(...)  # Canonical import
    - FindScope: O(|S| * log|X|) queries per call (oracle.is_valid, not SAT)
    - FindC: O(|Gamma|) queries per call (oracle.is_valid + DiscriminatingGenerator)
 
-#### acqmss/bias/ — Bias Generation
+#### conacq/bias/ — Bias Generation
 
 **Purpose**: Extract constraints from feature models for use as bias in learning.
 
@@ -139,7 +139,7 @@ examples = ExampleProvider(...)  # Canonical import
 - `bias_io.py` — Load/save bias in JSON/YAML formats
 - `config_loader.py` — TOML configuration for bias generation
 
-#### acqmss/example_generators/ — Example & Query Generation
+#### conacq/example_generators/ — Example & Query Generation
 
 **Purpose**: Generate diverse positive/negative configurations and discriminative queries for learning.
 
@@ -157,13 +157,7 @@ examples = ExampleProvider(...)  # Canonical import
   - Supports priority strategies: `clause_count_priority`, `literal_count_priority`
   - Lazy-loaded via `__getattr__` to avoid circular dependencies
 
-**Import Notes**:
-- Canonical imports: `from acqmss.example_generators import QueryGenerator, ExampleProvider`
-- QueryGenerator uses lazy loading to resolve circular dependency:
-  - `example_generators/__init__` → `query_generator` → `algorithms.quacq.task`
-  - Lazy loading defers import until first access via `__getattr__`
-
-#### acqmss/oracle/ — Oracle Implementations
+#### conacq/oracle/ — Oracle Implementations
 
 **Purpose**: Unified oracle interface for configuration validation.
 
@@ -186,45 +180,22 @@ class Oracle(ABC):
 
 **Key Classes**:
 
-1. **FMData** (`fm_data.py`): Immutable dataclass for FM metadata
-   - `features: Set[str]` — All feature names
-   - `feature_ids: Dict[str, int]` — Feature→SAT variable ID mapping
-   - `root_feature: str` — Root feature name
-   - `num_constraints: int` — Number of FM constraints
-   - `next_available_id: int` — Starting Tseitin variable ID
-   - Created once by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers
-
+1. **FMData** (`fm_data.py`): FM metadata (features, feature_ids, root, constraints, next_available_id)
+   - Created once by `FeatureModelOracle.get_fm_data()`, passed to decouple callers
 2. **FeatureModelOracle** (`fm_oracle.py`): FM-based oracle
-   - **Public ABC methods**: `is_valid(assignments)`, `ask(query)`
-   - **FM-specific extensions**:
-     - `get_fm_data() -> FMData` — Create frozen FM metadata snapshot
-     - `get_features() -> Set[str]` — Feature names
-     - `get_feature_ids() -> Dict[str, int]` — Feature→var ID mapping
-     - `get_root_feature() -> str` — Root feature
-     - `get_num_constraints() -> int` — Constraint count
-     - `get_next_available_id() -> int` — Tseitin start variable
-     - `complete_configuration(partial) -> Optional[Dict]` — SAT-based config completion (with fallback)
-     - `get_cnf_clauses() -> List[List[int]]` — Raw FM CNF (no assumption guards)
-     - `get_constraint_descriptions() -> Set[str]` — Cached constraint descriptions
-   - Delegates to `FMOracleModel` for consistency checking
-   - Uses incremental solver by default for performance
+   - **ABC methods**: `is_valid(assignments)`, `ask(query)` for configuration validation
+   - **Extensions**: FM metadata access (FMData), SAT-based config completion, constraint descriptions
+   - Delegates consistency checks to `FMOracleModel` (incremental solver by default)
 
-3. **BGData** (`bg_data.py`): Root background knowledge constraint data
-   - `set_kb: List[List[int]]` — Assumption-guarded clauses for root constraint + negated form
-   - `assumptions: Tuple[int, int]` — (root_assumption_id, negated_root_assumption_id)
-   - `negation_map: Dict[int, int]` — Maps root_id → negated_root_id
-   - `descriptions: Dict[int, str]` — Text descriptions of root constraint
-   - `next_available_id: int` — First free assumption ID after Oracle Parts 3+4
-   - Extracted post-preparation via `FMOracleModel.bg_data` property or `get_bg_data()` method
-   - Enables ConGen to cleanly allocate assumption IDs without overlap
+3. **BGData** (`bg_data.py`): Root FM constraint as assumption-guarded clauses
+   - Contains root constraint pair (original + negated form) and negation mapping
+   - Extracted post-preparation via `FMOracleModel.bg_data` property
+   - Enables ConGen to allocate assumption IDs without overlap
 
-4. **FMOracleModel** (`fm_oracle_model.py`): Assumption-guarded FM model
-   - FM clauses stored directly in `set_kb` (always active)
-   - Feature assignments become assumption-guarded unit clauses: `[-a_pos_i, fid]`, `[-a_neg_i, -fid]`
-   - Satisfies `CheckerModel` protocol for `CheckerFactory` integration
-   - Prepared via `OracleTaskPreparation`
-   - Exposes `bg_data` property (lazy-computed) and `get_bg_data()` method to extract root constraint
-   - Internal: Uses `_assignments_index` to track feature assignment assumption boundary
+4. **FMOracleModel** (`fm_oracle_model.py`): SAT representation of FM for consistency checking
+   - FM clauses in `set_kb`; feature assignments guarded by assumption literals
+   - Implements `CheckerModel` protocol for `CheckerFactory` integration
+   - Prepared via `OracleTaskPreparation`; exposes `bg_data` property for root constraint extraction
 
 5. **UserPromptOracle** (`user_prompt.py`): Interactive human-in-the-loop oracle
    - Raises `NotImplementedError` for `complete_configuration()` and `get_cnf_clauses()`
@@ -239,10 +210,9 @@ class Oracle(ABC):
    - Reads FM directly (no solver)
 
 **Architecture Notes**:
-- No separate oracle hierarchies (all inherit from unified `Oracle` ABC)
-- FM metadata decoupled from oracle via `FMData` — passed explicitly to decouple callers
-- Example generators typed as `FeatureModelOracle` (not generic `Oracle`)
-- `complete_configuration()` uses SAT solving with fallback (partial→full config)
+- Unified `Oracle` ABC with FM-specific extensions in concrete classes
+- FM metadata decoupled via `FMData` (passed explicitly to decouple callers)
+- `complete_configuration()` uses SAT-based config completion with fallback
 
 **Critical Detail**: Feature ID consistency
 - `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)
@@ -397,35 +367,11 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
     """
 ```
 
-**Diagnosis Algorithm Implementations**:
-
-1. **FastDiag** — Breadth-first minimal diagnosis
-   - Find all minimal diagnoses via HSDAG tree search
-   - ~10x speedup with tree optimization
-
-2. **QuickXPlain** — Minimal conflict explanation
-   - Find minimal subset of KB causing inconsistency
-   - Divide-and-conquer search
-
-3. **KBDiag** — Kernel-based diagnosis
-   - More efficient for certain KB structures
-   - Used internally by ACQMSS
-
-4. **WipeOutR Variants** — Feature model and test case specific
-
-5. **HSDAG** — Hierarchical Search DAG
-   - Tree search optimization
-   - Reuses computation across diagnosis instances
+**Diagnosis Algorithms**: FastDiag (minimal diagnosis via HSDAG), QuickXPlain (minimal conflicts), KBDiag (kernel-based, used by ACQMSS), WipeOutR (domain-specific), HSDAG (tree optimization)
 
 #### explanation/transformations/ — Model Converters
 
-**FM to SAT Conversion**:
-- Extract features and constraints from FM
-- Convert to propositional clauses (CNF)
-- Create variable mapping — MUST use flamapy's tree traversal order
-- Instantiate SAT solver
-
-**Critical**: The variable mapping MUST come from flamapy's variable assignment (tree traversal order), NOT alphabetical sorting. The Oracle uses flamapy's variable mapping as the authoritative source to ensure feature_ids match the SAT variable IDs in CNF clauses.
+**FM to SAT Conversion**: Extract FM features/constraints → propositional CNF clauses. **CRITICAL**: Variable mapping MUST use flamapy's tree traversal order (not alphabetical) to match feature_ids with SAT variable IDs.
 
 ## QuAcq → ConGen Evaluation Pipeline (NEW)
 
@@ -741,7 +687,7 @@ Result: QuAcqResult with dual representation + query history
 
 ## Integration Points
 
-### Between acqmss/ and explanation/
+### Between conacq/ and explanation/
 
 ```python
 from explanation.operations.algorithms import KBDiag, QuickXPlain
@@ -759,26 +705,15 @@ class ACQMSS:
 
 ### Shared Infrastructure
 
-**Profiling**:
-- Global profiler pattern allows optional profiling
-- Minimal overhead when disabled (NullProfiler)
-- Used across acqmss, explanation, and apps
-
-**Consistency Checking**:
-- All algorithms accept pluggable ConsistencyChecker
-- Easy to swap solver implementations
-- Enables testing with mock checkers
-
-**Model Representation**:
-- Unified CNF clause format (list[list[int]])
-- Variable mapping (feature → literal ID)
-- Shared across generation, acquisition, and diagnosis
+- **Profiling**: Global profiler pattern (optional, minimal overhead when disabled)
+- **Consistency Checking**: Pluggable ConsistencyChecker for solver abstraction
+- **Model Representation**: Unified CNF format (list[list[int]]) shared across components
 
 **Feature ID Consistency (CRITICAL)**:
 
 The Oracle and all SAT-based components must use the **same** feature_ids mapping:
 ```
-Oracle (acqmss/oracle/oracle.py)
+Oracle (conacq/oracle/fm_oracle.py)
   ├─ _build_cnf(): Uses FmToPysat → generates CNF clauses with variable IDs
   └─ _build_feature_ids(): Must extract mapping from same FmToPysat transform
 
@@ -831,14 +766,13 @@ Result: feature_ids matches SAT variable IDs in CNF
 
 ### Optimization Techniques
 
-1. **HSDAG Tree Search** — ~10x fewer solver calls
-2. **Incremental Solver** — ~50x faster SAT checks
-3. **Assumption-based Hypothesis Testing** — Reuse solver state
-4. **Divide-and-Conquer** — ACQMSS reduces problem size
-5. **Set-Based Bias Storage** — O(1) constraint removal (QuAcq)
-6. **Exact Scope Matching** — Prefers exact match before subset fallback (FindC)
+- **HSDAG Tree Search** (~10x fewer calls)
+- **Incremental Solver** (~50x faster)
+- **Assumption-based Hypothesis Testing** (solver state reuse)
+- **Divide-and-Conquer** (ACQMSS problem reduction)
+- **Set-Based Bias Storage** (O(1) removals in QuAcq)
 
-Combined effect: 500-1000x speedup over naive approach for large models.
+Combined: 500-1000x speedup over naive approaches.
 
 ## Testing Architecture
 
@@ -848,68 +782,19 @@ Combined effect: 500-1000x speedup over naive approach for large models.
 tests/
 ├── test_diagnosis.py        # FastDiag, QuickXPlain, KBDiag, WipeOutR
 ├── test_congen.py           # CONGEN, ACQMSS, REDUCE, GenerateNE
-├── test_quacq.py      # QuAcq, InteractiveLearner, QueryGenerator
+├── test_quacq.py            # QuAcq, QuAcqTask, QueryGenerator, FindScope/FindC
 ├── test_evaluation.py       # CrossValidation, AccuracyCalculator
 ├── test_profiler.py         # Profiling infrastructure
 └── test_*.py                # Other component tests
 ```
 
-### Parameterized Testing
+### Test Features
 
-```python
-@parameterized.expand([
-    ('incremental', IncrementalPySATChecker),
-    ('non_incremental', NonIncrementalPySATChecker),
-])
-def test_algorithm(self, name, checker_class):
-    # Test runs with both checker implementations
-    pass
-```
+Parameterized tests run with both Incremental and NonIncrementalPySATChecker. Control via `ENABLED_TESTS`/`ENABLED_PARAMS` dicts.
 
-### Test Control
+## Dependencies
 
-```python
-ENABLED_TESTS = {
-    'fastdiag_basic': True,         # Always run
-    'fastdiag_large': False,        # Skip (long-running)
-    'quacq_interactive': False,     # Requires user input
-}
-
-ENABLED_PARAMS = {
-    'incremental': True,
-    'non_incremental': True,
-    'sat4j': False,                 # Skip (requires Java)
-}
-```
-
-## Dependencies & External Interfaces
-
-### Required
-- **pysat** — SAT solver interface
-- **flamapy** — Feature model parsing
-
-### Optional
-- **sat4j** — External Java solver
-- **pytest + parameterized** — Testing
-
-### No Direct Dependencies
-- Direct SAT solver (via PySAT abstraction)
-- External constraint solvers
-- Machine learning frameworks
-
-## Security & Robustness
-
-### Input Validation
-- Feature models validated by flamapy
-- Constraints validated in CNF format
-- Configuration schema validated (TOML)
-
-### Resource Limits
-- Solver timeout (configurable)
-- Maximum solver calls limit
-- Memory limits (OS-level)
-
-### Error Handling
-- Graceful timeouts
-- Clear error messages
-- Fallback behaviors (NullProfiler, etc.)
+**Required**: pysat (SAT solver), flamapy (FM parsing)
+**Optional**: sat4j (Java solver), pytest
+**Not used**: Direct SAT solvers, external constraint solvers, ML frameworks
+**Security**: FM/CNF/TOML validation, configurable timeouts, graceful error handling

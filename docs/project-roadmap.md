@@ -50,7 +50,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ GenerateQuery discriminative query generation
 - ✅ ManualOracle user-driven oracle
 - ✅ AutomatedOracle FM-based oracle
-- ✅ InteractiveLearner high-level facade
+- ✅ QuAcqModelBuilder high-level builder
 - ✅ Bias generation from feature models
 - ✅ Example generation with strategies (RS, FF, 2-COV)
 - ✅ CONGEN and QuAcq tests (819 LOC combined)
@@ -103,7 +103,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ Bias shuffle seed support in congen_runner.py and run_congen_eval.py
 - ✅ generate_cv_folds.py CLI for reproducible fold generation
 - ✅ Two query modes: example_only and example_first (SAT fallback)
-- ✅ Oracle module (acqmss/oracle/, 3 files, ~660 LOC) with FeatureModelOracle, AutomatedOracle, etc.
+- ✅ Oracle module (conacq/oracle/, 4 files, ~929 LOC) with FeatureModelOracle, UserPromptOracle, CachedOracle, FMData
 
 **Achievements**:
 - QuAcq now supports both oracle-based (interactive) and example-based (batch) modes

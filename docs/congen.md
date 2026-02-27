@@ -300,13 +300,13 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `conacq/algorithms/congen.py` | 228 | Main ConGen algorithm (Algorithm 1) |
-| `conacq/algorithms/acqmss.py` | 104 | AcqMSS MSS finding (Algorithm 2) |
-| `conacq/algorithms/reduce.py` | 155 | REDUCE redundancy elimination (Algorithm 3) |
-| `conacq/algorithms/generate_ne.py` | 193 | GenerateNE negative example processing |
-| `conacq/algorithms/task_preparation.py` | 435 | ConGenTaskPreparation setup |
-| `conacq/algorithms/congen_model.py` | 186 | ConGenModel data container |
-| `conacq/algorithms/congen_model_builder.py` | 157 | Builder for ConGenModel construction |
+| `conacq/algorithms/acqmss/congen.py` | 149 | Main ConGen algorithm (Algorithm 1) |
+| `conacq/algorithms/acqmss/acqmss.py` | 104 | AcqMSS MSS finding (Algorithm 2) |
+| `conacq/algorithms/acqmss/reduce.py` | 104 | REDUCE redundancy elimination (Algorithm 3) |
+| `conacq/algorithms/acqmss/generate_ne.py` | 138 | GenerateNE negative example processing |
+| `conacq/algorithms/acqmss/task_preparation.py` | 239 | ConGenTaskPreparation setup |
+| `conacq/algorithms/acqmss/congen_model.py` | 257 | ConGenModel data container |
+| `conacq/algorithms/acqmss/congen_model_builder.py` | 150 | Builder for ConGenModel construction |
 
 ### Supporting Infrastructure
 
@@ -362,10 +362,10 @@ ConGen and QuAcq share significant infrastructure:
 ConGen supports n-fold cross-validation with shared folds for fair comparison with QuAcq:
 
 ```python
-from acqmss.algorithms import ConGen, ConGenModelBuilder
-from acqmss.oracle import FeatureModelOracle
-from acqmss.eval.fold_io import load_folds
-from acqmss.eval.cross_validation import n_fold_cross_validation
+from conacq.algorithms.congen import ConGenModelBuilder
+from conacq.oracle import FeatureModelOracle
+from conacq.eval.fold_io import load_folds
+from conacq.eval.cross_validation import n_fold_cross_validation
 
 # Load pre-generated folds (shared with QuAcq)
 fold_data = load_folds('data/cv_folds.json')

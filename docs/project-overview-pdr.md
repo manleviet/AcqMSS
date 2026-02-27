@@ -237,8 +237,8 @@ SAT Infrastructure (explanation/)
 
 1. **Dependency Injection** — Algorithms accept ConsistencyChecker
 2. **Strategy Pattern** — Multiple solver implementations
-3. **Builder Pattern** — DiagnosisModelBuilder configuration
-4. **Facade Pattern** — InteractiveLearner, CONGENRunner high-level interfaces
+3. **Builder Pattern** — QuAcqModelBuilder, ConGenModelBuilder configuration
+4. **Facade Pattern** — QuAcqRunner, ConGenRunner high-level interfaces
 5. **Template Method** — PySATAbstractExplanation algorithm base
 
 ## Success Criteria

@@ -190,23 +190,24 @@ model = (DiagnosisModelBuilder()
 High-level interfaces hiding complexity:
 
 ```python
-class InteractiveLearner:
-    """High-level interface for QuAcq."""
+from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
 
-    @classmethod
-    def from_files(cls, fm_path: str, bias_path: str) -> InteractiveLearner:
-        """Convenience constructor."""
-        fm = load_feature_model(fm_path)
-        bias = load_bias(bias_path)
-        return cls(fm, bias)
+class QuAcqRunner:
+    """High-level interface for QuAcq learning."""
 
-    def learn(self, mode: str = 'automated', max_queries: int = 1000):
+    def __init__(self, solver_name='glucose4'):
+        self.solver_name = solver_name
+
+    def run(self, model, oracle, max_queries=1000):
         """Learn constraints interactively."""
-        pass
+        quacq = QuAcq(self.solver_name)
+        return quacq.learn(model.task, oracle_mode='automated')
 
 # Usage
-learner = InteractiveLearner.from_files('model.uvl', 'bias.json')
-result = learner.learn()
+oracle = FeatureModelOracle('model.uvl')
+model = QuAcqModelBuilder.from_bias('bias.json').with_oracle(oracle).build()
+runner = QuAcqRunner('glucose4')
+result = runner.run(model, oracle)
 ```
 
 ### 4. Template Method Pattern
@@ -314,11 +315,11 @@ for fold_pos, fold_neg in folds:
 
 ### 6. Shared Utility Methods
 
-Extract duplicated logic into static/class methods. Example: `InteractiveTask.violates_clauses()` used by QuAcq, FindScope, and FindC centralizes violation checking logic in one place.
+Extract duplicated logic into static/class methods. Example: Violation checking logic centralized in `QuAcqTask` and reused by QuAcq, FindScope, and FindC.
 
 ### 7. Interactive Learning Patterns
 
-`InteractiveLearner` provides high-level facade for QuAcq learning modes (oracle-based or example-based). QuAcq processes negative examples with FindScope/FindC to identify violated constraints.
+`QuAcqRunner` provides high-level facade for QuAcq learning. QuAcq processes negative examples with FindScope/FindC to identify violated constraints in both oracle and example-based modes.
 
 ### 8. CheckerModel Protocol (Duck Typing)
 

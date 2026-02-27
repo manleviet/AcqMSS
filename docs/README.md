@@ -77,11 +77,11 @@ Comprehensive style guide and best practices:
 
 ### system-architecture.md
 **Purpose**: Technical architecture and data flows
-**Length**: 595 LOC
+**Length**: 799 LOC (trimmed to <800 LOC limit)
 
 Deep dive into how the system works:
 - Two-layer architecture overview
-- **NEW**: acqmss/oracle/ package architecture and feature ID consistency (CRITICAL)
+- **NEW**: conacq/oracle/ package architecture and feature ID consistency (CRITICAL)
 - **NEW**: Unified checker interface (assumption-based data representation)
 - Detailed package organization with API examples
 - Data flow diagrams (CONGEN learning flow, QuAcq interactive flow)
@@ -197,12 +197,12 @@ congen.md (ALGORITHM DETAILS)
 
 **Purpose**: Ground truth oracle for validating configurations and generating examples
 
-**Key Classes** (acqmss/oracle/):
-- `Oracle` — Abstract base class
-- `FeatureModelOracle` — FM-based configuration validator
-- `AutomatedOracle` — Automated oracle (FM-based or constraint-based)
-- `UserPromptOracle` — Interactive user oracle
-- `CachedOracle` — Caching wrapper
+**Key Classes** (conacq/oracle/):
+- `Oracle` — Abstract base class (base.py)
+- `FeatureModelOracle` — FM-based configuration validator (fm_oracle.py)
+- `UserPromptOracle` — Interactive user oracle (user_prompt.py)
+- `CachedOracle` — Caching wrapper (cached.py)
+- `FMData` — FM metadata container (frozen dataclass)
 - `ExampleProvider` — Batch example interface
 
 **Critical**: Feature ID consistency uses flamapy's variable mapping (tree traversal order) as authoritative source. Alphabetical sorting would cause critical mismatch.
@@ -229,10 +229,10 @@ congen.md (ALGORITHM DETAILS)
 
 1. **Dependency Injection** — Algorithms accept pluggable ConsistencyChecker
 2. **Strategy Pattern** — Multiple solver implementations
-3. **Builder Pattern** — DiagnosisModelBuilder for configuration
-4. **Facade Pattern** — High-level interfaces (InteractiveLearner, CONGENRunner)
+3. **Builder Pattern** — QuAcqModelBuilder, ConGenModelBuilder for configuration
+4. **Facade Pattern** — High-level interfaces (QuAcqRunner, ConGenRunner)
 5. **Template Method** — PySATAbstractExplanation algorithm base
-6. **Shared Utility Methods** — InteractiveTask.violates_clauses() used across modules
+6. **Shared Utility Methods** — Centralized utilities (e.g., QuickXPlain) across modules
 
 ## Common Tasks
 
@@ -247,9 +247,9 @@ congen.md (ALGORITHM DETAILS)
 → Follow design patterns from **system-architecture.md**
 
 ### "I want to add a new oracle type"
-→ Read **quacq.md** → "Relation to Codebase" section
-→ Read **system-architecture.md** → acqmss/oracle/ section
-→ Extend Oracle ABC from acqmss/oracle/oracle.py
+→ Read **quacq.md** → "Oracle Implementations" section
+→ Read **system-architecture.md** → conacq/oracle/ section
+→ Extend Oracle ABC from conacq/oracle/base.py
 → Check feature ID consistency requirements
 
 ### "I want to add a new algorithm"
@@ -271,15 +271,16 @@ congen.md (ALGORITHM DETAILS)
 
 | File | LOC | Size | Status |
 |------|-----|------|--------|
-| code-standards.md | 694 | 24 KB | ✅ Updated 2026-02-17 (trimmed to <800) |
-| codebase-summary.md | 439 | 22 KB | ✅ Updated 2026-02-17 |
-| system-architecture.md | 595 | 22 KB | ✅ Updated 2026-02-17 |
-| congen.md | 383 | 17 KB | ✅ Updated 2026-02-17 |
-| README.md | 364 | 10 KB | ✅ Updated 2026-02-17 |
-| project-overview-pdr.md | 352 | 17 KB | ✅ Updated 2026-02-17 |
-| project-roadmap.md | 347 | 14 KB | ✅ Updated 2026-02-17 |
-| quacq.md | 193 | 7 KB | ✅ Updated 2026-02-17 |
-| **TOTAL** | **3,404** | **135 KB** | ✅ **All under 800 LOC** |
+| code-standards.md | 710 | 24 KB | ✅ Updated 2026-02-27 |
+| codebase-summary.md | 567 | 22 KB | ✅ Updated 2026-02-27 |
+| system-architecture.md | 800 | 22 KB | ✅ Updated 2026-02-27 (trimmed to 800) |
+| congen.md | 389 | 17 KB | ✅ Updated 2026-02-27 |
+| README.md | 368 | 10 KB | ✅ Updated 2026-02-27 |
+| project-overview-pdr.md | 357 | 17 KB | ✅ Updated 2026-02-27 |
+| project-roadmap.md | 365 | 14 KB | ✅ Updated 2026-02-27 |
+| quacq.md | 355 | 7 KB | ✅ Updated 2026-02-27 |
+| eval-pipeline.md | 346 | 15 KB | ✅ Current |
+| **TOTAL** | **4,257** | **148 KB** | ✅ **All under 800 LOC** |
 
 All files are within size constraints (≤800 LOC per file) and follow documentation standards.
 
@@ -364,5 +365,5 @@ Documentation is updated when:
 
 ---
 
-**Documentation Status**: Phase 6 (Documentation & Polish) — In Progress
-**All files updated**: 2026-02-17
+**Documentation Status**: Phase 6 (Documentation & Polish) — Dead Code Cleanup Complete
+**All files updated**: 2026-02-27
