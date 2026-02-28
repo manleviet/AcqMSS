@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
 
 from conacq.example_generators import QueryGenerator, ExampleProvider
+from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
 from ..algorithms import QuAcq
@@ -52,14 +53,15 @@ def _learn_params_from_task(task) -> dict:
     return dict(
         set_c=task.set_c,
         set_b=task.set_b,
-        set_kb=task.set_kb,
         negation_map=task.negation_map,
-        assumptions=task.assumptions,
         background_clauses=task.background_clauses,
         feature_ids=task.feature_ids,
         id_to_feature=task.id_to_feature,
         constraint_clauses=task.constraint_clauses,
         negated_clauses=task.negated_clauses,
+        pos_assignment_to_assumption=task.pos_assignment_to_assumption,
+        neg_assignment_to_assumption=task.neg_assignment_to_assumption,
+        root_assumption=task.set_b[0] if task.set_b else None,
     )
 
 
@@ -105,7 +107,6 @@ class QuAcqRunner(BaseRunner):
                       .with_oracle(self.oracle)
                       .use_incremental(use_incremental)
                       .build())
-
         self.max_queries = max_queries
         self.query_mode = query_mode
 
@@ -162,6 +163,7 @@ class QuAcqRunner(BaseRunner):
             # Start memory tracking
             tracemalloc.start()
             with profiler.timer("quacq_total_time"):
+                checker = None
                 try:
                     # Re-prepare model for this run (fresh task, reuses negation)
                     self.model.prepare(self.oracle)
@@ -171,21 +173,30 @@ class QuAcqRunner(BaseRunner):
                         random.Random(shuffle_seed).shuffle(task.set_c)
                         logging.debug('Shuffled bias (set_c) with seed=%d', shuffle_seed)
 
+                    # Create checker via factory
+                    checker = CheckerFactory.create_from_model(
+                        self.model, self.solver_name, profiler
+                    )
+
                     # Extract flat params from task
                     task_data = _learn_params_from_task(task)
 
                     if is_oracle_mode:
                         result = self._run_oracle_mode(
-                            task, task_data, profiler, mode)
+                            checker, task, task_data, profiler, mode)
                     else:
                         result = self._run_example_mode(
-                            task, task_data, profiler,
+                            checker, task, task_data, profiler,
                             positive_examples, negative_examples,
                             mode, shuffle_seed)
 
                 finally:
                     current, peak = tracemalloc.get_traced_memory()
                     tracemalloc.stop()
+
+                    # Cleanup checker
+                    if checker is not None:
+                        checker.cleanup()
 
             # Extract core metrics
             timer_values = profiler.get_metric('quacq_total_time', [0])
@@ -219,7 +230,7 @@ class QuAcqRunner(BaseRunner):
 
         return run_result
 
-    def _run_oracle_mode(self, task, task_data, profiler, mode):
+    def _run_oracle_mode(self, checker, task, task_data, profiler, mode):
         """Run oracle-based learning via QuAcq.learn(mode='oracle')."""
         if mode == 'interactive':
             from conacq.oracle import UserPromptOracle
@@ -235,13 +246,13 @@ class QuAcqRunner(BaseRunner):
             id_to_feature=task.id_to_feature,
             solver_name=self.solver_name)
 
-        quacq = QuAcq.for_oracle(learn_oracle, query_gen, discrim_gen, profiler=profiler)
+        quacq = QuAcq.for_oracle(checker, learn_oracle, query_gen, discrim_gen, profiler=profiler)
 
         return quacq.learn(
             **task_data, mode='oracle',
             max_queries=self.max_queries)
 
-    def _run_example_mode(self, task, task_data, profiler,
+    def _run_example_mode(self, checker, task, task_data, profiler,
                           positive_examples, negative_examples,
                           mode, shuffle_seed):
         """Run example-based learning via QuAcq.learn(mode=...)."""
@@ -261,6 +272,7 @@ class QuAcqRunner(BaseRunner):
                 solver_name=self.solver_name)
 
         quacq = QuAcq(
+            checker=checker,
             oracle=self.oracle,
             query_generator=query_gen,
             example_provider=example_provider,

@@ -202,6 +202,7 @@ class FMOracleTaskPreparation:
 
         # Step 2: Feature assignments → assumption-guarded
         assignments_start_index = len(result.assumptions)
+        assignment_kb_start = len(result.set_kb)
         pos_assignment_to_assumption = {}
         neg_assumption_to_assumption = {}
 
@@ -238,6 +239,10 @@ class FMOracleTaskPreparation:
         if configuration is not None:
             result.set_c = model._base_set_c + model._config_to_assumptions(configuration)
 
+        # Extract Part 4 data (assignment clauses added after Part 3)
+        assignment_clauses = result.set_kb[assignment_kb_start:]
+        assignment_assumptions = result.assumptions[assignments_start_index:]
+
         # Step 4: Extract root BG data for ConGen consumption (requires negated constraints)
         model._bg_data = BGData(
             set_kb=result.set_kb[:2],  # first pair of assumptions for root constraint
@@ -246,6 +251,11 @@ class FMOracleTaskPreparation:
             descriptions=provider.get_descriptions_for(
                 [result.assumptions[0], result.assumptions[1]]),
             next_available_id=id_assumption,
+            # Part 4
+            assignment_clauses=assignment_clauses,
+            assignment_assumptions=assignment_assumptions,
+            pos_assignment_to_assumption=dict(pos_assignment_to_assumption),
+            neg_assignment_to_assumption=dict(neg_assumption_to_assumption),
         )
 
         return PreparationOutput(

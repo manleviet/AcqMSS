@@ -65,6 +65,12 @@ class QuAcqModel:
             raise RuntimeError("Call prepare() first")
         return self._description_provider
 
+    def _require_task(self) -> QuAcqTask:
+        """Return task or raise if not prepared."""
+        if self._task is None:
+            raise RuntimeError("Model not prepared. Call prepare() first.")
+        return self._task
+
     # Convenience getters (delegate to result)
     def get_c(self) -> List:
         """Get the set of potentially faulty constraints."""
@@ -83,8 +89,9 @@ class QuAcqModel:
     #     return self._require_task().get_cf()
 
     def get_kb(self) -> List[List]:
-        """Get the full knowledge base with assumptions."""
-        return self._require_task().set_kb
+        """Get full KB: bias + root BG + Part 4 assignment clauses."""
+        task = self._require_task()
+        return task.set_kb + task.assignment_clauses
 
     def get_negation_map(self) -> dict:
         """Get the mapping from original to negated assumption IDs.
@@ -96,8 +103,9 @@ class QuAcqModel:
         return self._require_task().negation_map
 
     def get_assumptions(self) -> List:
-        """Get the list of assumption literals."""
-        return self._require_task().assumptions
+        """Get all assumptions: bias + root BG + Part 4 assignments."""
+        task = self._require_task()
+        return list(task.assumptions) + task.assignment_assumptions
 
     def prepare(self, oracle: 'FeatureModelOracle') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.

@@ -24,6 +24,9 @@ from conacq.algorithms.quacq.sat_utils import (
     get_kb_clauses,
 )
 from conacq.example_generators import QueryGenerator
+from explanation.operations.algorithms.checker import (
+    CheckerFactory, NonIncrementalPySATChecker,
+)
 from explanation.operations.algorithms.profiler import (
     get_global_profiler,
     use_global_profiler,
@@ -42,14 +45,15 @@ def _learn_params_from_task(task):
     return dict(
         set_c=task.set_c,
         set_b=task.set_b,
-        set_kb=task.set_kb,
         negation_map=task.negation_map,
-        assumptions=task.assumptions,
         background_clauses=task.background_clauses,
         feature_ids=task.feature_ids,
         id_to_feature=task.id_to_feature,
         constraint_clauses=task.constraint_clauses,
         negated_clauses=task.negated_clauses,
+        pos_assignment_to_assumption=task.pos_assignment_to_assumption,
+        neg_assignment_to_assumption=task.neg_assignment_to_assumption,
+        root_assumption=task.set_b[0] if task.set_b else None,
     )
 
 
@@ -84,6 +88,17 @@ def interactive_model(oracle):
 def prepared_model(interactive_model):
     """Alias for interactive_model (already prepared by builder)."""
     return interactive_model
+
+
+@pytest.fixture
+def checker(prepared_model):
+    """Create checker from prepared QuAcqModel."""
+    return CheckerFactory.create_from_model(prepared_model)
+
+
+def _minimal_checker():
+    """Create a minimal checker for tests without a model."""
+    return NonIncrementalPySATChecker([], [])
 
 
 class TestQuAcqResult:
@@ -194,10 +209,11 @@ class TestQuAcq:
 
     def test_quacq_creation(self, oracle):
         """Test QuAcq can be created."""
-        quacq = QuAcq(oracle)
+        checker = _minimal_checker()
+        quacq = QuAcq(checker, oracle)
         assert quacq.oracle is oracle
 
-    def test_quacq_learn_with_limit(self, prepared_model, oracle, bias):
+    def test_quacq_learn_with_limit(self, prepared_model, oracle, bias, checker):
         """Test QuAcq learning with query limit."""
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
@@ -209,7 +225,7 @@ class TestQuAcq:
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=5)
@@ -231,10 +247,10 @@ class TestQuAcq:
             background_clauses=[], constraint_clauses={},
             negated_clauses={}, id_to_feature={1: 'root'})
 
-        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_gen, discrim_gen)
         result = quacq.learn(
-            set_c=[], set_b=[], set_kb=[], negation_map={},
-            assumptions=[], background_clauses=[],
+            set_c=[], set_b=[], negation_map={},
+            background_clauses=[],
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
             constraint_clauses={}, negated_clauses={},
             mode='oracle', max_queries=100)
@@ -272,7 +288,8 @@ class TestIntegration:
                 negated_clauses=task.negated_clauses,
                 id_to_feature=task.id_to_feature)
 
-            quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+            checker = CheckerFactory.create_from_model(model)
+            quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
             result = quacq.learn(
                 **task_data, mode='oracle',
                 max_queries=50)
@@ -433,7 +450,7 @@ class TestQuAcqModel:
 class TestQuAcqWithAssumptionIDs:
     """Tests for QuAcq algorithm with QuAcqTask (assumption IDs)."""
 
-    def test_quacq_learn_with_quacq_task(self, prepared_model, oracle):
+    def test_quacq_learn_with_quacq_task(self, prepared_model, oracle, checker):
         """Test QuAcq learning with QuAcqTask and DescriptionProvider."""
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
@@ -445,7 +462,7 @@ class TestQuAcqWithAssumptionIDs:
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=5)
@@ -469,10 +486,10 @@ class TestQuAcqWithAssumptionIDs:
             background_clauses=[], constraint_clauses={},
             negated_clauses={}, id_to_feature={1: 'root'})
 
-        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_gen, discrim_gen)
         result = quacq.learn(
-            set_c=[], set_b=[], set_kb=[], negation_map={},
-            assumptions=[], background_clauses=[],
+            set_c=[], set_b=[], negation_map={},
+            background_clauses=[],
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
             constraint_clauses={}, negated_clauses={},
             mode='oracle', max_queries=100)
@@ -481,7 +498,7 @@ class TestQuAcqWithAssumptionIDs:
         assert result.convergence_reason == 'empty_bias'
         assert result.kb_assumption_ids == []
 
-    def test_result_resolved_via_model(self, prepared_model, oracle):
+    def test_result_resolved_via_model(self, prepared_model, oracle, checker):
         """Test result assumption IDs can be resolved via model."""
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
@@ -493,7 +510,7 @@ class TestQuAcqWithAssumptionIDs:
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=10)
@@ -617,11 +634,12 @@ class TestQuAcqFactories:
 
     def test_for_oracle_factory(self, oracle):
         """Test for_oracle factory injects all deps."""
+        checker = _minimal_checker()
         query_gen = QueryGenerator()
         discrim_gen = DiscriminatingGenerator(
             background_clauses=[], constraint_clauses={},
             negated_clauses={}, id_to_feature={})
-        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
         assert quacq.oracle is oracle
         assert quacq.query_generator is query_gen
         assert quacq.discriminating_generator is discrim_gen
@@ -631,7 +649,7 @@ class TestQuAcqFactories:
         """Test for_examples factory injects example_provider."""
         from conacq.example_generators import ExampleProvider
         provider = ExampleProvider([{'a': True}], seed=42)
-        quacq = QuAcq.for_examples(oracle, provider)
+        quacq = QuAcq.for_examples(_minimal_checker(), oracle, provider)
         assert quacq.oracle is oracle
         assert quacq.example_provider is provider
         assert quacq.query_generator is None
@@ -643,26 +661,29 @@ class TestQuAcqModeValidation:
 
     def _minimal_learn_params(self):
         return dict(
-            set_c=[], set_b=[], set_kb=[], negation_map={},
-            assumptions=[], background_clauses=[],
+            set_c=[], set_b=[], negation_map={},
+            background_clauses=[],
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
-            constraint_clauses={}, negated_clauses={})
+            constraint_clauses={}, negated_clauses={},
+            pos_assignment_to_assumption=None,
+            neg_assignment_to_assumption=None,
+            root_assumption=None)
 
     def test_oracle_mode_requires_query_generator(self, oracle):
         """Oracle mode without query_generator raises."""
-        quacq = QuAcq(oracle)
+        quacq = QuAcq(_minimal_checker(), oracle)
         with pytest.raises(ValueError, match="query_generator"):
             quacq.learn(**self._minimal_learn_params(), mode='oracle')
 
     def test_oracle_mode_requires_discrim_gen(self, oracle):
         """Oracle mode without discriminating_generator raises."""
-        quacq = QuAcq(oracle, query_generator=QueryGenerator())
+        quacq = QuAcq(_minimal_checker(), oracle, query_generator=QueryGenerator())
         with pytest.raises(ValueError, match="discriminating_generator"):
             quacq.learn(**self._minimal_learn_params(), mode='oracle')
 
     def test_example_mode_requires_provider(self, oracle):
         """Example mode without example_provider raises."""
-        quacq = QuAcq(oracle, query_generator=QueryGenerator())
+        quacq = QuAcq(_minimal_checker(), oracle, query_generator=QueryGenerator())
         with pytest.raises(ValueError, match="example_provider"):
             quacq.learn(**self._minimal_learn_params(), mode='example_only')
 
@@ -670,7 +691,7 @@ class TestQuAcqModeValidation:
         """example_first mode without query_generator raises."""
         from conacq.example_generators import ExampleProvider
         provider = ExampleProvider([{'a': True}], seed=42)
-        quacq = QuAcq(oracle, example_provider=provider)
+        quacq = QuAcq(_minimal_checker(), oracle, example_provider=provider)
         with pytest.raises(ValueError, match="query_generator"):
             quacq.learn(**self._minimal_learn_params(), mode='example_first')
 
@@ -741,6 +762,63 @@ class TestSatUtils:
     def test_get_kb_clauses_empty(self):
         result = get_kb_clauses([], {10: [[1]]})
         assert result == []
+
+
+# =========================================================================
+# Part 4 data flow tests
+# =========================================================================
+
+class TestBGDataPart4:
+    """Tests for BGData Part 4 fields."""
+
+    def test_bgdata_part4_populated(self, oracle):
+        """BGData Part 4 fields populated after oracle prepare."""
+        bg_data = oracle.get_bg_data()
+        assert len(bg_data.assignment_clauses) > 0
+        assert len(bg_data.assignment_assumptions) > 0
+        assert len(bg_data.pos_assignment_to_assumption) > 0
+        assert len(bg_data.neg_assignment_to_assumption) > 0
+        # Each feature should have pos and neg entry
+        assert (len(bg_data.pos_assignment_to_assumption) ==
+                len(bg_data.neg_assignment_to_assumption))
+
+    def test_bgdata_part4_default_empty(self):
+        """BGData Part 4 fields default to empty."""
+        from conacq.oracle.bg_data import BGData
+        bg = BGData(set_kb=[], assumptions=(1, 2),
+                    negation_map={}, descriptions={},
+                    next_available_id=10)
+        assert bg.assignment_clauses == []
+        assert bg.assignment_assumptions == []
+        assert bg.pos_assignment_to_assumption == {}
+        assert bg.neg_assignment_to_assumption == {}
+
+
+class TestQuAcqTaskPart4:
+    """Tests for QuAcqTask Part 4 fields."""
+
+    def test_task_part4_populated(self, prepared_model):
+        """QuAcqTask Part 4 fields populated after prepare."""
+        task = prepared_model.task
+        assert len(task.assignment_clauses) > 0
+        assert len(task.pos_assignment_to_assumption) > 0
+        assert len(task.neg_assignment_to_assumption) > 0
+        # Every feature in feature_ids should have assignment mappings
+        for feat in task.feature_ids:
+            assert feat in task.pos_assignment_to_assumption
+            assert feat in task.neg_assignment_to_assumption
+
+    def test_model_get_kb_includes_part4(self, prepared_model):
+        """QuAcqModel.get_kb() includes Part 4 assignment clauses."""
+        task = prepared_model.task
+        model_kb = prepared_model.get_kb()
+        assert len(model_kb) == len(task.set_kb) + len(task.assignment_clauses)
+
+    def test_model_get_assumptions_includes_part4(self, prepared_model):
+        """QuAcqModel.get_assumptions() includes Part 4."""
+        task = prepared_model.task
+        model_assumptions = prepared_model.get_assumptions()
+        assert len(model_assumptions) == len(task.assumptions) + len(task.assignment_assumptions)
 
 
 if __name__ == '__main__':

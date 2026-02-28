@@ -59,6 +59,12 @@ class QuAcqTask(DiagnosisTask):
     # assumption_id -> negated clauses (raw, for QueryGenerator and FindC)
     negated_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
 
+    # Part 4: Feature assignment assumptions (for SAT-based pruning)
+    assignment_clauses: List[List[int]] = field(default_factory=list)
+    assignment_assumptions: List[int] = field(default_factory=list)
+    pos_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
+    neg_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
+
 
 class QuAcqTaskPreparation:
     """Prepare QuAcqTask from bias + oracle. No E+/E-.
@@ -93,6 +99,12 @@ class QuAcqTaskPreparation:
 
         # Store raw BG clauses (without assumption guards) for _find_conflict
         result.background_clauses = oracle.get_root_clauses()
+
+        # Copy Part 4 data from BGData (feature assignment assumptions)
+        result.assignment_clauses = list(bg_data.assignment_clauses)
+        result.assignment_assumptions = list(bg_data.assignment_assumptions)
+        result.pos_assignment_to_assumption = dict(bg_data.pos_assignment_to_assumption)
+        result.neg_assignment_to_assumption = dict(bg_data.neg_assignment_to_assumption)
 
         # Step 1: Assign assumption IDs (negated forms from builder)
         id_assumption = model.next_available_id

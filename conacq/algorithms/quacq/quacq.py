@@ -23,7 +23,7 @@ from .sat_utils import (
     config_to_assumptions, violates_clauses, get_kb_clauses
 )
 from conacq.algorithms.acqmss.reduce import Reduce
-from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
+from explanation.operations.algorithms.checker import NonIncrementalPySATChecker, ConsistencyChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
@@ -36,6 +36,11 @@ class QuAcqResult:
     n_queries: int = 0
     convergence_reason: str = ""
     query_history: List[Tuple[Dict[str, bool], bool, str]] = field(default_factory=list)
+
+    def __repr__(self) -> str:
+        return (f"QuAcqResult(n_kb={len(self.kb_assumption_ids)}, "
+                f"n_queries={self.n_queries}, "
+                f"convergence_reason='{self.convergence_reason}')")
 
 
 class QuAcq:
@@ -53,35 +58,40 @@ class QuAcq:
         profiler_instance: Optional profiler
     """
 
-    def __init__(self, oracle: Oracle,
+    def __init__(self, checker: ConsistencyChecker,
+                 oracle: Oracle,
                  query_generator: QueryGenerator = None,
                  example_provider: ExampleProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
                  profiler_instance: AbstractProfiler = None) -> None:
+        self.checker = checker
         self.oracle = oracle
-        self.query_generator = query_generator
-        self.example_provider = example_provider
-        self.discriminating_generator = discriminating_generator
         self.profiler = profiler_instance if profiler_instance else get_global_profiler()
         self.result: Optional[QuAcqResult] = None
 
+        self.query_generator = query_generator
+        self.example_provider = example_provider
+        self.discriminating_generator = discriminating_generator
+
     @classmethod
-    def for_oracle(cls, oracle: Oracle,
+    def for_oracle(cls, checker: ConsistencyChecker,
+                   oracle: Oracle,
                    query_gen: QueryGenerator,
                    discrim_gen: DiscriminatingGenerator,
                    profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for oracle-based learning. discrim_gen is required."""
-        return cls(oracle, query_generator=query_gen,
+        return cls(checker, oracle, query_generator=query_gen,
                    discriminating_generator=discrim_gen,
                    profiler_instance=profiler)
 
     @classmethod
-    def for_examples(cls, oracle: Oracle,
+    def for_examples(cls, checker: ConsistencyChecker,
+                     oracle: Oracle,
                      example_provider: ExampleProvider,
                      discrim_gen: DiscriminatingGenerator = None,
                      profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for example-based learning."""
-        return cls(oracle, example_provider=example_provider,
+        return cls(checker, oracle, example_provider=example_provider,
                    discriminating_generator=discrim_gen,
                    profiler_instance=profiler)
 
@@ -90,14 +100,15 @@ class QuAcq:
     def learn(self,
               set_c: List[int],
               set_b: List[int],
-              set_kb: List[List],
               negation_map: Dict[int, int],
-              assumptions: List[int],
               background_clauses: List[List[int]],
               feature_ids: Dict[str, int],
               id_to_feature: Dict[int, str],
               constraint_clauses: Dict[int, List[List[int]]],
               negated_clauses: Dict[int, List[List[int]]],
+              pos_assignment_to_assumption: Dict[str, int] = None,
+              neg_assignment_to_assumption: Dict[str, int] = None,
+              root_assumption: int = None,
               mode: Literal['oracle', 'example_only', 'example_first'] = 'oracle',
               max_queries: int = 1000,
               ) -> QuAcqResult:
@@ -107,14 +118,15 @@ class QuAcq:
         Args:
             set_c: Bias constraint assumption IDs
             set_b: BG assumption IDs
-            set_kb: Full KB with assumption guards
             negation_map: {assumption_id -> negated_assumption_id}
-            assumptions: All assumption IDs
             background_clauses: Raw BG CNF clauses
             feature_ids: Feature name -> SAT variable ID
             id_to_feature: SAT variable ID -> feature name
             constraint_clauses: assumption_id -> raw CNF clauses
             negated_clauses: assumption_id -> negated CNF clauses
+            pos_assignment_to_assumption: Feature name -> pos assignment assumption ID (Part 4)
+            neg_assignment_to_assumption: Feature name -> neg assignment assumption ID (Part 4)
+            root_assumption: Root BG assumption ID (enables root constraint)
             mode: 'oracle', 'example_only', or 'example_first'
             max_queries: Maximum queries before stopping
 
@@ -182,19 +194,21 @@ class QuAcq:
                 break
 
             # Step 2: Check with oracle
-            if mode == 'oracle':
-                answer = self.oracle.ask(query)
-            else:
-                answer = self.oracle.is_valid(query)
+            answer = self.oracle.is_valid(query)
 
             record_query(query, answer)
-
             logging.debug('Query %d: answer=%s, mode=%s', n_queries, answer, mode)
 
             # Step 3: Process answer
             if answer:
-                pruned = self._prune_rejecting_constraints(
-                    constraint_clauses, feature_ids, remaining_bias, query)
+                if pos_assignment_to_assumption and root_assumption is not None:
+                    pruned = self._prune_rejecting_constraints(
+                        remaining_bias, query,
+                        root_assumption, pos_assignment_to_assumption,
+                        neg_assignment_to_assumption)
+                else:
+                    pruned = self._prune_rejecting_constraints_legacy(
+                        constraint_clauses, feature_ids, remaining_bias, query)
                 logging.debug('Pruned %d constraints', len(pruned))
             else:
                 if n_queries >= max_queries:
@@ -245,10 +259,24 @@ class QuAcq:
             convergence_reason = 'empty_bias'
             logging.info('Bias exhausted - converged')
 
-        result = self._build_result(
-            set_kb, assumptions, set_b, negation_map,
-            learned_kb, n_queries, query_history, convergence_reason)
-        return result
+        reduce = Reduce(self.checker, self.profiler)
+        redundant, kb = reduce.reduce(
+            set_b_prime=learned_kb,
+            set_neg_tv=[],
+            set_bg=set_b,
+            negation_map=negation_map
+        )
+
+        self.result = QuAcqResult(
+            kb_assumption_ids=kb,
+            n_queries=n_queries,
+            convergence_reason=convergence_reason,
+            query_history=query_history
+        )
+
+        logging.info('QuAcq finished: KB=%d, queries=%d, reason=%s',
+                     len(kb), n_queries, convergence_reason)
+        return self.result
 
     def _validate_mode(self, mode: str) -> None:
         """Validate mode and required dependencies."""
@@ -268,57 +296,35 @@ class QuAcq:
             if self.discriminating_generator is None:
                 raise ValueError("example_first mode requires discriminating_generator")
 
-    def _build_result(self,
-                      set_kb: List[List], assumptions: List[int],
-                      set_b: List[int], negation_map: Dict[int, int],
-                      learned_kb: List[int],
-                      n_queries: int, query_history: list,
-                      convergence_reason: str) -> QuAcqResult:
-        """Build QuAcqResult from algorithm state, applying REDUCE."""
-        final_kb_ids = self._apply_reduce(
-            set_kb, assumptions, set_b, negation_map, learned_kb)
-
-        self.result = QuAcqResult(
-            kb_assumption_ids=final_kb_ids,
-            n_queries=n_queries,
-            convergence_reason=convergence_reason,
-            query_history=query_history
-        )
-
-        logging.info('QuAcq finished: KB=%d, queries=%d, reason=%s',
-                     len(final_kb_ids), n_queries, convergence_reason)
-
-        return self.result
-
-    def _apply_reduce(self, set_kb, assumptions, set_b, negation_map,
-                      learned_kb: List[int]) -> List[int]:
-        """Apply REDUCE directly using assumption IDs."""
-        if not learned_kb:
-            return []
-
-        checker = NonIncrementalPySATChecker(
-            set_kb, assumptions, 'glucose4', self.profiler)
-
-        try:
-            reduce = Reduce(checker, self.profiler)
-            redundant, non_redundant = reduce.reduce(
-                set_b_prime=learned_kb,
-                set_neg_tv=[],
-                set_bg=set_b,
-                negation_map=negation_map
-            )
-            return non_redundant
-        except Exception as e:
-            logging.warning('REDUCE failed: %s, returning learned KB as-is', e)
-            return list(learned_kb)
-
     @count_calls('prune_calls')
     def _prune_rejecting_constraints(self,
-                                     constraint_clauses: Dict[int, List[List[int]]],
-                                     feature_ids: Dict[str, int],
                                      remaining_bias: set,
-                                     positive_example: Dict[str, bool]) -> List[int]:
-        """Remove constraints from remaining_bias that reject the positive example."""
+                                     positive_example: Dict[str, bool],
+                                     root_assumption: int,
+                                     pos_map: Dict[str, int],
+                                     neg_map: Dict[str, int]) -> List[int]:
+        """Remove constraints from remaining_bias that reject the positive example.
+
+        Uses SAT-based consistency checking with Part 4 feature assignment
+        assumptions, catching implied violations beyond pure Boolean evaluation.
+        """
+        config_assumptions = [pos_map[feat] if val else neg_map[feat]
+                              for feat, val in positive_example.items()]
+        base = [root_assumption] + config_assumptions
+        pruned = []
+        for aid in list(remaining_bias):
+            if not self.checker.is_consistent(base + [aid]):
+                pruned.append(aid)
+        remaining_bias -= set(pruned)
+        return pruned
+
+    @count_calls('prune_calls')
+    def _prune_rejecting_constraints_legacy(self,
+                                            constraint_clauses: Dict[int, List[List[int]]],
+                                            feature_ids: Dict[str, int],
+                                            remaining_bias: set,
+                                            positive_example: Dict[str, bool]) -> List[int]:
+        """Legacy: pure Boolean eval fallback (when Part 4 data unavailable)."""
         assumptions_list = config_to_assumptions(positive_example, feature_ids)
         assignment = {abs(lit): lit > 0 for lit in assumptions_list}
 
