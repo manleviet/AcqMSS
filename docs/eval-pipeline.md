@@ -239,9 +239,9 @@ python -m apps.run_congen apps/conf/run_congen_config.toml -v
 | **Output per model** | 1 file: `{model}_{strategy}_kb.json` |
 | **Use case** | Debug, inspect learned KB, input for run_compare.py |
 
-### run_quacq.py — Single QuAcq Run (Original Mode)
+### run_quacq.py — Single QuAcq Run (Oracle Mode)
 
-Runs original QuAcq with QueryGenerator + Oracle. No examples needed — self-generates queries via SAT solving: `SAT(KB ∪ BG ∪ ¬c)`.
+Runs QuAcq with QueryProvider (SAT-based mode) + Oracle. No examples needed — self-generates queries via SAT solving: `SAT(KB ∪ BG ∪ ¬c)`.
 
 ```bash
 python -m apps.run_quacq apps/conf/run_quacq_config.toml -v
@@ -251,16 +251,16 @@ python -m apps.run_quacq apps/conf/run_quacq_config.toml -v
 |---|---|
 | **Output per model** | 1 file: `{model}_interactive_kb.json` |
 | **Modes** | `automated` (FM oracle answers) or `--interactive` (human answers) |
-| **Use case** | Demo interactive learning, test QuAcq algorithm |
+| **Use case** | Demo interactive learning, test QuAcq algorithm (generates queries from SAT) |
 
 ---
 
 ## QuAcq: Two Operating Modes
 
-| Mode | Method | Used by | Input | Query source |
+| Mode | Method | Used by | Input | Query/Example source |
 |---|---|---|---|---|
-| **Original** | `QuAcq.learn()` | `run_quacq.py` | Oracle FM only | `QueryGenerator` (SAT-based) |
-| **Example-based** | `QuAcq.learn_from_examples()` | `run_cv.py` (algorithm=interactive) | Examples E+/E- | `ExampleProvider` |
+| **Oracle** | `QuAcq.learn()` with mode='oracle' | `run_quacq.py` | Oracle FM only | `QueryProvider.generate_from_sat()` (SAT-based query generation) |
+| **Example-based** | `QuAcq.learn()` with mode='example_only'/'example_first' | `run_cv.py` (algorithm=interactive) | Examples E+/E- | `QueryProvider.generate_from_pool()` or fallback to `generate_from_sat()` |
 
 Example-based mode exists for **fair comparison** with ConGen — both algorithms receive the same input examples.
 

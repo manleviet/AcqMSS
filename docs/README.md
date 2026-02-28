@@ -203,7 +203,7 @@ congen.md (ALGORITHM DETAILS)
 - `UserPromptOracle` — Interactive user oracle (user_prompt.py)
 - `CachedOracle` — Caching wrapper (cached.py)
 - `FMData` — FM metadata container (frozen dataclass)
-- `ExampleProvider` — Batch example interface
+- `QueryProvider` — Unified query/example provision (strategies: pool, SAT, pool+SAT)
 
 **Critical**: Feature ID consistency uses flamapy's variable mapping (tree traversal order) as authoritative source. Alphabetical sorting would cause critical mismatch.
 

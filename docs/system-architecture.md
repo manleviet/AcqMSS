@@ -59,7 +59,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 from conacq.algorithms import ConGen, ConGenModelBuilder
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
 from conacq.oracle import FeatureModelOracle
-from conacq.example_generators import QueryGenerator, ExampleProvider
+from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import CheckerFactory
 
 # Passive learning — Pattern 1: auto-prepare (oracle + examples at build time)
@@ -89,7 +89,7 @@ for fold_pos, fold_neg in folds:
     # Use model.task for this fold
 
 # Interactive learning — QuAcq (DI pattern)
-from conacq.example_generators import QueryGenerator
+from conacq.example_generators import QueryProvider
 from conacq.algorithms.quacq import DiscriminatingGenerator
 
 oracle = FeatureModelOracle('data/fms/model.uvl')
@@ -97,9 +97,9 @@ model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
          .with_oracle(oracle)
          .build())  # Returns prepared model, task ready
 
-query_gen = QueryGenerator(max_query_size=10)
+query_prov = QueryProvider(max_query_size=10)
 discrim_gen = DiscriminatingGenerator()
-quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+quacq = QuAcq.for_oracle(oracle, query_prov, discrim_gen)
 
 result = quacq.learn(
     set_c=model.task.set_c, set_b=model.task.set_b,
@@ -113,8 +113,9 @@ result = quacq.learn(
 # Runner resolves names: kb_names, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
 
 # Query generation and example provision
-query = QueryGenerator.generate_discriminative_query(...)  # Canonical import
-examples = ExampleProvider(...)  # Canonical import
+query = QueryProvider.generate_from_sat(...)  # SAT-based query generation
+examples = QueryProvider.generate_from_pool(...)  # Pool-based example selection
+queries_or_examples = QueryProvider.generate(...)  # Pool with SAT fallback
 ```
 
 **Key Algorithms**:
@@ -165,10 +166,12 @@ examples = ExampleProvider(...)  # Canonical import
 1. **RandomSampling (RS)** — Uniform random configuration selection
 2. **FeatureFrequency (FF)** — Weight by feature occurrence patterns
 3. **TwoCoverage (2-COV)** — Ensure feature pairs appear together
-4. **ExampleProvider** — Batch example interface for learning (moved from oracle/)
 
-**Query Generation**:
-- **QueryGenerator** — Discriminative query generation (moved from algorithms/quacq/)
+**Query Generation & Selection**:
+- **QueryProvider** — Unified query/example provision with three strategies:
+  1. `generate_from_pool()` — Select example from pool
+  2. `generate_from_sat()` — Generate query via SAT solving
+  3. `generate()` — Pool-first, SAT fallback (default mode)
 
 #### conacq/oracle/ — Oracle Implementations
 

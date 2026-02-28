@@ -97,7 +97,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ FindScope algorithm (IJCAI13 Algorithm 2) — scope identification via partial queries
 - ✅ FindC algorithm (IJCAI13 Algorithm 3) — constraint discrimination with scope
 - ✅ QuAcq.learn_from_examples() — example-based learning mode (no oracle needed)
-- ✅ ExampleProvider class — batch example interface for FindC
+- ✅ QueryProvider class — unified query/example provision (merged ExampleProvider + QueryGenerator)
 - ✅ Shared CV fold generation/save/load (fold_io.py)
 - ✅ Pre-generated fold support in cross_validation.py
 - ✅ Bias shuffle seed support in congen_runner.py and run_congen_eval.py

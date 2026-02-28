@@ -47,9 +47,9 @@ Primary constraint discovery algorithms:
 - ✅ **Cleaned QuAcqTask** — Removed 7 dead methods (~80 LOC), now pure data container (fields only)
 - ✅ **Moved behavior to sat_utils.py** — Standalone functions: config_to_assumptions, violates_clauses, get_kb_clauses
 - ✅ **Removed DescriptionProvider** from QuAcq.learn() — Moved to runner layer (QuAcqRunner.resolve_kb())
-- ✅ Refactored `QuAcq.__init__()` — DI pattern (oracle, query_generator, example_provider, discriminating_generator, profiler)
+- ✅ Refactored `QuAcq.__init__()` — DI pattern (oracle, query_provider, discriminating_generator, profiler)
 - ✅ Added `QuAcq.for_oracle()` factory — discrim_gen required
-- ✅ Added `QuAcq.for_examples()` factory — example_provider required
+- ✅ Added `QuAcq.for_examples()` factory — query_provider required
 - ✅ Refactored `QuAcq.learn()` — Direct parameter signature (set_c, set_b, ..., mode, max_queries); runner resolves names
 - ✅ learn() supports 3 modes: 'oracle', 'example_only', 'example_first' via single parameter
 
@@ -77,19 +77,18 @@ Feature model to constraint conversion pipeline:
 | `clause_generator.py` | 199 | Convert FM constraints to CNF clauses |
 | `data_structures.py` | 160 | Constraint, BiasConfig, ConstraintType enumerations |
 
-#### conacq/example_generators/ — Example & Query Generation (~1,097 LOC, 7 files)
+#### conacq/example_generators/ — Example & Query Generation (~850 LOC, 6 files)
 
-Sampling strategies, example generation, and query generation for learning:
+Sampling strategies and query generation for learning:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `query_generator.py` | 262 | QueryGenerator: discriminative query generation (moved from interactive/) |
+| `query_provider.py` | ~320 | QueryProvider: unified query/example provision (strategies: generate_from_pool, generate_from_sat, generate) |
 | `base.py` | 245 | Base strategy class. Calls oracle.complete_configuration() (no pysat.solvers imports) |
 | `random_sampling.py` | 245 | RS sampling: uniformly random configuration selection |
 | `feature_frequency.py` | 197 | FF: feature frequency-based sampling. Calls oracle.complete_configuration() |
 | `nwise_coverage.py` | 136 | 2-COV strategy: n-wise pairwise coverage |
-| `example_provider.py` | ~120 | ExampleProvider: batch example interface (moved from oracle/) |
-| `__init__.py` | ~1 | Package exports with lazy-loaded QueryGenerator |
+| `__init__.py` | ~1 | Package exports with QueryProvider |
 
 #### conacq/examples/ — Example and Query History Conversion (~120 LOC, 4 files)
 

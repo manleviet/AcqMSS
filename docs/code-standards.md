@@ -191,7 +191,7 @@ High-level interfaces hiding complexity. QuAcqRunner demonstrates the pattern wi
 
 ```python
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
-from conacq.example_generators import QueryGenerator
+from conacq.example_generators import QueryProvider
 from conacq.oracle import FeatureModelOracle
 
 class QuAcqRunner:
@@ -199,9 +199,9 @@ class QuAcqRunner:
 
     def run(self, positive_examples=None, negative_examples=None, mode='oracle'):
         """Learn constraints interactively, resolve names."""
-        query_gen = QueryGenerator()
+        query_prov = QueryProvider()
         discrim_gen = DiscriminatingGenerator()
-        quacq = QuAcq.for_oracle(self.oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(self.oracle, query_prov, discrim_gen)
 
         # Algorithm returns raw assumption IDs
         result = quacq.learn(
@@ -288,30 +288,28 @@ class QuAcq:
     """Interactive learning with DI pattern and mode dispatch (oracle/example)."""
 
     def __init__(self, oracle: Oracle,
-                 query_generator: QueryGenerator = None,
-                 example_provider: ExampleProvider = None,
+                 query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
                  profiler_instance: AbstractProfiler = None):
         # All collaborators injected
         self.oracle = oracle
-        self.query_generator = query_generator
-        self.example_provider = example_provider
+        self.query_provider = query_provider
         self.discriminating_generator = discriminating_generator
 
     @classmethod
-    def for_oracle(cls, oracle: Oracle, query_gen: QueryGenerator,
+    def for_oracle(cls, oracle: Oracle, query_prov: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
                    profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for oracle mode."""
-        return cls(oracle, query_generator=query_gen,
+        return cls(oracle, query_provider=query_prov,
                    discriminating_generator=discrim_gen, profiler_instance=profiler)
 
     @classmethod
-    def for_examples(cls, oracle: Oracle, example_provider: ExampleProvider,
+    def for_examples(cls, oracle: Oracle, query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
                      profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for example-based modes."""
-        return cls(oracle, example_provider=example_provider,
+        return cls(oracle, query_provider=query_provider,
                    discriminating_generator=discrim_gen, profiler_instance=profiler)
 
     def learn(self, set_c, set_b, set_kb, negation_map, assumptions,
@@ -322,6 +320,11 @@ class QuAcq:
 
         Runner layer resolves names via model.resolve_kb(result.kb_assumption_ids)
         to match ConGen pattern: algorithm → IDs, runner → names.
+
+        Modes:
+        - 'oracle'/'automated'/'interactive': Query oracle via query_provider.generate_from_sat()
+        - 'example_only': Select from pool via query_provider.generate_from_pool()
+        - 'example_first': Pool first (via generate_from_pool()), fallback to SAT
         """
         # Mode dispatch: 'oracle', 'example_only', or 'example_first'
         ...

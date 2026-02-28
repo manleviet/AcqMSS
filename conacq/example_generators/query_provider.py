@@ -33,15 +33,16 @@ class QueryProvider:
     """
 
     def __init__(self, solver_name: str = 'glucose4',
-                 pool: List[Dict[str, bool]] = None,
-                 seed: int = None,
-                 profiler_instance: AbstractProfiler = None) -> None:
+                 pool: Optional[List[Dict[str, bool]]] = None,
+                 seed: Optional[int] = None,
+                 profiler_instance: Optional[AbstractProfiler] = None) -> None:
         self.solver_name = solver_name
         self.profiler = profiler_instance if profiler_instance else get_global_profiler()
 
         # Pool state
         self._pool: List[Dict[str, bool]] = []
         self._pool_index: int = 0
+        # Initializes pool state with optional seeded shuffling
         if pool is not None:
             self._pool = list(pool)
             if seed is not None:
@@ -171,36 +172,6 @@ class QueryProvider:
             negated_clauses, bg_clauses, feature_ids,
             id_to_feature, n_bg)
 
-    def generate_with_priority(
-            self, remaining_bias, learned_kb, kb_clauses,
-            negated_clauses, constraint_clauses, bg_clauses,
-            feature_ids, id_to_feature, priority_fn=None, n_bg=0,
-    ) -> Tuple[Optional[Dict[str, bool]], Optional[int]]:
-        """Generate query with constraint priority ordering."""
-        if priority_fn is None:
-            return self.generate_from_sat(
-                remaining_bias, learned_kb, kb_clauses,
-                negated_clauses, bg_clauses, feature_ids,
-                id_to_feature, n_bg)
-
-        sorted_bias = sorted(
-            remaining_bias,
-            key=lambda c_id: priority_fn(c_id, constraint_clauses.get(c_id, [])),
-            reverse=True)
-
-        for c_id in sorted_bias:
-            neg_c_clauses = negated_clauses.get(c_id)
-            if neg_c_clauses is None:
-                continue
-            query_result = self._try_generate_for_constraint(
-                kb_clauses=kb_clauses, bg_clauses=bg_clauses,
-                neg_c_clauses=neg_c_clauses, feature_ids=feature_ids,
-                id_to_feature=id_to_feature)
-            if query_result is not None:
-                return query_result, c_id
-
-        return None, None
-
     @count_calls('sat_checks_query_gen')
     def _try_generate_for_constraint(
             self, kb_clauses, bg_clauses, neg_c_clauses,
@@ -225,13 +196,3 @@ class QueryProvider:
             if var in id_to_feature:
                 config[id_to_feature[var]] = lit > 0
         return config
-
-
-def clause_count_priority(c_id, clauses: List[List[int]]) -> int:
-    """Priority function based on clause count."""
-    return len(clauses)
-
-
-def literal_count_priority(c_id, clauses: List[List[int]]) -> int:
-    """Priority function based on total literal count."""
-    return sum(len(c) for c in clauses)

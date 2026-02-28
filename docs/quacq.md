@@ -1,6 +1,6 @@
 # QuAcq - Constraint Acquisition via Partial Queries (IJCAI 2013)
 
-**Last Updated**: 2026-02-28 (QuAcqTask cleanup: pure data container, DescriptionProvider moved to runner)
+**Last Updated**: 2026-02-28 (Merged ExampleProvider + QueryGenerator → unified QueryProvider)
 
 **Paper:** Bessiere, Coletta, Hebrard, Katsirelos, Lazaar, Narodytska, Quimper, Walsh
 
@@ -24,7 +24,7 @@ Interactive learning through membership queries:
 
 **Implementation**:
 - `conacq/algorithms/quacq/quacq.py` — Main QuAcq algorithm (oracle mode)
-- `conacq/example_generators/query_generator.py` — GenerateQuery heuristics
+- `conacq/example_generators/query_provider.py` — Unified QueryProvider (pool + SAT strategies)
 - `conacq/oracle/` — Oracle implementations (FeatureModelOracle, UserPromptOracle, CachedOracle)
 
 ### 2. Example-Based Mode (Batch Learning with FindScope/FindC)
@@ -47,9 +47,9 @@ Learn from pre-collected positive/negative examples without an interactive oracl
 **Implementation**:
 - `conacq/algorithms/quacq/quacq.py` — QuAcq.learn_from_examples() method (oracle.is_valid())
 - `conacq/algorithms/quacq/findscope.py` — FindScope (Algorithm 2, 134 LOC, oracle-based)
-- `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, 208 LOC, oracle-based pool + generator)
+- `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, oracle.is_valid() + DiscriminatingGenerator)
 - `conacq/algorithms/quacq/discriminating_generator.py` — DiscriminatingGenerator (NEW, 66 LOC, C_L[Y] + BG)
-- `conacq/example_generators/example_provider.py` — ExampleProvider for batch examples
+- `conacq/example_generators/query_provider.py` — QueryProvider handles both pool-based and SAT-based query generation
 
 ## FindScope (Algorithm 2)
 
@@ -84,21 +84,19 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 - Returns config dict or None if UNSAT
 - Replaces SAT-based narrowing with C_L[Y]-based generation
 
-**Pool-Based Narrowing**:
-- Uses `oracle.is_valid()` instead of SAT checks
-- Example pool tested against candidates via raw clause maps
-- Valid examples eliminate candidate constraints; invalid examples narrow to violating set
+**Simplified FindC** (commit 260228):
+- Removed `_narrow_with_pool` — paper Algorithm 3 uses only DiscriminatingGenerator for narrowing
+- FindC no longer accepts `example_provider` or `query_mode` params
+- Uses `_narrow_with_generator` (DiscriminatingGenerator) when provided
 
 **Query Recording**:
 - All queries recorded via `record_query(config, answer, 'findc')` callback
-- Supports query_mode='example_only' (pool only) or 'example_first' (pool then generator)
 
 **Process**:
 1. Collect constraints matching scope (exact match preferred, fallback to subset)
 2. Filter to constraints that actually reject example e
-3. Use example pool to narrow down (oracle.is_valid() checks)
-4. Fall back to DiscriminatingGenerator if needed (query_mode='example_first')
-5. Return first remaining candidate
+3. Use DiscriminatingGenerator to narrow candidates via discriminating examples
+4. Return first remaining candidate
 
 - **Complexity:** O(|Gamma|) queries per call
 
@@ -135,12 +133,22 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 5. **Usable as solver** — stop when a complete positive example is found
 6. **Batch mode** (NEW) — Example-based learning with FindScope/FindC requires no oracle
 
-## Query Generation Heuristics
+## Query Generation (QueryProvider)
 
+Unified `QueryProvider` class (conacq/example_generators/query_provider.py) merges pool-based and SAT-based strategies:
+
+**Three methods** mapping to three modes:
+- `generate_from_pool()` → `example_only` mode: iterate pool, SAT-check satisfies C_L + BG, check violates ≥1 constraint in bias
+- `generate_from_sat()` → `oracle` mode: SAT-based generation (max-1/sol heuristics)
+- `generate()` → `example_first` mode: try pool first, fallback to SAT
+
+**SAT Heuristics** (in generate_from_sat):
 - **max-1**: Find solution of `C_L` maximizing violated constraints in `B` (1s cutoff)
 - **sol**: Find first solution of `C_L` violating at least 1 constraint in `B` (cheapest)
-- **max-1** generally needs fewer queries; **sol** is faster per query
-- **FindScope/FindC** uses both SAT-based queries and example pool matching
+
+**Pool Filtering** (paper Algorithm 1 condition):
+- Query `e` must satisfy C_L ∪ BG (checked via SAT solver)
+- Query `e` must violate ≥1 constraint in remaining bias (checked via raw clause violation)
 
 ## Relation to Codebase
 
@@ -148,14 +156,14 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 - `conacq/algorithms/quacq/quacq.py` — QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, assumption-based learn())
 - `conacq/algorithms/quacq/sat_utils.py` — Standalone utility functions (config_to_assumptions, violates_clauses, get_kb_clauses) — NEW
 - `conacq/algorithms/quacq/findscope.py` — FindScope (Algorithm 2, 134 LOC, oracle.is_valid() instead of SAT)
-- `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, 208 LOC, oracle.is_valid() pool + DiscriminatingGenerator)
+- `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, oracle.is_valid() + DiscriminatingGenerator narrowing)
 - `conacq/algorithms/quacq/discriminating_generator.py` — DiscriminatingGenerator (66 LOC, C_L[Y] + BG)
 - `conacq/algorithms/quacq/quacq_model.py` — QuAcqModel (dual to ConGenModel) for interactive learning
 - `conacq/algorithms/quacq/quacq_model_builder.py` — QuAcqModelBuilder (fluent builder, auto-prepares on build())
 - `conacq/algorithms/quacq/task_preparation.py` — QuAcqTask + QuAcqTaskPreparation (inherited from DiagnosisTask)
 - `conacq/algorithms/quacq/_task_compat.py` — Shared duck-typing helpers (get_bg_clauses(), get_clause_map(), get_negated_clauses())
 - `conacq/oracle/` — Oracle implementations: FeatureModelOracle, UserPromptOracle, CachedOracle, FMData, BGData
-- `conacq/example_generators/` — Query generation and batch examples (query_generator.py, example_provider.py)
+- `conacq/example_generators/` — QueryProvider: unified pool + SAT query generation (query_provider.py)
 
 **Evaluation Support**:
 - `conacq/eval/fold_io.py` — Shared CV fold generation for CONGEN/QuAcq comparison
@@ -273,9 +281,11 @@ Key Classes (in conacq/algorithms/quacq/):
 - `UserPromptOracle` — Interactive user oracle (prompts on command line) (user_prompt.py)
 - `CachedOracle` — Caching wrapper to avoid re-asking same query (cached.py)
 
-**Query & Example Generation** (conacq/example_generators/):
-- `QueryGenerator` — Discriminative query generation (moved from algorithms/interactive/) (query_generator.py)
-- `ExampleProvider` — Batch example interface for FindC algorithm (moved from oracle/) (example_provider.py)
+**Query Generation** (conacq/example_generators/):
+- `QueryProvider` — Unified query provider: pool-filtered + SAT-based strategies (query_provider.py)
+  - `generate_from_pool()`: Pool iteration with paper condition (satisfies C_L+BG, violates ≥1 bias)
+  - `generate_from_sat()`: SAT-based generation (max-1/sol heuristics)
+  - `generate()`: Combined pool-first + SAT fallback
 
 **Critical**: Feature ID consistency
 - Uses flamapy's variable mapping (tree traversal order) as authoritative source
@@ -295,7 +305,7 @@ The following classes are **no longer available**:
 **Recommended Pattern** (DI-based, post-refactor):
 ```python
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
-from conacq.example_generators import QueryGenerator
+from conacq.example_generators import QueryProvider
 from conacq.oracle import FeatureModelOracle
 
 # Build and prepare model
@@ -305,9 +315,9 @@ model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
          .build())  # Returns prepared QuAcqModel
 
 # Build QuAcq with dependencies (oracle mode)
-query_gen = QueryGenerator(max_query_size=10)
+query_provider = QueryProvider(solver_name='glucose4')
 discrim_gen = DiscriminatingGenerator()
-quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
 
 # Run learning (returns raw assumption IDs)
 result = quacq.learn(
@@ -333,15 +343,16 @@ print(f"Queries: {result.n_queries}")
 
 **Example-Based Mode**:
 ```python
-from conacq.example_generators import ExampleProvider
+from conacq.example_generators import QueryProvider
 
-example_provider = ExampleProvider(examples_list)
-quacq = QuAcq.for_examples(oracle, example_provider)
+# QueryProvider with pool for example-based learning
+query_provider = QueryProvider(solver_name='glucose4', pool=examples_list, seed=42)
+quacq = QuAcq.for_examples(checker, oracle, query_provider)
 
 # Run with pool only
 result = quacq.learn(..., mode='example_only', ...)
 
-# Or pool + SAT fallback
+# Or pool + SAT fallback (needs discrim_gen)
 result = quacq.learn(..., mode='example_first', ...)
 ```
 
