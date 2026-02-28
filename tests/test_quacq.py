@@ -43,7 +43,6 @@ def _learn_params_from_model(model):
         set_c=task.set_c,
         set_b=task.set_b,
         negation_map=task.negation_map,
-        feature_ids=model.variables,
     )
 
 
@@ -214,7 +213,7 @@ class TestQuAcq:
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
             checker=checker, model=prepared_model,
-            root_assumption=task.set_b[0])
+            profiler=get_global_profiler(), root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
                                    model=prepared_model)
@@ -237,12 +236,12 @@ class TestQuAcq:
         checker = _minimal_checker()
         query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
-            checker=checker, model=None, root_assumption=0)
+            checker=checker, model=None,
+            profiler=get_global_profiler(), root_assumption=0)
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
-            feature_ids={'root': 1},
             mode='oracle', max_queries=100)
 
         assert result.n_queries == 0
@@ -275,7 +274,7 @@ class TestIntegration:
             query_provider = QueryProvider(checker=checker, model=model)
             discrim_gen = DiscriminatingGenerator(
                 checker=checker, model=model,
-                root_assumption=task.set_b[0])
+                profiler=get_global_profiler(), root_assumption=task.set_b[0])
 
             quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
             result = quacq.learn(
@@ -428,7 +427,7 @@ class TestQuAcqWithAssumptionIDs:
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
             checker=checker, model=prepared_model,
-            root_assumption=task.set_b[0])
+            profiler=get_global_profiler(), root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
                                    model=prepared_model)
@@ -453,12 +452,12 @@ class TestQuAcqWithAssumptionIDs:
         checker = _minimal_checker()
         query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
-            checker=checker, model=None, root_assumption=0)
+            checker=checker, model=None,
+            profiler=get_global_profiler(), root_assumption=0)
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
-            feature_ids={'root': 1},
             mode='oracle', max_queries=100)
 
         assert result.n_queries == 0
@@ -473,7 +472,7 @@ class TestQuAcqWithAssumptionIDs:
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
             checker=checker, model=prepared_model,
-            root_assumption=task.set_b[0])
+            profiler=get_global_profiler(), root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
                                    model=prepared_model)
@@ -542,7 +541,8 @@ class TestQuAcqFactories:
         checker = _minimal_checker()
         query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
-            checker=checker, model=None, root_assumption=0)
+            checker=checker, model=None,
+            profiler=get_global_profiler(), root_assumption=0)
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         assert quacq.oracle is oracle
         assert quacq.query_provider is query_provider
@@ -561,8 +561,7 @@ class TestQuAcqModeValidation:
 
     def _minimal_learn_params(self):
         return dict(
-            set_c=[], set_b=[], negation_map={},
-            feature_ids={'root': 1})
+            set_c=[], set_b=[], negation_map={})
 
     def test_no_query_provider_raises(self, oracle):
         """Any mode without query_provider raises."""

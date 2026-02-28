@@ -27,8 +27,9 @@ Example Usage:
     task = model.task
     checker = CheckerFactory.create_from_model(model)
     query_provider = QueryProvider()
+    profiler = get_global_profiler()
     discrim_gen = DiscriminatingGenerator(
-        checker=checker, model=model, root_assumption=task.set_b[0])
+        checker=checker, model=model, profiler=profiler, root_assumption=task.set_b[0])
     quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
     result = quacq.learn(
         set_c=task.set_c, set_b=task.set_b,

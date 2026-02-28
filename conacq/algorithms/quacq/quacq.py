@@ -74,9 +74,9 @@ class QuAcq:
     @classmethod
     def for_oracle(cls, checker: ConsistencyChecker,
                    oracle: Oracle,
-                   model: QuAcqModel,
                    query_provider: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
+                   model: QuAcqModel = None,
                    profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for oracle-based learning. discrim_gen required."""
         return cls(checker, oracle, model=model,
@@ -87,9 +87,9 @@ class QuAcq:
     @classmethod
     def for_examples(cls, checker: ConsistencyChecker,
                      oracle: Oracle,
-                     model: QuAcqModel,
                      query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
+                     model: QuAcqModel = None,
                      profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for example-based learning."""
         return cls(checker, oracle, model=model,
@@ -113,7 +113,6 @@ class QuAcq:
             set_c: Bias constraint assumption IDs
             set_b: BG assumption IDs
             negation_map: {assumption_id -> negated_assumption_id}
-            feature_ids: Feature name -> SAT variable ID
             mode: 'oracle', 'example_only', or 'example_first'
             max_queries: Maximum queries before stopping
 
@@ -137,7 +136,7 @@ class QuAcq:
                 n_queries += 1
                 query_history.append((config.copy(), answer, source))
 
-        all_variables = set(self.model.variables.keys())
+        all_variables = set(self.model.variables.keys()) if self.model else set()
 
         logging.info('QuAcq starting: Bias=%d constraints, mode=%s', len(remaining_bias), mode)
 
@@ -204,7 +203,7 @@ class QuAcq:
                 # Adds scope-derived constraint to knowledge base or falls back to tested constraint
                 if scope:
                     find_c = FindC(self.oracle, self.checker, self.model,
-                                   record_query, set_b[0],
+                                   self.profiler, record_query, set_b[0],
                                    generator=self.discriminating_generator)
                     c_id = find_c.run(
                         e=query, scope=scope,

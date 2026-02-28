@@ -41,7 +41,10 @@ class QuAcqRunResult(BaseRunResult):
     findc_runtime_ms: float = 0.0
     dis_gen_runtime_ms: float = 0.0
     reduce_runtime_ms: float = 0.0
+    solver_time_ms: float = 0.0
 
+    is_consistent_calls: int = 0
+    is_consistent_test_cases_calls: int = 0
     quacq_calls: int = 0
     query_generation_calls: int = 0
     query_generation_consistency_checks: int = 0
@@ -70,6 +73,9 @@ class QuAcqRunResult(BaseRunResult):
             'findc_runtime_ms': self.findc_runtime_ms,
             'dis_gen_runtime_ms': self.dis_gen_runtime_ms,
             'reduce_runtime_ms': self.reduce_runtime_ms,
+            'solver_time_ms': self.solver_time_ms,
+            'is_consistent_calls': self.is_consistent_calls,
+            'is_consistent_test_cases_calls': self.is_consistent_test_cases_calls,
             'quacq_calls': self.quacq_calls,
             'query_generation_calls': self.query_generation_calls,
             'query_generation_consistency_checks': self.query_generation_consistency_checks,
@@ -102,6 +108,9 @@ class QuAcqRunResult(BaseRunResult):
             findc_runtime_ms=self.findc_runtime_ms,
             dis_gen_runtime_ms=self.dis_gen_runtime_ms,
             reduce_runtime_ms=self.reduce_runtime_ms,
+            solver_time_ms=self.solver_time_ms,
+            is_consistent_calls=self.is_consistent_calls,
+            is_consistent_test_cases_calls=self.is_consistent_test_cases_calls,
             quacq_calls=self.quacq_calls,
             query_generation_calls=self.query_generation_calls,
             query_generation_consistency_checks=self.query_generation_consistency_checks,
@@ -272,7 +281,10 @@ class QuAcqRunner(BaseRunner):
             findc_runtime_ms = sum(profiler.get_metric('findc_runtime', [0])) * 1000
             dis_gen_runtime_ms = sum(profiler.get_metric('dis_gen_runtime', [0])) * 1000
             reduce_runtime_ms = sum(profiler.get_metric('reduce_runtime', [0])) * 1000
+            solver_time_ms = sum(profiler.get_metric('solver_time', [0])) * 1000
 
+            is_consistent_calls = profiler.get_metric('is_consistent_calls', 0)
+            is_consistent_test_cases_calls = profiler.get_metric('is_consistent_test_cases_calls', 0)
             quacq_calls = profiler.get_metric('quacq_calls', 0)
             query_generation_calls = profiler.get_metric('query_generation_calls', 0)
             query_generation_consistency_checks = profiler.get_metric('query_generation_consistency_checks', 0)
@@ -309,6 +321,9 @@ class QuAcqRunner(BaseRunner):
                 findc_runtime_ms=findc_runtime_ms,
                 dis_gen_runtime_ms=dis_gen_runtime_ms,
                 reduce_runtime_ms=reduce_runtime_ms,
+                solver_time_ms=solver_time_ms,
+                is_consistent_calls=is_consistent_calls,
+                is_consistent_test_cases_calls=is_consistent_test_cases_calls,
                 quacq_calls=quacq_calls,
                 query_generation_calls=query_generation_calls,
                 query_generation_consistency_checks=query_generation_consistency_checks,
@@ -345,6 +360,7 @@ class QuAcqRunner(BaseRunner):
         discrim_gen = DiscriminatingGenerator(
             checker=checker,
             model=self.model,
+            profiler=profiler,
             root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, learn_oracle, query_provider, discrim_gen,
@@ -372,6 +388,7 @@ class QuAcqRunner(BaseRunner):
             discrim_gen = DiscriminatingGenerator(
                 checker=checker,
                 model=self.model,
+                profiler=profiler,
                 root_assumption=task.set_b[0])
 
         quacq = QuAcq(
