@@ -58,11 +58,7 @@ class CrossValidationFoldResult:
             'accuracy': self.accuracy,
             'metrics': self.metrics.to_dict(),
             'performance': {
-                'runtime_ms': self.performance.runtime_ms,
-                'consistency_checks': self.performance.consistency_checks,
-                'memory_peak_mb': self.performance.memory_peak_mb,
-                'n_mss': self.performance.n_mss,
-                'n_kb': self.performance.n_kb,
+                **self.performance.to_dict(),
                 'profiler': self.profiler_data,
             },
             'kb_constraints': self.kb_constraints,

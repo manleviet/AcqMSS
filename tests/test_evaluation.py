@@ -379,6 +379,75 @@ class TestPerformanceMetrics:
         assert agg.is_consistent_tc_calls_mean == 6  # (5 + 7) / 2
         assert agg.redundancy_checks_mean == 20  # (15 + 25) / 2
 
+    def test_quacq_performance_metrics(self):
+        """Test PerformanceMetrics accepts QuAcq-specific fields."""
+        pm = PerformanceMetrics(
+            runtime_ms=500, consistency_checks=200,
+            memory_peak_mb=25, n_kb=10,
+            quacq_runtime_ms=450, query_generation_runtime_ms=100,
+            findscope_runtime_ms=80, findc_runtime_ms=120,
+            dis_gen_runtime_ms=50, reduce_runtime_ms=30,
+            quacq_calls=5, query_generation_calls=20,
+            query_generation_consistency_checks=40,
+            prune_calls=15, prune_is_consistent_calls=30,
+            findscope_calls=5, findc_calls=5,
+            findc_consistency_checks=25,
+            dis_gen_calls=3, dis_gen_consistency_checks=10,
+            reduce_calls=2, redundancy_consistency_checks=8,
+        )
+        assert pm.quacq_runtime_ms == 450
+        assert pm.findscope_calls == 5
+        assert pm.reduce_calls == 2
+
+    def test_quacq_to_dict(self):
+        """Test to_dict() includes QuAcq fields."""
+        pm = PerformanceMetrics(
+            runtime_ms=100, consistency_checks=50,
+            memory_peak_mb=10, n_kb=5,
+            quacq_runtime_ms=90, findc_calls=7,
+        )
+        d = pm.to_dict()
+        assert d['quacq_runtime_ms'] == 90
+        assert d['findc_calls'] == 7
+        assert d['findscope_runtime_ms'] == 0.0
+
+    def test_aggregate_quacq_metrics(self):
+        """Test aggregate_metrics() handles QuAcq-specific fields."""
+        metrics_list = [
+            PerformanceMetrics(
+                runtime_ms=100, consistency_checks=50,
+                memory_peak_mb=10, n_kb=5,
+                quacq_runtime_ms=80, findscope_calls=4,
+                findc_consistency_checks=20,
+            ),
+            PerformanceMetrics(
+                runtime_ms=200, consistency_checks=70,
+                memory_peak_mb=15, n_kb=7,
+                quacq_runtime_ms=160, findscope_calls=8,
+                findc_consistency_checks=40,
+            ),
+        ]
+        agg = aggregate_metrics(metrics_list)
+        assert agg.quacq_runtime_mean_ms == 120  # (80+160)/2
+        assert agg.quacq_runtime_min_ms == 80
+        assert agg.quacq_runtime_max_ms == 160
+        assert agg.findscope_calls_mean == 6  # (4+8)/2
+        assert agg.findc_checks_mean == 30  # (20+40)/2
+
+    def test_aggregate_mixed_defaults(self):
+        """Test ConGen metrics aggregate fine with QuAcq fields at zero defaults."""
+        metrics_list = [
+            PerformanceMetrics(
+                runtime_ms=100, consistency_checks=50,
+                memory_peak_mb=10, n_kb=5,
+                congen_runtime_ms=90,
+            ),
+        ]
+        agg = aggregate_metrics(metrics_list)
+        assert agg.congen_runtime_mean_ms == 90
+        assert agg.quacq_runtime_mean_ms == 0.0
+        assert agg.findscope_calls_mean == 0.0
+
     def test_aggregate_empty_list(self):
         """Test that empty list raises error."""
         with pytest.raises(ValueError):
