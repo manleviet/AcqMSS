@@ -171,7 +171,7 @@ class QuAcqTaskPreparation:
         result.negation_map.update(bg_data.negation_map)
         for aid, desc in bg_data.descriptions.items():
             provider.add_constraint_description(aid, desc)
-        result.set_b = list(bg_data.assumptions)
+        result.set_b = [bg_data.assumptions[0]]
 
         # Store raw BG clauses (without assumption guards) for _find_conflict
         result.background_clauses = oracle.get_root_clauses()

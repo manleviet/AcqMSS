@@ -190,24 +190,34 @@ model = (DiagnosisModelBuilder()
 High-level interfaces hiding complexity:
 
 ```python
-from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
+from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
+from conacq.example_generators import QueryGenerator
+from conacq.oracle import FeatureModelOracle
 
 class QuAcqRunner:
-    """High-level interface for QuAcq learning."""
+    """High-level interface for QuAcq learning (DI-based)."""
 
-    def __init__(self, solver_name='glucose4'):
-        self.solver_name = solver_name
-
-    def run(self, model, oracle, max_queries=1000):
+    def run(self, oracle, model, max_queries=1000):
         """Learn constraints interactively."""
-        quacq = QuAcq(self.solver_name)
-        return quacq.learn(model.task, oracle_mode='automated')
+        query_gen = QueryGenerator(max_query_size=10)
+        discrim_gen = DiscriminatingGenerator()
+        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+
+        return quacq.learn(
+            set_c=model.task.set_c, set_b=model.task.set_b,
+            set_kb=model.task.set_kb, negation_map=model.task.negation_map,
+            assumptions=model.task.assumptions,
+            background_clauses=model.task.background_clauses,
+            feature_ids=model.task.feature_ids, id_to_feature=model.task.id_to_feature,
+            constraint_clauses=model.task.constraint_clauses,
+            negated_clauses=model.task.negated_clauses,
+            mode='oracle', max_queries=max_queries)
 
 # Usage
 oracle = FeatureModelOracle('model.uvl')
 model = QuAcqModelBuilder.from_bias('bias.json').with_oracle(oracle).build()
-runner = QuAcqRunner('glucose4')
-result = runner.run(model, oracle)
+runner = QuAcqRunner()
+result = runner.run(oracle, model)
 ```
 
 ### 4. Template Method Pattern
@@ -240,17 +250,14 @@ class FastDiag(PySATAbstractExplanation):
 
 ### 5. Dependency Injection
 
-Pass dependencies as constructor parameters:
+Pass dependencies as constructor parameters and via factories:
 
+**ConGen** (passive learning):
 ```python
 class ConGen:
     """Constraint acquisition via AcqMSS (mode-agnostic)."""
 
-    def __init__(
-            self,
-            checker: ConsistencyChecker,
-            profiler: Optional[Profiler] = None
-    ):
+    def __init__(self, checker: ConsistencyChecker, profiler: Optional[Profiler] = None):
         self.checker = checker  # Injected (Incremental or NonIncremental)
         self.profiler = profiler or NullProfiler()
 
@@ -262,13 +269,53 @@ class ConGen:
             set_neg_tv: List[int],  # NE assumption IDs
             negation_map: Dict[int, int]  # Maps assumption ID → negated ID for REDUCE
     ) -> CONGENResult:
-        """Learn constraints using injected checker.
-
-        Works identically with both checker types (no is_incremental branching).
-        """
+        """Learn constraints using injected checker."""
         with self.profiler.measure('acqmss'):
             mss = self._acqmss(set_b, set_neg_tv, set_tc, set_bg)
         return Result(mss)
+```
+
+**QuAcq** (interactive learning with factories):
+```python
+class QuAcq:
+    """Interactive learning with DI pattern and mode dispatch."""
+
+    def __init__(self, oracle: Oracle,
+                 query_generator: QueryGenerator = None,
+                 example_provider: ExampleProvider = None,
+                 discriminating_generator: DiscriminatingGenerator = None,
+                 profiler_instance: AbstractProfiler = None):
+        # All collaborators injected
+        self.oracle = oracle
+        self.query_generator = query_generator
+        self.example_provider = example_provider
+        self.discriminating_generator = discriminating_generator
+
+    @classmethod
+    def for_oracle(cls, oracle: Oracle, query_gen: QueryGenerator,
+                   discrim_gen: DiscriminatingGenerator,
+                   profiler: AbstractProfiler = None) -> 'QuAcq':
+        """Factory for oracle mode — discrim_gen required."""
+        return cls(oracle, query_generator=query_gen,
+                   discriminating_generator=discrim_gen, profiler_instance=profiler)
+
+    @classmethod
+    def for_examples(cls, oracle: Oracle, example_provider: ExampleProvider,
+                     discrim_gen: DiscriminatingGenerator = None,
+                     profiler: AbstractProfiler = None) -> 'QuAcq':
+        """Factory for example-based modes."""
+        return cls(oracle, example_provider=example_provider,
+                   discriminating_generator=discrim_gen, profiler_instance=profiler)
+
+    def learn(self, set_c, set_b, set_kb, negation_map, assumptions,
+              background_clauses, feature_ids, id_to_feature,
+              constraint_clauses, negated_clauses,
+              mode='oracle', max_queries=1000,
+              description_provider=None) -> QuAcqResult:
+        """Run learning with injected dependencies."""
+        # Mode dispatch: 'oracle', 'example_only', or 'example_first'
+        ...
+```
 
 
 # Usage with ConGenModelBuilder (fluent pattern)

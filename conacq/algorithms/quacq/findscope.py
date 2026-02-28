@@ -8,9 +8,11 @@ Complexity: O(|S| * log|X|) queries where S=scope size, X=total variables.
 """
 
 import logging
-from typing import List
+from typing import Dict, List
 
-from ._task_compat import get_clause_map
+from .sat_utils import (
+    partial_config_to_assumptions, get_constraint_vars, violates_clauses
+)
 from explanation.operations.algorithms.profiler import AbstractProfiler
 
 
@@ -20,7 +22,9 @@ def find_scope(
         Y: set,
         ask_query: bool,
         oracle,
-        task,
+        constraint_clauses: Dict[int, List[List[int]]],
+        feature_ids: Dict[str, int],
+        id_to_feature: Dict[int, str],
         remaining_bias: set,
         record_query,
         profiler: AbstractProfiler = None
@@ -34,7 +38,9 @@ def find_scope(
         Y: Remaining variables to search
         ask_query: Whether to query oracle with e[R]
         oracle: Oracle with is_valid(Dict[str, bool]) -> bool
-        task: QuAcqTask state (immutable)
+        constraint_clauses: assumption_id -> raw CNF clauses
+        feature_ids: Feature name -> SAT variable ID
+        id_to_feature: SAT variable ID -> feature name
         remaining_bias: Mutable set of remaining bias assumption IDs
         record_query: Callback(config, answer, source) to record queries
         profiler: Optional profiler
@@ -48,7 +54,9 @@ def find_scope(
         record_query(partial, is_consistent, 'findscope')
 
         if is_consistent:
-            _prune_rejecting_partial(task, remaining_bias, e, R)
+            _prune_rejecting_partial(
+                constraint_clauses, feature_ids, id_to_feature,
+                remaining_bias, e, R)
         else:
             return []
 
@@ -61,32 +69,39 @@ def find_scope(
     Y1 = set(Y_list[:mid])
     Y2 = set(Y_list[mid:])
 
-    S1 = find_scope(e, R | Y1, Y2, True, oracle, task, remaining_bias, record_query, profiler)
-    S2 = find_scope(e, R | set(S1), Y1, len(S1) > 0, oracle, task, remaining_bias, record_query, profiler)
+    S1 = find_scope(e, R | Y1, Y2, True, oracle,
+                    constraint_clauses, feature_ids, id_to_feature,
+                    remaining_bias, record_query, profiler)
+    S2 = find_scope(e, R | set(S1), Y1, len(S1) > 0, oracle,
+                    constraint_clauses, feature_ids, id_to_feature,
+                    remaining_bias, record_query, profiler)
 
     return S1 + S2
 
 
-def _prune_rejecting_partial(task, remaining_bias: set, e: dict, R: set) -> None:
-    """Prune bias constraints that reject partial assignment e[R].
-
-    Mutates remaining_bias in place.
-    """
-    assumptions = task.partial_config_to_assumptions(e, R)
+def _prune_rejecting_partial(
+        constraint_clauses: Dict[int, List[List[int]]],
+        feature_ids: Dict[str, int],
+        id_to_feature: Dict[int, str],
+        remaining_bias: set,
+        e: dict,
+        R: set
+) -> None:
+    """Prune bias constraints that reject partial assignment e[R]."""
+    assumptions = partial_config_to_assumptions(e, R, feature_ids)
     if not assumptions:
         return
 
     assignment = {abs(lit): lit > 0 for lit in assumptions}
-    clause_map = get_clause_map(task)
 
     pruned = []
     for c_id in list(remaining_bias):
-        clauses = clause_map.get(c_id, [])
-        c_vars = task._get_constraint_vars(c_id)
+        clauses = constraint_clauses.get(c_id, [])
+        c_vars = get_constraint_vars(c_id, constraint_clauses, id_to_feature)
         if not c_vars.issubset(R):
             continue
 
-        if task.violates_clauses(clauses, assignment):
+        if violates_clauses(clauses, assignment):
             pruned.append(c_id)
 
     if pruned:

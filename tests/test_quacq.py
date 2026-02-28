@@ -13,10 +13,16 @@ from conacq.bias import BiasIO
 from conacq.algorithms.quacq import (
     QuAcqResult,
     QuAcq,
+    DiscriminatingGenerator,
 )
 from conacq.algorithms.quacq.task_preparation import QuAcqTask
 from conacq.algorithms.quacq.quacq_model import QuAcqModel
 from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
+from conacq.algorithms.quacq.sat_utils import (
+    config_to_assumptions, partial_config_to_assumptions,
+    get_constraint_vars, violates_clauses, get_constraints_with_scope,
+    get_kb_clauses,
+)
 from conacq.example_generators import QueryGenerator
 from explanation.operations.algorithms.profiler import (
     get_global_profiler,
@@ -29,6 +35,22 @@ from explanation.operations.algorithms.profiler import (
 DATA_DIR = Path(__file__).parent.parent / "data"
 FM_PATH = DATA_DIR / "fms" / "REAL-FM-7.uvl"
 BIAS_PATH = DATA_DIR / "bias" / "REAL-FM-7-bias.json"
+
+
+def _learn_params_from_task(task):
+    """Extract flat learn() params from QuAcqTask."""
+    return dict(
+        set_c=task.set_c,
+        set_b=task.set_b,
+        set_kb=task.set_kb,
+        negation_map=task.negation_map,
+        assumptions=task.assumptions,
+        background_clauses=task.background_clauses,
+        feature_ids=task.feature_ids,
+        id_to_feature=task.id_to_feature,
+        constraint_clauses=task.constraint_clauses,
+        negated_clauses=task.negated_clauses,
+    )
 
 
 @pytest.fixture
@@ -165,16 +187,22 @@ class TestQueryGenerator:
         assert gen.solver_name == 'glucose4'
 
     def test_generate_query(self, prepared_model):
-        """Test query generation."""
+        """Test query generation with raw params."""
         task = prepared_model.task
         gen = QueryGenerator()
         remaining_bias = set(task.set_c)
-        query, tested_c_id = gen.generate(task, remaining_bias, [])
+        kb_clauses = get_kb_clauses([], task.constraint_clauses)
+        query, tested_c_id = gen.generate(
+            remaining_bias=remaining_bias,
+            learned_kb=[],
+            kb_clauses=kb_clauses,
+            negated_clauses=task.negated_clauses,
+            bg_clauses=task.background_clauses,
+            feature_ids=task.feature_ids,
+            id_to_feature=task.id_to_feature)
 
         # Should generate a query when bias is not empty
         if task.set_c:
-            # Query generation may succeed or fail depending on constraints
-            # Just verify the types are correct
             if query is not None:
                 assert isinstance(query, dict)
                 assert tested_c_id is not None
@@ -184,17 +212,28 @@ class TestQueryGenerator:
 class TestQuAcq:
     """Tests for QuAcq algorithm."""
 
-    def test_quacq_creation(self):
+    def test_quacq_creation(self, oracle):
         """Test QuAcq can be created."""
-        quacq = QuAcq()
-        assert quacq.solver_name == 'glucose4'
+        quacq = QuAcq(oracle)
+        assert quacq.oracle is oracle
 
     def test_quacq_learn_with_limit(self, prepared_model, oracle, bias):
         """Test QuAcq learning with query limit."""
         task = prepared_model.task
-        quacq = QuAcq()
+        task_data = _learn_params_from_task(task)
+
+        query_gen = QueryGenerator()
+        discrim_gen = DiscriminatingGenerator(
+            background_clauses=task.background_clauses,
+            constraint_clauses=task.constraint_clauses,
+            negated_clauses=task.negated_clauses,
+            id_to_feature=task.id_to_feature)
+
+        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
         result = quacq.learn(
-            task, oracle, prepared_model.description_provider, max_queries=5)
+            **task_data, mode='oracle',
+            description_provider=prepared_model.description_provider,
+            max_queries=5)
 
         assert result is not None
         assert result.n_queries <= 5
@@ -212,13 +251,18 @@ class TestQuAcq:
 
     def test_quacq_empty_bias(self, oracle):
         """Test QuAcq with empty bias converges immediately."""
-        task = QuAcqTask(
-            feature_ids={'root': 1},
-            id_to_feature={1: 'root'},
-        )
+        query_gen = QueryGenerator()
+        discrim_gen = DiscriminatingGenerator(
+            background_clauses=[], constraint_clauses={},
+            negated_clauses={}, id_to_feature={1: 'root'})
 
-        quacq = QuAcq()
-        result = quacq.learn(task, oracle, max_queries=100)
+        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        result = quacq.learn(
+            set_c=[], set_b=[], set_kb=[], negation_map={},
+            assumptions=[], background_clauses=[],
+            feature_ids={'root': 1}, id_to_feature={1: 'root'},
+            constraint_clauses={}, negated_clauses={},
+            mode='oracle', max_queries=100)
 
         assert result.n_queries == 0
         assert result.convergence_reason == 'empty_bias'
@@ -243,9 +287,20 @@ class TestIntegration:
                      .with_oracle(oracle)
                      .build())
 
-            quacq = QuAcq()
+            task = model.task
+            task_data = _learn_params_from_task(task)
+
+            query_gen = QueryGenerator()
+            discrim_gen = DiscriminatingGenerator(
+                background_clauses=task.background_clauses,
+                constraint_clauses=task.constraint_clauses,
+                negated_clauses=task.negated_clauses,
+                id_to_feature=task.id_to_feature)
+
+            quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
             result = quacq.learn(
-                model.task, oracle, model.description_provider,
+                **task_data, mode='oracle',
+                description_provider=model.description_provider,
                 max_queries=50)
 
             assert result is not None
@@ -488,18 +543,27 @@ class TestQuAcqWithAssumptionIDs:
     def test_quacq_learn_with_quacq_task(self, prepared_model, oracle):
         """Test QuAcq learning with QuAcqTask and DescriptionProvider."""
         task = prepared_model.task
-        quacq = QuAcq()
+        task_data = _learn_params_from_task(task)
+
+        query_gen = QueryGenerator()
+        discrim_gen = DiscriminatingGenerator(
+            background_clauses=task.background_clauses,
+            constraint_clauses=task.constraint_clauses,
+            negated_clauses=task.negated_clauses,
+            id_to_feature=task.id_to_feature)
+
+        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
         result = quacq.learn(
-            task, oracle, prepared_model.description_provider, max_queries=5)
+            **task_data, mode='oracle',
+            description_provider=prepared_model.description_provider,
+            max_queries=5)
 
         assert result is not None
         assert result.n_queries <= 5
         assert isinstance(result.kb_assumption_ids, list)
         assert isinstance(result.kb_constraints, list)
-        # kb_constraints should be resolved names
         for name in result.kb_constraints:
             assert isinstance(name, str)
-        # kb_assumption_ids should be ints
         for aid in result.kb_assumption_ids:
             assert isinstance(aid, int)
         assert result.convergence_reason in [
@@ -507,12 +571,18 @@ class TestQuAcqWithAssumptionIDs:
 
     def test_quacq_empty_bias_quacq_task(self, oracle):
         """Test QuAcq with empty QuAcqTask converges immediately."""
-        task = QuAcqTask(
-            feature_ids={'root': 1},
-            id_to_feature={1: 'root'},
-        )
-        quacq = QuAcq()
-        result = quacq.learn(task, oracle, max_queries=100)
+        query_gen = QueryGenerator()
+        discrim_gen = DiscriminatingGenerator(
+            background_clauses=[], constraint_clauses={},
+            negated_clauses={}, id_to_feature={1: 'root'})
+
+        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        result = quacq.learn(
+            set_c=[], set_b=[], set_kb=[], negation_map={},
+            assumptions=[], background_clauses=[],
+            feature_ids={'root': 1}, id_to_feature={1: 'root'},
+            constraint_clauses={}, negated_clauses={},
+            mode='oracle', max_queries=100)
 
         assert result.n_queries == 0
         assert result.convergence_reason == 'empty_bias'
@@ -521,13 +591,22 @@ class TestQuAcqWithAssumptionIDs:
     def test_result_has_dual_representation(self, prepared_model, oracle):
         """Test result has both string names and assumption IDs."""
         task = prepared_model.task
-        quacq = QuAcq()
-        result = quacq.learn(
-            task, oracle, prepared_model.description_provider, max_queries=10)
+        task_data = _learn_params_from_task(task)
 
-        # Both lists should be same length
+        query_gen = QueryGenerator()
+        discrim_gen = DiscriminatingGenerator(
+            background_clauses=task.background_clauses,
+            constraint_clauses=task.constraint_clauses,
+            negated_clauses=task.negated_clauses,
+            id_to_feature=task.id_to_feature)
+
+        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        result = quacq.learn(
+            **task_data, mode='oracle',
+            description_provider=prepared_model.description_provider,
+            max_queries=10)
+
         assert len(result.kb_constraints) == len(result.kb_assumption_ids)
-        # n_kb should match
         if result.kb_constraints:
             assert result.n_kb == len(result.kb_constraints)
 
@@ -669,19 +748,163 @@ class TestBackgroundClauses:
 
 
 class TestQueryGeneratorWithQuAcqTask:
-    """Tests for QueryGenerator with QuAcqTask."""
+    """Tests for QueryGenerator with raw params from QuAcqTask."""
 
     def test_generate_with_quacq_task(self, prepared_model):
-        """Test query generation with QuAcqTask."""
+        """Test query generation with raw params from QuAcqTask."""
         task = prepared_model.task
         gen = QueryGenerator()
         remaining_bias = set(task.set_c)
-        query, tested_c_id = gen.generate(task, remaining_bias, [])
+        kb_clauses = get_kb_clauses([], task.constraint_clauses)
+
+        query, tested_c_id = gen.generate(
+            remaining_bias=remaining_bias,
+            learned_kb=[],
+            kb_clauses=kb_clauses,
+            negated_clauses=task.negated_clauses,
+            bg_clauses=task.background_clauses,
+            feature_ids=task.feature_ids,
+            id_to_feature=task.id_to_feature)
 
         if query is not None:
             assert isinstance(query, dict)
             assert isinstance(tested_c_id, int)
             assert tested_c_id in remaining_bias
+
+
+# =========================================================================
+# DI / Factory / Mode validation tests (Phase 7)
+# =========================================================================
+
+class TestQuAcqFactories:
+    """Tests for QuAcq factory class methods."""
+
+    def test_for_oracle_factory(self, oracle):
+        """Test for_oracle factory injects all deps."""
+        query_gen = QueryGenerator()
+        discrim_gen = DiscriminatingGenerator(
+            background_clauses=[], constraint_clauses={},
+            negated_clauses={}, id_to_feature={})
+        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        assert quacq.oracle is oracle
+        assert quacq.query_generator is query_gen
+        assert quacq.discriminating_generator is discrim_gen
+        assert quacq.example_provider is None
+
+    def test_for_examples_factory(self, oracle):
+        """Test for_examples factory injects example_provider."""
+        from conacq.example_generators import ExampleProvider
+        provider = ExampleProvider([{'a': True}], seed=42)
+        quacq = QuAcq.for_examples(oracle, provider)
+        assert quacq.oracle is oracle
+        assert quacq.example_provider is provider
+        assert quacq.query_generator is None
+        assert quacq.discriminating_generator is None
+
+
+class TestQuAcqModeValidation:
+    """Tests for mode validation in learn()."""
+
+    def _minimal_learn_params(self):
+        return dict(
+            set_c=[], set_b=[], set_kb=[], negation_map={},
+            assumptions=[], background_clauses=[],
+            feature_ids={'root': 1}, id_to_feature={1: 'root'},
+            constraint_clauses={}, negated_clauses={})
+
+    def test_oracle_mode_requires_query_generator(self, oracle):
+        """Oracle mode without query_generator raises."""
+        quacq = QuAcq(oracle)
+        with pytest.raises(ValueError, match="query_generator"):
+            quacq.learn(**self._minimal_learn_params(), mode='oracle')
+
+    def test_oracle_mode_requires_discrim_gen(self, oracle):
+        """Oracle mode without discriminating_generator raises."""
+        quacq = QuAcq(oracle, query_generator=QueryGenerator())
+        with pytest.raises(ValueError, match="discriminating_generator"):
+            quacq.learn(**self._minimal_learn_params(), mode='oracle')
+
+    def test_example_mode_requires_provider(self, oracle):
+        """Example mode without example_provider raises."""
+        quacq = QuAcq(oracle, query_generator=QueryGenerator())
+        with pytest.raises(ValueError, match="example_provider"):
+            quacq.learn(**self._minimal_learn_params(), mode='example_only')
+
+    def test_example_first_requires_query_generator(self, oracle):
+        """example_first mode without query_generator raises."""
+        from conacq.example_generators import ExampleProvider
+        provider = ExampleProvider([{'a': True}], seed=42)
+        quacq = QuAcq(oracle, example_provider=provider)
+        with pytest.raises(ValueError, match="query_generator"):
+            quacq.learn(**self._minimal_learn_params(), mode='example_first')
+
+
+class TestSatUtils:
+    """Tests for sat_utils standalone functions."""
+
+    def test_config_to_assumptions(self):
+        feature_ids = {'a': 1, 'b': 2, 'c': 3}
+        config = {'a': True, 'b': False, 'c': True}
+        result = config_to_assumptions(config, feature_ids)
+        assert set(result) == {1, -2, 3}
+
+    def test_config_to_assumptions_missing_feature(self):
+        feature_ids = {'a': 1}
+        config = {'a': True, 'unknown': False}
+        result = config_to_assumptions(config, feature_ids)
+        assert result == [1]
+
+    def test_partial_config_to_assumptions(self):
+        feature_ids = {'a': 1, 'b': 2, 'c': 3}
+        config = {'a': True, 'b': False, 'c': True}
+        result = partial_config_to_assumptions(config, {'a', 'c'}, feature_ids)
+        assert set(result) == {1, 3}
+
+    def test_get_constraint_vars(self):
+        constraint_clauses = {10: [[1, -2], [3]]}
+        id_to_feature = {1: 'a', 2: 'b', 3: 'c'}
+        result = get_constraint_vars(10, constraint_clauses, id_to_feature)
+        assert result == {'a', 'b', 'c'}
+
+    def test_get_constraint_vars_missing(self):
+        result = get_constraint_vars(99, {}, {})
+        assert result == set()
+
+    def test_violates_clauses_true(self):
+        clauses = [[1, 2]]  # (a OR b)
+        assignment = {1: False, 2: False}  # both false -> violates
+        assert violates_clauses(clauses, assignment) is True
+
+    def test_violates_clauses_false(self):
+        clauses = [[1, 2]]  # (a OR b)
+        assignment = {1: True, 2: False}  # a true -> satisfied
+        assert violates_clauses(clauses, assignment) is False
+
+    def test_get_constraints_with_scope_exact(self):
+        constraint_clauses = {10: [[1, -2]], 12: [[1]]}
+        id_to_feature = {1: 'a', 2: 'b'}
+        scope = {'a', 'b'}
+        result = get_constraints_with_scope(
+            scope, {10, 12}, constraint_clauses, id_to_feature)
+        assert result == [10]  # exact match
+
+    def test_get_constraints_with_scope_subset(self):
+        constraint_clauses = {10: [[1]], 12: [[2]]}
+        id_to_feature = {1: 'a', 2: 'b'}
+        scope = {'a', 'b'}
+        result = get_constraints_with_scope(
+            scope, {10, 12}, constraint_clauses, id_to_feature)
+        # No exact match, both are subsets
+        assert set(result) == {10, 12}
+
+    def test_get_kb_clauses(self):
+        constraint_clauses = {10: [[1, 2]], 12: [[3, -4]]}
+        result = get_kb_clauses([10, 12], constraint_clauses)
+        assert result == [[1, 2], [3, -4]]
+
+    def test_get_kb_clauses_empty(self):
+        result = get_kb_clauses([], {10: [[1]]})
+        assert result == []
 
 
 if __name__ == '__main__':

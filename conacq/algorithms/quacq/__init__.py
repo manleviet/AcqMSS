@@ -17,14 +17,29 @@ Oracle Implementations:
 - CachedOracle: Wrapper that caches oracle answers
 
 Example Usage:
-    from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
+    from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
+    from conacq.example_generators import QueryGenerator
 
     model = (QuAcqModelBuilder
              .from_bias('data/bias/model-bias.json')
              .with_oracle(oracle)
              .build())
     task = model.task
-    result = QuAcq().learn(task, oracle, model.description_provider)
+    query_gen = QueryGenerator()
+    discrim_gen = DiscriminatingGenerator(
+        background_clauses=task.background_clauses,
+        constraint_clauses=task.constraint_clauses,
+        negated_clauses=task.negated_clauses,
+        id_to_feature=task.id_to_feature)
+    quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+    result = quacq.learn(
+        set_c=task.set_c, set_b=task.set_b, set_kb=task.set_kb,
+        negation_map=task.negation_map, assumptions=task.assumptions,
+        background_clauses=task.background_clauses,
+        feature_ids=task.feature_ids, id_to_feature=task.id_to_feature,
+        constraint_clauses=task.constraint_clauses,
+        negated_clauses=task.negated_clauses,
+        mode='oracle', description_provider=model.description_provider)
 """
 
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation

@@ -88,13 +88,28 @@ for fold_pos, fold_neg in folds:
     model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
     # Use model.task for this fold
 
-# Interactive learning — QuAcq with builder (recommended)
+# Interactive learning — QuAcq (DI pattern)
+from conacq.example_generators import QueryGenerator
+from conacq.algorithms.quacq import DiscriminatingGenerator
+
 oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
          .with_oracle(oracle)
          .build())  # Returns prepared model, task ready
-quacq = QuAcq('glucose4')
-result = quacq.learn(model.task, oracle_mode='automated')  # → KB + query history
+
+query_gen = QueryGenerator(max_query_size=10)
+discrim_gen = DiscriminatingGenerator()
+quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+
+result = quacq.learn(
+    set_c=model.task.set_c, set_b=model.task.set_b,
+    set_kb=model.task.set_kb, negation_map=model.task.negation_map,
+    assumptions=model.task.assumptions,
+    background_clauses=model.task.background_clauses,
+    feature_ids=model.task.feature_ids, id_to_feature=model.task.id_to_feature,
+    constraint_clauses=model.task.constraint_clauses,
+    negated_clauses=model.task.negated_clauses,
+    mode='oracle', max_queries=1000)  # → KB + query history
 
 # Query generation and example provision
 query = QueryGenerator.generate_discriminative_query(...)  # Canonical import

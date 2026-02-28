@@ -145,14 +145,15 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 ## Relation to Codebase
 
 **Core Implementation**:
-- `conacq/algorithms/quacq/quacq.py` — QuAcq algorithm + QuAcqResult (oracle/example modes, dual representation, oracle.is_valid())
-- `conacq/algorithms/quacq/findscope.py` — FindScope (Algorithm 2, 94 LOC, oracle.is_valid() instead of SAT)
-- `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, 187 LOC, oracle.is_valid() pool + DiscriminatingGenerator)
-- `conacq/algorithms/quacq/discriminating_generator.py` — DiscriminatingGenerator (NEW, 65 LOC, C_L[Y] + BG)
+- `conacq/algorithms/quacq/quacq.py` — QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, assumption-based learn())
+- `conacq/algorithms/quacq/sat_utils.py` — Standalone utility functions (config_to_assumptions, violates_clauses, get_kb_clauses) — NEW
+- `conacq/algorithms/quacq/findscope.py` — FindScope (Algorithm 2, 134 LOC, oracle.is_valid() instead of SAT)
+- `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, 208 LOC, oracle.is_valid() pool + DiscriminatingGenerator)
+- `conacq/algorithms/quacq/discriminating_generator.py` — DiscriminatingGenerator (66 LOC, C_L[Y] + BG)
 - `conacq/algorithms/quacq/quacq_model.py` — QuAcqModel (dual to ConGenModel) for interactive learning
 - `conacq/algorithms/quacq/quacq_model_builder.py` — QuAcqModelBuilder (fluent builder, auto-prepares on build())
-- `conacq/algorithms/quacq/task_preparation.py` — QuAcqTask + QuAcqTaskPreparation (consolidated, inherited from DiagnosisTask)
-- `conacq/algorithms/quacq/_task_compat.py` — Shared duck-typing helpers (get_bg_clauses(), normalize clause maps)
+- `conacq/algorithms/quacq/task_preparation.py` — QuAcqTask + QuAcqTaskPreparation (inherited from DiagnosisTask)
+- `conacq/algorithms/quacq/_task_compat.py` — Shared duck-typing helpers (get_bg_clauses(), get_clause_map(), get_negated_clauses())
 - `conacq/oracle/` — Oracle implementations: FeatureModelOracle, UserPromptOracle, CachedOracle, FMData, BGData
 - `conacq/example_generators/` — Query generation and batch examples (query_generator.py, example_provider.py)
 
@@ -290,36 +291,55 @@ The following classes are **no longer available**:
 | `InteractiveLearner` | `QuAcqModelBuilder` + `QuAcq` | `learner.py` | High-level facade; use builder pattern instead |
 | `InteractiveResult` (alias) | `QuAcqResult` | `result.py` | Merged into `quacq.py` |
 
-**Usage with QuAcqModelBuilder** (recommended):
+**Recommended Pattern** (DI-based, post-refactor):
 ```python
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
+from conacq.example_generators import QueryGenerator
 from conacq.oracle import FeatureModelOracle
 
-# Build and prepare in one fluent chain
+# Build and prepare model
 oracle = FeatureModelOracle('data/fms/model.uvl')
-model = (QuAcqModelBuilder
-         .from_bias('data/bias/model.json')
+model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
          .with_oracle(oracle)
-         .build())  # Returns prepared model, task ready
+         .build())  # Returns prepared QuAcqModel
 
-# Use model with QuAcq
-quacq = QuAcq(solver_name='glucose4', profiler=None)
-result = quacq.learn(model.task, oracle_mode='automated')
+# Build QuAcq with dependencies (oracle mode)
+query_gen = QueryGenerator(max_query_size=10)
+discrim_gen = DiscriminatingGenerator()
+quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
 
-# Access results
+# Run learning
+result = quacq.learn(
+    set_c=model.task.set_c,
+    set_b=model.task.set_b,
+    set_kb=model.task.set_kb,
+    negation_map=model.task.negation_map,
+    assumptions=model.task.assumptions,
+    background_clauses=model.task.background_clauses,
+    feature_ids=model.task.feature_ids,
+    id_to_feature=model.task.id_to_feature,
+    constraint_clauses=model.task.constraint_clauses,
+    negated_clauses=model.task.negated_clauses,
+    mode='oracle',
+    max_queries=1000
+)
+
 print(f"Learned KB: {result.kb_constraints}")
 print(f"Queries: {result.n_queries}")
 ```
 
-**Current Recommended Pattern**:
+**Example-Based Mode**:
 ```python
-from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
-from conacq.oracle import FeatureModelOracle
+from conacq.example_generators import ExampleProvider
 
-oracle = FeatureModelOracle('data/fms/model.uvl')
-model = QuAcqModelBuilder.from_bias('data/bias/model.json').with_oracle(oracle).build()
-quacq = QuAcq('glucose4')
-result = quacq.learn(model.task, oracle_mode='automated')
+example_provider = ExampleProvider(examples_list)
+quacq = QuAcq.for_examples(oracle, example_provider)
+
+# Run with pool only
+result = quacq.learn(..., mode='example_only', ...)
+
+# Or pool + SAT fallback
+result = quacq.learn(..., mode='example_first', ...)
 ```
 
 **QuAcqResult Dual Representation**:

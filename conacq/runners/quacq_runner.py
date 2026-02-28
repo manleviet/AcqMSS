@@ -1,9 +1,9 @@
 """
 Run QuAcq (interactive) learning and collect performance metrics.
 
-Supports two modes:
-- Oracle mode ('automated'/'interactive'): via QuAcqModel + QuAcq.learn()
-- Example mode ('example_only'/'example_first'): via QuAcqModel + QuAcq.learn_from_examples()
+Supports three modes:
+- Oracle mode ('automated'/'interactive'): via QuAcqModel + QuAcq.learn(mode='oracle')
+- Example mode ('example_only'/'example_first'): via QuAcqModel + QuAcq.learn(mode=...)
 
 Builds model once in __init__(), re-prepares per run() for fresh task.
 """
@@ -18,6 +18,8 @@ from typing import List, Dict, Optional, Tuple
 from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
 from ..algorithms import QuAcq
+from ..algorithms.quacq.discriminating_generator import DiscriminatingGenerator
+from conacq.example_generators import QueryGenerator, ExampleProvider
 
 
 @dataclass
@@ -45,6 +47,21 @@ class QuAcqRunResult(BaseRunResult):
         ]
         return d
 
+
+def _learn_params_from_task(task) -> dict:
+    """Extract flat learn() params from QuAcqTask."""
+    return dict(
+        set_c=task.set_c,
+        set_b=task.set_b,
+        set_kb=task.set_kb,
+        negation_map=task.negation_map,
+        assumptions=task.assumptions,
+        background_clauses=task.background_clauses,
+        feature_ids=task.feature_ids,
+        id_to_feature=task.id_to_feature,
+        constraint_clauses=task.constraint_clauses,
+        negated_clauses=task.negated_clauses,
+    )
 
 
 class QuAcqRunner(BaseRunner):
@@ -109,8 +126,8 @@ class QuAcqRunner(BaseRunner):
         Run QuAcq learning and collect metrics.
 
         Mode dispatch:
-        - 'automated'/'interactive' -> oracle path via QuAcq.learn()
-        - 'example_only'/'example_first' -> example path via QuAcq.learn_from_examples()
+        - 'automated'/'interactive' -> oracle path
+        - 'example_only'/'example_first' -> example path
 
         Args:
             positive_examples: List of E+ (required for example modes)
@@ -155,16 +172,15 @@ class QuAcqRunner(BaseRunner):
                         random.Random(shuffle_seed).shuffle(task.set_c)
                         logging.debug('Shuffled bias (set_c) with seed=%d', shuffle_seed)
 
-                    # Create ExampleProvider hoặc QueryGenerator via factory based on mode
-
-                    quacq = QuAcq(self.solver_name, profiler)
+                    # Extract flat params from task
+                    task_data = _learn_params_from_task(task)
 
                     if is_oracle_mode:
                         result = self._run_oracle_mode(
-                            quacq, task, self.oracle, self.model.description_provider, mode)
+                            task, task_data, profiler, mode)
                     else:
                         result = self._run_example_mode(
-                            quacq, task, self.oracle, self.model.description_provider,
+                            task, task_data, profiler,
                             positive_examples, negative_examples,
                             mode, shuffle_seed)
 
@@ -178,24 +194,11 @@ class QuAcqRunner(BaseRunner):
             memory_peak_mb = peak / (1024 * 1024)
             consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
 
-            # Extract extended profiler metrics (timers are lists, sum all calls)
-            # congen_runtime_ms = sum(profiler.get_metric('congen_runtime', [0])) * 1000
-            # acqmss_runtime_ms = sum(profiler.get_metric('acqmss_runtime', [0])) * 1000
-            # reduce_runtime_ms = sum(profiler.get_metric('reduce_runtime', [0])) * 1000
-            # solver_time_ms = sum(profiler.get_metric('solver_time', [0])) * 1000
-            # acqmss_calls = profiler.get_metric('acqmss_calls', 0)
-            # is_consistent_calls = profiler.get_metric('is_consistent_calls', 0)
-            # is_consistent_test_cases_calls = profiler.get_metric('is_consistent_test_cases_calls', 0)
-            # redundancy_consistency_checks = profiler.get_metric('redundancy_consistency_checks', 0)
-
             profiler_snapshot = profiler.to_dict()
 
             # Resolve KB clauses and BG clauses
             _, kb_clauses = self.model.resolve_kb(result.kb_assumption_ids)
             bg_clauses = self.oracle.get_root_clauses()
-            # Resolve assumption IDs -> clauses/names via model
-            # bg_clauses, kb_clauses, kb_names, redundant_names = \
-            #     self.model.resolve_result(result)
 
             run_result = QuAcqRunResult(
                 kb_constraints=result.kb_constraints,
@@ -217,28 +220,56 @@ class QuAcqRunner(BaseRunner):
 
         return run_result
 
-    def _run_oracle_mode(self, quacq, task, oracle, description_provider, mode):
-        """Run oracle-based learning via QuAcq.learn()."""
+    def _run_oracle_mode(self, task, task_data, profiler, mode):
+        """Run oracle-based learning via QuAcq.learn(mode='oracle')."""
         if mode == 'interactive':
             from conacq.oracle import UserPromptOracle
             learn_oracle = UserPromptOracle(list(task.feature_ids.keys()))
         else:
-            learn_oracle = oracle
+            learn_oracle = self.oracle
+
+        query_gen = QueryGenerator(self.solver_name, profiler)
+        discrim_gen = DiscriminatingGenerator(
+            background_clauses=task.background_clauses,
+            constraint_clauses=task.constraint_clauses,
+            negated_clauses=task.negated_clauses,
+            id_to_feature=task.id_to_feature,
+            solver_name=self.solver_name)
+
+        quacq = QuAcq.for_oracle(learn_oracle, query_gen, discrim_gen, profiler=profiler)
 
         return quacq.learn(
-            task, learn_oracle, description_provider,
-            max_queries=self.max_queries)
+            **task_data, mode='oracle',
+            max_queries=self.max_queries,
+            description_provider=self.model.description_provider)
 
-    def _run_example_mode(self, quacq, task, oracle, description_provider,
+    def _run_example_mode(self, task, task_data, profiler,
                           positive_examples, negative_examples,
                           mode, shuffle_seed):
-        """Run example-based learning via QuAcq.learn_from_examples()."""
-        from conacq.example_generators import ExampleProvider
-
+        """Run example-based learning via QuAcq.learn(mode=...)."""
         mixed_examples = list(positive_examples) + list(negative_examples)
         example_provider = ExampleProvider(mixed_examples, shuffle_seed)
 
-        return quacq.learn_from_examples(
-            task, example_provider, oracle,
-            description_provider,
-            query_mode=mode, max_queries=self.max_queries)
+        # For example_first, also need query_gen and discrim_gen
+        query_gen = None
+        discrim_gen = None
+        if mode == 'example_first':
+            query_gen = QueryGenerator(self.solver_name, profiler)
+            discrim_gen = DiscriminatingGenerator(
+                background_clauses=task.background_clauses,
+                constraint_clauses=task.constraint_clauses,
+                negated_clauses=task.negated_clauses,
+                id_to_feature=task.id_to_feature,
+                solver_name=self.solver_name)
+
+        quacq = QuAcq(
+            oracle=self.oracle,
+            query_generator=query_gen,
+            example_provider=example_provider,
+            discriminating_generator=discrim_gen,
+            profiler_instance=profiler)
+
+        return quacq.learn(
+            **task_data, mode=mode,
+            max_queries=self.max_queries,
+            description_provider=self.model.description_provider)

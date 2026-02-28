@@ -26,29 +26,35 @@ Primary constraint discovery algorithms:
 | (Total: 1,331 LOC for main algorithms) |
 | (Subtotal: 1,439 LOC including both paradigm-specific builders) |
 
-**QuAcq Sub-package** (`quacq/`, 9 files, ~1,900 LOC):
+**QuAcq Sub-package** (`quacq/`, 10 files, ~2,000 LOC):
 
-**Assumption-Based Learning (Unified with ConGen, Paper-Aligned Queries)**:
+**Assumption-Based Learning (Unified with ConGen, Paper-Aligned Queries, DI Pattern)**:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `quacq.py` | 439 | QuAcq algorithm + QuAcqResult (oracle.is_valid() modes, assumption IDs) |
+| `quacq.py` | 439 | QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, 3-arg learn()) |
+| `sat_utils.py` | 93 | Standalone SAT utilities: config_to_assumptions, violates_clauses, get_kb_clauses — NEW |
 | `quacq_model.py` | ~93 | QuAcqModel: dual to ConGenModel for interactive learning. Stores negated_constraint_map + next_available_id (computed at build time). |
 | `quacq_model_builder.py` | ~74 | QuAcqModelBuilder: fluent builder, requires oracle. build() computes negation (idempotent), auto-prepares on build(). |
 | `task_preparation.py` | ~280 | QuAcqTask + QuAcqTaskPreparation: task hierarchy + preparation |
 | `_task_compat.py` | ~39 | Shared duck-typing helpers: get_clause_map(), get_negated_clauses(), get_bg_clauses() |
 | `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): oracle.is_valid() + DiscriminatingGenerator(C_L[Y]) |
 | `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): oracle.is_valid() partial queries, no SAT |
-| `discriminating_generator.py` | 66 | DiscriminatingGenerator (NEW): Paper Algorithm 3 line 5, C_L[Y] + BG, not FM |
+| `discriminating_generator.py` | 66 | DiscriminatingGenerator: Paper Algorithm 3 line 5, C_L[Y] + BG, not FM |
 | `__init__.py` | ~60 | Package exports |
 
-**Changes (This Session - FindScope/FindC Refactoring - commit 260227)**:
-- ✅ Added `discriminating_generator.py` — DiscriminatingGenerator (Paper Algorithm 3 line 5, C_L[Y] + BG)
-- ✅ Updated `findscope.py` — Now uses oracle.is_valid() instead of SAT-based consistency check
-- ✅ Updated `findc.py` — Pool-based narrowing via oracle.is_valid(), SAT fallback to DiscriminatingGenerator
-- ✅ Updated `quacq.py` — Query recording with source tags ('main', 'findscope', 'findc')
-- ✅ Removed 5 dead methods from QuAcq: `_check_consistency_with_fm`, `_find_conflict`, `_quickxplain_constraints`, `_get_clauses_for_constraints`, `_is_consistent`
-- ✅ Deleted `OneShotModel` — No production usage after refactoring
+**Changes (This Session - DI Refactor - commit 260228)**:
+- ✅ Added `sat_utils.py` — Standalone utility functions extracted from QuAcqTask
+- ✅ Refactored `QuAcq.__init__()` — DI pattern (oracle, query_generator, example_provider, discriminating_generator, profiler)
+- ✅ Added `QuAcq.for_oracle()` factory — discrim_gen required
+- ✅ Added `QuAcq.for_examples()` factory — example_provider required
+- ✅ Refactored `QuAcq.learn()` — Direct parameter signature (set_c, set_b, ..., mode, max_queries, description_provider)
+- ✅ learn() supports 3 modes: 'oracle', 'example_only', 'example_first' via single parameter
+
+**Previous Session Changes (FindScope/FindC Refactoring - commit 260227)**:
+- ✅ Added `discriminating_generator.py` — DiscriminatingGenerator (Paper Algorithm 3 line 5)
+- ✅ Updated `findscope.py` — oracle.is_valid() instead of SAT-based consistency check
+- ✅ Updated `findc.py` — Pool-based narrowing via oracle.is_valid()
 
 **Previous Session Changes**:
 - ✅ Merged `QuAcqTaskPreparation` into `task_preparation.py` (was `quacq_task.py`, renamed)

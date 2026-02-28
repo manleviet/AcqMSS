@@ -11,9 +11,11 @@ Complexity: O(|Gamma|) queries where Gamma = candidate constraints with scope.
 """
 
 import logging
-from typing import Optional, List
+from typing import Optional, Dict, List
 
-from ._task_compat import get_clause_map
+from .sat_utils import (
+    config_to_assumptions, get_constraints_with_scope, violates_clauses
+)
 from conacq.example_generators import ExampleProvider
 from explanation.operations.algorithms.profiler import AbstractProfiler
 
@@ -21,7 +23,9 @@ from explanation.operations.algorithms.profiler import AbstractProfiler
 def find_c(
         e: dict,
         scope: set,
-        task,
+        constraint_clauses: Dict[int, List[List[int]]],
+        feature_ids: Dict[str, int],
+        id_to_feature: Dict[int, str],
         remaining_bias: set,
         record_query,
         oracle,
@@ -40,7 +44,9 @@ def find_c(
     Args:
         e: Negative example
         scope: Variable scope from FindScope (set of feature names)
-        task: QuAcqTask state (immutable)
+        constraint_clauses: assumption_id -> raw CNF clauses
+        feature_ids: Feature name -> SAT variable ID
+        id_to_feature: SAT variable ID -> feature name
         remaining_bias: Mutable set of remaining bias assumption IDs
         record_query: Callback(config, answer, source) to record queries
         oracle: Oracle with is_valid(Dict[str, bool]) -> bool
@@ -53,10 +59,9 @@ def find_c(
     Returns:
         Constraint ID (int) or None
     """
-    clause_map = get_clause_map(task)
-
     # Get candidate constraints: bias constraints whose scope matches
-    candidates = task.get_constraints_with_scope(scope, remaining_bias)
+    candidates = get_constraints_with_scope(
+        scope, remaining_bias, constraint_clauses, id_to_feature)
 
     if not candidates:
         logging.debug('FindC: no candidates with scope %s', scope)
@@ -67,12 +72,12 @@ def find_c(
 
     # Filter to constraints that actually reject e
     rejecting = []
-    e_assumptions = task.config_to_assumptions(e)
+    e_assumptions = config_to_assumptions(e, feature_ids)
     assignment = {abs(lit): lit > 0 for lit in e_assumptions}
 
     for c_id in candidates:
-        clauses = clause_map.get(c_id, [])
-        if task.violates_clauses(clauses, assignment):
+        clauses = constraint_clauses.get(c_id, [])
+        if violates_clauses(clauses, assignment):
             rejecting.append(c_id)
 
     if not rejecting:
@@ -87,15 +92,16 @@ def find_c(
 
     # Pool-first hybrid (validated: keep pool narrowing with oracle.is_valid)
     if example_provider is not None and not example_provider.is_exhausted():
-        result = _narrow_with_pool(remaining, task, remaining_bias,
-                                   record_query, oracle, example_provider)
+        result = _narrow_with_pool(
+            remaining, constraint_clauses, feature_ids,
+            remaining_bias, record_query, oracle, example_provider)
         if result is not None:
             return result
 
     if query_mode == 'example_first':
-        result = _narrow_with_generator(remaining, task, remaining_bias,
-                                        record_query, oracle, learned_kb,
-                                        generator, scope)
+        result = _narrow_with_generator(
+            remaining, remaining_bias, record_query, oracle,
+            learned_kb, generator, scope)
         if result is not None:
             return result
 
@@ -106,26 +112,25 @@ def find_c(
 
 def _narrow_with_pool(
         candidates: list,
-        task,
+        constraint_clauses: Dict[int, List[List[int]]],
+        feature_ids: Dict[str, int],
         remaining_bias: set,
         record_query,
         oracle,
         example_provider: ExampleProvider
 ):
     """Try to narrow candidates using examples from pool + oracle.is_valid()."""
-    clause_map = get_clause_map(task)
-
     while not example_provider.is_exhausted() and len(candidates) > 1:
         disc_e = example_provider.next_example()
         if disc_e is None:
             break
 
-        disc_assumptions = task.config_to_assumptions(disc_e)
+        disc_assumptions = config_to_assumptions(disc_e, feature_ids)
         disc_assignment = {abs(lit): lit > 0 for lit in disc_assumptions}
 
         # Check which candidates this example violates
         violating = [c for c in candidates
-                     if task.violates_clauses(clause_map.get(c, []), disc_assignment)]
+                     if violates_clauses(constraint_clauses.get(c, []), disc_assignment)]
 
         # Check validity via oracle (not SAT)
         is_valid = oracle.is_valid(disc_e)
@@ -149,7 +154,6 @@ def _narrow_with_pool(
 
 def _narrow_with_generator(
         candidates: list,
-        task,
         remaining_bias: set,
         record_query,
         oracle,
