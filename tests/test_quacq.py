@@ -2,7 +2,7 @@
 Tests for QuAcq constraint acquisition algorithm.
 
 Uses REAL-FM-7 feature model with generated bias.
-Tests core components: QueryGenerator, QuAcq, QuAcqTask, QuAcqModel.
+Tests core components: QueryProvider, QuAcq, QuAcqTask, QuAcqModel.
 """
 
 import pytest
@@ -23,7 +23,7 @@ from conacq.algorithms.quacq.sat_utils import (
     get_constraint_vars, violates_clauses, get_constraints_with_scope,
     get_kb_clauses,
 )
-from conacq.example_generators import QueryGenerator
+from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import (
     CheckerFactory, NonIncrementalPySATChecker,
 )
@@ -51,8 +51,6 @@ def _learn_params_from_task(task):
         id_to_feature=task.id_to_feature,
         constraint_clauses=task.constraint_clauses,
         negated_clauses=task.negated_clauses,
-        pos_assignment_to_assumption=task.pos_assignment_to_assumption,
-        neg_assignment_to_assumption=task.neg_assignment_to_assumption,
         root_assumption=task.set_b[0] if task.set_b else None,
     )
 
@@ -173,21 +171,30 @@ class TestCachedOracle:
         assert result1 == result2
 
 
-class TestQueryGenerator:
-    """Tests for QueryGenerator."""
+class TestQueryProvider:
+    """Tests for QueryProvider."""
 
-    def test_generator_creation(self):
-        """Test generator can be created."""
-        gen = QueryGenerator()
-        assert gen.solver_name == 'glucose4'
+    def test_provider_creation(self):
+        """Test provider can be created."""
+        provider = QueryProvider()
+        assert provider.solver_name == 'glucose4'
+        assert provider.pool_exhausted is True
+        assert provider.pool_remaining == 0
 
-    def test_generate_query(self, prepared_model):
-        """Test query generation with raw params."""
+    def test_provider_with_pool(self):
+        """Test provider with pool."""
+        pool = [{'a': True, 'b': False}]
+        provider = QueryProvider(pool=pool, seed=42)
+        assert provider.pool_exhausted is False
+        assert provider.pool_remaining == 1
+
+    def test_generate_from_sat(self, prepared_model):
+        """Test SAT-based query generation."""
         task = prepared_model.task
-        gen = QueryGenerator()
+        provider = QueryProvider()
         remaining_bias = set(task.set_c)
         kb_clauses = get_kb_clauses([], task.constraint_clauses)
-        query, tested_c_id = gen.generate(
+        query, tested_c_id = provider.generate_from_sat(
             remaining_bias=remaining_bias,
             learned_kb=[],
             kb_clauses=kb_clauses,
@@ -196,7 +203,6 @@ class TestQueryGenerator:
             feature_ids=task.feature_ids,
             id_to_feature=task.id_to_feature)
 
-        # Should generate a query when bias is not empty
         if task.set_c:
             if query is not None:
                 assert isinstance(query, dict)
@@ -218,14 +224,14 @@ class TestQuAcq:
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
 
-        query_gen = QueryGenerator()
+        query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
             background_clauses=task.background_clauses,
             constraint_clauses=task.constraint_clauses,
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=5)
@@ -242,12 +248,12 @@ class TestQuAcq:
 
     def test_quacq_empty_bias(self, oracle):
         """Test QuAcq with empty bias converges immediately."""
-        query_gen = QueryGenerator()
+        query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
             background_clauses=[], constraint_clauses={},
             negated_clauses={}, id_to_feature={1: 'root'})
 
-        quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
             background_clauses=[],
@@ -281,7 +287,7 @@ class TestIntegration:
             task = model.task
             task_data = _learn_params_from_task(task)
 
-            query_gen = QueryGenerator()
+            query_provider = QueryProvider()
             discrim_gen = DiscriminatingGenerator(
                 background_clauses=task.background_clauses,
                 constraint_clauses=task.constraint_clauses,
@@ -289,7 +295,7 @@ class TestIntegration:
                 id_to_feature=task.id_to_feature)
 
             checker = CheckerFactory.create_from_model(model)
-            quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
+            quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
             result = quacq.learn(
                 **task_data, mode='oracle',
                 max_queries=50)
@@ -455,14 +461,14 @@ class TestQuAcqWithAssumptionIDs:
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
 
-        query_gen = QueryGenerator()
+        query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
             background_clauses=task.background_clauses,
             constraint_clauses=task.constraint_clauses,
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=5)
@@ -481,12 +487,12 @@ class TestQuAcqWithAssumptionIDs:
 
     def test_quacq_empty_bias_quacq_task(self, oracle):
         """Test QuAcq with empty QuAcqTask converges immediately."""
-        query_gen = QueryGenerator()
+        query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
             background_clauses=[], constraint_clauses={},
             negated_clauses={}, id_to_feature={1: 'root'})
 
-        quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
             background_clauses=[],
@@ -503,14 +509,14 @@ class TestQuAcqWithAssumptionIDs:
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
 
-        query_gen = QueryGenerator()
+        query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
             background_clauses=task.background_clauses,
             constraint_clauses=task.constraint_clauses,
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=10)
@@ -600,17 +606,17 @@ class TestBackgroundClauses:
                 assert isinstance(lit, int)
 
 
-class TestQueryGeneratorWithQuAcqTask:
-    """Tests for QueryGenerator with raw params from QuAcqTask."""
+class TestQueryProviderWithQuAcqTask:
+    """Tests for QueryProvider with raw params from QuAcqTask."""
 
-    def test_generate_with_quacq_task(self, prepared_model):
-        """Test query generation with raw params from QuAcqTask."""
+    def test_generate_from_sat_with_quacq_task(self, prepared_model):
+        """Test SAT query generation with raw params from QuAcqTask."""
         task = prepared_model.task
-        gen = QueryGenerator()
+        provider = QueryProvider()
         remaining_bias = set(task.set_c)
         kb_clauses = get_kb_clauses([], task.constraint_clauses)
 
-        query, tested_c_id = gen.generate(
+        query, tested_c_id = provider.generate_from_sat(
             remaining_bias=remaining_bias,
             learned_kb=[],
             kb_clauses=kb_clauses,
@@ -626,7 +632,7 @@ class TestQueryGeneratorWithQuAcqTask:
 
 
 # =========================================================================
-# DI / Factory / Mode validation tests (Phase 7)
+# DI / Factory / Mode validation tests
 # =========================================================================
 
 class TestQuAcqFactories:
@@ -635,25 +641,21 @@ class TestQuAcqFactories:
     def test_for_oracle_factory(self, oracle):
         """Test for_oracle factory injects all deps."""
         checker = _minimal_checker()
-        query_gen = QueryGenerator()
+        query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
             background_clauses=[], constraint_clauses={},
             negated_clauses={}, id_to_feature={})
-        quacq = QuAcq.for_oracle(checker, oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         assert quacq.oracle is oracle
-        assert quacq.query_generator is query_gen
+        assert quacq.query_provider is query_provider
         assert quacq.discriminating_generator is discrim_gen
-        assert quacq.example_provider is None
 
     def test_for_examples_factory(self, oracle):
-        """Test for_examples factory injects example_provider."""
-        from conacq.example_generators import ExampleProvider
-        provider = ExampleProvider([{'a': True}], seed=42)
+        """Test for_examples factory injects query_provider."""
+        provider = QueryProvider(pool=[{'a': True}], seed=42)
         quacq = QuAcq.for_examples(_minimal_checker(), oracle, provider)
         assert quacq.oracle is oracle
-        assert quacq.example_provider is provider
-        assert quacq.query_generator is None
-        assert quacq.discriminating_generator is None
+        assert quacq.query_provider is provider
 
 
 class TestQuAcqModeValidation:
@@ -665,35 +667,52 @@ class TestQuAcqModeValidation:
             background_clauses=[],
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
             constraint_clauses={}, negated_clauses={},
-            pos_assignment_to_assumption=None,
-            neg_assignment_to_assumption=None,
             root_assumption=None)
 
-    def test_oracle_mode_requires_query_generator(self, oracle):
-        """Oracle mode without query_generator raises."""
+    def test_no_query_provider_raises(self, oracle):
+        """Any mode without query_provider raises."""
         quacq = QuAcq(_minimal_checker(), oracle)
-        with pytest.raises(ValueError, match="query_generator"):
+        with pytest.raises(ValueError, match="query_provider"):
             quacq.learn(**self._minimal_learn_params(), mode='oracle')
 
     def test_oracle_mode_requires_discrim_gen(self, oracle):
         """Oracle mode without discriminating_generator raises."""
-        quacq = QuAcq(_minimal_checker(), oracle, query_generator=QueryGenerator())
+        quacq = QuAcq(_minimal_checker(), oracle, query_provider=QueryProvider())
         with pytest.raises(ValueError, match="discriminating_generator"):
             quacq.learn(**self._minimal_learn_params(), mode='oracle')
 
-    def test_example_mode_requires_provider(self, oracle):
-        """Example mode without example_provider raises."""
-        quacq = QuAcq(_minimal_checker(), oracle, query_generator=QueryGenerator())
-        with pytest.raises(ValueError, match="example_provider"):
-            quacq.learn(**self._minimal_learn_params(), mode='example_only')
+    def test_example_only_works_without_discrim_gen(self, oracle):
+        """example_only mode works without discriminating_generator."""
+        quacq = QuAcq(_minimal_checker(), oracle, query_provider=QueryProvider())
+        result = quacq.learn(**self._minimal_learn_params(), mode='example_only')
+        assert result.convergence_reason == 'empty_bias'
 
-    def test_example_first_requires_query_generator(self, oracle):
-        """example_first mode without query_generator raises."""
-        from conacq.example_generators import ExampleProvider
-        provider = ExampleProvider([{'a': True}], seed=42)
-        quacq = QuAcq(_minimal_checker(), oracle, example_provider=provider)
-        with pytest.raises(ValueError, match="query_generator"):
+    def test_example_first_requires_discrim_gen(self, oracle):
+        """example_first mode without discriminating_generator raises."""
+        quacq = QuAcq(_minimal_checker(), oracle, query_provider=QueryProvider())
+        with pytest.raises(ValueError, match="discriminating_generator"):
             quacq.learn(**self._minimal_learn_params(), mode='example_first')
+
+
+class TestQueryProviderPoolFiltering:
+    """Tests for QueryProvider pool filtering logic."""
+
+    def test_pool_exhausted_when_empty(self):
+        """Provider with no pool is immediately exhausted."""
+        provider = QueryProvider()
+        assert provider.pool_exhausted is True
+
+    def test_pool_filtering_skips_invalid(self):
+        """Pool examples not satisfying KB+BG are skipped."""
+        provider = QueryProvider(pool=[{'a': True}])
+        query, c_id = provider.generate_from_pool(
+            remaining_bias={1},
+            kb_clauses=[[-1]],  # clause: NOT a (rejects a=True)
+            bg_clauses=[],
+            constraint_clauses={1: [[1]]},  # constraint: a
+            feature_ids={'a': 1})
+        assert query is None  # filtered out
+        assert provider.pool_exhausted is True
 
 
 class TestSatUtils:

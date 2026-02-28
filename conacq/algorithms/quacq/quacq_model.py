@@ -107,6 +107,21 @@ class QuAcqModel:
         task = self._require_task()
         return list(task.assumptions) + task.assignment_assumptions
 
+    def config_to_assumptions(self, config: Dict[str, bool]) -> List[int]:
+        """Convert feature config to Part 4 assignment assumption IDs.
+
+        Args:
+            config: Feature name -> bool assignment
+
+        Returns:
+            List of assumption IDs for the given feature assignments
+        """
+        task = self._require_task()
+        return [task.pos_assignment_to_assumption[feat] if val
+                else task.neg_assignment_to_assumption[feat]
+                for feat, val in config.items()
+                if feat in task.pos_assignment_to_assumption]
+
     def prepare(self, oracle: 'FeatureModelOracle') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.
 

@@ -14,7 +14,7 @@ import tracemalloc
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
 
-from conacq.example_generators import QueryGenerator, ExampleProvider
+from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
@@ -59,8 +59,6 @@ def _learn_params_from_task(task) -> dict:
         id_to_feature=task.id_to_feature,
         constraint_clauses=task.constraint_clauses,
         negated_clauses=task.negated_clauses,
-        pos_assignment_to_assumption=task.pos_assignment_to_assumption,
-        neg_assignment_to_assumption=task.neg_assignment_to_assumption,
         root_assumption=task.set_b[0] if task.set_b else None,
     )
 
@@ -238,7 +236,7 @@ class QuAcqRunner(BaseRunner):
         else:
             learn_oracle = self.oracle
 
-        query_gen = QueryGenerator(self.solver_name, profiler)
+        query_provider = QueryProvider(self.solver_name, profiler_instance=profiler)
         discrim_gen = DiscriminatingGenerator(
             background_clauses=task.background_clauses,
             constraint_clauses=task.constraint_clauses,
@@ -246,7 +244,8 @@ class QuAcqRunner(BaseRunner):
             id_to_feature=task.id_to_feature,
             solver_name=self.solver_name)
 
-        quacq = QuAcq.for_oracle(checker, learn_oracle, query_gen, discrim_gen, profiler=profiler)
+        quacq = QuAcq.for_oracle(checker, learn_oracle, query_provider, discrim_gen,
+                                  model=self.model, profiler=profiler)
 
         return quacq.learn(
             **task_data, mode='oracle',
@@ -257,13 +256,15 @@ class QuAcqRunner(BaseRunner):
                           mode, shuffle_seed):
         """Run example-based learning via QuAcq.learn(mode=...)."""
         mixed_examples = list(positive_examples) + list(negative_examples)
-        example_provider = ExampleProvider(mixed_examples, shuffle_seed)
+        query_provider = QueryProvider(
+            self.solver_name,
+            pool=mixed_examples,
+            seed=shuffle_seed,
+            profiler_instance=profiler)
 
-        # For example_first, also need query_gen and discrim_gen
-        query_gen = None
+        # For example_first, also need discrim_gen
         discrim_gen = None
         if mode == 'example_first':
-            query_gen = QueryGenerator(self.solver_name, profiler)
             discrim_gen = DiscriminatingGenerator(
                 background_clauses=task.background_clauses,
                 constraint_clauses=task.constraint_clauses,
@@ -274,8 +275,8 @@ class QuAcqRunner(BaseRunner):
         quacq = QuAcq(
             checker=checker,
             oracle=self.oracle,
-            query_generator=query_gen,
-            example_provider=example_provider,
+            model=self.model,
+            query_provider=query_provider,
             discriminating_generator=discrim_gen,
             profiler_instance=profiler)
 

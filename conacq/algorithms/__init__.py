@@ -11,7 +11,7 @@ ConGen (Passive/Batch Learning):
 
 Interactive Learning (QuAcq):
 - QuAcq: Interactive constraint acquisition via membership queries
-- QueryGenerator: SAT-based query generation
+- QueryProvider: Unified query provider (pool + SAT)
 
 Task classes shared across incremental and non-incremental modes.
 """

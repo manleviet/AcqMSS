@@ -18,23 +18,24 @@ Oracle Implementations:
 
 Example Usage:
     from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
-    from conacq.example_generators import QueryGenerator
+    from conacq.example_generators import QueryProvider
 
     model = (QuAcqModelBuilder
              .from_bias('data/bias/model-bias.json')
              .with_oracle(oracle)
              .build())
     task = model.task
-    query_gen = QueryGenerator()
+    query_provider = QueryProvider()
     discrim_gen = DiscriminatingGenerator(
         background_clauses=task.background_clauses,
         constraint_clauses=task.constraint_clauses,
         negated_clauses=task.negated_clauses,
         id_to_feature=task.id_to_feature)
-    quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+    checker = CheckerFactory.create_from_model(model)
+    quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
     result = quacq.learn(
-        set_c=task.set_c, set_b=task.set_b, set_kb=task.set_kb,
-        negation_map=task.negation_map, assumptions=task.assumptions,
+        set_c=task.set_c, set_b=task.set_b,
+        negation_map=task.negation_map,
         background_clauses=task.background_clauses,
         feature_ids=task.feature_ids, id_to_feature=task.id_to_feature,
         constraint_clauses=task.constraint_clauses,

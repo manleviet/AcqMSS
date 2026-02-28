@@ -39,7 +39,7 @@ class QuAcqTask(DiagnosisTask):
         feature_ids:          Feature name -> SAT variable ID
         id_to_feature:        SAT variable ID -> feature name
         constraint_clauses:   assumption_id -> raw CNF clauses (no guards)
-        negated_clauses:      assumption_id -> negated CNF clauses (raw, for QueryGenerator)
+        negated_clauses:      assumption_id -> negated CNF clauses (raw, for QueryProvider)
 
     Mutable state (remaining_bias, learned_kb, n_queries, query_history)
     lives in the QuAcq algorithm, not here.
@@ -56,7 +56,7 @@ class QuAcqTask(DiagnosisTask):
     # assumption_id -> raw clauses (WITHOUT assumption guards, for violation checking)
     constraint_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
 
-    # assumption_id -> negated clauses (raw, for QueryGenerator and FindC)
+    # assumption_id -> negated clauses (raw, for QueryProvider and FindC)
     negated_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
 
     # Part 4: Feature assignment assumptions (for SAT-based pruning)

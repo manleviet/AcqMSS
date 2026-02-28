@@ -2,9 +2,9 @@
 QuAcq algorithm for interactive constraint acquisition (IJCAI 2013).
 
 Supports three modes via single learn() method:
-- 'oracle': traditional QuAcq with SAT-based query generation + oracle.ask()
-- 'example_only': ExampleProvider supplies queries, oracle.is_valid() classifies
-- 'example_first': pool first, SAT fallback when exhausted
+- 'oracle': QueryProvider.generate_from_sat() + oracle.ask()
+- 'example_only': QueryProvider.generate_from_pool() (paper-filtered)
+- 'example_first': QueryProvider.generate() (pool first, SAT fallback)
 
 All collaborators injected at construction (DI pattern).
 Also contains QuAcqResult (co-located: algorithm produces its own result type).
@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Literal
 
 from conacq.oracle import Oracle
-from conacq.example_generators import QueryGenerator, ExampleProvider
+from conacq.example_generators import QueryProvider
 from .findscope import find_scope
 from .findc import find_c
 from .discriminating_generator import DiscriminatingGenerator
@@ -52,46 +52,49 @@ class QuAcq:
 
     Args:
         oracle: Oracle for membership queries
-        query_generator: SAT-based query generator (required for oracle/example_first modes)
-        example_provider: Example pool provider (required for example modes)
+        query_provider: Unified query provider (pool + SAT strategies)
         discriminating_generator: For FindC discriminating examples (required for oracle mode)
         profiler_instance: Optional profiler
     """
 
     def __init__(self, checker: ConsistencyChecker,
                  oracle: Oracle,
-                 query_generator: QueryGenerator = None,
-                 example_provider: ExampleProvider = None,
+                 model=None,
+                 query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
                  profiler_instance: AbstractProfiler = None) -> None:
         self.checker = checker
         self.oracle = oracle
+        self.model = model  # QuAcqModel (optional, enables SAT-based pruning)
         self.profiler = profiler_instance if profiler_instance else get_global_profiler()
         self.result: Optional[QuAcqResult] = None
 
-        self.query_generator = query_generator
-        self.example_provider = example_provider
+        self.query_provider = query_provider
         self.discriminating_generator = discriminating_generator
 
     @classmethod
     def for_oracle(cls, checker: ConsistencyChecker,
                    oracle: Oracle,
-                   query_gen: QueryGenerator,
+                   query_provider: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
+                   model=None,
                    profiler: AbstractProfiler = None) -> 'QuAcq':
-        """Factory for oracle-based learning. discrim_gen is required."""
-        return cls(checker, oracle, query_generator=query_gen,
+        """Factory for oracle-based learning. discrim_gen required."""
+        return cls(checker, oracle, model=model,
+                   query_provider=query_provider,
                    discriminating_generator=discrim_gen,
                    profiler_instance=profiler)
 
     @classmethod
     def for_examples(cls, checker: ConsistencyChecker,
                      oracle: Oracle,
-                     example_provider: ExampleProvider,
+                     query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
+                     model=None,
                      profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for example-based learning."""
-        return cls(checker, oracle, example_provider=example_provider,
+        return cls(checker, oracle, model=model,
+                   query_provider=query_provider,
                    discriminating_generator=discrim_gen,
                    profiler_instance=profiler)
 
@@ -106,8 +109,6 @@ class QuAcq:
               id_to_feature: Dict[int, str],
               constraint_clauses: Dict[int, List[List[int]]],
               negated_clauses: Dict[int, List[List[int]]],
-              pos_assignment_to_assumption: Dict[str, int] = None,
-              neg_assignment_to_assumption: Dict[str, int] = None,
               root_assumption: int = None,
               mode: Literal['oracle', 'example_only', 'example_first'] = 'oracle',
               max_queries: int = 1000,
@@ -124,8 +125,6 @@ class QuAcq:
             id_to_feature: SAT variable ID -> feature name
             constraint_clauses: assumption_id -> raw CNF clauses
             negated_clauses: assumption_id -> negated CNF clauses
-            pos_assignment_to_assumption: Feature name -> pos assignment assumption ID (Part 4)
-            neg_assignment_to_assumption: Feature name -> neg assignment assumption ID (Part 4)
             root_assumption: Root BG assumption ID (enables root constraint)
             mode: 'oracle', 'example_only', or 'example_first'
             max_queries: Maximum queries before stopping
@@ -161,27 +160,28 @@ class QuAcq:
                 break
 
             # Step 1: Get next query (mode-dependent)
-            query = None
-            tested_c_id = None
+            kb_cls = get_kb_clauses(learned_kb, constraint_clauses)
 
             if mode == 'oracle':
-                kb_cls = get_kb_clauses(learned_kb, constraint_clauses)
-                query, tested_c_id = self.query_generator.generate(
+                query, tested_c_id = self.query_provider.generate_from_sat(
                     remaining_bias=remaining_bias, learned_kb=learned_kb,
                     kb_clauses=kb_cls, negated_clauses=negated_clauses,
                     bg_clauses=background_clauses, feature_ids=feature_ids,
                     id_to_feature=id_to_feature, n_bg=len(set_b))
-            else:
-                # example_only or example_first: try pool first
-                query = self.example_provider.next_example()
-                if query is None and mode == 'example_first':
-                    # Pool exhausted, fall back to SAT
-                    kb_cls = get_kb_clauses(learned_kb, constraint_clauses)
-                    query, tested_c_id = self.query_generator.generate(
-                        remaining_bias=remaining_bias, learned_kb=learned_kb,
-                        kb_clauses=kb_cls, negated_clauses=negated_clauses,
-                        bg_clauses=background_clauses, feature_ids=feature_ids,
-                        id_to_feature=id_to_feature, n_bg=len(set_b))
+            elif mode == 'example_only':
+                query, tested_c_id = self.query_provider.generate_from_pool(
+                    remaining_bias=remaining_bias, kb_clauses=kb_cls,
+                    bg_clauses=background_clauses,
+                    constraint_clauses=constraint_clauses,
+                    feature_ids=feature_ids)
+            else:  # example_first
+                query, tested_c_id = self.query_provider.generate(
+                    remaining_bias=remaining_bias, learned_kb=learned_kb,
+                    kb_clauses=kb_cls, negated_clauses=negated_clauses,
+                    bg_clauses=background_clauses, feature_ids=feature_ids,
+                    id_to_feature=id_to_feature,
+                    constraint_clauses=constraint_clauses,
+                    n_bg=len(set_b))
 
             if query is None:
                 if mode == 'oracle':
@@ -201,11 +201,9 @@ class QuAcq:
 
             # Step 3: Process answer
             if answer:
-                if pos_assignment_to_assumption and root_assumption is not None:
+                if self.model and root_assumption is not None:
                     pruned = self._prune_rejecting_constraints(
-                        remaining_bias, query,
-                        root_assumption, pos_assignment_to_assumption,
-                        neg_assignment_to_assumption)
+                        remaining_bias, query, root_assumption)
                 else:
                     pruned = self._prune_rejecting_constraints_legacy(
                         constraint_clauses, feature_ids, remaining_bias, query)
@@ -236,8 +234,6 @@ class QuAcq:
                         record_query=record_query, oracle=self.oracle,
                         learned_kb=learned_kb,
                         generator=self.discriminating_generator,
-                        example_provider=self.example_provider if mode != 'oracle' else None,
-                        query_mode=mode if mode != 'oracle' else 'example_only',
                         profiler=self.profiler
                     )
 
@@ -283,34 +279,24 @@ class QuAcq:
         valid_modes = ('oracle', 'example_only', 'example_first')
         if mode not in valid_modes:
             raise ValueError(f"Unknown mode '{mode}'. Use one of: {valid_modes}")
-        if mode == 'oracle':
-            if self.query_generator is None:
-                raise ValueError("Oracle mode requires query_generator (use for_oracle())")
-            if self.discriminating_generator is None:
-                raise ValueError("Oracle mode requires discriminating_generator (use for_oracle())")
-        if mode in ('example_only', 'example_first') and self.example_provider is None:
-            raise ValueError(f"Mode '{mode}' requires example_provider (use for_examples())")
-        if mode == 'example_first':
-            if self.query_generator is None:
-                raise ValueError("example_first mode requires query_generator")
-            if self.discriminating_generator is None:
-                raise ValueError("example_first mode requires discriminating_generator")
+        if self.query_provider is None:
+            raise ValueError("query_provider is required (use for_oracle() or for_examples())")
+        if mode == 'oracle' and self.discriminating_generator is None:
+            raise ValueError("Oracle mode requires discriminating_generator (use for_oracle())")
+        if mode == 'example_first' and self.discriminating_generator is None:
+            raise ValueError("example_first mode requires discriminating_generator")
 
     @count_calls('prune_calls')
     def _prune_rejecting_constraints(self,
                                      remaining_bias: set,
                                      positive_example: Dict[str, bool],
-                                     root_assumption: int,
-                                     pos_map: Dict[str, int],
-                                     neg_map: Dict[str, int]) -> List[int]:
+                                     root_assumption: int) -> List[int]:
         """Remove constraints from remaining_bias that reject the positive example.
 
         Uses SAT-based consistency checking with Part 4 feature assignment
         assumptions, catching implied violations beyond pure Boolean evaluation.
         """
-        config_assumptions = [pos_map[feat] if val else neg_map[feat]
-                              for feat, val in positive_example.items()
-                              if feat in pos_map]
+        config_assumptions = self.model.config_to_assumptions(positive_example)
         base = [root_assumption] + config_assumptions
         pruned = []
         for aid in list(remaining_bias):

@@ -1,7 +1,7 @@
 """
 Adapter functions for working with QuAcqTask (int assumption IDs).
 
-Used by QueryGenerator and FindScope/FindC helpers.
+Used by QueryProvider and FindScope/FindC helpers.
 """
 
 from typing import List
