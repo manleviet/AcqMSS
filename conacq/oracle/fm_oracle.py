@@ -179,12 +179,10 @@ class FeatureModelOracle(Oracle):
         """Get the raw ground truth CNF clauses (without assumption guards)."""
         return self._oracle_model.get_fm_clauses()
 
-    # TODO: need check
     def get_num_constraints(self) -> int:
         """Get number of FM constraints in ground truth."""
         return len(self._oracle_model.constraint_map)
 
-    # TODO: need check
     def get_next_available_id(self) -> int:
         """Get starting Tseitin variable ID from FM model."""
         return self._oracle_model.next_available_id

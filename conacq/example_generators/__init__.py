@@ -1,6 +1,7 @@
 """Example generators for different sampling strategies."""
 
 from .base import ExampleGenerator
+from .query_generator import QueryGenerator, clause_count_priority, literal_count_priority
 from .random_sampling import RandomSamplingGenerator, BalancedRandomSamplingGenerator, ControlledRandomSamplingGenerator
 from .feature_frequency import FeatureFrequencyGenerator
 from .nwise_coverage import NWiseCoverageGenerator, TwoCoverageGenerator
