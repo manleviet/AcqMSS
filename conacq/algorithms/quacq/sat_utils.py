@@ -62,9 +62,9 @@ def violates_clauses(clauses: List[List[int]],
 
 
 def get_constraints_with_scope(scope: set,
-                                remaining_bias: set,
-                                constraint_clauses: Dict[int, List[List[int]]],
-                                id_to_feature: Dict[int, str]) -> List[int]:
+                               remaining_bias: set,
+                               constraint_clauses: Dict[int, List[List[int]]],
+                               id_to_feature: Dict[int, str]) -> List[int]:
     """Get bias constraint IDs whose variables match scope.
 
     Prefers exact scope match (c_vars == scope). Falls back to subset
@@ -72,6 +72,7 @@ def get_constraints_with_scope(scope: set,
     """
     exact = []
     subset = []
+    # Collects bias constraints matching scope exactly or subset
     for aid in remaining_bias:
         c_vars = get_constraint_vars(aid, constraint_clauses, id_to_feature)
         if not c_vars:

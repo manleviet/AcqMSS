@@ -61,6 +61,7 @@ class QuAcqModelBuilder:
         model = QuAcqModel()
         model.constraint_map = bias.to_constraint_map()
         model.variables = bias.feature_ids
+        model.features = {var_id: name for name, var_id in model.variables.items()}
         model.use_incremental = self._use_incremental
 
         # Compute negation at build time (before prepare)

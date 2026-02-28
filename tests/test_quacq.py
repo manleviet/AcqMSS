@@ -46,12 +46,9 @@ def _learn_params_from_task(task):
         set_c=task.set_c,
         set_b=task.set_b,
         negation_map=task.negation_map,
-        background_clauses=task.background_clauses,
         feature_ids=task.feature_ids,
         id_to_feature=task.id_to_feature,
         constraint_clauses=task.constraint_clauses,
-        negated_clauses=task.negated_clauses,
-        root_assumption=task.set_b[0] if task.set_b else None,
     )
 
 
@@ -177,7 +174,6 @@ class TestQueryProvider:
     def test_provider_creation(self):
         """Test provider can be created."""
         provider = QueryProvider()
-        assert provider.solver_name == 'glucose4'
         assert provider.pool_exhausted is True
         assert provider.pool_remaining == 0
 
@@ -188,19 +184,16 @@ class TestQueryProvider:
         assert provider.pool_exhausted is False
         assert provider.pool_remaining == 1
 
-    def test_generate_from_sat(self, prepared_model):
+    def test_generate_from_sat(self, prepared_model, checker):
         """Test SAT-based query generation."""
         task = prepared_model.task
-        provider = QueryProvider()
+        provider = QueryProvider(checker=checker, model=prepared_model)
         remaining_bias = set(task.set_c)
-        kb_clauses = get_kb_clauses([], task.constraint_clauses)
         query, tested_c_id = provider.generate_from_sat(
             remaining_bias=remaining_bias,
             learned_kb=[],
-            kb_clauses=kb_clauses,
-            negated_clauses=task.negated_clauses,
-            bg_clauses=task.background_clauses,
-            feature_ids=task.feature_ids,
+            set_b=task.set_b,
+            negation_map=task.negation_map,
             id_to_feature=task.id_to_feature)
 
         if task.set_c:
@@ -224,14 +217,15 @@ class TestQuAcq:
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
 
-        query_provider = QueryProvider()
+        query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
             background_clauses=task.background_clauses,
             constraint_clauses=task.constraint_clauses,
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
+                                   model=prepared_model)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=5)
@@ -256,9 +250,8 @@ class TestQuAcq:
         quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
-            background_clauses=[],
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
-            constraint_clauses={}, negated_clauses={},
+            constraint_clauses={},
             mode='oracle', max_queries=100)
 
         assert result.n_queries == 0
@@ -287,14 +280,14 @@ class TestIntegration:
             task = model.task
             task_data = _learn_params_from_task(task)
 
-            query_provider = QueryProvider()
+            checker = CheckerFactory.create_from_model(model)
+            query_provider = QueryProvider(checker=checker, model=model)
             discrim_gen = DiscriminatingGenerator(
                 background_clauses=task.background_clauses,
                 constraint_clauses=task.constraint_clauses,
                 negated_clauses=task.negated_clauses,
                 id_to_feature=task.id_to_feature)
 
-            checker = CheckerFactory.create_from_model(model)
             quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
             result = quacq.learn(
                 **task_data, mode='oracle',
@@ -461,14 +454,15 @@ class TestQuAcqWithAssumptionIDs:
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
 
-        query_provider = QueryProvider()
+        query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
             background_clauses=task.background_clauses,
             constraint_clauses=task.constraint_clauses,
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
+                                   model=prepared_model)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=5)
@@ -495,9 +489,8 @@ class TestQuAcqWithAssumptionIDs:
         quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
-            background_clauses=[],
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
-            constraint_clauses={}, negated_clauses={},
+            constraint_clauses={},
             mode='oracle', max_queries=100)
 
         assert result.n_queries == 0
@@ -509,14 +502,15 @@ class TestQuAcqWithAssumptionIDs:
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
 
-        query_provider = QueryProvider()
+        query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
             background_clauses=task.background_clauses,
             constraint_clauses=task.constraint_clauses,
             negated_clauses=task.negated_clauses,
             id_to_feature=task.id_to_feature)
 
-        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
+                                   model=prepared_model)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=10)
@@ -609,20 +603,17 @@ class TestBackgroundClauses:
 class TestQueryProviderWithQuAcqTask:
     """Tests for QueryProvider with raw params from QuAcqTask."""
 
-    def test_generate_from_sat_with_quacq_task(self, prepared_model):
+    def test_generate_from_sat_with_quacq_task(self, prepared_model, checker):
         """Test SAT query generation with raw params from QuAcqTask."""
         task = prepared_model.task
-        provider = QueryProvider()
+        provider = QueryProvider(checker=checker, model=prepared_model)
         remaining_bias = set(task.set_c)
-        kb_clauses = get_kb_clauses([], task.constraint_clauses)
 
         query, tested_c_id = provider.generate_from_sat(
             remaining_bias=remaining_bias,
             learned_kb=[],
-            kb_clauses=kb_clauses,
-            negated_clauses=task.negated_clauses,
-            bg_clauses=task.background_clauses,
-            feature_ids=task.feature_ids,
+            set_b=task.set_b,
+            negation_map=task.negation_map,
             id_to_feature=task.id_to_feature)
 
         if query is not None:
@@ -664,10 +655,8 @@ class TestQuAcqModeValidation:
     def _minimal_learn_params(self):
         return dict(
             set_c=[], set_b=[], negation_map={},
-            background_clauses=[],
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
-            constraint_clauses={}, negated_clauses={},
-            root_assumption=None)
+            constraint_clauses={})
 
     def test_no_query_provider_raises(self, oracle):
         """Any mode without query_provider raises."""
@@ -702,15 +691,18 @@ class TestQueryProviderPoolFiltering:
         provider = QueryProvider()
         assert provider.pool_exhausted is True
 
-    def test_pool_filtering_skips_invalid(self):
+    def test_pool_filtering_skips_invalid(self, prepared_model, checker):
         """Pool examples not satisfying KB+BG are skipped."""
-        provider = QueryProvider(pool=[{'a': True}])
+        task = prepared_model.task
+        features = list(task.feature_ids.keys())
+        # All-false config almost certainly invalid (root must be true)
+        invalid_config = {f: False for f in features}
+        provider = QueryProvider(pool=[invalid_config], seed=42,
+                                 checker=checker, model=prepared_model)
         query, c_id = provider.generate_from_pool(
-            remaining_bias={1},
-            kb_clauses=[[-1]],  # clause: NOT a (rejects a=True)
-            bg_clauses=[],
-            constraint_clauses={1: [[1]]},  # constraint: a
-            feature_ids={'a': 1})
+            remaining_bias=set(task.set_c),
+            learned_kb=[],
+            set_b=task.set_b)
         assert query is None  # filtered out
         assert provider.pool_exhausted is True
 

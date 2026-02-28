@@ -4,7 +4,8 @@ FindC algorithm from IJCAI13 paper (Algorithm 3).
 Given a scope (from FindScope), finds the specific constraint
 that is violated by the negative example.
 
-Uses oracle.is_valid() for membership queries and DiscriminatingGenerator
+Uses oracle.is_valid() for membership queries, ConsistencyChecker
+for SAT-based rejection filtering, and DiscriminatingGenerator
 for SAT-based discriminating examples from C_L[Y] (learned KB).
 
 Complexity: O(|Gamma|) queries where Gamma = candidate constraints with scope.
@@ -13,17 +14,21 @@ Complexity: O(|Gamma|) queries where Gamma = candidate constraints with scope.
 import logging
 from typing import Dict, List
 
-from .sat_utils import (
-    config_to_assumptions, get_constraints_with_scope, violates_clauses
-)
+from .sat_utils import get_constraints_with_scope
+from explanation.operations.algorithms.checker import ConsistencyChecker
+
+
 class FindC:
     """Finds constraint with given scope violated by example.
 
-    Oracle and generator injected at construction; per-call data passed to run().
+    Oracle, checker, model, and generator injected at construction;
+    per-call data passed to run().
     """
 
-    def __init__(self, oracle, generator=None):
+    def __init__(self, oracle, checker: ConsistencyChecker, model, generator=None):
         self.oracle = oracle
+        self.checker = checker
+        self.model = model
         self.generator = generator
 
     def run(
@@ -31,27 +36,28 @@ class FindC:
             e: dict,
             scope: set,
             constraint_clauses: Dict[int, List[List[int]]],
-            feature_ids: Dict[str, int],
             id_to_feature: Dict[int, str],
             remaining_bias: set,
             record_query,
             learned_kb: list,
+            root_assumption: int,
     ):
         """
         Find constraint with given scope violated by e.
 
-        Uses DiscriminatingGenerator to narrow down which constraint
+        Uses ConsistencyChecker for SAT-based rejection filtering and
+        DiscriminatingGenerator to narrow down which constraint
         in the scope is the one in the target (paper Algorithm 3).
 
         Args:
             e: Negative example
             scope: Variable scope from FindScope (set of feature names)
             constraint_clauses: assumption_id -> raw CNF clauses
-            feature_ids: Feature name -> SAT variable ID
             id_to_feature: SAT variable ID -> feature name
             remaining_bias: Mutable set of remaining bias assumption IDs
             record_query: Callback(config, answer, source) to record queries
             learned_kb: Currently learned constraint IDs (for DiscriminatingGenerator)
+            root_assumption: Root BG assumption ID for SAT checking
 
         Returns:
             Constraint ID (int) or None
@@ -67,14 +73,13 @@ class FindC:
         if len(candidates) == 1:
             return candidates[0]
 
-        # Filter to constraints that actually reject e
+        # Filter to constraints that actually reject e (SAT-based)
         rejecting = []
-        e_assumptions = config_to_assumptions(e, feature_ids)
-        assignment = {abs(lit): lit > 0 for lit in e_assumptions}
+        e_assumptions = self.model.config_to_assumptions(e)
+        base = [root_assumption] + e_assumptions
 
         for c_id in candidates:
-            clauses = constraint_clauses.get(c_id, [])
-            if violates_clauses(clauses, assignment):
+            if not self.checker.is_consistent(base + [c_id]):
                 rejecting.append(c_id)
 
         if not rejecting:

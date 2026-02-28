@@ -19,11 +19,8 @@ from conacq.example_generators import QueryProvider
 from .findscope import FindScope
 from .findc import FindC
 from .discriminating_generator import DiscriminatingGenerator
-from .sat_utils import (
-    config_to_assumptions, violates_clauses, get_kb_clauses
-)
 from conacq.algorithms.acqmss.reduce import Reduce
-from explanation.operations.algorithms.checker import NonIncrementalPySATChecker, ConsistencyChecker
+from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
@@ -72,10 +69,6 @@ class QuAcq:
         self.query_provider = query_provider
         self.discriminating_generator = discriminating_generator
 
-        # Internal algorithm components (DI via constructor)
-        self._find_scope = FindScope(oracle)
-        self._find_c = FindC(oracle, discriminating_generator)
-
     @classmethod
     def for_oracle(cls, checker: ConsistencyChecker,
                    oracle: Oracle,
@@ -108,12 +101,9 @@ class QuAcq:
               set_c: List[int],
               set_b: List[int],
               negation_map: Dict[int, int],
-              background_clauses: List[List[int]],
               feature_ids: Dict[str, int],
               id_to_feature: Dict[int, str],
               constraint_clauses: Dict[int, List[List[int]]],
-              negated_clauses: Dict[int, List[List[int]]],
-              root_assumption: int = None,
               mode: Literal['oracle', 'example_only', 'example_first'] = 'oracle',
               max_queries: int = 1000,
               ) -> QuAcqResult:
@@ -124,12 +114,9 @@ class QuAcq:
             set_c: Bias constraint assumption IDs
             set_b: BG assumption IDs
             negation_map: {assumption_id -> negated_assumption_id}
-            background_clauses: Raw BG CNF clauses
             feature_ids: Feature name -> SAT variable ID
             id_to_feature: SAT variable ID -> feature name
             constraint_clauses: assumption_id -> raw CNF clauses
-            negated_clauses: assumption_id -> negated CNF clauses
-            root_assumption: Root BG assumption ID (enables root constraint)
             mode: 'oracle', 'example_only', or 'example_first'
             max_queries: Maximum queries before stopping
 
@@ -164,28 +151,23 @@ class QuAcq:
                 break
 
             # Step 1: Get next query (mode-dependent)
-            kb_cls = get_kb_clauses(learned_kb, constraint_clauses)
-
             if mode == 'oracle':
                 query, tested_c_id = self.query_provider.generate_from_sat(
-                    remaining_bias=remaining_bias, learned_kb=learned_kb,
-                    kb_clauses=kb_cls, negated_clauses=negated_clauses,
-                    bg_clauses=background_clauses, feature_ids=feature_ids,
-                    id_to_feature=id_to_feature, n_bg=len(set_b))
+                    remaining_bias=remaining_bias,
+                    learned_kb=learned_kb,
+                    set_b=set_b,
+                    negation_map=negation_map)
             elif mode == 'example_only':
                 query, tested_c_id = self.query_provider.generate_from_pool(
-                    remaining_bias=remaining_bias, kb_clauses=kb_cls,
-                    bg_clauses=background_clauses,
-                    constraint_clauses=constraint_clauses,
-                    feature_ids=feature_ids)
+                    remaining_bias=remaining_bias,
+                    learned_kb=learned_kb,
+                    set_b=set_b)
             else:  # example_first
                 query, tested_c_id = self.query_provider.generate(
-                    remaining_bias=remaining_bias, learned_kb=learned_kb,
-                    kb_clauses=kb_cls, negated_clauses=negated_clauses,
-                    bg_clauses=background_clauses, feature_ids=feature_ids,
-                    id_to_feature=id_to_feature,
-                    constraint_clauses=constraint_clauses,
-                    n_bg=len(set_b))
+                    remaining_bias=remaining_bias,
+                    learned_kb=learned_kb,
+                    set_b=set_b,
+                    negation_map=negation_map)
 
             if query is None:
                 if mode == 'oracle':
@@ -205,38 +187,36 @@ class QuAcq:
 
             # Step 3: Process answer
             if answer:
-                if self.model and root_assumption is not None:
-                    pruned = self._prune_rejecting_constraints(
-                        remaining_bias, query, root_assumption)
-                else:
-                    pruned = self._prune_rejecting_constraints_legacy(
-                        constraint_clauses, feature_ids, remaining_bias, query)
+                pruned = self._prune_rejecting_constraints(
+                    remaining_bias, query, set_b[0])
                 logging.debug('Pruned %d constraints', len(pruned))
             else:
                 if n_queries >= max_queries:
                     convergence_reason = 'max_queries'
                     break
 
-                scope_vars = self._find_scope.run(
+                find_scope = FindScope(self.oracle, self.checker, self.model)
+                scope_vars = find_scope.run(
                     e=query, R=set(), Y=all_variables,
                     ask_query=False,
-                    constraint_clauses=constraint_clauses,
-                    feature_ids=feature_ids,
-                    id_to_feature=id_to_feature,
                     remaining_bias=remaining_bias,
                     record_query=record_query,
+                    root_assumption=set_b[0],
                 )
 
                 scope = set(scope_vars)
+                # Adds scope-derived constraint to knowledge base or falls back to tested constraint
                 if scope:
-                    c_id = self._find_c.run(
+                    find_c = FindC(self.oracle, self.checker, self.model,
+                                   self.discriminating_generator)
+                    c_id = find_c.run(
                         e=query, scope=scope,
                         constraint_clauses=constraint_clauses,
-                        feature_ids=feature_ids,
                         id_to_feature=id_to_feature,
                         remaining_bias=remaining_bias,
                         record_query=record_query,
                         learned_kb=learned_kb,
+                        root_assumption=set_b[0],
                     )
 
                     if c_id is not None:
@@ -304,24 +284,5 @@ class QuAcq:
         for aid in list(remaining_bias):
             if not self.checker.is_consistent(base + [aid]):
                 pruned.append(aid)
-        remaining_bias -= set(pruned)
-        return pruned
-
-    @count_calls('prune_calls')
-    def _prune_rejecting_constraints_legacy(self,
-                                            constraint_clauses: Dict[int, List[List[int]]],
-                                            feature_ids: Dict[str, int],
-                                            remaining_bias: set,
-                                            positive_example: Dict[str, bool]) -> List[int]:
-        """Legacy: pure Boolean eval fallback (when Part 4 data unavailable)."""
-        assumptions_list = config_to_assumptions(positive_example, feature_ids)
-        assignment = {abs(lit): lit > 0 for lit in assumptions_list}
-
-        pruned = []
-        for aid in list(remaining_bias):
-            clauses = constraint_clauses.get(aid, [])
-            if violates_clauses(clauses, assignment):
-                pruned.append(aid)
-
         remaining_bias -= set(pruned)
         return pruned

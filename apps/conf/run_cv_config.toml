@@ -17,7 +17,7 @@ n_folds = 3
 solver_name = "glucose4"
 
 # Solver modes: "all" (both), "incremental", or "non-incremental"
-solver_mode = "non-incremental"
+solver_mode = "incremental"
 
 # Shuffle bias ordering per fold
 shuffle_bias = true

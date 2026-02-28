@@ -55,11 +55,14 @@ Learn from pre-collected positive/negative examples without an interactive oracl
 
 Finds the scope (variable set) of a violated constraint using a QuickXPlain-like technique — binary split on variable set, ask partial queries on each half via oracle.is_valid().
 
-**Implementation Details** (commit 260227):
+**Implementation Details** (commit 260228 - SAT-based bias pruning):
 - Uses `oracle.is_valid(partial)` for membership queries on variable subsets
 - All partial queries recorded via `record_query(partial, answer, 'findscope')` callback
-- Bias pruning uses raw clause maps (no SAT solver needed for scope determination)
-- Paper-aligned: membership queries only, no SAT discrimination
+- **NEW: Bias pruning uses SAT-based consistency checking** via `checker.is_consistent(base + [c_id])`
+  - For each constraint in remaining_bias: check if partial assignment + constraint is UNSAT
+  - Prune constraints that are inconsistent with partial assignment
+- Paper-aligned: membership queries only, no discriminating examples needed
+- **DI Pattern**: Receives oracle, ConsistencyChecker, and model at construction
 
 **Process**:
 1. Start with all variables in scope candidate
@@ -75,22 +78,27 @@ Finds the scope (variable set) of a violated constraint using a QuickXPlain-like
 
 After scope `Y` is found, identifies the specific constraint violated by generating discriminating examples from C_L[Y] (learned KB restricted to scope) + BG clauses.
 
-**Implementation Changes (NEW)** (commit 260227):
+**Implementation Details** (commit 260228 - SAT-based rejection filtering):
 
-**DiscriminatingGenerator (NEW)**:
+**Constraint Filtering** (NEW):
+- **Scope matching**: Find bias constraints whose scope matches Y (prefer exact, fallback to subset)
+- **SAT-based rejection**: Filter candidates using `checker.is_consistent(base + [c_id] + config_assumptions)`
+  - A constraint is rejected if assuming it makes the partial assignment UNSAT
+  - Narrows candidates to only those consistent with negative example e
+
+**DiscriminatingGenerator** (commit 260227):
 - Generates discriminating examples from C_L[Y] + BG, NOT from FM clauses (ground truth)
 - Paper Algorithm 3 line 5: find e' in sol(BG + C_L[Y]) s.t. e' |= c_i, e' |/= c_j
 - SAT formula: BG + C_L[Y] + c_i + neg(c_j)
 - Returns config dict or None if UNSAT
-- Replaces SAT-based narrowing with C_L[Y]-based generation
-
-**Simplified FindC** (commit 260228):
-- Removed `_narrow_with_pool` — paper Algorithm 3 uses only DiscriminatingGenerator for narrowing
-- FindC no longer accepts `example_provider` or `query_mode` params
-- Uses `_narrow_with_generator` (DiscriminatingGenerator) when provided
 
 **Query Recording**:
 - All queries recorded via `record_query(config, answer, 'findc')` callback
+
+**DI Pattern** (commit 260228):
+- Receives oracle, ConsistencyChecker, model, and optional DiscriminatingGenerator at construction
+- SAT-based rejection filtering replaces raw clause violation checks
+- No longer accepts example_provider or query_mode params
 
 **Process**:
 1. Collect constraints matching scope (exact match preferred, fallback to subset)
@@ -135,20 +143,42 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 
 ## Query Generation (QueryProvider)
 
-Unified `QueryProvider` class (conacq/example_generators/query_provider.py) merges pool-based and SAT-based strategies:
+Unified `QueryProvider` class (conacq/example_generators/query_provider.py) merges pool-based and SAT-based strategies with injected ConsistencyChecker.
+
+**Architecture** (NEW: commit 260228):
+- **No ad-hoc solver creation**: QueryProvider uses injected `checker` + `model` parameters
+- **ConsistencyChecker protocol**: Both conditions (satisfies KB+BG, violates bias) use `checker.is_consistent()`
+- **SAT model extraction**: `checker.get_model()` returns parsed SAT assignment for config generation
+- **Assumption-based filtering**: All SAT queries use assumption IDs for KB, BG, and bias constraints
+
+**Constructor** (NEW):
+```python
+QueryProvider(
+    pool: Optional[List[Dict[str, bool]]] = None,
+    seed: Optional[int] = None,
+    checker: ConsistencyChecker = None,  # Injected (NEW)
+    model: QuAcqModel = None,            # Injected for config_to_assumptions (NEW)
+    profiler_instance: AbstractProfiler = None
+)
+```
 
 **Three methods** mapping to three modes:
-- `generate_from_pool()` → `example_only` mode: iterate pool, SAT-check satisfies C_L + BG, check violates ≥1 constraint in bias
-- `generate_from_sat()` → `oracle` mode: SAT-based generation (max-1/sol heuristics)
-- `generate()` → `example_first` mode: try pool first, fallback to SAT
+- `generate_from_pool(remaining_bias, learned_kb, set_b)` → `example_only` mode
+  - Condition 1: `checker.is_consistent(C_L + BG + config_assumptions)` (satisfies KB+BG)
+  - Condition 2: `checker.is_consistent([c_id] + config_assumptions)` (violates bias constraint)
+- `generate_from_sat(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)` → `oracle` mode
+  - For each remaining constraint c_id: `checker.is_consistent(C_L + BG + [neg(c_id)])`
+  - Extract model: `model_lits = checker.get_model()` → convert to config dict
+- `generate(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)` → `example_first` mode
+  - Try pool first, fallback to SAT
 
 **SAT Heuristics** (in generate_from_sat):
-- **max-1**: Find solution of `C_L` maximizing violated constraints in `B` (1s cutoff)
-- **sol**: Find first solution of `C_L` violating at least 1 constraint in `B` (cheapest)
+- **max-1**: Find solution of `C_L` maximizing violated constraints in `B` (1s cutoff) — NO LONGER IMPLEMENTED
+- **sol**: Find first solution of `C_L` violating at least 1 constraint in `B` (cheapest) — CURRENT HEURISTIC
 
 **Pool Filtering** (paper Algorithm 1 condition):
-- Query `e` must satisfy C_L ∪ BG (checked via SAT solver)
-- Query `e` must violate ≥1 constraint in remaining bias (checked via raw clause violation)
+- Query `e` must satisfy C_L ∪ BG ∪ config_assumptions: `checker.is_consistent(C_L + BG + config_assumptions)`
+- Query `e` must violate ≥1 constraint in remaining bias: `not checker.is_consistent([c_id] + config_assumptions)`
 
 ## Relation to Codebase
 
@@ -282,15 +312,24 @@ Key Classes (in conacq/algorithms/quacq/):
 - `CachedOracle` — Caching wrapper to avoid re-asking same query (cached.py)
 
 **Query Generation** (conacq/example_generators/):
-- `QueryProvider` — Unified query provider: pool-filtered + SAT-based strategies (query_provider.py)
-  - `generate_from_pool()`: Pool iteration with paper condition (satisfies C_L+BG, violates ≥1 bias)
-  - `generate_from_sat()`: SAT-based generation (max-1/sol heuristics)
+- `QueryProvider` — Unified query provider: pool-filtered + SAT-based strategies (query_provider.py) (commit 260228)
+  - Uses injected `checker` (ConsistencyChecker) + `model` (QuAcqModel) for all SAT operations
+  - `generate_from_pool()`: Pool iteration with paper condition via `checker.is_consistent()`
+  - `generate_from_sat()`: SAT-based generation via `checker.is_consistent()` + `checker.get_model()`
   - `generate()`: Combined pool-first + SAT fallback
+  - No longer creates ad-hoc solvers: all SAT checks delegated to injected checker
+
+**ConsistencyChecker Integration** (NEW):
+- **get_model()**: Abstract method in ConsistencyChecker, returns `Optional[List[int]]`
+- Implementations (IncrementalPySATChecker, NonIncrementalPySATChecker) return SAT model after satisfiable check
+- QueryProvider calls `checker.get_model()` to extract assignment and convert to feature config
+- Enables decoupling query generation from solver implementation details
 
 **Critical**: Feature ID consistency
 - Uses flamapy's variable mapping (tree traversal order) as authoritative source
 - Ensures feature_ids match SAT variable IDs in CNF clauses
 - Alphabetical sorting would cause critical mismatch between Oracle and SAT solver
+- `id_to_feature: Dict[int, str]` maps SAT variables → feature names for config generation
 
 ## Removed Classes (Deleted This Session)
 
@@ -302,11 +341,12 @@ The following classes are **no longer available**:
 | `InteractiveLearner` | `QuAcqModelBuilder` + `QuAcq` | `learner.py` | High-level facade; use builder pattern instead |
 | `InteractiveResult` (alias) | `QuAcqResult` | `result.py` | Merged into `quacq.py` |
 
-**Recommended Pattern** (DI-based, post-refactor):
+**Recommended Pattern** (DI-based, post-refactor, commit 260228):
 ```python
-from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
+from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
 from conacq.example_generators import QueryProvider
 from conacq.oracle import FeatureModelOracle
+from explanation.operations.algorithms.checker import CheckerFactory
 
 # Build and prepare model
 oracle = FeatureModelOracle('data/fms/model.uvl')
@@ -314,12 +354,19 @@ model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
          .with_oracle(oracle)
          .build())  # Returns prepared QuAcqModel
 
-# Build QuAcq with dependencies (oracle mode)
-query_provider = QueryProvider(solver_name='glucose4')
+# Build checker and query provider (injected dependencies)
+checker = CheckerFactory.create_from_model(model)
+query_provider = QueryProvider(
+    checker=checker,    # Injected (NEW)
+    model=model,        # For config_to_assumptions (NEW)
+    pool=None           # Optional: provide pool for example-based mode
+)
 discrim_gen = DiscriminatingGenerator()
+
+# Build QuAcq with dependencies (oracle mode)
 quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
 
-# Run learning (returns raw assumption IDs)
+# Run learning (returns raw assumption IDs, simplified signature)
 result = quacq.learn(
     set_c=model.task.set_c,
     set_b=model.task.set_b,
@@ -344,16 +391,33 @@ print(f"Queries: {result.n_queries}")
 **Example-Based Mode**:
 ```python
 from conacq.example_generators import QueryProvider
+from explanation.operations.algorithms.checker import CheckerFactory
 
-# QueryProvider with pool for example-based learning
-query_provider = QueryProvider(solver_name='glucose4', pool=examples_list, seed=42)
-quacq = QuAcq.for_examples(checker, oracle, query_provider)
+# Build checker from model
+checker = CheckerFactory.create_from_model(model)
 
-# Run with pool only
+# QueryProvider with pool for example-based learning (injected dependencies)
+query_provider = QueryProvider(
+    pool=examples_list,
+    seed=42,
+    checker=checker,    # Injected (NEW)
+    model=model         # For config_to_assumptions (NEW)
+)
+
+quacq = QuAcq.for_examples(checker, oracle, query_provider, discrim_gen=None)
+
+# Run with pool only (no SAT, no discriminating generator needed)
 result = quacq.learn(..., mode='example_only', ...)
 
-# Or pool + SAT fallback (needs discrim_gen)
-result = quacq.learn(..., mode='example_first', ...)
+# Or pool + SAT fallback (requires discriminating generator)
+query_provider_mixed = QueryProvider(
+    pool=examples_list,
+    seed=42,
+    checker=checker,
+    model=model
+)
+quacq_mixed = QuAcq.for_examples(checker, oracle, query_provider_mixed, discrim_gen=discrim_gen)
+result = quacq_mixed.learn(..., mode='example_first', ...)
 ```
 
 **QuAcqResult Representation** (NEW: Algorithm returns IDs only):

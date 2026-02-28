@@ -2,25 +2,28 @@
 FindScope algorithm from IJCAI13 paper (Algorithm 2).
 
 Finds scope of violated constraint using partial membership queries
-checked via oracle.is_valid().
+checked via oracle.is_valid(). Prunes bias via SAT-based consistency
+checking with ConsistencyChecker.
 
 Complexity: O(|S| * log|X|) queries where S=scope size, X=total variables.
 """
 
 import logging
-from typing import Dict, List
+from typing import List
 
-from .sat_utils import (
-    partial_config_to_assumptions, get_constraint_vars, violates_clauses
-)
+from explanation.operations.algorithms.checker import ConsistencyChecker
+
+
 class FindScope:
     """Finds scope of violated constraint via partial membership queries.
 
-    Oracle injected at construction; per-call data passed to run().
+    Oracle, checker, and model injected at construction; per-call data passed to run().
     """
 
-    def __init__(self, oracle):
+    def __init__(self, oracle, checker: ConsistencyChecker, model):
         self.oracle = oracle
+        self.checker = checker
+        self.model = model
 
     def run(
             self,
@@ -28,11 +31,9 @@ class FindScope:
             R: set,
             Y: set,
             ask_query: bool,
-            constraint_clauses: Dict[int, List[List[int]]],
-            feature_ids: Dict[str, int],
-            id_to_feature: Dict[int, str],
             remaining_bias: set,
             record_query,
+            root_assumption: int,
     ) -> List[str]:
         """
         Find scope of violated constraint via partial membership queries.
@@ -42,11 +43,9 @@ class FindScope:
             R: Already-determined scope variables (feature names)
             Y: Remaining variables to search
             ask_query: Whether to query oracle with e[R]
-            constraint_clauses: assumption_id -> raw CNF clauses
-            feature_ids: Feature name -> SAT variable ID
-            id_to_feature: SAT variable ID -> feature name
             remaining_bias: Mutable set of remaining bias assumption IDs
             record_query: Callback(config, answer, source) to record queries
+            root_assumption: Root BG assumption ID for SAT checking
 
         Returns:
             Scope variables (feature names) as list
@@ -58,8 +57,7 @@ class FindScope:
 
             if is_consistent:
                 self._prune_rejecting_partial(
-                    constraint_clauses, feature_ids, id_to_feature,
-                    remaining_bias, e, R)
+                    remaining_bias, e, R, root_assumption)
             else:
                 return []
 
@@ -73,38 +71,34 @@ class FindScope:
         Y2 = set(Y_list[mid:])
 
         S1 = self.run(e, R | Y1, Y2, True,
-                      constraint_clauses, feature_ids, id_to_feature,
-                      remaining_bias, record_query)
+                      remaining_bias, record_query, root_assumption)
         S2 = self.run(e, R | set(S1), Y1, len(S1) > 0,
-                      constraint_clauses, feature_ids, id_to_feature,
-                      remaining_bias, record_query)
+                      remaining_bias, record_query, root_assumption)
 
         return S1 + S2
 
     def _prune_rejecting_partial(
             self,
-            constraint_clauses: Dict[int, List[List[int]]],
-            feature_ids: Dict[str, int],
-            id_to_feature: Dict[int, str],
             remaining_bias: set,
             e: dict,
-            R: set
+            R: set,
+            root_assumption: int,
     ) -> None:
-        """Prune bias constraints that reject partial assignment e[R]."""
-        assumptions = partial_config_to_assumptions(e, R, feature_ids)
-        if not assumptions:
+        """Prune bias constraints that reject partial assignment e[R].
+
+        Uses SAT-based consistency checking: a constraint is pruned if
+        KB + root + partial_assignment + constraint is UNSAT.
+        """
+        partial = {k: e[k] for k in R if k in e}
+        if not partial:
             return
 
-        assignment = {abs(lit): lit > 0 for lit in assumptions}
+        config_assumptions = self.model.config_to_assumptions(partial)
+        base = [root_assumption] + config_assumptions
 
         pruned = []
         for c_id in list(remaining_bias):
-            clauses = constraint_clauses.get(c_id, [])
-            c_vars = get_constraint_vars(c_id, constraint_clauses, id_to_feature)
-            if not c_vars.issubset(R):
-                continue
-
-            if violates_clauses(clauses, assignment):
+            if not self.checker.is_consistent(base + [c_id]):
                 pruned.append(c_id)
 
         if pruned:

@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-28 (QuAcqTask cleanup: pure data container, DI refactoring, unified shuffle-after-prepare)
+**Last Updated**: 2026-02-28 (QueryProvider + ConsistencyChecker refactor: injected checker/model, unified SAT interface, get_model() extraction)
 
 ## High-Level Overview
 
@@ -88,19 +88,30 @@ for fold_pos, fold_neg in folds:
     model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
     # Use model.task for this fold
 
-# Interactive learning — QuAcq (DI pattern)
+# Interactive learning — QuAcq (DI pattern, commit 260228)
 from conacq.example_generators import QueryProvider
-from conacq.algorithms.quacq import DiscriminatingGenerator
+from conacq.algorithms.quacq import DiscriminatingGenerator, QuAcq
+from explanation.operations.algorithms.checker import CheckerFactory
 
 oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
          .with_oracle(oracle)
          .build())  # Returns prepared model, task ready
 
-query_prov = QueryProvider(max_query_size=10)
-discrim_gen = DiscriminatingGenerator()
-quacq = QuAcq.for_oracle(oracle, query_prov, discrim_gen)
+# Build checker (injected dependency) — NEW pattern
+checker = CheckerFactory.create_from_model(model)
 
+# QueryProvider with injected checker + model — NEW: no solver_name parameter
+query_prov = QueryProvider(
+    checker=checker,    # Injected ConsistencyChecker
+    model=model         # For config_to_assumptions()
+)
+discrim_gen = DiscriminatingGenerator()
+
+# QuAcq with checker parameter (NEW)
+quacq = QuAcq.for_oracle(checker, oracle, query_prov, discrim_gen)
+
+# Run learning (simplified signature, no background_clauses/negated_clauses params)
 result = quacq.learn(
     set_c=model.task.set_c, set_b=model.task.set_b,
     set_kb=model.task.set_kb, negation_map=model.task.negation_map,
@@ -112,10 +123,10 @@ result = quacq.learn(
     mode='oracle', max_queries=1000)  # → QuAcqResult with KB assumption IDs only
 # Runner resolves names: kb_names, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
 
-# Query generation and example provision
-query = QueryProvider.generate_from_sat(...)  # SAT-based query generation
-examples = QueryProvider.generate_from_pool(...)  # Pool-based example selection
-queries_or_examples = QueryProvider.generate(...)  # Pool with SAT fallback
+# Query generation (instance methods on QueryProvider instance)
+config, c_id = query_prov.generate_from_sat(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)
+config, c_id = query_prov.generate_from_pool(remaining_bias, learned_kb, set_b)
+config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)
 ```
 
 **Key Algorithms**:
@@ -143,8 +154,8 @@ queries_or_examples = QueryProvider.generate(...)  # Pool with SAT fallback
 5. **QuAcq** — Interactive and batch learning (two modes, paper-aligned)
    - **Oracle mode** (original): GenerateQuery → Oracle.ask() → Update KB
    - **Example mode** (paper-faithful): FindScope + FindC via oracle.is_valid() + DiscriminatingGenerator(C_L[Y])
-   - FindScope: O(|S| * log|X|) queries per call (oracle.is_valid, not SAT)
-   - FindC: O(|Gamma|) queries per call (oracle.is_valid + DiscriminatingGenerator)
+   - FindScope: O(|S| * log|X|) queries per call (oracle.is_valid + SAT-based bias pruning)
+   - FindC: O(|Gamma|) queries per call (oracle.is_valid + SAT-based rejection + DiscriminatingGenerator)
 
 #### conacq/bias/ — Bias Generation
 
@@ -167,11 +178,17 @@ queries_or_examples = QueryProvider.generate(...)  # Pool with SAT fallback
 2. **FeatureFrequency (FF)** — Weight by feature occurrence patterns
 3. **TwoCoverage (2-COV)** — Ensure feature pairs appear together
 
-**Query Generation & Selection**:
-- **QueryProvider** — Unified query/example provision with three strategies:
-  1. `generate_from_pool()` — Select example from pool
-  2. `generate_from_sat()` — Generate query via SAT solving
-  3. `generate()` — Pool-first, SAT fallback (default mode)
+**Query Generation & Selection** (commit 260228):
+- **QueryProvider** — Unified query/example provision with injected ConsistencyChecker
+  - Constructor: `QueryProvider(pool=None, seed=None, checker=ConsistencyChecker, model=QuAcqModel, profiler=None)`
+  - All SAT checks delegated to injected `checker` (no ad-hoc solver creation)
+  - Config-to-assumption conversion via injected `model.config_to_assumptions()`
+  - Three strategies:
+    1. `generate_from_pool(remaining_bias, learned_kb, set_b)` — Pool iteration with paper conditions
+    2. `generate_from_sat(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)` — SAT-based generation
+    3. `generate(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)` — Pool-first, SAT fallback
+  - **Consistency checks**: Both pool filtering conditions use `checker.is_consistent()`
+  - **SAT model extraction**: `checker.get_model()` returns assignment for config conversion
 
 #### conacq/oracle/ — Oracle Implementations
 
@@ -357,10 +374,19 @@ class QuAcqTask(DiagnosisTask):
 
 #### explanation/operations/ — Diagnosis Algorithms
 
-**Solver Abstraction Layer**:
-- `ConsistencyChecker(ABC)` — Abstract interface; both incremental/non-incremental use assumption-based data
+**Solver Abstraction Layer** (commit 260228):
+- `ConsistencyChecker(ABC)` — Abstract interface with two key methods:
+  - `is_consistent(set_c: List[int]) -> bool` — Check CNF formula satisfiability
+  - `get_model() -> Optional[List[int]]` — Extract SAT assignment after satisfiable check
+  - Both implementations use assumption-based data (set_c as enabled assumptions)
 - `IncrementalPySATChecker` — Persistent solver (~50x faster, ideal for ConGen)
+  - Computes delta: disabled assumptions = all_assumptions \ set_c
+  - Calls solver with negated disabled assumptions
+  - `get_model()` returns solver's current model
 - `NonIncrementalPySATChecker` — Fresh solver per call (baseline for comparison)
+  - Builds CNF from set_kb and set_c clauses each time
+  - `get_model()` returns None (no persistent state)
+- `CheckerFactory.create_from_model(model)` — Factory for creating checker instances based on model's `use_incremental` flag
 
 **Diagnosis Algorithms**: FastDiag (minimal diagnosis via HSDAG), QuickXPlain (minimal conflicts), KBDiag (kernel-based, used by ACQMSS), WipeOutR (domain-specific), HSDAG (tree optimization)
 
@@ -665,16 +691,17 @@ Feature Model + Bias + Oracle (required for both modes)
             ├─ For each e in E-:
             │   ├─ FindScope: Binary search via oracle.is_valid() (O(|S| * log|X|))
             │   │   ├─ Partial query: oracle.is_valid({k: e[k] for k in R})
-            │   │   ├─ Prune bias if consistent (uses raw clause maps, not SAT)
+            │   │   ├─ SAT-based bias pruning: checker.is_consistent(base + [c_id]) per constraint
+            │   │   │   └─ Prune constraints inconsistent with partial assignment
             │   │   └─ record_query(partial, answer, 'findscope')
             │   │
-            │   ├─ FindC: Discriminate candidates (O(|Gamma|))
-            │   │   ├─ Pool-based: example_provider.next_example() → oracle.is_valid()
-            │   │   │   └─ Narrow via clause violation checks
-            │   │   ├─ Generator-based: DiscriminatingGenerator.generate(c_i, c_j, C_L[Y])
-            │   │   │   ├─ SAT formula: BG + C_L[Y] + c_i + neg(c_j)
+            │   ├─ FindC: Discriminate candidates via SAT-based filtering (O(|Gamma|))
+            │   │   ├─ Scope matching: Find bias constraints with matching scope Y
+            │   │   ├─ SAT-based rejection: checker.is_consistent(base + [c_id] + config_assumptions)
+            │   │   │   └─ Reject constraints inconsistent with negative example e
+            │   │   ├─ DiscriminatingGenerator (if provided): SAT formula BG + C_L[Y] + c_i + neg(c_j)
             │   │   │   ├─ Paper Algorithm 3 line 5 (not FM clauses)
-            │   │   │   └─ oracle.is_valid(config) to validate
+            │   │   │   └─ oracle.is_valid(config) to validate discriminating example
             │   │   └─ record_query(disc_e, answer, 'findc')
             │   │
             │   └─ Add found constraint (assumption ID) to KB
@@ -698,10 +725,12 @@ Result: QuAcqResult with assumption IDs + query history
 **File Organization** (Consolidated in conacq/algorithms/quacq/):
 - **task_preparation.py**: `QuAcqTask` class (inherits DiagnosisTask) + `QuAcqTaskPreparation`
 - **quacq.py**: `QuAcq` algorithm + `QuAcqResult` (oracle.is_valid(), query history with tags)
-- **findscope.py**: FindScope (Algorithm 2, oracle.is_valid() instead of SAT)
-- **findc.py**: FindC (Algorithm 3, oracle.is_valid() pool + DiscriminatingGenerator fallback)
-- **discriminating_generator.py**: DiscriminatingGenerator (NEW, C_L[Y] + BG, not FM)
-- **quacq_model.py**: QuAcqModel for interactive learning
+- **findscope.py**: FindScope (Algorithm 2, DI pattern: oracle + ConsistencyChecker + model)
+  - Bias pruning: SAT-based consistency checking via checker.is_consistent()
+- **findc.py**: FindC (Algorithm 3, DI pattern: oracle + ConsistencyChecker + model + DiscriminatingGenerator)
+  - Rejection filtering: SAT-based consistency checking before discriminating examples
+- **discriminating_generator.py**: DiscriminatingGenerator (C_L[Y] + BG, not FM)
+- **quacq_model.py**: QuAcqModel for interactive learning (includes config_to_assumptions)
 - **quacq_model_builder.py**: Fluent builder pattern
 - **_task_compat.py**: Shared helpers (get_bg_clauses, normalize clause maps)
 

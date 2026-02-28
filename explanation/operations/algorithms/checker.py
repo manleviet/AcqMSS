@@ -11,7 +11,7 @@ import os
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
-from typing import List, Protocol, runtime_checkable
+from typing import List, Optional, Protocol, runtime_checkable
 
 from pysat.formula import CNF
 from pysat.solvers import Solver
@@ -48,6 +48,15 @@ class ConsistencyChecker(ABC):
     @abstractmethod
     def is_consistent(self, set_c: List) -> bool:
         """Check if the given CNF formula is consistent."""
+        pass
+
+    @abstractmethod
+    def get_model(self) -> Optional[List[int]]:
+        """Return SAT model from last successful is_consistent() call.
+
+        Only valid after is_consistent() returned True.
+        Returns None if last check was UNSAT or no check performed.
+        """
         pass
 
     @count_calls(key="is_consistent_test_cases_calls")
@@ -112,6 +121,12 @@ class IncrementalPySATChecker(ConsistencyChecker):
 
         return result
 
+    def get_model(self) -> Optional[List[int]]:
+        """Return model from persistent solver."""
+        if self.solver is None:
+            return None
+        return self.solver.get_model()
+
     def copy(self):
         return IncrementalPySATChecker(
             self.set_kb, self.assumptions, self.solver_name, self.profiler
@@ -143,6 +158,7 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
         self.solver_name = solver_name
         self.set_kb = set_kb
         self.assumptions = assumptions
+        self._cached_model: Optional[List[int]] = None
 
     @count_calls(key="is_consistent_calls")
     def is_consistent(self, set_c: List) -> bool:
@@ -153,9 +169,14 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
         result = solver.solve(assumptions=final_assumptions)
 
         self.profiler.record_time("solver_time", solver.time())
+        self._cached_model = solver.get_model() if result else None
         solver.delete()
 
         return result
+
+    def get_model(self) -> Optional[List[int]]:
+        """Return cached model from last is_consistent() call."""
+        return self._cached_model
 
     def copy(self):
         return NonIncrementalPySATChecker(
@@ -176,6 +197,7 @@ class SAT4JChecker(ConsistencyChecker):
         self.timeout = timeout
         self.set_kb = set_kb or []
         self.assumptions = assumptions or []
+        self._cached_model: Optional[List[int]] = None
 
         if not os.path.exists(jar_path):
             raise FileNotFoundError(
@@ -208,7 +230,21 @@ class SAT4JChecker(ConsistencyChecker):
                 except Exception as e:
                     raise RuntimeError(f"Failed to run SAT4J: {e}")
 
-        return "SATISFIABLE" in output and "UNSATISFIABLE" not in output
+        is_sat = "SATISFIABLE" in output and "UNSATISFIABLE" not in output
+        self._cached_model = self._parse_model(output) if is_sat else None
+        return is_sat
+
+    def _parse_model(self, output: str) -> Optional[List[int]]:
+        """Parse SAT model from SAT4J output (v lines)."""
+        model = []
+        for line in output.splitlines():
+            if line.startswith('v '):
+                model.extend(int(x) for x in line[2:].split() if x != '0')
+        return model if model else None
+
+    def get_model(self) -> Optional[List[int]]:
+        """Return cached model from last is_consistent() call."""
+        return self._cached_model
 
     def copy(self):
         return SAT4JChecker(

@@ -50,6 +50,7 @@ class QuAcqModel:
         self._task: Optional[QuAcqTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
 
+        self.features: Dict[int, str] = {}  # id -> feature's name
         self.pos_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
         self.neg_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
 
@@ -122,7 +123,6 @@ class QuAcqModel:
         Returns:
             List of assumption IDs for the given feature assignments
         """
-        task = self._require_task()
         return [self.pos_assignment_to_assumption[feat] if val
                 else self.neg_assignment_to_assumption[feat]
                 for feat, val in config.items()
@@ -163,3 +163,12 @@ class QuAcqModel:
             if name in self.constraint_map:
                 clauses.extend(self.constraint_map[name])
         return names, clauses
+
+    def model_to_config(self, model):
+        """Convert SAT model to configuration dictionary."""
+        config = {}
+        for lit in model:
+            var = abs(lit)
+            if var in self.features:
+                config[self.features[var]] = lit > 0
+        return config

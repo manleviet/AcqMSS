@@ -54,12 +54,6 @@ def _learn_params_from_task(task) -> dict:
         set_c=task.set_c,
         set_b=task.set_b,
         negation_map=task.negation_map,
-        background_clauses=task.background_clauses,
-        feature_ids=task.feature_ids,
-        id_to_feature=task.id_to_feature,
-        constraint_clauses=task.constraint_clauses,
-        negated_clauses=task.negated_clauses,
-        root_assumption=task.set_b[0] if task.set_b else None,
     )
 
 
@@ -236,7 +230,9 @@ class QuAcqRunner(BaseRunner):
         else:
             learn_oracle = self.oracle
 
-        query_provider = QueryProvider(self.solver_name, profiler_instance=profiler)
+        query_provider = QueryProvider(checker=checker,
+                                       model=self.model,
+                                       profiler_instance=profiler)
         discrim_gen = DiscriminatingGenerator(
             background_clauses=task.background_clauses,
             constraint_clauses=task.constraint_clauses,
@@ -257,9 +253,10 @@ class QuAcqRunner(BaseRunner):
         """Run example-based learning via QuAcq.learn(mode=...)."""
         mixed_examples = list(positive_examples) + list(negative_examples)
         query_provider = QueryProvider(
-            self.solver_name,
             pool=mixed_examples,
             seed=shuffle_seed,
+            checker=checker,
+            model=self.model,
             profiler_instance=profiler)
 
         # For example_first, also need discrim_gen
