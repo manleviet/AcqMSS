@@ -8,7 +8,7 @@ to QuAcqTaskPreparation, produces QuAcqTask.
 from __future__ import annotations
 
 from dataclasses import field
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from explanation.models.task_preparation import DescriptionProvider
 
@@ -127,6 +127,14 @@ class QuAcqModel:
                 else self.neg_assignment_to_assumption[feat]
                 for feat, val in config.items()
                 if feat in self.pos_assignment_to_assumption]
+
+    def get_constraint_vars(self, assumption_id: int) -> Set[str]:
+        """Get feature names for constraint by assumption ID."""
+        task = self._require_task()
+        clauses = task.constraint_clauses.get(assumption_id, [])
+        return {task.id_to_feature[abs(lit)]
+                for clause in clauses for lit in clause
+                if abs(lit) in task.id_to_feature}
 
     def prepare(self, oracle: 'FeatureModelOracle') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.

@@ -193,8 +193,7 @@ class TestQueryProvider:
             remaining_bias=remaining_bias,
             learned_kb=[],
             set_b=task.set_b,
-            negation_map=task.negation_map,
-            id_to_feature=task.id_to_feature)
+            negation_map=task.negation_map)
 
         if task.set_c:
             if query is not None:
@@ -219,10 +218,8 @@ class TestQuAcq:
 
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
-            background_clauses=task.background_clauses,
-            constraint_clauses=task.constraint_clauses,
-            negated_clauses=task.negated_clauses,
-            id_to_feature=task.id_to_feature)
+            checker=checker, model=prepared_model,
+            root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
                                    model=prepared_model)
@@ -242,12 +239,12 @@ class TestQuAcq:
 
     def test_quacq_empty_bias(self, oracle):
         """Test QuAcq with empty bias converges immediately."""
+        checker = _minimal_checker()
         query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
-            background_clauses=[], constraint_clauses={},
-            negated_clauses={}, id_to_feature={1: 'root'})
+            checker=checker, model=None, root_assumption=0)
 
-        quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_provider, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
@@ -283,10 +280,8 @@ class TestIntegration:
             checker = CheckerFactory.create_from_model(model)
             query_provider = QueryProvider(checker=checker, model=model)
             discrim_gen = DiscriminatingGenerator(
-                background_clauses=task.background_clauses,
-                constraint_clauses=task.constraint_clauses,
-                negated_clauses=task.negated_clauses,
-                id_to_feature=task.id_to_feature)
+                checker=checker, model=model,
+                root_assumption=task.set_b[0])
 
             quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
             result = quacq.learn(
@@ -456,10 +451,8 @@ class TestQuAcqWithAssumptionIDs:
 
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
-            background_clauses=task.background_clauses,
-            constraint_clauses=task.constraint_clauses,
-            negated_clauses=task.negated_clauses,
-            id_to_feature=task.id_to_feature)
+            checker=checker, model=prepared_model,
+            root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
                                    model=prepared_model)
@@ -481,12 +474,12 @@ class TestQuAcqWithAssumptionIDs:
 
     def test_quacq_empty_bias_quacq_task(self, oracle):
         """Test QuAcq with empty QuAcqTask converges immediately."""
+        checker = _minimal_checker()
         query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
-            background_clauses=[], constraint_clauses={},
-            negated_clauses={}, id_to_feature={1: 'root'})
+            checker=checker, model=None, root_assumption=0)
 
-        quacq = QuAcq.for_oracle(_minimal_checker(), oracle, query_provider, discrim_gen)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
             feature_ids={'root': 1}, id_to_feature={1: 'root'},
@@ -504,10 +497,8 @@ class TestQuAcqWithAssumptionIDs:
 
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
-            background_clauses=task.background_clauses,
-            constraint_clauses=task.constraint_clauses,
-            negated_clauses=task.negated_clauses,
-            id_to_feature=task.id_to_feature)
+            checker=checker, model=prepared_model,
+            root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
                                    model=prepared_model)
@@ -613,8 +604,7 @@ class TestQueryProviderWithQuAcqTask:
             remaining_bias=remaining_bias,
             learned_kb=[],
             set_b=task.set_b,
-            negation_map=task.negation_map,
-            id_to_feature=task.id_to_feature)
+            negation_map=task.negation_map)
 
         if query is not None:
             assert isinstance(query, dict)
@@ -634,8 +624,7 @@ class TestQuAcqFactories:
         checker = _minimal_checker()
         query_provider = QueryProvider()
         discrim_gen = DiscriminatingGenerator(
-            background_clauses=[], constraint_clauses={},
-            negated_clauses={}, id_to_feature={})
+            checker=checker, model=None, root_assumption=0)
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         assert quacq.oracle is oracle
         assert quacq.query_provider is query_provider

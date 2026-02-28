@@ -17,6 +17,7 @@ from typing import List, Dict, Optional, Tuple, Literal
 from conacq.oracle import Oracle
 from conacq.example_generators import QueryProvider
 from .findscope import FindScope
+from .sat_utils import prune_rejecting
 from .findc import FindC
 from .discriminating_generator import DiscriminatingGenerator
 from conacq.algorithms.acqmss.reduce import Reduce
@@ -24,6 +25,7 @@ from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
+from .quacq_model import QuAcqModel
 
 
 @dataclass
@@ -56,7 +58,7 @@ class QuAcq:
 
     def __init__(self, checker: ConsistencyChecker,
                  oracle: Oracle,
-                 model=None,
+                 model: Optional[QuAcqModel]=None,
                  query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
                  profiler_instance: AbstractProfiler = None) -> None:
@@ -140,7 +142,8 @@ class QuAcq:
                 n_queries += 1
                 query_history.append((config.copy(), answer, source))
 
-        all_variables = set(feature_ids.keys())
+        # all_variables = set(feature_ids.keys())
+        all_variables = set(self.model.variables.keys())
 
         logging.info('QuAcq starting: Bias=%d constraints, mode=%s', len(remaining_bias), mode)
 
@@ -187,8 +190,7 @@ class QuAcq:
 
             # Step 3: Process answer
             if answer:
-                pruned = self._prune_rejecting_constraints(
-                    remaining_bias, query, set_b[0])
+                pruned = prune_rejecting(self.checker, self.model, remaining_bias, query, set_b[0])
                 logging.debug('Pruned %d constraints', len(pruned))
             else:
                 if n_queries >= max_queries:
@@ -267,22 +269,3 @@ class QuAcq:
             raise ValueError("Oracle mode requires discriminating_generator (use for_oracle())")
         if mode == 'example_first' and self.discriminating_generator is None:
             raise ValueError("example_first mode requires discriminating_generator")
-
-    @count_calls('prune_calls')
-    def _prune_rejecting_constraints(self,
-                                     remaining_bias: set,
-                                     positive_example: Dict[str, bool],
-                                     root_assumption: int) -> List[int]:
-        """Remove constraints from remaining_bias that reject the positive example.
-
-        Uses SAT-based consistency checking with Part 4 feature assignment
-        assumptions, catching implied violations beyond pure Boolean evaluation.
-        """
-        config_assumptions = self.model.config_to_assumptions(positive_example)
-        base = [root_assumption] + config_assumptions
-        pruned = []
-        for aid in list(remaining_bias):
-            if not self.checker.is_consistent(base + [aid]):
-                pruned.append(aid)
-        remaining_bias -= set(pruned)
-        return pruned

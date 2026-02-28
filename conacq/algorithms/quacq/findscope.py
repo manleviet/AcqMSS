@@ -12,6 +12,7 @@ import logging
 from typing import List
 
 from explanation.operations.algorithms.checker import ConsistencyChecker
+from .sat_utils import prune_rejecting
 
 
 class FindScope:
@@ -84,23 +85,11 @@ class FindScope:
             R: set,
             root_assumption: int,
     ) -> None:
-        """Prune bias constraints that reject partial assignment e[R].
-
-        Uses SAT-based consistency checking: a constraint is pruned if
-        KB + root + partial_assignment + constraint is UNSAT.
-        """
+        """Prune bias constraints that reject partial assignment e[R]."""
         partial = {k: e[k] for k in R if k in e}
         if not partial:
             return
 
-        config_assumptions = self.model.config_to_assumptions(partial)
-        base = [root_assumption] + config_assumptions
-
-        pruned = []
-        for c_id in list(remaining_bias):
-            if not self.checker.is_consistent(base + [c_id]):
-                pruned.append(c_id)
-
+        pruned = prune_rejecting(self.checker, self.model, remaining_bias, partial, root_assumption)
         if pruned:
-            remaining_bias -= set(pruned)
             logging.debug('FindScope pruned %d constraints from partial query', len(pruned))

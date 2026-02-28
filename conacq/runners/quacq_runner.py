@@ -234,11 +234,9 @@ class QuAcqRunner(BaseRunner):
                                        model=self.model,
                                        profiler_instance=profiler)
         discrim_gen = DiscriminatingGenerator(
-            background_clauses=task.background_clauses,
-            constraint_clauses=task.constraint_clauses,
-            negated_clauses=task.negated_clauses,
-            id_to_feature=task.id_to_feature,
-            solver_name=self.solver_name)
+            checker=checker,
+            model=self.model,
+            root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, learn_oracle, query_provider, discrim_gen,
                                   model=self.model, profiler=profiler)
@@ -263,11 +261,9 @@ class QuAcqRunner(BaseRunner):
         discrim_gen = None
         if mode == 'example_first':
             discrim_gen = DiscriminatingGenerator(
-                background_clauses=task.background_clauses,
-                constraint_clauses=task.constraint_clauses,
-                negated_clauses=task.negated_clauses,
-                id_to_feature=task.id_to_feature,
-                solver_name=self.solver_name)
+                checker=checker,
+                model=self.model,
+                root_assumption=task.set_b[0])
 
         quacq = QuAcq(
             checker=checker,

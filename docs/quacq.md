@@ -184,7 +184,7 @@ QueryProvider(
 
 **Core Implementation**:
 - `conacq/algorithms/quacq/quacq.py` — QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, assumption-based learn())
-- `conacq/algorithms/quacq/sat_utils.py` — Standalone utility functions (config_to_assumptions, violates_clauses, get_kb_clauses) — NEW
+- `conacq/algorithms/quacq/sat_utils.py` — Shared SAT utilities (config/scope conversion, consistency pruning, constraint clause extraction)
 - `conacq/algorithms/quacq/findscope.py` — FindScope (Algorithm 2, 134 LOC, oracle.is_valid() instead of SAT)
 - `conacq/algorithms/quacq/findc.py` — FindC (Algorithm 3, oracle.is_valid() + DiscriminatingGenerator narrowing)
 - `conacq/algorithms/quacq/discriminating_generator.py` — DiscriminatingGenerator (66 LOC, C_L[Y] + BG)

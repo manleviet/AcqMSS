@@ -33,7 +33,7 @@ Primary constraint discovery algorithms:
 | File | LOC | Purpose |
 |------|-----|---------|
 | `quacq.py` | 439 | QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, direct param learn()) |
-| `sat_utils.py` | 93 | Standalone SAT utilities: config_to_assumptions, violates_clauses, get_kb_clauses — NEW |
+| `sat_utils.py` | 123 | Standalone SAT utilities for QuAcq: constraint filtering, scope matching, assumption conversion, consistency pruning |
 | `quacq_model.py` | ~93 | QuAcqModel: dual to ConGenModel for interactive learning. Stores negated_constraint_map + next_available_id (computed at build time). |
 | `quacq_model_builder.py` | ~74 | QuAcqModelBuilder: fluent builder, requires oracle. build() computes negation (idempotent), auto-prepares on build(). |
 | `task_preparation.py` | ~123 | QuAcqTask + QuAcqTaskPreparation: pure data container + preparation |
@@ -45,7 +45,7 @@ Primary constraint discovery algorithms:
 
 **Changes (This Session - QuAcqTask Cleanup + DI Refactor - commits 260228-e2b68c8)**:
 - ✅ **Cleaned QuAcqTask** — Removed 7 dead methods (~80 LOC), now pure data container (fields only)
-- ✅ **Moved behavior to sat_utils.py** — Standalone functions: config_to_assumptions, violates_clauses, get_kb_clauses
+- ✅ **Moved behavior to sat_utils.py** — Shared SAT utilities: config_to_assumptions, violates_clauses, get_kb_clauses, prune_rejecting, constraint scope matching
 - ✅ **Removed DescriptionProvider** from QuAcq.learn() — Moved to runner layer (QuAcqRunner.resolve_kb())
 - ✅ Refactored `QuAcq.__init__()` — DI pattern (oracle, query_provider, discriminating_generator, profiler)
 - ✅ Added `QuAcq.for_oracle()` factory — discrim_gen required

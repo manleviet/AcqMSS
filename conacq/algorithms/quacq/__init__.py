@@ -25,22 +25,14 @@ Example Usage:
              .with_oracle(oracle)
              .build())
     task = model.task
+    checker = CheckerFactory.create_from_model(model)
     query_provider = QueryProvider()
     discrim_gen = DiscriminatingGenerator(
-        background_clauses=task.background_clauses,
-        constraint_clauses=task.constraint_clauses,
-        negated_clauses=task.negated_clauses,
-        id_to_feature=task.id_to_feature)
-    checker = CheckerFactory.create_from_model(model)
+        checker=checker, model=model, root_assumption=task.set_b[0])
     quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
     result = quacq.learn(
         set_c=task.set_c, set_b=task.set_b,
-        negation_map=task.negation_map,
-        background_clauses=task.background_clauses,
-        feature_ids=task.feature_ids, id_to_feature=task.id_to_feature,
-        constraint_clauses=task.constraint_clauses,
-        negated_clauses=task.negated_clauses,
-        mode='oracle')
+        negation_map=task.negation_map, mode='oracle')
 """
 
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation
