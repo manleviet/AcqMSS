@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-28 (QuAcq DescriptionProvider refactoring: removed from learn(), moved to runner resolve_kb())
+**Last Updated**: 2026-02-28 (QuAcqTask cleanup: pure data container, DI refactoring, unified shuffle-after-prepare)
 
 ## High-Level Overview
 
@@ -168,31 +168,15 @@ examples = ExampleProvider(...)  # Canonical import
 4. **ExampleProvider** — Batch example interface for learning (moved from oracle/)
 
 **Query Generation**:
-- **QueryGenerator** — Discriminative query generation for interactive learning (moved from algorithms/quacq/)
-  - Implements greedy selection of queries that maximize constraint distinction
-  - Supports priority strategies: `clause_count_priority`, `literal_count_priority`
-  - Lazy-loaded via `__getattr__` to avoid circular dependencies
+- **QueryGenerator** — Discriminative query generation (moved from algorithms/quacq/)
 
 #### conacq/oracle/ — Oracle Implementations
 
 **Purpose**: Unified oracle interface for configuration validation.
 
 **Oracle ABC** (`base.py`):
-- Minimal interface: only `is_valid()` and `ask()` (alias)
-- FM metadata and SAT capabilities live on concrete implementations
-- All oracle implementations must inherit from `Oracle` ABC
-
-```python
-class Oracle(ABC):
-    @abstractmethod
-    def is_valid(self, assignments: Dict[str, bool]) -> bool:
-        """Check if configuration is valid."""
-        pass
-    
-    def ask(self, query: Dict[str, bool]) -> bool:
-        """Alias for is_valid()."""
-        return self.is_valid(query)
-```
+- Minimal interface: `is_valid(assignments)` and `ask()` (alias) only
+- FM-specific methods on concrete implementations
 
 **Key Classes**:
 
@@ -227,8 +211,7 @@ class Oracle(ABC):
 
 **Architecture Notes**:
 - Unified `Oracle` ABC with FM-specific extensions in concrete classes
-- FM metadata decoupled via `FMData` (passed explicitly to decouple callers)
-- `complete_configuration()` uses SAT-based config completion with fallback
+- FM metadata decoupled via `FMData` (explicit passing)
 
 **Critical Detail**: Feature ID consistency
 - `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)
@@ -372,33 +355,9 @@ class QuAcqTask(DiagnosisTask):
 #### explanation/operations/ — Diagnosis Algorithms
 
 **Solver Abstraction Layer**:
-```python
-class ConsistencyChecker(ABC):
-    """Abstract SAT checker interface (immutable after construction).
-
-    Both incremental and non-incremental use assumption-based data representation:
-    - set_c: List[int] - assumption IDs to enable
-    - set_kb: CNF clauses with assumption literals
-    - assumptions: List of all possible assumption IDs
-    """
-
-    @abstractmethod
-    def is_consistent(self, set_c: List[int]) -> bool:
-        """Check if set_c assumptions are consistent with KB."""
-        pass
-
-class IncrementalPySATChecker(ConsistencyChecker):
-    """Persistent solver with assumption-based solving.
-    - ~50x faster than non-incremental
-    - Use case: ConGen with many consistency checks
-    """
-
-class NonIncrementalPySATChecker(ConsistencyChecker):
-    """Fresh solver per call with assumption-based data.
-    - Memory-light baseline for comparison
-    - Use case: Verification and comparison
-    """
-```
+- `ConsistencyChecker(ABC)` — Abstract interface; both incremental/non-incremental use assumption-based data
+- `IncrementalPySATChecker` — Persistent solver (~50x faster, ideal for ConGen)
+- `NonIncrementalPySATChecker` — Fresh solver per call (baseline for comparison)
 
 **Diagnosis Algorithms**: FastDiag (minimal diagnosis via HSDAG), QuickXPlain (minimal conflicts), KBDiag (kernel-based, used by ACQMSS), WipeOutR (domain-specific), HSDAG (tree optimization)
 
@@ -745,27 +704,11 @@ Result: QuAcqResult with assumption IDs + query history
 
 ## Integration Points
 
-### Between conacq/ and explanation/
-
-```python
-from explanation.operations.algorithms import KBDiag, QuickXPlain
-from explanation.operations import Profiler
-
-class ACQMSS:
-    def __init__(self, checker, profiler=None):
-        self.checker = checker  # ConsistencyChecker from explanation/
-        self.profiler = profiler or NullProfiler()
-
-    def acquire(self, bias, examples):
-        mss = kbdiag(self.model, self.checker)
-        return mss
-```
-
-### Shared Infrastructure
-
-- **Profiling**: Global profiler pattern (optional, minimal overhead when disabled)
-- **Consistency Checking**: Pluggable ConsistencyChecker for solver abstraction
-- **Model Representation**: Unified CNF format (list[list[int]]) shared across components
+conacq/ uses explanation/ components:
+- **ACQMSS**: Uses KBDiag from explanation.operations.algorithms
+- **Consistency Checking**: Pluggable ConsistencyChecker abstraction (Incremental, NonIncremental, SAT4J)
+- **Profiling**: Optional global profiler pattern (minimal overhead when disabled)
+- **CNF Format**: Unified list[list[int]] representation across all components
 
 **Feature ID Consistency (CRITICAL)**:
 
@@ -846,9 +789,7 @@ tests/
 └── test_*.py                # Other component tests
 ```
 
-### Test Features
-
-Parameterized tests run with both Incremental and NonIncrementalPySATChecker. Control via `ENABLED_TESTS`/`ENABLED_PARAMS` dicts.
+Tests run in both Incremental and NonIncremental modes. Control via `ENABLED_TESTS`/`ENABLED_PARAMS` dicts.
 
 ## Dependencies
 

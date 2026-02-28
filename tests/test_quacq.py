@@ -355,7 +355,7 @@ class TestQuAcqTask:
         task = prepared_model.task
         features = list(task.feature_ids.keys())
         config = {features[0]: True, features[1]: False}
-        assumptions = task.config_to_assumptions(config)
+        assumptions = config_to_assumptions(config, task.feature_ids)
         assert len(assumptions) == 2
         assert all(isinstance(a, int) for a in assumptions)
 
@@ -363,7 +363,7 @@ class TestQuAcqTask:
         """Test getting KB clauses from learned constraints."""
         task = prepared_model.task
         aid = task.set_c[0]
-        clauses = task.get_kb_clauses([aid])
+        clauses = get_kb_clauses([aid], task.constraint_clauses)
         assert isinstance(clauses, list)
         assert len(clauses) > 0
 

@@ -1,6 +1,6 @@
 # AcqMSS Documentation
 
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-02-28
 
 Welcome to the comprehensive documentation for AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets). This directory contains technical documentation for developers, researchers, and contributors.
 
@@ -113,7 +113,7 @@ Project status and future planning:
 
 ### quacq.md
 **Purpose**: QuAcq algorithm documentation (IJCAI 2013)
-**Length**: 193 LOC
+**Length**: 377 LOC
 
 Paper-based implementation guide:
 - Overview of QuAcq algorithm (partial queries for active learning)
@@ -269,18 +269,18 @@ congen.md (ALGORITHM DETAILS)
 
 ## Documentation Statistics
 
-| File | LOC | Size | Status |
-|------|-----|------|--------|
-| code-standards.md | 710 | 24 KB | ✅ Updated 2026-02-27 |
-| codebase-summary.md | 567 | 22 KB | ✅ Updated 2026-02-27 |
-| system-architecture.md | 800 | 22 KB | ✅ Updated 2026-02-27 (trimmed to 800) |
-| congen.md | 389 | 17 KB | ✅ Updated 2026-02-27 |
-| README.md | 368 | 10 KB | ✅ Updated 2026-02-27 |
-| project-overview-pdr.md | 357 | 17 KB | ✅ Updated 2026-02-27 |
-| project-roadmap.md | 365 | 14 KB | ✅ Updated 2026-02-27 |
-| quacq.md | 355 | 7 KB | ✅ Updated 2026-02-27 |
-| eval-pipeline.md | 346 | 15 KB | ✅ Current |
-| **TOTAL** | **4,257** | **148 KB** | ✅ **All under 800 LOC** |
+| File | LOC | Status |
+|------|-----|--------|
+| code-standards.md | 774 | ✅ Updated 2026-02-28 |
+| codebase-summary.md | 589 | ✅ Updated 2026-02-28 |
+| system-architecture.md | 799 | ✅ Updated 2026-02-28 (trimmed) |
+| congen.md | 389 | ✅ Current |
+| README.md | 369 | ✅ Updated 2026-02-28 |
+| project-overview-pdr.md | 357 | ✅ Current |
+| project-roadmap.md | 365 | ✅ Updated 2026-02-28 |
+| quacq.md | 377 | ✅ Updated 2026-02-28 |
+| eval-pipeline.md | 346 | ✅ Current |
+| **TOTAL** | **4,359** | ✅ **All ≤800 LOC** |
 
 All files are within size constraints (≤800 LOC per file) and follow documentation standards.
 
@@ -356,14 +356,15 @@ Documentation is updated when:
 - **New features added** — Document architecture and usage
 
 **Version History:**
-- v1.5 (2026-02-18): ConGenModelBuilder auto-prepare pattern, BGData class, runner details, cross-validation refactoring documentation
-- v1.4 (2026-02-17): Updated for oracle refactoring (ABC slimmed, FMData introduced, FeatureModelOracle extended), runners/ package move, CheckerFactory import path correction
+- v1.6 (2026-02-28): QuAcqTask cleanup, DescriptionProvider removal, DI refactoring, system-architecture.md trimmed to 799 LOC
+- v1.5 (2026-02-18): ConGenModelBuilder auto-prepare pattern, BGData class, runner details
+- v1.4 (2026-02-17): Oracle refactoring (ABC slimmed, FMData, FeatureModelOracle extended)
 - v1.3 (2026-02-16): Added congen.md, cross-linked all docs
-- v1.2 (2026-02-16): Update for variable naming refactor (neg_c_map → negation_map), CheckerFactory API update
-- v1.1 (2026-02-13): Comprehensive update with oracle/ package, Phase 5 completion, file size trim
+- v1.2 (2026-02-16): Variable naming refactor (neg_c_map → negation_map)
+- v1.1 (2026-02-13): Comprehensive update with oracle/ package, Phase 5 completion
 - v1.0 (2026-02-12): Initial comprehensive documentation
 
 ---
 
-**Documentation Status**: Phase 6 (Documentation & Polish) — Dead Code Cleanup Complete
-**All files updated**: 2026-02-27
+**Documentation Status**: Phase 6 (Documentation & Polish) — QuAcqTask Cleanup Complete
+**All files updated**: 2026-02-28

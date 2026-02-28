@@ -1,6 +1,6 @@
 # AcqMSS Project Roadmap
 
-**Last Updated**: 2026-02-25
+**Last Updated**: 2026-02-28
 
 ## Executive Summary
 
@@ -117,27 +117,25 @@ AcqMSS is a mature research system with core functionality fully implemented and
 **Status**: Documentation updates in progress
 
 **Completed**:
-- ✅ Codebase summary updated with oracle/ package, runners/ move, BGData class (27 LOC), and accurate LOC counts (~20,900)
-- ✅ System architecture updated with oracle architecture, FMData, BGData, and checker interface details
-- ✅ Code standards trimmed to 694 LOC (under 800 limit), CheckerFactory import path corrected, added CheckerModel protocol documentation
+- ✅ QuAcqTask cleanup (commit e2b68c8): Pure data container (80 LOC removed), behavior moved to sat_utils.py
+- ✅ DescriptionProvider removed from QuAcq.learn() — Moved to runner layer (resolve_kb() pattern)
+- ✅ DI refactoring complete (commit b038a74): Aligned QuAcq DI with ConGen pattern
+- ✅ Unified shuffle-after-prepare pattern (commit 2f0788d): Both runners follow same lifecycle
+- ✅ Codebase summary updated (commit 260228): QuAcqTask cleanup, DI refactoring, accurate LOC counts
+- ✅ System architecture updated with oracle architecture, FMData, BGData, and checker interface
+- ✅ Code standards trimmed to 694 LOC, CheckerFactory import path corrected
 - ✅ Project overview updated with FindScope/FindC, oracle module, Phase 5 completion
-- ✅ Project roadmap updated with Phase 5 completion and metrics
 - ✅ Oracle refactoring documented (ABC slimmed, FMData introduced, FeatureModelOracle extended)
 - ✅ Runners package move documented (ConGenRunner, QuAcqRunner in conacq/runners/)
-- ✅ README.md updated (package name conacq, runners in structure)
-- ✅ quacq.md fixed (GenerateNE internal to prepare(), runners path corrected)
-- ✅ ConGenModelBuilder auto-prepare pattern documented (commit f3c501e)
-- ✅ BGData class documented (commit b9dd90e)
-- ✅ Cross-validation refactoring documented (commit 11366df)
 - ✅ All doc imports verified (conacq.* not acqmss.*)
-- ✅ Pipeline simplified: removed evaluate_congen_results.py + evaluate_congen_config.toml; run_congen_eval.py now CV-only; extract_results.py extended with fold metrics and DRY-refactored (1,139→621 LOC)
 
 **In Progress**:
-- 📝 Documentation updates for QuAcq package file consolidation (commit 260227)
-  - ✅ Merged QuAcqTaskPreparation + QuAcqTask into task_preparation.py
-  - ✅ Merged QuAcqResult into quacq.py
-  - ✅ Deleted task.py (InteractiveTask) + learner.py (InteractiveLearner)
-  - ✅ Simplified _task_compat.py (removed deprecated fallback branches)
+- 📝 Documentation updates for QuAcqTask cleanup and DI refactoring (commit 260228)
+  - ✅ quacq.md updated: QuAcqTask pure data, DescriptionProvider moved to runner
+  - ✅ codebase-summary.md updated: QuAcqTask cleanup notes, LOC counts
+  - 🔄 system-architecture.md: Trimming to ≤800 LOC, updating for DI/shuffle patterns
+  - 🔄 project-roadmap.md: Phase 6 updates, date to 2026-02-28
+  - 🔄 README.md: LOC stats, dates, Phase 6 status
 
 **Planned**:
 - 📝 API documentation (Sphinx/pdoc integration)
@@ -360,6 +358,6 @@ pytest tests/test_diagnosis.py -k "with_profiling" -v
 
 ---
 
-**Document Version**: 1.2
-**Last Updated**: 2026-02-25
+**Document Version**: 1.3
+**Last Updated**: 2026-02-28
 **Maintained By**: Development Team

@@ -10,16 +10,15 @@ Builds model once in __init__(), re-prepares per run() for fresh task.
 
 import logging
 import random
-import time
 import tracemalloc
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
 
+from conacq.example_generators import QueryGenerator, ExampleProvider
 from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
 from ..algorithms import QuAcq
 from ..algorithms.quacq.discriminating_generator import DiscriminatingGenerator
-from conacq.example_generators import QueryGenerator, ExampleProvider
 
 
 @dataclass
@@ -33,7 +32,7 @@ class QuAcqRunResult(BaseRunResult):
     n_queries: int = 0
     convergence_reason: str = ''
 
-    # Query history: (config, answer, source) tuples for evaluation pipeline
+    # Query history: (config, answer, source) tuples for progressive pipeline
     query_history: List[Tuple[Dict[str, bool], bool, str]] = field(default_factory=list)
 
     def to_dict(self) -> dict:

@@ -1,6 +1,6 @@
 # QuAcq - Constraint Acquisition via Partial Queries (IJCAI 2013)
 
-**Last Updated**: 2026-02-28 (DescriptionProvider refactoring: removed from learn(), moved to runner resolve_kb())
+**Last Updated**: 2026-02-28 (QuAcqTask cleanup: pure data container, DescriptionProvider moved to runner)
 
 **Paper:** Bessiere, Coletta, Hebrard, Katsirelos, Lazaar, Narodytska, Quimper, Walsh
 
@@ -217,9 +217,9 @@ Assumption ID Layout (shared between ConGen and QuAcq):
   Part 6: NE pairs (original + negated) [ConGen, from GenerateNE]
 
 Key Classes (in conacq/algorithms/quacq/):
-- QuAcqTask(DiagnosisTask): Assumption-based task with interactive learning state
+- QuAcqTask(DiagnosisTask): Pure data container for interactive learning state (no methods)
   - Inherited from DiagnosisTask: set_kb, assumptions, set_b, set_c, negation_map
-  - Interactive-specific:
+  - Interactive-specific fields:
     - bias: Set[int] — Remaining bias constraint assumption IDs
     - learned_kb: List[int] — Discovered constraint assumption IDs
     - background_clauses: List[List[int]] — Raw BG CNF (no guards; for SAT violation checking)
@@ -227,6 +227,7 @@ Key Classes (in conacq/algorithms/quacq/):
     - negated_clauses: Dict[int, List[List[int]]] — Negated constraint CNF by assumption ID
     - feature_ids: Dict[str, int] — Feature name → SAT variable ID
     - id_to_feature: Dict[int, str] — SAT variable ID → feature name
+  - **Note**: Behavior (algorithms) moved to sat_utils.py standalone functions, not task methods
 - QuAcqModel: QuAcq dual to ConGenModel (quacq_model.py)
 - QuAcqModelBuilder: Fluent builder, auto-prepares on build() (quacq_model_builder.py)
 - QuAcqTaskPreparation: Prepares QuAcqTask via prepare_kb() (task_preparation.py)
@@ -260,7 +261,7 @@ Key Classes (in conacq/algorithms/quacq/):
 - Both use same evaluation framework (cross_validation, accuracy metrics)
 - Fair comparison via shared CV folds (fold_io.py)
 - Both support n-fold cross-validation with pre-generated folds
-- Both use `DescriptionProvider` to map assumption IDs to constraint names
+- Constraint name resolution moved to runner layer (QuAcqRunner.resolve_kb() pattern)
 
 ## Oracle Implementations
 

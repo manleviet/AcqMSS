@@ -2,7 +2,7 @@
 
 **Total Python Code**: ~21,300 lines across ~99 files (consolidated from ~104 files after QuAcq file mergers)
 **Main Packages**: conacq (~9,700 LOC) + explanation (~4,600 LOC) + apps (~3,025 LOC) + tests (~3,745 LOC)
-**Last Updated**: 2026-02-27 (FindScope/FindC paper alignment: oracle.is_valid() + DiscriminatingGenerator)
+**Last Updated**: 2026-02-28 (QuAcqTask cleanup: pure data container, DescriptionProvider removed from learn())
 
 ## Package Structure
 
@@ -32,19 +32,21 @@ Primary constraint discovery algorithms:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `quacq.py` | 439 | QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, 3-arg learn()) |
+| `quacq.py` | 439 | QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, direct param learn()) |
 | `sat_utils.py` | 93 | Standalone SAT utilities: config_to_assumptions, violates_clauses, get_kb_clauses — NEW |
 | `quacq_model.py` | ~93 | QuAcqModel: dual to ConGenModel for interactive learning. Stores negated_constraint_map + next_available_id (computed at build time). |
 | `quacq_model_builder.py` | ~74 | QuAcqModelBuilder: fluent builder, requires oracle. build() computes negation (idempotent), auto-prepares on build(). |
-| `task_preparation.py` | ~280 | QuAcqTask + QuAcqTaskPreparation: task hierarchy + preparation |
+| `task_preparation.py` | ~123 | QuAcqTask + QuAcqTaskPreparation: pure data container + preparation |
 | `_task_compat.py` | ~39 | Shared duck-typing helpers: get_clause_map(), get_negated_clauses(), get_bg_clauses() |
 | `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): oracle.is_valid() + DiscriminatingGenerator(C_L[Y]) |
 | `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): oracle.is_valid() partial queries, no SAT |
 | `discriminating_generator.py` | 66 | DiscriminatingGenerator: Paper Algorithm 3 line 5, C_L[Y] + BG, not FM |
 | `__init__.py` | ~60 | Package exports |
 
-**Changes (This Session - DI Refactor - commit 260228)**:
-- ✅ Added `sat_utils.py` — Standalone utility functions extracted from QuAcqTask
+**Changes (This Session - QuAcqTask Cleanup + DI Refactor - commits 260228-e2b68c8)**:
+- ✅ **Cleaned QuAcqTask** — Removed 7 dead methods (~80 LOC), now pure data container (fields only)
+- ✅ **Moved behavior to sat_utils.py** — Standalone functions: config_to_assumptions, violates_clauses, get_kb_clauses
+- ✅ **Removed DescriptionProvider** from QuAcq.learn() — Moved to runner layer (QuAcqRunner.resolve_kb())
 - ✅ Refactored `QuAcq.__init__()` — DI pattern (oracle, query_generator, example_provider, discriminating_generator, profiler)
 - ✅ Added `QuAcq.for_oracle()` factory — discrim_gen required
 - ✅ Added `QuAcq.for_examples()` factory — example_provider required

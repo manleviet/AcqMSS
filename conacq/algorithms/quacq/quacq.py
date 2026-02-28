@@ -37,10 +37,6 @@ class QuAcqResult:
     convergence_reason: str = ""
     query_history: List[Tuple[Dict[str, bool], bool, str]] = field(default_factory=list)
 
-    def __repr__(self):
-        return (f"QuAcqResult(n_kb={len(self.kb_assumption_ids)}, n_queries={self.n_queries}, "
-                f"convergence='{self.convergence_reason}')")
-
 
 class QuAcq:
     """
