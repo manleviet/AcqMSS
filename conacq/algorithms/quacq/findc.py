@@ -11,126 +11,126 @@ Complexity: O(|Gamma|) queries where Gamma = candidate constraints with scope.
 """
 
 import logging
-from typing import Optional, Dict, List
+from typing import Dict, List
 
 from .sat_utils import (
     config_to_assumptions, get_constraints_with_scope, violates_clauses
 )
-from explanation.operations.algorithms.profiler import AbstractProfiler
+class FindC:
+    """Finds constraint with given scope violated by example.
 
-
-def find_c(
-        e: dict,
-        scope: set,
-        constraint_clauses: Dict[int, List[List[int]]],
-        feature_ids: Dict[str, int],
-        id_to_feature: Dict[int, str],
-        remaining_bias: set,
-        record_query,
-        oracle,
-        learned_kb: list,
-        generator,
-        profiler: AbstractProfiler = None
-):
+    Oracle and generator injected at construction; per-call data passed to run().
     """
-    Find constraint with given scope violated by e.
 
-    Uses DiscriminatingGenerator to narrow down which constraint
-    in the scope is the one in the target (paper Algorithm 3).
+    def __init__(self, oracle, generator=None):
+        self.oracle = oracle
+        self.generator = generator
 
-    Args:
-        e: Negative example
-        scope: Variable scope from FindScope (set of feature names)
-        constraint_clauses: assumption_id -> raw CNF clauses
-        feature_ids: Feature name -> SAT variable ID
-        id_to_feature: SAT variable ID -> feature name
-        remaining_bias: Mutable set of remaining bias assumption IDs
-        record_query: Callback(config, answer, source) to record queries
-        oracle: Oracle with is_valid(Dict[str, bool]) -> bool
-        learned_kb: Currently learned constraint IDs (for DiscriminatingGenerator)
-        generator: DiscriminatingGenerator instance
-        profiler: Optional profiler
+    def run(
+            self,
+            e: dict,
+            scope: set,
+            constraint_clauses: Dict[int, List[List[int]]],
+            feature_ids: Dict[str, int],
+            id_to_feature: Dict[int, str],
+            remaining_bias: set,
+            record_query,
+            learned_kb: list,
+    ):
+        """
+        Find constraint with given scope violated by e.
 
-    Returns:
-        Constraint ID (int) or None
-    """
-    # Get candidate constraints: bias constraints whose scope matches
-    candidates = get_constraints_with_scope(
-        scope, remaining_bias, constraint_clauses, id_to_feature)
+        Uses DiscriminatingGenerator to narrow down which constraint
+        in the scope is the one in the target (paper Algorithm 3).
 
-    if not candidates:
-        logging.debug('FindC: no candidates with scope %s', scope)
-        return None
+        Args:
+            e: Negative example
+            scope: Variable scope from FindScope (set of feature names)
+            constraint_clauses: assumption_id -> raw CNF clauses
+            feature_ids: Feature name -> SAT variable ID
+            id_to_feature: SAT variable ID -> feature name
+            remaining_bias: Mutable set of remaining bias assumption IDs
+            record_query: Callback(config, answer, source) to record queries
+            learned_kb: Currently learned constraint IDs (for DiscriminatingGenerator)
 
-    if len(candidates) == 1:
-        return candidates[0]
+        Returns:
+            Constraint ID (int) or None
+        """
+        # Get candidate constraints: bias constraints whose scope matches
+        candidates = get_constraints_with_scope(
+            scope, remaining_bias, constraint_clauses, id_to_feature)
 
-    # Filter to constraints that actually reject e
-    rejecting = []
-    e_assumptions = config_to_assumptions(e, feature_ids)
-    assignment = {abs(lit): lit > 0 for lit in e_assumptions}
+        if not candidates:
+            logging.debug('FindC: no candidates with scope %s', scope)
+            return None
 
-    for c_id in candidates:
-        clauses = constraint_clauses.get(c_id, [])
-        if violates_clauses(clauses, assignment):
-            rejecting.append(c_id)
+        if len(candidates) == 1:
+            return candidates[0]
 
-    if not rejecting:
-        logging.debug('FindC: no rejecting constraint found')
-        return None
+        # Filter to constraints that actually reject e
+        rejecting = []
+        e_assumptions = config_to_assumptions(e, feature_ids)
+        assignment = {abs(lit): lit > 0 for lit in e_assumptions}
 
-    if len(rejecting) == 1:
-        return rejecting[0]
+        for c_id in candidates:
+            clauses = constraint_clauses.get(c_id, [])
+            if violates_clauses(clauses, assignment):
+                rejecting.append(c_id)
 
-    # Use DiscriminatingGenerator to narrow down
-    remaining = list(rejecting)
+        if not rejecting:
+            logging.debug('FindC: no rejecting constraint found')
+            return None
 
-    if generator is not None:
-        result = _narrow_with_generator(
-            remaining, remaining_bias, record_query, oracle,
-            learned_kb, generator, scope)
-        if result is not None:
-            return result
+        if len(rejecting) == 1:
+            return rejecting[0]
 
-    # If we can't discriminate further, return first remaining candidate
-    logging.debug('FindC: returning first of %d candidates', len(remaining))
-    return remaining[0]
+        # Use DiscriminatingGenerator to narrow down
+        remaining = list(rejecting)
 
+        if self.generator is not None:
+            result = self._narrow_with_generator(
+                remaining, remaining_bias, record_query,
+                learned_kb, scope)
+            if result is not None:
+                return result
 
-def _narrow_with_generator(
-        candidates: list,
-        remaining_bias: set,
-        record_query,
-        oracle,
-        learned_kb: list,
-        generator,
-        scope: set
-):
-    """Try to narrow candidates using DiscriminatingGenerator (C_L[Y])."""
-    i = 0
-    while i < len(candidates) and len(candidates) > 1:
-        c_i = candidates[i]
-        j = i + 1
-        while j < len(candidates):
-            c_j = candidates[j]
-            disc_e = generator.generate(c_i, c_j, learned_kb, scope)
-            if disc_e is None:
-                j += 1
-                continue
+        # If we can't discriminate further, return first remaining candidate
+        logging.debug('FindC: returning first of %d candidates', len(remaining))
+        return remaining[0]
 
-            is_valid = oracle.is_valid(disc_e)
-            record_query(disc_e, is_valid, 'findc')
+    def _narrow_with_generator(
+            self,
+            candidates: list,
+            remaining_bias: set,
+            record_query,
+            learned_kb: list,
+            scope: set
+    ):
+        """Try to narrow candidates using DiscriminatingGenerator (C_L[Y])."""
+        i = 0
+        while i < len(candidates) and len(candidates) > 1:
+            c_i = candidates[i]
+            j = i + 1
+            while j < len(candidates):
+                c_j = candidates[j]
+                disc_e = self.generator.generate(c_i, c_j, learned_kb, scope)
+                if disc_e is None:
+                    j += 1
+                    continue
 
-            if is_valid:
-                # c_j rejects a valid example -> c_j not in target
-                candidates.remove(c_j)
-                remaining_bias.discard(c_j)
-                # don't increment j — next element shifted into position
-            else:
-                j += 1
+                is_valid = self.oracle.is_valid(disc_e)
+                record_query(disc_e, is_valid, 'findc')
 
-            if len(candidates) == 1:
-                return candidates[0]
-        i += 1
+                if is_valid:
+                    # c_j rejects a valid example -> c_j not in target
+                    candidates.remove(c_j)
+                    remaining_bias.discard(c_j)
+                    # don't increment j — next element shifted into position
+                else:
+                    j += 1
 
-    return candidates[0] if candidates else None
+                if len(candidates) == 1:
+                    return candidates[0]
+            i += 1
+
+        return candidates[0] if candidates else None

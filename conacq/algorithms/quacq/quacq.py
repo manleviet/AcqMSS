@@ -16,8 +16,8 @@ from typing import List, Dict, Optional, Tuple, Literal
 
 from conacq.oracle import Oracle
 from conacq.example_generators import QueryProvider
-from .findscope import find_scope
-from .findc import find_c
+from .findscope import FindScope
+from .findc import FindC
 from .discriminating_generator import DiscriminatingGenerator
 from .sat_utils import (
     config_to_assumptions, violates_clauses, get_kb_clauses
@@ -71,6 +71,10 @@ class QuAcq:
 
         self.query_provider = query_provider
         self.discriminating_generator = discriminating_generator
+
+        # Internal algorithm components (DI via constructor)
+        self._find_scope = FindScope(oracle)
+        self._find_c = FindC(oracle, discriminating_generator)
 
     @classmethod
     def for_oracle(cls, checker: ConsistencyChecker,
@@ -213,28 +217,26 @@ class QuAcq:
                     convergence_reason = 'max_queries'
                     break
 
-                scope_vars = find_scope(
+                scope_vars = self._find_scope.run(
                     e=query, R=set(), Y=all_variables,
-                    ask_query=False, oracle=self.oracle,
+                    ask_query=False,
                     constraint_clauses=constraint_clauses,
                     feature_ids=feature_ids,
                     id_to_feature=id_to_feature,
                     remaining_bias=remaining_bias,
-                    record_query=record_query, profiler=self.profiler
+                    record_query=record_query,
                 )
 
                 scope = set(scope_vars)
                 if scope:
-                    c_id = find_c(
+                    c_id = self._find_c.run(
                         e=query, scope=scope,
                         constraint_clauses=constraint_clauses,
                         feature_ids=feature_ids,
                         id_to_feature=id_to_feature,
                         remaining_bias=remaining_bias,
-                        record_query=record_query, oracle=self.oracle,
+                        record_query=record_query,
                         learned_kb=learned_kb,
-                        generator=self.discriminating_generator,
-                        profiler=self.profiler
                     )
 
                     if c_id is not None:

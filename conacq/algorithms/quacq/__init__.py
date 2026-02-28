@@ -53,8 +53,8 @@ from conacq.oracle import (
     CachedOracle,
 )
 from .quacq import QuAcq, QuAcqResult
-from .findscope import find_scope
-from .findc import find_c
+from .findscope import FindScope
+from .findc import FindC
 from .discriminating_generator import DiscriminatingGenerator
 
 __all__ = [
@@ -74,8 +74,8 @@ __all__ = [
     'UserPromptOracle',
     'CachedOracle',
     # FindScope/FindC
-    'find_scope',
-    'find_c',
+    'FindScope',
+    'FindC',
     # DiscriminatingGenerator
     'DiscriminatingGenerator',
 ]
