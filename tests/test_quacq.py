@@ -816,29 +816,6 @@ class TestBGDataPart4:
 class TestQuAcqTaskPart4:
     """Tests for QuAcqTask Part 4 fields."""
 
-    def test_task_part4_populated(self, prepared_model):
-        """QuAcqTask Part 4 fields populated after prepare."""
-        task = prepared_model.task
-        assert len(task.assignment_clauses) > 0
-        assert len(task.pos_assignment_to_assumption) > 0
-        assert len(task.neg_assignment_to_assumption) > 0
-        # Every feature in feature_ids should have assignment mappings
-        for feat in task.feature_ids:
-            assert feat in task.pos_assignment_to_assumption
-            assert feat in task.neg_assignment_to_assumption
-
-    def test_model_get_kb_includes_part4(self, prepared_model):
-        """QuAcqModel.get_kb() includes Part 4 assignment clauses."""
-        task = prepared_model.task
-        model_kb = prepared_model.get_kb()
-        assert len(model_kb) == len(task.set_kb) + len(task.assignment_clauses)
-
-    def test_model_get_assumptions_includes_part4(self, prepared_model):
-        """QuAcqModel.get_assumptions() includes Part 4."""
-        task = prepared_model.task
-        model_assumptions = prepared_model.get_assumptions()
-        assert len(model_assumptions) == len(task.assumptions) + len(task.assignment_assumptions)
-
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

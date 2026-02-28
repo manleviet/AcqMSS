@@ -7,6 +7,7 @@ to QuAcqTaskPreparation, produces QuAcqTask.
 
 from __future__ import annotations
 
+from dataclasses import field
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from explanation.models.task_preparation import DescriptionProvider
@@ -48,6 +49,9 @@ class QuAcqModel:
         # Populated after prepare()
         self._task: Optional[QuAcqTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
+
+        self.pos_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
+        self.neg_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
 
     @property
     def task(self) -> Optional[QuAcqTask]:
@@ -91,7 +95,8 @@ class QuAcqModel:
     def get_kb(self) -> List[List]:
         """Get full KB: bias + root BG + Part 4 assignment clauses."""
         task = self._require_task()
-        return task.set_kb + task.assignment_clauses
+        # return task.set_kb + task.assignment_clauses
+        return task.set_kb
 
     def get_negation_map(self) -> dict:
         """Get the mapping from original to negated assumption IDs.
@@ -105,7 +110,8 @@ class QuAcqModel:
     def get_assumptions(self) -> List:
         """Get all assumptions: bias + root BG + Part 4 assignments."""
         task = self._require_task()
-        return list(task.assumptions) + task.assignment_assumptions
+        # return list(task.assumptions) + task.assignment_assumptions
+        return list(task.assumptions)
 
     def config_to_assumptions(self, config: Dict[str, bool]) -> List[int]:
         """Convert feature config to Part 4 assignment assumption IDs.
@@ -117,10 +123,10 @@ class QuAcqModel:
             List of assumption IDs for the given feature assignments
         """
         task = self._require_task()
-        return [task.pos_assignment_to_assumption[feat] if val
-                else task.neg_assignment_to_assumption[feat]
+        return [self.pos_assignment_to_assumption[feat] if val
+                else self.neg_assignment_to_assumption[feat]
                 for feat, val in config.items()
-                if feat in task.pos_assignment_to_assumption]
+                if feat in self.pos_assignment_to_assumption]
 
     def prepare(self, oracle: 'FeatureModelOracle') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.

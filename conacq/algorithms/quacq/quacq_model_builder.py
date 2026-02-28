@@ -70,6 +70,9 @@ class QuAcqModelBuilder:
             model.negated_constraint_map[f"NOT({key})"] = neg_clauses
         model.next_available_id = next_tseitin_var
 
+        model.pos_assignment_to_assumption = dict(self._oracle.get_bg_data().pos_assignment_to_assumption)
+        model.neg_assignment_to_assumption = dict(self._oracle.get_bg_data().neg_assignment_to_assumption)
+
         model.prepare(self._oracle)
         return model
 
