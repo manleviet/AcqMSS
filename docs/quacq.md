@@ -1,6 +1,6 @@
 # QuAcq - Constraint Acquisition via Partial Queries (IJCAI 2013)
 
-**Last Updated**: 2026-02-27 (FindScope/FindC IJCAI 2013 paper alignment: oracle.is_valid() + DiscriminatingGenerator)
+**Last Updated**: 2026-02-28 (DescriptionProvider refactoring: removed from learn(), moved to runner resolve_kb())
 
 **Paper:** Bessiere, Coletta, Hebrard, Katsirelos, Lazaar, Narodytska, Quimper, Walsh
 
@@ -308,7 +308,7 @@ query_gen = QueryGenerator(max_query_size=10)
 discrim_gen = DiscriminatingGenerator()
 quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
 
-# Run learning
+# Run learning (returns raw assumption IDs)
 result = quacq.learn(
     set_c=model.task.set_c,
     set_b=model.task.set_b,
@@ -324,7 +324,9 @@ result = quacq.learn(
     max_queries=1000
 )
 
-print(f"Learned KB: {result.kb_constraints}")
+# Runner layer resolves constraint names (matches ConGen pattern)
+kb_names, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
+print(f"Learned KB: {kb_names}")
 print(f"Queries: {result.n_queries}")
 ```
 
@@ -342,11 +344,11 @@ result = quacq.learn(..., mode='example_only', ...)
 result = quacq.learn(..., mode='example_first', ...)
 ```
 
-**QuAcqResult Dual Representation**:
-- `kb_constraints: List[str]` — Resolved constraint names (for human readability)
-- `kb_assumption_ids: List[int]` — Primary representation (for SAT operations)
+**QuAcqResult Representation** (NEW: Algorithm returns IDs only):
+- `kb_assumption_ids: List[int]` — Primary: learned constraints as assumption IDs (from algorithm)
+- `kb_constraints: List[str]` — Secondary: resolved names (populated by runner via `model.resolve_kb()`)
 
-Both fields are always populated in `QuAcqResult` for compatibility.
+Pattern matches ConGen: algorithm returns assumption IDs, runner resolves names.
 
 ## Cross-Validation Support
 

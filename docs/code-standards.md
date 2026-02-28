@@ -1,6 +1,6 @@
 # AcqMSS Code Standards & Guidelines
 
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-02-28 (QuAcq DescriptionProvider refactoring: removed from learn(), pattern now matches ConGen)
 
 ## Language & Environment
 
@@ -187,7 +187,7 @@ model = (DiagnosisModelBuilder()
 
 ### 3. Facade Pattern
 
-High-level interfaces hiding complexity:
+High-level interfaces hiding complexity. QuAcqRunner demonstrates the pattern with name resolution:
 
 ```python
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
@@ -195,29 +195,36 @@ from conacq.example_generators import QueryGenerator
 from conacq.oracle import FeatureModelOracle
 
 class QuAcqRunner:
-    """High-level interface for QuAcq learning (DI-based)."""
+    """High-level interface for QuAcq learning (DI-based, returns resolved KB)."""
 
-    def run(self, oracle, model, max_queries=1000):
-        """Learn constraints interactively."""
-        query_gen = QueryGenerator(max_query_size=10)
+    def run(self, positive_examples=None, negative_examples=None, mode='oracle'):
+        """Learn constraints interactively, resolve names."""
+        query_gen = QueryGenerator()
         discrim_gen = DiscriminatingGenerator()
-        quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
+        quacq = QuAcq.for_oracle(self.oracle, query_gen, discrim_gen)
 
-        return quacq.learn(
-            set_c=model.task.set_c, set_b=model.task.set_b,
-            set_kb=model.task.set_kb, negation_map=model.task.negation_map,
-            assumptions=model.task.assumptions,
-            background_clauses=model.task.background_clauses,
-            feature_ids=model.task.feature_ids, id_to_feature=model.task.id_to_feature,
-            constraint_clauses=model.task.constraint_clauses,
-            negated_clauses=model.task.negated_clauses,
-            mode='oracle', max_queries=max_queries)
+        # Algorithm returns raw assumption IDs
+        result = quacq.learn(
+            set_c=self.model.task.set_c, set_b=self.model.task.set_b,
+            set_kb=self.model.task.set_kb, negation_map=self.model.task.negation_map,
+            assumptions=self.model.task.assumptions,
+            background_clauses=self.model.task.background_clauses,
+            feature_ids=self.model.task.feature_ids, id_to_feature=self.model.task.id_to_feature,
+            constraint_clauses=self.model.task.constraint_clauses,
+            negated_clauses=self.model.task.negated_clauses,
+            mode=mode, max_queries=self.max_queries)
+
+        # Runner resolves names (matches ConGen pattern)
+        kb_names, kb_clauses = self.model.resolve_kb(result.kb_assumption_ids)
+        return QuAcqRunResult(
+            kb_constraints=kb_names, kb_clauses=kb_clauses,
+            n_kb=result.n_kb, n_queries=result.n_queries, ...)
 
 # Usage
 oracle = FeatureModelOracle('model.uvl')
 model = QuAcqModelBuilder.from_bias('bias.json').with_oracle(oracle).build()
-runner = QuAcqRunner()
-result = runner.run(oracle, model)
+runner = QuAcqRunner(bias_path, fm_path)
+result = runner.run(mode='oracle')
 ```
 
 ### 4. Template Method Pattern
@@ -275,10 +282,10 @@ class ConGen:
         return Result(mss)
 ```
 
-**QuAcq** (interactive learning with factories):
+**QuAcq** (interactive learning with DI + mode dispatch):
 ```python
 class QuAcq:
-    """Interactive learning with DI pattern and mode dispatch."""
+    """Interactive learning with DI pattern and mode dispatch (oracle/example)."""
 
     def __init__(self, oracle: Oracle,
                  query_generator: QueryGenerator = None,
@@ -295,7 +302,7 @@ class QuAcq:
     def for_oracle(cls, oracle: Oracle, query_gen: QueryGenerator,
                    discrim_gen: DiscriminatingGenerator,
                    profiler: AbstractProfiler = None) -> 'QuAcq':
-        """Factory for oracle mode — discrim_gen required."""
+        """Factory for oracle mode."""
         return cls(oracle, query_generator=query_gen,
                    discriminating_generator=discrim_gen, profiler_instance=profiler)
 
@@ -310,9 +317,12 @@ class QuAcq:
     def learn(self, set_c, set_b, set_kb, negation_map, assumptions,
               background_clauses, feature_ids, id_to_feature,
               constraint_clauses, negated_clauses,
-              mode='oracle', max_queries=1000,
-              description_provider=None) -> QuAcqResult:
-        """Run learning with injected dependencies."""
+              mode='oracle', max_queries=1000) -> QuAcqResult:
+        """Run learning (returns raw assumption IDs, no name resolution).
+
+        Runner layer resolves names via model.resolve_kb(result.kb_assumption_ids)
+        to match ConGen pattern: algorithm → IDs, runner → names.
+        """
         # Mode dispatch: 'oracle', 'example_only', or 'example_first'
         ...
 ```

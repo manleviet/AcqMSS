@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-27 (QuAcq package file consolidation: merged result.py, task_preparation.py, removed deprecated files)
+**Last Updated**: 2026-02-28 (QuAcq DescriptionProvider refactoring: removed from learn(), moved to runner resolve_kb())
 
 ## High-Level Overview
 
@@ -109,7 +109,8 @@ result = quacq.learn(
     feature_ids=model.task.feature_ids, id_to_feature=model.task.id_to_feature,
     constraint_clauses=model.task.constraint_clauses,
     negated_clauses=model.task.negated_clauses,
-    mode='oracle', max_queries=1000)  # → KB + query history
+    mode='oracle', max_queries=1000)  # → QuAcqResult with KB assumption IDs only
+# Runner resolves names: kb_names, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
 
 # Query generation and example provision
 query = QueryGenerator.generate_discriminative_query(...)  # Canonical import
@@ -717,11 +718,11 @@ Feature Model + Bias + Oracle (required for both modes)
             │   └─ Add found constraint (assumption ID) to KB
             └─ Termination: All E- processed or bias exhausted
 
-Result: QuAcqResult with dual representation + query history
-    ├─ kb_constraints: List[str] — Resolved via DescriptionProvider
-    ├─ kb_assumption_ids: List[int] — Primary representation for SAT operations
+Result: QuAcqResult with assumption IDs + query history
+    ├─ kb_assumption_ids: List[int] — Primary representation (raw from algorithm)
     ├─ query_history: List[(config, answer, source)] — Tagged queries ('main', 'findscope', 'findc')
-    └─ consistency_checks: int — Profiling data
+    ├─ consistency_checks: int — Profiling data
+    └─ kb_constraints: List[str] — Resolved by runner via model.resolve_kb()
 ```
 
 **Key Changes** (commit 260228 - unified shuffle-after-prepare):
