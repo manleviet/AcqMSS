@@ -59,87 +59,6 @@ class QuAcqTask(DiagnosisTask):
     # assumption_id -> negated clauses (raw, for QueryGenerator and FindC)
     negated_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
 
-    def get_kb_clauses(self, learned_kb: List[int]) -> List[List[int]]:
-        """Get raw CNF clauses for given learned KB assumption IDs."""
-        clauses = []
-        for aid in learned_kb:
-            clauses.extend(self.constraint_clauses.get(aid, []))
-        return clauses
-
-    def config_to_assumptions(self, config: Dict[str, bool]) -> List[int]:
-        """Convert configuration dict to SAT assumption literals."""
-        assumptions = []
-        for name, value in config.items():
-            if name in self.feature_ids:
-                fid = self.feature_ids[name]
-                assumptions.append(fid if value else -fid)
-        return assumptions
-
-    def partial_config_to_assumptions(self, config: Dict[str, bool],
-                                      variables: set) -> List[int]:
-        """Convert partial config (only variables in scope) to assumptions."""
-        assumptions = []
-        for name in variables:
-            if name in config and name in self.feature_ids:
-                fid = self.feature_ids[name]
-                assumptions.append(fid if config[name] else -fid)
-        return assumptions
-
-    def model_to_config(self, model: List[int]) -> Dict[str, bool]:
-        """Convert SAT model to configuration dict."""
-        config = {}
-        for lit in model:
-            var = abs(lit)
-            if var in self.id_to_feature:
-                config[self.id_to_feature[var]] = lit > 0
-        return config
-
-    def get_constraints_with_scope(self, scope: set,
-                                    remaining_bias: set) -> List[int]:
-        """Get bias constraint assumption IDs whose variables match scope.
-
-        Prefers exact scope match (c_vars == scope). Falls back to subset
-        match (c_vars ⊆ scope) if no exact matches found.
-        """
-        exact = []
-        subset = []
-        for aid in remaining_bias:
-            c_vars = self._get_constraint_vars(aid)
-            if not c_vars:
-                continue
-            if c_vars == scope:
-                exact.append(aid)
-            elif c_vars.issubset(scope):
-                subset.append(aid)
-        return exact if exact else subset
-
-    def _get_constraint_vars(self, assumption_id: int) -> set:
-        """Get the set of feature-name variables for a constraint."""
-        clauses = self.constraint_clauses.get(assumption_id, [])
-        c_vars = set()
-        for clause in clauses:
-            for lit in clause:
-                var = abs(lit)
-                if var in self.id_to_feature:
-                    c_vars.add(self.id_to_feature[var])
-        return c_vars
-
-    @staticmethod
-    def violates_clauses(clauses: List[List[int]],
-                         assignment: Dict[int, bool]) -> bool:
-        """Check if assignment violates constraint clauses."""
-        for clause in clauses:
-            clause_satisfied = False
-            for lit in clause:
-                var = abs(lit)
-                if var in assignment:
-                    if (lit > 0 and assignment[var]) or (lit < 0 and not assignment[var]):
-                        clause_satisfied = True
-                        break
-            if not clause_satisfied:
-                return True
-        return False
-
 
 class QuAcqTaskPreparation:
     """Prepare QuAcqTask from bias + oracle. No E+/E-.
@@ -171,7 +90,6 @@ class QuAcqTaskPreparation:
         result.negation_map.update(bg_data.negation_map)
         for aid, desc in bg_data.descriptions.items():
             provider.add_constraint_description(aid, desc)
-        result.set_b = [bg_data.assumptions[0]]
 
         # Store raw BG clauses (without assumption guards) for _find_conflict
         result.background_clauses = oracle.get_root_clauses()
@@ -182,12 +100,10 @@ class QuAcqTaskPreparation:
         id_assumption = prepare_kb(
             result, provider, model.constraint_map,
             id_assumption, model.negated_constraint_map)
+        # Assign set_b and set_c from assumptions
+        self._assign_sets(result, bias_start_pos)
 
-        # Step 3: Extract bias assumption IDs (stride=2: original, not negated)
-        result.set_c = list(
-            result.assumptions[bias_start_pos::_ASSUMPTION_PAIR_STRIDE])
-
-        # Step 4: Build constraint_clauses and negated_clauses mappings
+        # Step 2: Build constraint_clauses and negated_clauses mappings
         for aid in result.set_c:
             name = provider.get_description(aid)
             if name in model.constraint_map:
@@ -196,9 +112,15 @@ class QuAcqTaskPreparation:
             if neg_key in model.negated_constraint_map:
                 result.negated_clauses[aid] = model.negated_constraint_map[neg_key]
 
-        # Step 5: Populate feature_ids/id_to_feature from oracle
+        # Step 3: Populate feature_ids/id_to_feature from oracle
         fm_data = oracle.get_fm_data()
         result.feature_ids = fm_data.feature_ids
         result.id_to_feature = {v: k for k, v in fm_data.feature_ids.items()}
 
         return PreparationOutput(result, provider)
+
+    @staticmethod
+    def _assign_sets(result: QuAcqTask, bias_start_pos: int) -> None:
+        """Assign set_b and set_c from assumptions."""
+        result.set_b = [result.assumptions[0]]
+        result.set_c = list(result.assumptions[bias_start_pos::_ASSUMPTION_PAIR_STRIDE])
