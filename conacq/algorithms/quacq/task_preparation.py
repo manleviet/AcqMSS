@@ -35,35 +35,13 @@ class QuAcqTask(DiagnosisTask):
         assumptions:   All assumption IDs
 
     QuAcq-specific immutable data:
-        background_clauses:   Raw BG CNF clauses (no assumption guards)
-        feature_ids:          Feature name -> SAT variable ID
-        id_to_feature:        SAT variable ID -> feature name
         constraint_clauses:   assumption_id -> raw CNF clauses (no guards)
-        negated_clauses:      assumption_id -> negated CNF clauses (raw, for QueryProvider)
 
     Mutable state (remaining_bias, learned_kb, n_queries, query_history)
     lives in the QuAcq algorithm, not here.
     """
-    # Raw BG CNF clauses (without assumption guards) for _find_conflict
-    background_clauses: List[List[int]] = field(default_factory=list)
-
-    # Feature name -> SAT variable ID
-    feature_ids: Dict[str, int] = field(default_factory=dict)
-
-    # SAT variable ID -> feature name
-    id_to_feature: Dict[int, str] = field(default_factory=dict)
-
     # assumption_id -> raw clauses (WITHOUT assumption guards, for violation checking)
     constraint_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
-
-    # assumption_id -> negated clauses (raw, for QueryProvider and FindC)
-    negated_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
-
-    # Part 4: Feature assignment assumptions (for SAT-based pruning)
-    # assignment_clauses: List[List[int]] = field(default_factory=list)
-    # assignment_assumptions: List[int] = field(default_factory=list)
-    # pos_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
-    # neg_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
 
 
 class QuAcqTaskPreparation:
@@ -97,14 +75,9 @@ class QuAcqTaskPreparation:
         for aid, desc in bg_data.descriptions.items():
             provider.add_constraint_description(aid, desc)
 
-        # Store raw BG clauses (without assumption guards) for _find_conflict
-        result.background_clauses = oracle.get_root_clauses()
-
         # Copy Part 4 data from BGData (feature assignment assumptions)
         result.set_kb.extend(bg_data.assignment_clauses)
         result.assumptions.extend(bg_data.assignment_assumptions)
-        # model.pos_assignment_to_assumption = dict(bg_data.pos_assignment_to_assumption)
-        # model.neg_assignment_to_assumption = dict(bg_data.neg_assignment_to_assumption)
 
         # Step 1: Assign assumption IDs (negated forms from builder)
         id_assumption = model.next_available_id
@@ -115,19 +88,11 @@ class QuAcqTaskPreparation:
         # Assign set_b and set_c from assumptions
         self._assign_sets(result, bias_start_pos)
 
-        # Step 2: Build constraint_clauses and negated_clauses mappings
+        # Step 2: Build constraint_clauses mapping
         for aid in result.set_c:
             name = provider.get_description(aid)
             if name in model.constraint_map:
                 result.constraint_clauses[aid] = model.constraint_map[name]
-            neg_key = f"NOT({name})"
-            if neg_key in model.negated_constraint_map:
-                result.negated_clauses[aid] = model.negated_constraint_map[neg_key]
-
-        # Step 3: Populate feature_ids/id_to_feature from oracle
-        fm_data = oracle.get_fm_data()
-        result.feature_ids = fm_data.feature_ids
-        result.id_to_feature = {v: k for k, v in fm_data.feature_ids.items()}
 
         return PreparationOutput(result, provider)
 

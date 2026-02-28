@@ -11,7 +11,6 @@ from dataclasses import field
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from explanation.models.task_preparation import DescriptionProvider
-from .sat_utils import get_constraint_vars
 
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation
 
@@ -195,7 +194,7 @@ class QuAcqModel:
         task = self._require_task()
         # Collects bias constraints matching scope exactly or subset
         for aid in remaining_bias:
-            c_vars = get_constraint_vars(aid, task.constraint_clauses, self.features)
+            c_vars = self.get_constraint_vars(aid)
             if not c_vars:
                 continue
             if c_vars == scope:

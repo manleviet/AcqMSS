@@ -12,6 +12,7 @@ import logging
 from typing import List
 
 from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.operations.algorithms.profiler import measure_time, count_calls
 from .sat_utils import prune_rejecting
 
 
@@ -22,14 +23,17 @@ class FindScope:
     root_assumption) injected at construction; per-call data passed to run().
     """
 
-    def __init__(self, oracle, checker: ConsistencyChecker, model,
+    def __init__(self, oracle, checker: ConsistencyChecker, model, profiler,
                  record_query, root_assumption: int):
         self.oracle = oracle
         self.checker = checker
         self.model = model
+        self.profiler = profiler
         self.record_query = record_query
         self.root_assumption = root_assumption
 
+    @measure_time('findscope_runtime')
+    @count_calls('findscope_calls')
     def run(
             self,
             e: dict,
@@ -53,12 +57,13 @@ class FindScope:
         """
         if ask_query:
             partial = {k: e[k] for k in R if k in e}
+            self.profiler.increment("paper_consistency_checks")
             is_consistent = self.oracle.is_valid(partial)
             self.record_query(partial, is_consistent, 'findscope')
 
             if is_consistent:
                 if partial:
-                    pruned = prune_rejecting(self.checker, self.model, remaining_bias, partial, self.root_assumption)
+                    pruned = prune_rejecting(self.checker, self.model, remaining_bias, partial, self.root_assumption, self.profiler)
                     if pruned:
                         logging.debug('FindScope pruned %d constraints from partial query', len(pruned))
             else:

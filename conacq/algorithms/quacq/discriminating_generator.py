@@ -10,6 +10,7 @@ Uses ConsistencyChecker via DI pattern (like FindScope/FindC).
 from typing import Dict, List, Optional, Set
 
 from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.operations.algorithms.profiler import measure_time, count_calls
 
 
 class DiscriminatingGenerator:
@@ -24,11 +25,14 @@ class DiscriminatingGenerator:
         root_assumption: Root BG assumption ID
     """
 
-    def __init__(self, checker: ConsistencyChecker, model, root_assumption: int) -> None:
+    def __init__(self, checker: ConsistencyChecker, model, profiler, root_assumption: int) -> None:
         self.checker = checker
         self.model = model
+        self.profiler = profiler
         self.root_assumption = root_assumption
 
+    @measure_time('dis_gen_runtime')
+    @count_calls('dis_gen_calls')
     def generate(self, c_i: int, c_j: int,
                  learned_kb: List[int], scope: Set[str]) -> Optional[Dict[str, bool]]:
         """Find e' s.t. e' in sol(BG + C_L[Y]) and e' |= c_i and e' |/= c_j.
@@ -55,6 +59,7 @@ class DiscriminatingGenerator:
         # SAT: BG + C_L[Y] + c_i + neg(c_j)
         set_c = [self.root_assumption] + cl_y + [c_i, neg_j]
 
+        self.profiler.increment("dis_gen_consistency_checks")
         if self.checker.is_consistent(set_c):
             return self.model.model_to_config(self.checker.get_model())
         return None

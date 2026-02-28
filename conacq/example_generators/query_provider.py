@@ -65,7 +65,8 @@ class QueryProvider:
         """Number of pool examples remaining."""
         return max(0, len(self._pool) - self._pool_index)
 
-    @count_calls('pool_generation_calls')
+    @count_calls('query_generation_calls')
+    @measure_time('query_generation_runtime')
     def generate_from_pool(
             self,
             remaining_bias: set,
@@ -87,11 +88,13 @@ class QueryProvider:
             # Condition 1: satisfies C_L + BG (via checker with Part 4 assumptions)
             config_assumptions = self.model.config_to_assumptions(e)
             set_c = learned_kb + set_b + config_assumptions
+            self.profiler.increment("query_generation_consistency_checks")
             if not self.checker.is_consistent(set_c):
                 continue
 
             # Condition 2: violates >=1 constraint in remaining_bias (via checker)
             for c_id in remaining_bias:
+                self.profiler.increment("query_generation_consistency_checks")
                 if not self.checker.is_consistent([c_id] + config_assumptions):
                     logging.debug('Pool query found testing constraint %s', c_id)
                     return e, c_id
@@ -122,6 +125,7 @@ class QueryProvider:
                 continue
 
             set_c = learned_kb + set_b + [neg_aid]
+            self.profiler.increment("query_generation_consistency_checks")
             if self.checker.is_consistent(set_c):
                 model_lits = self.checker.get_model()
                 if model_lits is None:

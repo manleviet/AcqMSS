@@ -58,7 +58,7 @@ class QuAcq:
 
     def __init__(self, checker: ConsistencyChecker,
                  oracle: Oracle,
-                 model: Optional[QuAcqModel]=None,
+                 model: Optional[QuAcqModel] = None,
                  query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
                  profiler_instance: AbstractProfiler = None) -> None:
@@ -74,9 +74,9 @@ class QuAcq:
     @classmethod
     def for_oracle(cls, checker: ConsistencyChecker,
                    oracle: Oracle,
+                   model: QuAcqModel,
                    query_provider: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
-                   model=None,
                    profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for oracle-based learning. discrim_gen required."""
         return cls(checker, oracle, model=model,
@@ -87,9 +87,9 @@ class QuAcq:
     @classmethod
     def for_examples(cls, checker: ConsistencyChecker,
                      oracle: Oracle,
+                     model: QuAcqModel,
                      query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
-                     model=None,
                      profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for example-based learning."""
         return cls(checker, oracle, model=model,
@@ -103,9 +103,6 @@ class QuAcq:
               set_c: List[int],
               set_b: List[int],
               negation_map: Dict[int, int],
-              feature_ids: Dict[str, int],
-              id_to_feature: Dict[int, str],
-              constraint_clauses: Dict[int, List[List[int]]],
               mode: Literal['oracle', 'example_only', 'example_first'] = 'oracle',
               max_queries: int = 1000,
               ) -> QuAcqResult:
@@ -117,8 +114,6 @@ class QuAcq:
             set_b: BG assumption IDs
             negation_map: {assumption_id -> negated_assumption_id}
             feature_ids: Feature name -> SAT variable ID
-            id_to_feature: SAT variable ID -> feature name
-            constraint_clauses: assumption_id -> raw CNF clauses
             mode: 'oracle', 'example_only', or 'example_first'
             max_queries: Maximum queries before stopping
 
@@ -142,7 +137,7 @@ class QuAcq:
                 n_queries += 1
                 query_history.append((config.copy(), answer, source))
 
-        all_variables = set(feature_ids.keys())
+        all_variables = set(self.model.variables.keys())
 
         logging.info('QuAcq starting: Bias=%d constraints, mode=%s', len(remaining_bias), mode)
 
@@ -182,6 +177,7 @@ class QuAcq:
                 break
 
             # Step 2: Check with oracle
+            self.profiler.increment("paper_consistency_checks")
             answer = self.oracle.is_valid(query)
 
             record_query(query, answer)
@@ -189,14 +185,14 @@ class QuAcq:
 
             # Step 3: Process answer
             if answer:
-                pruned = prune_rejecting(self.checker, self.model, remaining_bias, query, set_b[0])
+                pruned = prune_rejecting(self.checker, self.model, remaining_bias, query, set_b[0], self.profiler)
                 logging.debug('Pruned %d constraints', len(pruned))
             else:
                 if n_queries >= max_queries:
                     convergence_reason = 'max_queries'
                     break
 
-                find_scope = FindScope(self.oracle, self.checker, self.model,
+                find_scope = FindScope(self.oracle, self.checker, self.model, self.profiler,
                                        record_query, set_b[0])
                 scope_vars = find_scope.run(
                     e=query, R=set(), Y=all_variables,
@@ -212,8 +208,6 @@ class QuAcq:
                                    generator=self.discriminating_generator)
                     c_id = find_c.run(
                         e=query, scope=scope,
-                        constraint_clauses=constraint_clauses,
-                        id_to_feature=id_to_feature,
                         remaining_bias=remaining_bias,
                         learned_kb=learned_kb,
                     )

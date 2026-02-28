@@ -16,12 +16,9 @@ from conacq.algorithms.quacq import (
     DiscriminatingGenerator,
 )
 from conacq.algorithms.quacq.task_preparation import QuAcqTask
-from conacq.algorithms.quacq.quacq_model import QuAcqModel, get_constraints_with_scope
+from conacq.algorithms.quacq.quacq_model import QuAcqModel
 from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
-from conacq.algorithms.quacq.sat_utils import (
-    config_to_assumptions, partial_config_to_assumptions,
-    get_constraint_vars, violates_clauses, get_kb_clauses,
-)
+from conacq.algorithms.quacq.sat_utils import get_constraint_vars
 from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import (
     CheckerFactory, NonIncrementalPySATChecker,
@@ -39,15 +36,14 @@ FM_PATH = DATA_DIR / "fms" / "REAL-FM-7.uvl"
 BIAS_PATH = DATA_DIR / "bias" / "REAL-FM-7-bias.json"
 
 
-def _learn_params_from_task(task):
-    """Extract flat learn() params from QuAcqTask."""
+def _learn_params_from_model(model):
+    """Extract flat learn() params from prepared QuAcqModel."""
+    task = model.task
     return dict(
         set_c=task.set_c,
         set_b=task.set_b,
         negation_map=task.negation_map,
-        feature_ids=task.feature_ids,
-        id_to_feature=task.id_to_feature,
-        constraint_clauses=task.constraint_clauses,
+        feature_ids=model.variables,
     )
 
 
@@ -213,7 +209,7 @@ class TestQuAcq:
     def test_quacq_learn_with_limit(self, prepared_model, oracle, bias, checker):
         """Test QuAcq learning with query limit."""
         task = prepared_model.task
-        task_data = _learn_params_from_task(task)
+        task_data = _learn_params_from_model(prepared_model)
 
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
@@ -246,8 +242,7 @@ class TestQuAcq:
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
-            feature_ids={'root': 1}, id_to_feature={1: 'root'},
-            constraint_clauses={},
+            feature_ids={'root': 1},
             mode='oracle', max_queries=100)
 
         assert result.n_queries == 0
@@ -274,7 +269,7 @@ class TestIntegration:
                      .build())
 
             task = model.task
-            task_data = _learn_params_from_task(task)
+            task_data = _learn_params_from_model(model)
 
             checker = CheckerFactory.create_from_model(model)
             query_provider = QueryProvider(checker=checker, model=model)
@@ -346,8 +341,8 @@ class TestQuAcqTask:
         task = prepared_model.task
         assert isinstance(task, QuAcqTask)
         assert len(task.set_c) > 0
-        assert len(task.feature_ids) > 0
-        assert len(task.id_to_feature) == len(task.feature_ids)
+        assert len(prepared_model.variables) > 0
+
         # All bias IDs should be ints
         for aid in task.set_c:
             assert isinstance(aid, int)
@@ -357,25 +352,7 @@ class TestQuAcqTask:
         task = prepared_model.task
         for aid in task.set_c:
             assert aid in task.constraint_clauses, f"Missing clauses for {aid}"
-            assert aid in task.negated_clauses, f"Missing negated clauses for {aid}"
             assert len(task.constraint_clauses[aid]) > 0
-
-    def test_config_to_assumptions(self, prepared_model):
-        """Test config dict to SAT assumptions conversion."""
-        task = prepared_model.task
-        features = list(task.feature_ids.keys())
-        config = {features[0]: True, features[1]: False}
-        assumptions = config_to_assumptions(config, task.feature_ids)
-        assert len(assumptions) == 2
-        assert all(isinstance(a, int) for a in assumptions)
-
-    def test_get_kb_clauses(self, prepared_model):
-        """Test getting KB clauses from learned constraints."""
-        task = prepared_model.task
-        aid = task.set_c[0]
-        clauses = get_kb_clauses([aid], task.constraint_clauses)
-        assert isinstance(clauses, list)
-        assert len(clauses) > 0
 
     def test_background_populated(self, prepared_model):
         """Test background has BG assumption IDs from oracle."""
@@ -446,7 +423,7 @@ class TestQuAcqWithAssumptionIDs:
     def test_quacq_learn_with_quacq_task(self, prepared_model, oracle, checker):
         """Test QuAcq learning with QuAcqTask and DescriptionProvider."""
         task = prepared_model.task
-        task_data = _learn_params_from_task(task)
+        task_data = _learn_params_from_model(prepared_model)
 
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
@@ -481,8 +458,7 @@ class TestQuAcqWithAssumptionIDs:
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
         result = quacq.learn(
             set_c=[], set_b=[], negation_map={},
-            feature_ids={'root': 1}, id_to_feature={1: 'root'},
-            constraint_clauses={},
+            feature_ids={'root': 1},
             mode='oracle', max_queries=100)
 
         assert result.n_queries == 0
@@ -492,7 +468,7 @@ class TestQuAcqWithAssumptionIDs:
     def test_result_resolved_via_model(self, prepared_model, oracle, checker):
         """Test result assumption IDs can be resolved via model."""
         task = prepared_model.task
-        task_data = _learn_params_from_task(task)
+        task_data = _learn_params_from_model(prepared_model)
 
         query_provider = QueryProvider(checker=checker, model=prepared_model)
         discrim_gen = DiscriminatingGenerator(
@@ -530,64 +506,7 @@ class TestQuAcqResultAssumptionIDs:
         assert len(result.kb_assumption_ids) == 3
 
 
-class TestTaskCompat:
-    """Tests for _task_compat shared helpers."""
 
-    def test_get_bg_clauses_quacq_task(self):
-        """get_bg_clauses returns background_clauses for QuAcqTask."""
-        task = QuAcqTask(background_clauses=[[1], [2, -3]])
-        from conacq.algorithms.quacq._task_compat import get_bg_clauses
-        result = get_bg_clauses(task)
-        assert result == [[1], [2, -3]]
-
-    def test_get_bg_clauses_empty(self):
-        """get_bg_clauses returns [] for empty background."""
-        task = QuAcqTask()
-        from conacq.algorithms.quacq._task_compat import get_bg_clauses
-        result = get_bg_clauses(task)
-        assert result == []
-
-    def test_get_clause_map_quacq(self):
-        """get_clause_map returns constraint_clauses for QuAcqTask."""
-        task = QuAcqTask(constraint_clauses={10: [[1, 2]]})
-        from conacq.algorithms.quacq._task_compat import get_clause_map
-        assert get_clause_map(task) == {10: [[1, 2]]}
-
-
-class TestBackgroundClauses:
-    """Tests for background_clauses field on QuAcqTask."""
-
-    def test_background_clauses_field(self):
-        """QuAcqTask.background_clauses stores raw BG CNF clauses."""
-        task = QuAcqTask(
-            set_b=[5, 6],
-            background_clauses=[[1], [2, -3]],
-        )
-        assert task.set_b == [5, 6]
-        assert task.background_clauses == [[1], [2, -3]]
-
-    def test_background_clauses_default_empty(self):
-        """background_clauses defaults to empty list."""
-        task = QuAcqTask()
-        assert task.background_clauses == []
-
-    def test_background_clauses_independent_instances(self):
-        """Separate QuAcqTask instances have independent background_clauses."""
-        task1 = QuAcqTask(background_clauses=[[1], [2, -3]])
-        task2 = QuAcqTask(background_clauses=[[1], [2, -3]])
-        task2.background_clauses[0].append(99)
-        assert task1.background_clauses[0] != task2.background_clauses[0]
-
-    def test_prepare_populates_background_clauses(self, prepared_model):
-        """QuAcqTaskPreparation.prepare() populates background_clauses."""
-        task = prepared_model.task
-        assert isinstance(task.background_clauses, list)
-        assert len(task.background_clauses) > 0
-        # Each clause is a list of ints (no assumption guards)
-        for clause in task.background_clauses:
-            assert isinstance(clause, list)
-            for lit in clause:
-                assert isinstance(lit, int)
 
 
 class TestQueryProviderWithQuAcqTask:
@@ -643,8 +562,7 @@ class TestQuAcqModeValidation:
     def _minimal_learn_params(self):
         return dict(
             set_c=[], set_b=[], negation_map={},
-            feature_ids={'root': 1}, id_to_feature={1: 'root'},
-            constraint_clauses={})
+            feature_ids={'root': 1})
 
     def test_no_query_provider_raises(self, oracle):
         """Any mode without query_provider raises."""
@@ -682,7 +600,7 @@ class TestQueryProviderPoolFiltering:
     def test_pool_filtering_skips_invalid(self, prepared_model, checker):
         """Pool examples not satisfying KB+BG are skipped."""
         task = prepared_model.task
-        features = list(task.feature_ids.keys())
+        features = list(prepared_model.variables.keys())
         # All-false config almost certainly invalid (root must be true)
         invalid_config = {f: False for f in features}
         provider = QueryProvider(pool=[invalid_config], seed=42,
@@ -698,24 +616,6 @@ class TestQueryProviderPoolFiltering:
 class TestSatUtils:
     """Tests for sat_utils standalone functions."""
 
-    def test_config_to_assumptions(self):
-        feature_ids = {'a': 1, 'b': 2, 'c': 3}
-        config = {'a': True, 'b': False, 'c': True}
-        result = config_to_assumptions(config, feature_ids)
-        assert set(result) == {1, -2, 3}
-
-    def test_config_to_assumptions_missing_feature(self):
-        feature_ids = {'a': 1}
-        config = {'a': True, 'unknown': False}
-        result = config_to_assumptions(config, feature_ids)
-        assert result == [1]
-
-    def test_partial_config_to_assumptions(self):
-        feature_ids = {'a': 1, 'b': 2, 'c': 3}
-        config = {'a': True, 'b': False, 'c': True}
-        result = partial_config_to_assumptions(config, {'a', 'c'}, feature_ids)
-        assert set(result) == {1, 3}
-
     def test_get_constraint_vars(self):
         constraint_clauses = {10: [[1, -2], [3]]}
         id_to_feature = {1: 'a', 2: 'b', 3: 'c'}
@@ -726,41 +626,29 @@ class TestSatUtils:
         result = get_constraint_vars(99, {}, {})
         assert result == set()
 
-    def test_violates_clauses_true(self):
-        clauses = [[1, 2]]  # (a OR b)
-        assignment = {1: False, 2: False}  # both false -> violates
-        assert violates_clauses(clauses, assignment) is True
-
-    def test_violates_clauses_false(self):
-        clauses = [[1, 2]]  # (a OR b)
-        assignment = {1: True, 2: False}  # a true -> satisfied
-        assert violates_clauses(clauses, assignment) is False
-
     def test_get_constraints_with_scope_exact(self):
         constraint_clauses = {10: [[1, -2]], 12: [[1]]}
         id_to_feature = {1: 'a', 2: 'b'}
         scope = {'a', 'b'}
-        result = get_constraints_with_scope(
-            scope, {10, 12}, constraint_clauses, id_to_feature)
+        # Build minimal model with synthetic task
+        model = QuAcqModel()
+        model.features = id_to_feature
+        model._task = QuAcqTask(constraint_clauses=constraint_clauses)
+        result = model.get_constraints_with_scope(scope, {10, 12})
         assert result == [10]  # exact match
 
     def test_get_constraints_with_scope_subset(self):
         constraint_clauses = {10: [[1]], 12: [[2]]}
         id_to_feature = {1: 'a', 2: 'b'}
         scope = {'a', 'b'}
-        result = get_constraints_with_scope(
-            scope, {10, 12}, constraint_clauses, id_to_feature)
+        # Build minimal model with synthetic task
+        model = QuAcqModel()
+        model.features = id_to_feature
+        model._task = QuAcqTask(constraint_clauses=constraint_clauses)
+        result = model.get_constraints_with_scope(scope, {10, 12})
         # No exact match, both are subsets
         assert set(result) == {10, 12}
 
-    def test_get_kb_clauses(self):
-        constraint_clauses = {10: [[1, 2]], 12: [[3, -4]]}
-        result = get_kb_clauses([10, 12], constraint_clauses)
-        assert result == [[1, 2], [3, -4]]
-
-    def test_get_kb_clauses_empty(self):
-        result = get_kb_clauses([], {10: [[1]]})
-        assert result == []
 
 
 # =========================================================================
