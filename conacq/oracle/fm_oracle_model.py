@@ -204,7 +204,7 @@ class FMOracleTaskPreparation:
         assignments_start_index = len(result.assumptions)
         assignment_kb_start = len(result.set_kb)
         pos_assignment_to_assumption = {}
-        neg_assumption_to_assumption = {}
+        neg_assignment_to_assumption = {}
 
         for name, fid in model.variables.items():
             # a_pos: if active → feature must be true
@@ -224,11 +224,11 @@ class FMOracleTaskPreparation:
 
             result.assumptions.append(a_neg)
             provider.add_configuration_description(a_neg, desc)
-            neg_assumption_to_assumption[name] = a_neg
+            neg_assignment_to_assumption[name] = a_neg
             id_assumption += 1
 
         model._pos_assignment_to_assumption = pos_assignment_to_assumption
-        model._neg_assignment_to_assumption = neg_assumption_to_assumption
+        model._neg_assignment_to_assumption = neg_assignment_to_assumption
 
         # Step 3: compute and cache base set_c (FM constraint assumptions only)
         model._base_set_c = [result.assumptions[i]
@@ -255,7 +255,7 @@ class FMOracleTaskPreparation:
             assignment_clauses=assignment_clauses,
             assignment_assumptions=assignment_assumptions,
             pos_assignment_to_assumption=dict(pos_assignment_to_assumption),
-            neg_assignment_to_assumption=dict(neg_assumption_to_assumption),
+            neg_assignment_to_assumption=dict(neg_assignment_to_assumption),
         )
 
         return PreparationOutput(

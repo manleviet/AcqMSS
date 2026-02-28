@@ -309,7 +309,8 @@ class QuAcq:
         assumptions, catching implied violations beyond pure Boolean evaluation.
         """
         config_assumptions = [pos_map[feat] if val else neg_map[feat]
-                              for feat, val in positive_example.items()]
+                              for feat, val in positive_example.items()
+                              if feat in pos_map]
         base = [root_assumption] + config_assumptions
         pruned = []
         for aid in list(remaining_bias):
