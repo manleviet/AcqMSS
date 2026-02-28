@@ -196,16 +196,16 @@ class QuAcqRunner(BaseRunner):
 
             profiler_snapshot = profiler.to_dict()
 
-            # Resolve KB clauses and BG clauses
-            _, kb_clauses = self.model.resolve_kb(result.kb_assumption_ids)
+            # Resolve KB names and clauses, get BG clauses
+            kb_names, kb_clauses = self.model.resolve_kb(result.kb_assumption_ids)
             bg_clauses = self.oracle.get_root_clauses()
 
             run_result = QuAcqRunResult(
-                kb_constraints=result.kb_constraints,
+                kb_constraints=kb_names,
                 kb_clauses=kb_clauses,
                 bg_clauses=bg_clauses,
                 n_bias=len(self.model.constraint_map),
-                n_kb=result.n_kb,
+                n_kb=len(result.kb_assumption_ids),
                 n_queries=result.n_queries,
                 convergence_reason=result.convergence_reason,
                 runtime_ms=runtime_ms,
@@ -216,7 +216,7 @@ class QuAcqRunner(BaseRunner):
             )
 
             logging.debug('<<< QuAcqRunner: KB=%d, queries=%d, runtime=%.2fms',
-                          result.n_kb, result.n_queries, runtime_ms)
+                          len(result.kb_assumption_ids), result.n_queries, runtime_ms)
 
         return run_result
 
@@ -240,8 +240,7 @@ class QuAcqRunner(BaseRunner):
 
         return quacq.learn(
             **task_data, mode='oracle',
-            max_queries=self.max_queries,
-            description_provider=self.model.description_provider)
+            max_queries=self.max_queries)
 
     def _run_example_mode(self, task, task_data, profiler,
                           positive_examples, negative_examples,
@@ -271,5 +270,4 @@ class QuAcqRunner(BaseRunner):
 
         return quacq.learn(
             **task_data, mode=mode,
-            max_queries=self.max_queries,
-            description_provider=self.model.description_provider)
+            max_queries=self.max_queries)

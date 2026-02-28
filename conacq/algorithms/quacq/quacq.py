@@ -10,11 +10,8 @@ All collaborators injected at construction (DI pattern).
 Also contains QuAcqResult (co-located: algorithm produces its own result type).
 """
 
-import json
 import logging
-import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Literal
 
 from conacq.oracle import Oracle
@@ -26,7 +23,6 @@ from .sat_utils import (
     config_to_assumptions, violates_clauses, get_kb_clauses
 )
 from conacq.algorithms.acqmss.reduce import Reduce
-from explanation.models.task_preparation import DescriptionProvider
 from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
 from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
@@ -35,109 +31,14 @@ from explanation.operations.algorithms.profiler import (
 
 @dataclass
 class QuAcqResult:
-    """
-    Result of QuAcq constraint acquisition.
-
-    Captures all information about the learning outcome:
-    - Acquired constraints as both assumption IDs and resolved names
-    - Query statistics
-    - Performance metrics
-    - Convergence information
-    - Evaluation metrics (optional)
-
-    Attributes:
-        kb_assumption_ids: Learned KB as integer assumption IDs (primary)
-        kb_constraints:    Learned KB as resolved constraint names (backward compat)
-        n_queries:         Total membership queries asked
-        n_kb:              Number of constraints in final KB
-        convergence_reason: Why learning stopped
-        runtime_ms:        Total learning runtime in milliseconds
-        consistency_checks: Number of SAT consistency checks performed
-        metadata:          Additional metadata for analysis
-        query_history:     List of (config, answer, source) triples
-        evaluation:        Optional evaluation results
-    """
-    # Primary: learned KB as assumption IDs
+    """Result of QuAcq constraint acquisition."""
     kb_assumption_ids: List[int] = field(default_factory=list)
-
-    # Resolved constraint names (for backward compat with eval pipeline)
-    kb_constraints: List[str] = field(default_factory=list)
-
-    # Query statistics
     n_queries: int = 0
-    n_kb: int = 0
     convergence_reason: str = ""
-    runtime_ms: float = 0.0
-    consistency_checks: int = 0
-    metadata: Dict = field(default_factory=dict)
-
-    # Query history: (config, answer, source) triples
     query_history: List[Tuple[Dict[str, bool], bool, str]] = field(default_factory=list)
 
-    # Evaluation results (populated after evaluate() is called)
-    evaluation: Optional[Dict] = None
-
-    def __post_init__(self):
-        """Auto-calculate n_kb if not set."""
-        if self.n_kb == 0:
-            self.n_kb = len(self.kb_assumption_ids) or len(self.kb_constraints)
-
-    def to_dict(self) -> Dict:
-        """Convert result to dictionary for JSON serialization."""
-        result = {
-            'kb_constraints': self.kb_constraints,
-            'kb_assumption_ids': self.kb_assumption_ids,
-            'n_queries': self.n_queries,
-            'n_kb': self.n_kb,
-            'convergence_reason': self.convergence_reason,
-            'runtime_ms': self.runtime_ms,
-            'consistency_checks': self.consistency_checks,
-            'metadata': self.metadata,
-            'query_history': [
-                {'config': config, 'answer': answer, 'source': source}
-                for config, answer, source in self.query_history
-            ]
-        }
-        if self.evaluation is not None:
-            result['evaluation'] = self.evaluation
-        return result
-
-    def save(self, filepath: str) -> None:
-        """Save result to JSON file."""
-        filepath = Path(filepath)
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        with open(filepath, 'w') as f:
-            json.dump(self.to_dict(), f, indent=2)
-
-    @classmethod
-    def load(cls, filepath: str) -> 'QuAcqResult':
-        """Load result from JSON file. Handles both old and new formats."""
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-
-        # Handle query_history: support 2-tuple (old) and 3-tuple (new) formats
-        query_history = []
-        for qh in data.get('query_history', []):
-            config = qh['config']
-            answer = qh['answer']
-            source = qh.get('source', 'main')
-            query_history.append((config, answer, source))
-
-        return cls(
-            kb_assumption_ids=data.get('kb_assumption_ids', []),
-            kb_constraints=data.get('kb_constraints', []),
-            n_queries=data.get('n_queries', 0),
-            n_kb=data.get('n_kb', 0),
-            convergence_reason=data.get('convergence_reason', ''),
-            runtime_ms=data.get('runtime_ms', 0.0),
-            consistency_checks=data.get('consistency_checks', 0),
-            metadata=data.get('metadata', {}),
-            query_history=query_history,
-            evaluation=data.get('evaluation')
-        )
-
     def __repr__(self):
-        return (f"QuAcqResult(n_kb={self.n_kb}, n_queries={self.n_queries}, "
+        return (f"QuAcqResult(n_kb={len(self.kb_assumption_ids)}, n_queries={self.n_queries}, "
                 f"convergence='{self.convergence_reason}')")
 
 
@@ -203,7 +104,6 @@ class QuAcq:
               negated_clauses: Dict[int, List[List[int]]],
               mode: Literal['oracle', 'example_only', 'example_first'] = 'oracle',
               max_queries: int = 1000,
-              description_provider: DescriptionProvider = None,
               ) -> QuAcqResult:
         """
         Run QuAcq learning with specified mode.
@@ -221,7 +121,6 @@ class QuAcq:
             negated_clauses: assumption_id -> negated CNF clauses
             mode: 'oracle', 'example_only', or 'example_first'
             max_queries: Maximum queries before stopping
-            description_provider: Maps assumption IDs to constraint names
 
         Returns:
             QuAcqResult with learned KB
@@ -229,10 +128,7 @@ class QuAcq:
         # Mode validation
         self._validate_mode(mode)
 
-        start_time = time.perf_counter()
         convergence_reason = ''
-        queries_from_pool = 0
-        queries_from_sat = 0
 
         # Local mutable state
         remaining_bias = set(set_c)
@@ -267,14 +163,10 @@ class QuAcq:
                     kb_clauses=kb_cls, negated_clauses=negated_clauses,
                     bg_clauses=background_clauses, feature_ids=feature_ids,
                     id_to_feature=id_to_feature, n_bg=len(set_b))
-                if query is not None:
-                    queries_from_sat += 1
             else:
                 # example_only or example_first: try pool first
                 query = self.example_provider.next_example()
-                if query is not None:
-                    queries_from_pool += 1
-                elif mode == 'example_first':
+                if query is None and mode == 'example_first':
                     # Pool exhausted, fall back to SAT
                     kb_cls = get_kb_clauses(learned_kb, constraint_clauses)
                     query, tested_c_id = self.query_generator.generate(
@@ -282,8 +174,6 @@ class QuAcq:
                         kb_clauses=kb_cls, negated_clauses=negated_clauses,
                         bg_clauses=background_clauses, feature_ids=feature_ids,
                         id_to_feature=id_to_feature, n_bg=len(set_b))
-                    if query is not None:
-                        queries_from_sat += 1
 
             if query is None:
                 if mode == 'oracle':
@@ -360,13 +250,8 @@ class QuAcq:
             logging.info('Bias exhausted - converged')
 
         result = self._build_result(
-            constraint_clauses, set_kb, assumptions, set_b, negation_map,
-            learned_kb, n_queries, query_history,
-            remaining_bias, start_time, convergence_reason, description_provider)
-        if mode != 'oracle':
-            result.metadata['queries_from_pool'] = queries_from_pool
-            result.metadata['queries_from_sat'] = queries_from_sat
-            result.metadata['query_mode'] = mode
+            set_kb, assumptions, set_b, negation_map,
+            learned_kb, n_queries, query_history, convergence_reason)
         return result
 
     def _validate_mode(self, mode: str) -> None:
@@ -388,42 +273,19 @@ class QuAcq:
                 raise ValueError("example_first mode requires discriminating_generator")
 
     def _build_result(self,
-                      constraint_clauses: Dict[int, List[List[int]]],
                       set_kb: List[List], assumptions: List[int],
                       set_b: List[int], negation_map: Dict[int, int],
                       learned_kb: List[int],
                       n_queries: int, query_history: list,
-                      remaining_bias: set,
-                      start_time: float, convergence_reason: str,
-                      description_provider: DescriptionProvider) -> QuAcqResult:
+                      convergence_reason: str) -> QuAcqResult:
         """Build QuAcqResult from algorithm state, applying REDUCE."""
         final_kb_ids = self._apply_reduce(
             set_kb, assumptions, set_b, negation_map, learned_kb)
-        runtime_ms = (time.perf_counter() - start_time) * 1000
-
-        # Resolve assumption IDs to constraint names (if provider available)
-        if description_provider is not None:
-            kb_names = [description_provider.get_description(aid) for aid in final_kb_ids]
-        else:
-            kb_names = [str(aid) for aid in final_kb_ids]
-
-        consistency_checks = self.profiler.get_metric('sat_checks_query_gen', 0)
-        if isinstance(consistency_checks, list):
-            consistency_checks = len(consistency_checks)
 
         self.result = QuAcqResult(
             kb_assumption_ids=final_kb_ids,
-            kb_constraints=kb_names,
             n_queries=n_queries,
-            n_kb=len(final_kb_ids),
             convergence_reason=convergence_reason,
-            runtime_ms=runtime_ms,
-            consistency_checks=consistency_checks,
-            metadata={
-                'initial_bias_size': len(constraint_clauses),
-                'remaining_bias_size': len(remaining_bias),
-                'learned_before_reduce': len(learned_kb)
-            },
             query_history=query_history
         )
 

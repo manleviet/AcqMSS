@@ -48,7 +48,7 @@ Primary constraint discovery algorithms:
 - ✅ Refactored `QuAcq.__init__()` — DI pattern (oracle, query_generator, example_provider, discriminating_generator, profiler)
 - ✅ Added `QuAcq.for_oracle()` factory — discrim_gen required
 - ✅ Added `QuAcq.for_examples()` factory — example_provider required
-- ✅ Refactored `QuAcq.learn()` — Direct parameter signature (set_c, set_b, ..., mode, max_queries, description_provider)
+- ✅ Refactored `QuAcq.learn()` — Direct parameter signature (set_c, set_b, ..., mode, max_queries); runner resolves names
 - ✅ learn() supports 3 modes: 'oracle', 'example_only', 'example_first' via single parameter
 
 **Previous Session Changes (FindScope/FindC Refactoring - commit 260227)**:

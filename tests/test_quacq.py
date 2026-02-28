@@ -90,53 +90,33 @@ class TestQuAcqResult:
     """Tests for QuAcqResult data structure."""
 
     def test_result_creation(self):
-        """Test result can be created."""
+        """Test result can be created with 4 fields."""
         result = QuAcqResult(
-            kb_constraints=['c1', 'c2'],
+            kb_assumption_ids=[10, 12],
             n_queries=10,
-            n_kb=2,
             convergence_reason='empty_bias',
-            runtime_ms=100.5
+            query_history=[({'f1': True}, True, 'main')]
         )
 
         assert result.n_queries == 10
-        assert result.n_kb == 2
         assert result.convergence_reason == 'empty_bias'
-        assert len(result.kb_constraints) == 2
+        assert len(result.kb_assumption_ids) == 2
+        assert len(result.query_history) == 1
 
-    def test_result_to_dict(self):
-        """Test result serialization."""
-        result = QuAcqResult(
-            kb_constraints=['c1'],
-            n_queries=5,
-            n_kb=1,
-            convergence_reason='no_query',
-            runtime_ms=50.0
-        )
+    def test_result_defaults(self):
+        """Test result defaults are sensible."""
+        result = QuAcqResult()
+        assert result.kb_assumption_ids == []
+        assert result.n_queries == 0
+        assert result.convergence_reason == ""
+        assert result.query_history == []
 
-        d = result.to_dict()
-        assert d['n_queries'] == 5
-        assert d['n_kb'] == 1
-        assert d['convergence_reason'] == 'no_query'
-
-    def test_result_save_load(self, tmp_path):
-        """Test result save and load."""
-        result = QuAcqResult(
-            kb_constraints=['c1', 'c2'],
-            n_queries=10,
-            n_kb=2,
-            convergence_reason='empty_bias',
-            runtime_ms=100.5,
-            query_history=[({'f1': True}, True, 'main'), ({'f1': False}, False, 'main')]
-        )
-
-        filepath = tmp_path / "result.json"
-        result.save(str(filepath))
-
-        loaded = QuAcqResult.load(str(filepath))
-        assert loaded.n_queries == result.n_queries
-        assert loaded.n_kb == result.n_kb
-        assert loaded.kb_constraints == result.kb_constraints
+    def test_result_repr(self):
+        """Test repr derives n_kb from len(kb_assumption_ids)."""
+        result = QuAcqResult(kb_assumption_ids=[10, 12, 14], n_queries=5,
+                             convergence_reason='empty_bias')
+        assert 'n_kb=3' in repr(result)
+        assert 'n_queries=5' in repr(result)
 
 
 class TestFeatureModelOracle:
@@ -232,22 +212,17 @@ class TestQuAcq:
         quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
-            description_provider=prepared_model.description_provider,
             max_queries=5)
 
         assert result is not None
         assert result.n_queries <= 5
-        assert isinstance(result.kb_constraints, list)
+        assert isinstance(result.kb_assumption_ids, list)
         assert result.convergence_reason in ['empty_bias', 'max_queries', 'no_query']
 
         print(f"\nQuAcq Result (max_queries=5):")
         print(f"  Queries: {result.n_queries}")
-        print(f"  KB size: {result.n_kb}")
+        print(f"  KB size: {len(result.kb_assumption_ids)}")
         print(f"  Convergence: {result.convergence_reason}")
-
-        if result.kb_constraints:
-            for c in result.kb_constraints:
-                print(f"  Constraint: {c}")
 
     def test_quacq_empty_bias(self, oracle):
         """Test QuAcq with empty bias converges immediately."""
@@ -300,7 +275,6 @@ class TestIntegration:
             quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
             result = quacq.learn(
                 **task_data, mode='oracle',
-                description_provider=model.description_provider,
                 max_queries=50)
 
             assert result is not None
@@ -310,87 +284,6 @@ class TestIntegration:
 
         finally:
             profiler.stop()
-
-
-class TestEvaluation:
-    """Tests for evaluation functionality."""
-
-    def test_evaluation_result_field(self):
-        """Test that QuAcqResult has evaluation field."""
-        result = QuAcqResult(
-            kb_constraints=['c1', 'c2'],
-            n_queries=10,
-            n_kb=2,
-            convergence_reason='empty_bias',
-            runtime_ms=100.5
-        )
-
-        # evaluation should be None by default
-        assert result.evaluation is None
-
-        # Set evaluation
-        result.evaluation = {
-            'description': {'metrics': {'accuracy': 0.95}},
-            'clause': {'metrics': {'accuracy': 0.92}}
-        }
-
-        assert result.evaluation is not None
-        assert result.evaluation['description']['metrics']['accuracy'] == 0.95
-
-    def test_evaluation_to_dict(self):
-        """Test that to_dict includes evaluation field."""
-        result = QuAcqResult(
-            kb_constraints=['c1'],
-            n_queries=5,
-            n_kb=1,
-            convergence_reason='no_query',
-            runtime_ms=50.0,
-            evaluation={
-                'description': {'metrics': {'accuracy': 0.95}},
-                'clause': {'metrics': {'accuracy': 0.92}}
-            }
-        )
-
-        d = result.to_dict()
-        assert 'evaluation' in d
-        assert d['evaluation']['description']['metrics']['accuracy'] == 0.95
-        assert d['evaluation']['clause']['metrics']['accuracy'] == 0.92
-
-    def test_evaluation_save_load(self, tmp_path):
-        """Test that evaluation is saved and loaded correctly."""
-        result = QuAcqResult(
-            kb_constraints=['c1', 'c2'],
-            n_queries=10,
-            n_kb=2,
-            convergence_reason='empty_bias',
-            runtime_ms=100.5,
-            evaluation={
-                'description': {
-                    'metrics': {
-                        'accuracy': 0.95,
-                        'precision': 0.90,
-                        'recall': 0.85,
-                        'f1_score': 0.87
-                    }
-                },
-                'clause': {
-                    'metrics': {
-                        'accuracy': 0.92,
-                        'precision': 0.88,
-                        'recall': 0.80,
-                        'f1_score': 0.84
-                    }
-                }
-            }
-        )
-
-        filepath = tmp_path / "result_with_eval.json"
-        result.save(str(filepath))
-
-        loaded = QuAcqResult.load(str(filepath))
-        assert loaded.evaluation is not None
-        assert loaded.evaluation['description']['metrics']['accuracy'] == 0.95
-        assert loaded.evaluation['clause']['metrics']['accuracy'] == 0.92
 
 
 class TestFMData:
@@ -555,15 +448,15 @@ class TestQuAcqWithAssumptionIDs:
         quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
-            description_provider=prepared_model.description_provider,
             max_queries=5)
 
         assert result is not None
         assert result.n_queries <= 5
         assert isinstance(result.kb_assumption_ids, list)
-        assert isinstance(result.kb_constraints, list)
-        for name in result.kb_constraints:
-            assert isinstance(name, str)
+        if result.kb_assumption_ids:
+            names, _ = prepared_model.resolve_kb(result.kb_assumption_ids)
+            for name in names:
+                assert isinstance(name, str)
         for aid in result.kb_assumption_ids:
             assert isinstance(aid, int)
         assert result.convergence_reason in [
@@ -588,8 +481,8 @@ class TestQuAcqWithAssumptionIDs:
         assert result.convergence_reason == 'empty_bias'
         assert result.kb_assumption_ids == []
 
-    def test_result_has_dual_representation(self, prepared_model, oracle):
-        """Test result has both string names and assumption IDs."""
+    def test_result_resolved_via_model(self, prepared_model, oracle):
+        """Test result assumption IDs can be resolved via model."""
         task = prepared_model.task
         task_data = _learn_params_from_task(task)
 
@@ -603,88 +496,31 @@ class TestQuAcqWithAssumptionIDs:
         quacq = QuAcq.for_oracle(oracle, query_gen, discrim_gen)
         result = quacq.learn(
             **task_data, mode='oracle',
-            description_provider=prepared_model.description_provider,
             max_queries=10)
 
-        assert len(result.kb_constraints) == len(result.kb_assumption_ids)
-        if result.kb_constraints:
-            assert result.n_kb == len(result.kb_constraints)
+        # Runner resolves names via model, not algorithm result
+        if result.kb_assumption_ids:
+            names, _ = prepared_model.resolve_kb(result.kb_assumption_ids)
+            assert len(names) == len(result.kb_assumption_ids)
 
 
 class TestQuAcqResultAssumptionIDs:
-    """Tests for QuAcqResult with assumption ID support."""
+    """Tests for QuAcqResult with assumption IDs."""
 
     def test_result_with_assumption_ids(self):
-        """Test result creation with both fields."""
+        """Test result creation with assumption IDs."""
         result = QuAcqResult(
-            kb_constraints=['c1', 'c2'],
             kb_assumption_ids=[10, 12],
             n_queries=5,
-            n_kb=2,
-            convergence_reason='empty_bias',
-            runtime_ms=50.0
+            convergence_reason='empty_bias'
         )
         assert result.kb_assumption_ids == [10, 12]
-        assert result.kb_constraints == ['c1', 'c2']
+        assert result.n_queries == 5
 
-    def test_to_dict_includes_assumption_ids(self):
-        """Test to_dict includes kb_assumption_ids."""
-        result = QuAcqResult(
-            kb_constraints=['c1'],
-            kb_assumption_ids=[10],
-            n_queries=3,
-            n_kb=1,
-            convergence_reason='no_query',
-            runtime_ms=20.0
-        )
-        d = result.to_dict()
-        assert 'kb_assumption_ids' in d
-        assert d['kb_assumption_ids'] == [10]
-        assert d['kb_constraints'] == ['c1']
-
-    def test_save_load_with_assumption_ids(self, tmp_path):
-        """Test save/load preserves assumption IDs."""
-        result = QuAcqResult(
-            kb_constraints=['c1', 'c2'],
-            kb_assumption_ids=[10, 12],
-            n_queries=5,
-            n_kb=2,
-            convergence_reason='empty_bias',
-            runtime_ms=50.0
-        )
-        filepath = tmp_path / "result_aids.json"
-        result.save(str(filepath))
-
-        loaded = QuAcqResult.load(str(filepath))
-        assert loaded.kb_assumption_ids == [10, 12]
-        assert loaded.kb_constraints == ['c1', 'c2']
-
-    def test_load_old_format_without_assumption_ids(self, tmp_path):
-        """Test load handles old format without kb_assumption_ids."""
-        import json
-        old_data = {
-            'kb_constraints': ['c1'],
-            'n_queries': 3,
-            'n_kb': 1,
-            'convergence_reason': 'no_query',
-            'runtime_ms': 20.0,
-        }
-        filepath = tmp_path / "old_result.json"
-        with open(filepath, 'w') as f:
-            json.dump(old_data, f)
-
-        loaded = QuAcqResult.load(str(filepath))
-        assert loaded.kb_assumption_ids == []
-        assert loaded.kb_constraints == ['c1']
-
-    def test_n_kb_auto_from_assumption_ids(self):
-        """Test n_kb auto-calculated from kb_assumption_ids."""
-        result = QuAcqResult(
-            kb_assumption_ids=[10, 12, 14],
-            convergence_reason='empty_bias',
-            runtime_ms=10.0
-        )
-        assert result.n_kb == 3
+    def test_n_kb_derived_from_len(self):
+        """Test n_kb is derived from len(kb_assumption_ids)."""
+        result = QuAcqResult(kb_assumption_ids=[10, 12, 14])
+        assert len(result.kb_assumption_ids) == 3
 
 
 class TestTaskCompat:

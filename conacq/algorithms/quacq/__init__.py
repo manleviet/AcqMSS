@@ -39,7 +39,7 @@ Example Usage:
         feature_ids=task.feature_ids, id_to_feature=task.id_to_feature,
         constraint_clauses=task.constraint_clauses,
         negated_clauses=task.negated_clauses,
-        mode='oracle', description_provider=model.description_provider)
+        mode='oracle')
 """
 
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation
