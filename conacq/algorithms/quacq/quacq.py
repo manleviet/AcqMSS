@@ -142,8 +142,7 @@ class QuAcq:
                 n_queries += 1
                 query_history.append((config.copy(), answer, source))
 
-        # all_variables = set(feature_ids.keys())
-        all_variables = set(self.model.variables.keys())
+        all_variables = set(feature_ids.keys())
 
         logging.info('QuAcq starting: Bias=%d constraints, mode=%s', len(remaining_bias), mode)
 
@@ -197,28 +196,26 @@ class QuAcq:
                     convergence_reason = 'max_queries'
                     break
 
-                find_scope = FindScope(self.oracle, self.checker, self.model)
+                find_scope = FindScope(self.oracle, self.checker, self.model,
+                                       record_query, set_b[0])
                 scope_vars = find_scope.run(
                     e=query, R=set(), Y=all_variables,
                     ask_query=False,
                     remaining_bias=remaining_bias,
-                    record_query=record_query,
-                    root_assumption=set_b[0],
                 )
 
                 scope = set(scope_vars)
                 # Adds scope-derived constraint to knowledge base or falls back to tested constraint
                 if scope:
                     find_c = FindC(self.oracle, self.checker, self.model,
-                                   self.discriminating_generator)
+                                   record_query, set_b[0],
+                                   generator=self.discriminating_generator)
                     c_id = find_c.run(
                         e=query, scope=scope,
                         constraint_clauses=constraint_clauses,
                         id_to_feature=id_to_feature,
                         remaining_bias=remaining_bias,
-                        record_query=record_query,
                         learned_kb=learned_kb,
-                        root_assumption=set_b[0],
                     )
 
                     if c_id is not None:

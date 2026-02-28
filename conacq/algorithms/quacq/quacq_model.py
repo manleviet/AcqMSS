@@ -11,6 +11,7 @@ from dataclasses import field
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from explanation.models.task_preparation import DescriptionProvider
+from .sat_utils import get_constraint_vars
 
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation
 
@@ -132,9 +133,9 @@ class QuAcqModel:
         """Get feature names for constraint by assumption ID."""
         task = self._require_task()
         clauses = task.constraint_clauses.get(assumption_id, [])
-        return {task.id_to_feature[abs(lit)]
+        return {self.features[abs(lit)]
                 for clause in clauses for lit in clause
-                if abs(lit) in task.id_to_feature}
+                if abs(lit) in self.features}
 
     def prepare(self, oracle: 'FeatureModelOracle') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.
@@ -180,3 +181,25 @@ class QuAcqModel:
             if var in self.features:
                 config[self.features[var]] = lit > 0
         return config
+
+    def get_constraints_with_scope(self,
+                                   scope: set,
+                                   remaining_bias: set) -> List[int]:
+        """Get bias constraint IDs whose variables match scope.
+
+        Prefers exact scope match (c_vars == scope). Falls back to subset
+        match (c_vars ⊆ scope) if no exact matches found.
+        """
+        exact = []
+        subset = []
+        task = self._require_task()
+        # Collects bias constraints matching scope exactly or subset
+        for aid in remaining_bias:
+            c_vars = get_constraint_vars(aid, task.constraint_clauses, self.features)
+            if not c_vars:
+                continue
+            if c_vars == scope:
+                exact.append(aid)
+            elif c_vars.issubset(scope):
+                subset.append(aid)
+        return exact if exact else subset

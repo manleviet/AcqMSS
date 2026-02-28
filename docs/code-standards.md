@@ -199,9 +199,17 @@ class QuAcqRunner:
 
     def run(self, positive_examples=None, negative_examples=None, mode='oracle'):
         """Learn constraints interactively, resolve names."""
-        query_prov = QueryProvider()
-        discrim_gen = DiscriminatingGenerator()
-        quacq = QuAcq.for_oracle(self.oracle, query_prov, discrim_gen)
+        # Create checker from model (DI pattern)
+        from explanation.operations.algorithms.checker import CheckerFactory
+        checker = CheckerFactory.create_from_model(self.model)
+
+        # Inject checker + model into query provider
+        query_prov = QueryProvider(checker=checker, model=self.model)
+
+        # Inject checker + model + root_assumption into DiscriminatingGenerator (NEW - commit 260228)
+        discrim_gen = DiscriminatingGenerator(checker, self.model, self.model.task.set_b[0])
+
+        quacq = QuAcq.for_oracle(checker, self.oracle, query_prov, discrim_gen)
 
         # Algorithm returns raw assumption IDs
         result = quacq.learn(
@@ -297,19 +305,19 @@ class QuAcq:
         self.discriminating_generator = discriminating_generator
 
     @classmethod
-    def for_oracle(cls, oracle: Oracle, query_prov: QueryProvider,
+    def for_oracle(cls, checker: ConsistencyChecker, oracle: Oracle, query_prov: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
                    profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for oracle mode."""
-        return cls(oracle, query_provider=query_prov,
+        return cls(checker, oracle, query_provider=query_prov, model=None,
                    discriminating_generator=discrim_gen, profiler_instance=profiler)
 
     @classmethod
-    def for_examples(cls, oracle: Oracle, query_provider: QueryProvider,
+    def for_examples(cls, checker: ConsistencyChecker, oracle: Oracle, query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
                      profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for example-based modes."""
-        return cls(oracle, query_provider=query_provider,
+        return cls(checker, oracle, query_provider=query_provider, model=None,
                    discriminating_generator=discrim_gen, profiler_instance=profiler)
 
     def learn(self, set_c, set_b, set_kb, negation_map, assumptions,

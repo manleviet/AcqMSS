@@ -42,7 +42,7 @@ class DiscriminatingGenerator:
         Returns:
             Config dict if SAT, None if UNSAT
         """
-        # C_L[Y]: learned constraints in scope
+        # C_L[Y]: assumption IDs of learned constraints whose vars are in scope
         cl_y = [c_id for c_id in learned_kb
                 if self.model.get_constraint_vars(c_id).issubset(scope)]
 

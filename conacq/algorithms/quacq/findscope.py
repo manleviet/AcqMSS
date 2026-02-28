@@ -18,13 +18,17 @@ from .sat_utils import prune_rejecting
 class FindScope:
     """Finds scope of violated constraint via partial membership queries.
 
-    Oracle, checker, and model injected at construction; per-call data passed to run().
+    All collaborators and invariants (oracle, checker, model, record_query,
+    root_assumption) injected at construction; per-call data passed to run().
     """
 
-    def __init__(self, oracle, checker: ConsistencyChecker, model):
+    def __init__(self, oracle, checker: ConsistencyChecker, model,
+                 record_query, root_assumption: int):
         self.oracle = oracle
         self.checker = checker
         self.model = model
+        self.record_query = record_query
+        self.root_assumption = root_assumption
 
     def run(
             self,
@@ -33,8 +37,6 @@ class FindScope:
             Y: set,
             ask_query: bool,
             remaining_bias: set,
-            record_query,
-            root_assumption: int,
     ) -> List[str]:
         """
         Find scope of violated constraint via partial membership queries.
@@ -45,8 +47,6 @@ class FindScope:
             Y: Remaining variables to search
             ask_query: Whether to query oracle with e[R]
             remaining_bias: Mutable set of remaining bias assumption IDs
-            record_query: Callback(config, answer, source) to record queries
-            root_assumption: Root BG assumption ID for SAT checking
 
         Returns:
             Scope variables (feature names) as list
@@ -54,11 +54,13 @@ class FindScope:
         if ask_query:
             partial = {k: e[k] for k in R if k in e}
             is_consistent = self.oracle.is_valid(partial)
-            record_query(partial, is_consistent, 'findscope')
+            self.record_query(partial, is_consistent, 'findscope')
 
             if is_consistent:
-                self._prune_rejecting_partial(
-                    remaining_bias, e, R, root_assumption)
+                if partial:
+                    pruned = prune_rejecting(self.checker, self.model, remaining_bias, partial, self.root_assumption)
+                    if pruned:
+                        logging.debug('FindScope pruned %d constraints from partial query', len(pruned))
             else:
                 return []
 
@@ -71,25 +73,7 @@ class FindScope:
         Y1 = set(Y_list[:mid])
         Y2 = set(Y_list[mid:])
 
-        S1 = self.run(e, R | Y1, Y2, True,
-                      remaining_bias, record_query, root_assumption)
-        S2 = self.run(e, R | set(S1), Y1, len(S1) > 0,
-                      remaining_bias, record_query, root_assumption)
+        S1 = self.run(e, R | Y1, Y2, True, remaining_bias)
+        S2 = self.run(e, R | set(S1), Y1, len(S1) > 0, remaining_bias)
 
         return S1 + S2
-
-    def _prune_rejecting_partial(
-            self,
-            remaining_bias: set,
-            e: dict,
-            R: set,
-            root_assumption: int,
-    ) -> None:
-        """Prune bias constraints that reject partial assignment e[R]."""
-        partial = {k: e[k] for k in R if k in e}
-        if not partial:
-            return
-
-        pruned = prune_rejecting(self.checker, self.model, remaining_bias, partial, root_assumption)
-        if pruned:
-            logging.debug('FindScope pruned %d constraints from partial query', len(pruned))

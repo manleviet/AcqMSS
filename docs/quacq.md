@@ -361,7 +361,9 @@ query_provider = QueryProvider(
     model=model,        # For config_to_assumptions (NEW)
     pool=None           # Optional: provide pool for example-based mode
 )
-discrim_gen = DiscriminatingGenerator()
+
+# DiscriminatingGenerator with injected checker + model (NEW - commit 260228)
+discrim_gen = DiscriminatingGenerator(checker, model, model.task.set_b[0])
 
 # Build QuAcq with dependencies (oracle mode)
 quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)

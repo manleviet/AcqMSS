@@ -16,12 +16,11 @@ from conacq.algorithms.quacq import (
     DiscriminatingGenerator,
 )
 from conacq.algorithms.quacq.task_preparation import QuAcqTask
-from conacq.algorithms.quacq.quacq_model import QuAcqModel
+from conacq.algorithms.quacq.quacq_model import QuAcqModel, get_constraints_with_scope
 from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
 from conacq.algorithms.quacq.sat_utils import (
     config_to_assumptions, partial_config_to_assumptions,
-    get_constraint_vars, violates_clauses, get_constraints_with_scope,
-    get_kb_clauses,
+    get_constraint_vars, violates_clauses, get_kb_clauses,
 )
 from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import (

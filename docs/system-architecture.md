@@ -106,7 +106,9 @@ query_prov = QueryProvider(
     checker=checker,    # Injected ConsistencyChecker
     model=model         # For config_to_assumptions()
 )
-discrim_gen = DiscriminatingGenerator()
+
+# DiscriminatingGenerator with injected checker + model (NEW - commit 260228)
+discrim_gen = DiscriminatingGenerator(checker, model, model.task.set_b[0])
 
 # QuAcq with checker parameter (NEW)
 quacq = QuAcq.for_oracle(checker, oracle, query_prov, discrim_gen)

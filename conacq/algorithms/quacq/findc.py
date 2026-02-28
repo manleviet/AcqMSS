@@ -21,14 +21,17 @@ from explanation.operations.algorithms.checker import ConsistencyChecker
 class FindC:
     """Finds constraint with given scope violated by example.
 
-    Oracle, checker, model, and generator injected at construction;
-    per-call data passed to run().
+    All collaborators and invariants (oracle, checker, model, record_query,
+    root_assumption, generator) injected at construction; per-call data passed to run().
     """
 
-    def __init__(self, oracle, checker: ConsistencyChecker, model, generator=None):
+    def __init__(self, oracle, checker: ConsistencyChecker, model,
+                 record_query, root_assumption: int, generator=None):
         self.oracle = oracle
         self.checker = checker
         self.model = model
+        self.record_query = record_query
+        self.root_assumption = root_assumption
         self.generator = generator
 
     def run(
@@ -38,9 +41,7 @@ class FindC:
             constraint_clauses: Dict[int, List[List[int]]],
             id_to_feature: Dict[int, str],
             remaining_bias: set,
-            record_query,
             learned_kb: list,
-            root_assumption: int,
     ):
         """
         Find constraint with given scope violated by e.
@@ -55,9 +56,7 @@ class FindC:
             constraint_clauses: assumption_id -> raw CNF clauses
             id_to_feature: SAT variable ID -> feature name
             remaining_bias: Mutable set of remaining bias assumption IDs
-            record_query: Callback(config, answer, source) to record queries
             learned_kb: Currently learned constraint IDs (for DiscriminatingGenerator)
-            root_assumption: Root BG assumption ID for SAT checking
 
         Returns:
             Constraint ID (int) or None
@@ -76,7 +75,7 @@ class FindC:
         # Filter to constraints that actually reject e (SAT-based)
         rejecting = []
         e_assumptions = self.model.config_to_assumptions(e)
-        base = [root_assumption] + e_assumptions
+        base = [self.root_assumption] + e_assumptions
 
         for c_id in candidates:
             if not self.checker.is_consistent(base + [c_id]):
@@ -94,8 +93,7 @@ class FindC:
 
         if self.generator is not None:
             result = self._narrow_with_generator(
-                remaining, remaining_bias, record_query,
-                learned_kb, scope)
+                remaining, remaining_bias, learned_kb, scope)
             if result is not None:
                 return result
 
@@ -107,7 +105,6 @@ class FindC:
             self,
             candidates: list,
             remaining_bias: set,
-            record_query,
             learned_kb: list,
             scope: set
     ):
@@ -124,7 +121,7 @@ class FindC:
                     continue
 
                 is_valid = self.oracle.is_valid(disc_e)
-                record_query(disc_e, is_valid, 'findc')
+                self.record_query(disc_e, is_valid, 'findc')
 
                 if is_valid:
                     # c_j rejects a valid example -> c_j not in target
