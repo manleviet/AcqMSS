@@ -7,7 +7,6 @@ to QuAcqTaskPreparation, produces QuAcqTask.
 
 from __future__ import annotations
 
-from dataclasses import field
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from explanation.models.task_preparation import DescriptionProvider
@@ -51,8 +50,8 @@ class QuAcqModel:
         self._description_provider: Optional[DescriptionProvider] = None
 
         self.features: Dict[int, str] = {}  # id -> feature's name
-        self.pos_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
-        self.neg_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
+        self.pos_assignment_to_assumption: Dict[str, int] = {}
+        self.neg_assignment_to_assumption: Dict[str, int] = {}
 
     @property
     def task(self) -> Optional[QuAcqTask]:

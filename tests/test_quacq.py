@@ -18,7 +18,6 @@ from conacq.algorithms.quacq import (
 from conacq.algorithms.quacq.task_preparation import QuAcqTask
 from conacq.algorithms.quacq.quacq_model import QuAcqModel
 from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
-from conacq.algorithms.quacq.sat_utils import get_constraint_vars
 from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import (
     CheckerFactory, NonIncrementalPySATChecker,
@@ -616,13 +615,17 @@ class TestSatUtils:
     """Tests for sat_utils standalone functions."""
 
     def test_get_constraint_vars(self):
-        constraint_clauses = {10: [[1, -2], [3]]}
-        id_to_feature = {1: 'a', 2: 'b', 3: 'c'}
-        result = get_constraint_vars(10, constraint_clauses, id_to_feature)
+        model = QuAcqModel()
+        model.features = {1: 'a', 2: 'b', 3: 'c'}
+        model._task = QuAcqTask(constraint_clauses={10: [[1, -2], [3]]})
+        result = model.get_constraint_vars(10)
         assert result == {'a', 'b', 'c'}
 
     def test_get_constraint_vars_missing(self):
-        result = get_constraint_vars(99, {}, {})
+        model = QuAcqModel()
+        model.features = {}
+        model._task = QuAcqTask(constraint_clauses={})
+        result = model.get_constraint_vars(99)
         assert result == set()
 
     def test_get_constraints_with_scope_exact(self):
