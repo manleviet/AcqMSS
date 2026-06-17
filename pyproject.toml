@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "acqmss"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "flamapy~=2.0.1",
+    "python-sat",
+    "toml~=0.10.2",
+    "allpairspy~=2.5.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "parameterized~=0.9.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["conacq*", "explanation*", "apps*"]
