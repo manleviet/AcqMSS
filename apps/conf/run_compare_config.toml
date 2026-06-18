@@ -20,20 +20,17 @@ strategy = "all"
 # =============================================================================
 # REAL-FM-7 (14 features)
 # =============================================================================
+#[[models]]
+#name = "REAL-FM-7"
+#oracle = "data/fms/REAL-FM-7.uvl"
+#bias = "data/bias/REAL-FM-7-bias.json"
+#kb_dir = "data/results/congen"
+
 [[models]]
 name = "REAL-FM-7"
 oracle = "data/fms/REAL-FM-7.uvl"
 bias = "data/bias/REAL-FM-7-bias.json"
-kb_dir = "data/results/congen"
-
-## =============================================================================
-## REAL-FM-4 (291 features)
-## =============================================================================
-#[[models]]
-#name = "REAL-FM-4"
-#oracle = "data/fms/REAL-FM-4.uvl"
-#bias = "data/bias/REAL-FM-4-bias.json"
-#kb_dir = "data/results/congen"
+kb_dir = "data/results/interactive"
 #
 ## =============================================================================
 ## arcade-game (65 features)
@@ -43,6 +40,12 @@ kb_dir = "data/results/congen"
 #oracle = "data/fms/arcade-game.uvl"
 #bias = "data/bias/arcade-game-bias.json"
 #kb_dir = "data/results/congen"
+
+[[models]]
+name = "arcade-game"
+oracle = "data/fms/arcade-game.uvl"
+bias = "data/bias/arcade-game-bias.json"
+kb_dir = "data/results/interactive"
 #
 ## =============================================================================
 ## fqa (179 features)
@@ -51,6 +54,21 @@ kb_dir = "data/results/congen"
 #name = "fqa"
 #oracle = "data/fms/fqa.uvl"
 #bias = "data/bias/fqa-bias.json"
+#kb_dir = "data/results/congen"
+
+[[models]]
+name = "fqa"
+oracle = "data/fms/fqa.uvl"
+bias = "data/bias/fqa-bias.json"
+kb_dir = "data/results/interactive"
+#
+## =============================================================================
+## REAL-FM-4 (291 features)
+## =============================================================================
+#[[models]]
+#name = "REAL-FM-4"
+#oracle = "data/fms/REAL-FM-4.uvl"
+#bias = "data/bias/REAL-FM-4-bias.json"
 #kb_dir = "data/results/congen"
 #
 ## =============================================================================
