@@ -308,7 +308,7 @@ finally:
 - `config.py` — Pipeline config (ModelConfig, find_cv_files, find_kb_files)
 - `result_loader.py` — Load evaluation results + `ConGenResultData.from_dict()`
 - `report.py` — Generate CSV/JSON/LaTeX/Markdown reports; unified CV dict builder (`generate_unified_cv_dict`, `_enrich_constraints`)
-- `interactive_metrics.py` — QuAcq-specific metrics (query counts, convergence)
+
 
 **Metrics**:
 ```
@@ -734,7 +734,7 @@ Result: QuAcqResult with assumption IDs + query history
 - **discriminating_generator.py**: DiscriminatingGenerator (C_L[Y] + BG, not FM)
 - **quacq_model.py**: QuAcqModel for interactive learning (includes config_to_assumptions)
 - **quacq_model_builder.py**: Fluent builder pattern
-- **_task_compat.py**: Shared helpers (get_bg_clauses, normalize clause maps)
+- **sat_utils.py**: Shared SAT utilities (config/scope conversion, consistency pruning, constraint extraction)
 
 ## Integration Points
 

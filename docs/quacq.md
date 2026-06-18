@@ -191,7 +191,7 @@ QueryProvider(
 - `conacq/algorithms/quacq/quacq_model.py` — QuAcqModel (dual to ConGenModel) for interactive learning
 - `conacq/algorithms/quacq/quacq_model_builder.py` — QuAcqModelBuilder (fluent builder, auto-prepares on build())
 - `conacq/algorithms/quacq/task_preparation.py` — QuAcqTask + QuAcqTaskPreparation (inherited from DiagnosisTask)
-- `conacq/algorithms/quacq/_task_compat.py` — Shared duck-typing helpers (get_bg_clauses(), get_clause_map(), get_negated_clauses())
+
 - `conacq/oracle/` — Oracle implementations: FeatureModelOracle, UserPromptOracle, CachedOracle, FMData, BGData
 - `conacq/example_generators/` — QueryProvider: unified pool + SAT query generation (query_provider.py)
 
@@ -269,7 +269,7 @@ Key Classes (in conacq/algorithms/quacq/):
 - QuAcqModel: QuAcq dual to ConGenModel (quacq_model.py)
 - QuAcqModelBuilder: Fluent builder, auto-prepares on build() (quacq_model_builder.py)
 - QuAcqTaskPreparation: Prepares QuAcqTask via prepare_kb() (task_preparation.py)
-- _task_compat: Shared helpers (get_bg_clauses(), get_clause_map(), get_negated_clauses())
+
 ```
 
 **Inheritance Pattern** (Refactored):

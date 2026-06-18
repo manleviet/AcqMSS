@@ -314,7 +314,7 @@ SAT Infrastructure (explanation/)
 | **Recall** | TP / (TP + FN) | ≥80% | False negative rate |
 | **Solver Efficiency** | Calls per CONGEN run | <10K (65-feat) | Profiling data |
 | **Wall-clock Time** | Minutes to complete CONGEN | <0.5 (65-feat) | Profiler.py timing |
-| **Convergence** | Queries for QuAcq completion | <1K | interactive_metrics.py |
+| **Convergence** | Queries for QuAcq completion | <1K | cross_validation.py metrics |
 | **Code Coverage** | % of algorithms with tests | ≥80% | pytest --cov |
 | **Documentation** | Lines per 100 LOC | ≥15 | doc/code ratio |
 

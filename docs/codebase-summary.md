@@ -16,32 +16,31 @@ Primary constraint discovery algorithms:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `congen.py` | 228 | ConGen orchestration (direct params, no task object) |
+| `congen.py` | 149 | ConGen orchestration (direct params, no task object) |
 | `acqmss.py` | 104 | ACQMSS: divide-and-conquer MSS finding |
-| `reduce.py` | 155 | REDUCE: redundancy elimination via consistency checking |
-| `generate_ne.py` | 193 | GenerateNE: negated example generation (internal to ConGenModel.prepare()) |
-| `task_preparation.py` | 435 | Task hierarchy (DiagnosisTask → TestCaseTask → ConGenTask) + unified prep |
-| `congen_model.py` | 186 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Stores negated_constraint_map + next_available_id (computed at build time). Call prepare(oracle) before use. |
-| `congen_model_builder.py` | 157 | ConGenModelBuilder - fluent builder pattern. Requires oracle. build() computes negation (idempotent), auto-prepares when oracle+examples set. Returns unprepared model otherwise. |
+| `reduce.py` | 104 | REDUCE: redundancy elimination via consistency checking |
+| `generate_ne.py` | 138 | GenerateNE: negated example generation (internal to ConGenModel.prepare()) |
+| `task_preparation.py` | 233 | Task hierarchy (DiagnosisTask → TestCaseTask → ConGenTask) + unified prep |
+| `congen_model.py` | 257 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Stores negated_constraint_map + next_available_id (computed at build time). Call prepare(oracle) before use. |
+| `congen_model_builder.py` | 162 | ConGenModelBuilder - fluent builder pattern. Requires oracle. build() computes negation (idempotent), auto-prepares when oracle+examples set. Returns unprepared model otherwise. |
 | (Total: 1,331 LOC for main algorithms) |
 | (Subtotal: 1,439 LOC including both paradigm-specific builders) |
 
-**QuAcq Sub-package** (`quacq/`, 10 files, ~2,000 LOC):
+**QuAcq Sub-package** (`quacq/`, 9 files, ~1,066 LOC):
 
 **Assumption-Based Learning (Unified with ConGen, Paper-Aligned Queries, DI Pattern)**:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `quacq.py` | 439 | QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, direct param learn()) |
-| `sat_utils.py` | 123 | Standalone SAT utilities for QuAcq: constraint filtering, scope matching, assumption conversion, consistency pruning |
-| `quacq_model.py` | ~93 | QuAcqModel: dual to ConGenModel for interactive learning. Stores negated_constraint_map + next_available_id (computed at build time). |
-| `quacq_model_builder.py` | ~74 | QuAcqModelBuilder: fluent builder, requires oracle. build() computes negation (idempotent), auto-prepares on build(). |
-| `task_preparation.py` | ~123 | QuAcqTask + QuAcqTaskPreparation: pure data container + preparation |
-| `_task_compat.py` | ~39 | Shared duck-typing helpers: get_clause_map(), get_negated_clauses(), get_bg_clauses() |
-| `findc.py` | 208 | FindC (IJCAI13 Algorithm 3): oracle.is_valid() + DiscriminatingGenerator(C_L[Y]) |
-| `findscope.py` | 134 | FindScope (IJCAI13 Algorithm 2): oracle.is_valid() partial queries, no SAT |
-| `discriminating_generator.py` | 66 | DiscriminatingGenerator: Paper Algorithm 3 line 5, C_L[Y] + BG, not FM |
-| `__init__.py` | ~60 | Package exports |
+| `quacq.py` | 262 | QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, direct param learn()) |
+| `sat_utils.py` | 52 | Standalone SAT utilities for QuAcq: constraint filtering, scope matching, assumption conversion, consistency pruning |
+| `quacq_model.py` | 204 | QuAcqModel: dual to ConGenModel for interactive learning. Stores negated_constraint_map + next_available_id (computed at build time). |
+| `quacq_model_builder.py` | 85 | QuAcqModelBuilder: fluent builder, requires oracle. build() computes negation (idempotent), auto-prepares on build(). |
+| `task_preparation.py` | 103 | QuAcqTask + QuAcqTaskPreparation: pure data container + preparation |
+| `findc.py` | 138 | FindC (IJCAI13 Algorithm 3): oracle.is_valid() + DiscriminatingGenerator(C_L[Y]) |
+| `findscope.py` | 84 | FindScope (IJCAI13 Algorithm 2): oracle.is_valid() partial queries, no SAT |
+| `discriminating_generator.py` | 65 | DiscriminatingGenerator: Paper Algorithm 3 line 5, C_L[Y] + BG, not FM |
+| `__init__.py` | 73 | Package exports |
 
 **Changes (This Session - QuAcqTask Cleanup + DI Refactor - commits 260228-e2b68c8)**:
 - ✅ **Cleaned QuAcqTask** — Removed 7 dead methods (~80 LOC), now pure data container (fields only)
@@ -63,7 +62,7 @@ Primary constraint discovery algorithms:
 - ✅ Merged `QuAcqResult` into `quacq.py` (deleted `result.py`)
 - ✅ Deleted `task.py` (`InteractiveTask`) — use `QuAcqTask` (assumes int IDs)
 - ✅ Deleted `learner.py` (`InteractiveLearner`) — use `QuAcqModelBuilder` path
-- ✅ Simplified `_task_compat.py` (removed InteractiveTask fallback branches)
+- ✅ Removed `_task_compat.py` (module deleted, functionality moved to sat_utils.py - commit 84e1c11)
 
 #### conacq/bias/ — Bias (Constraint) Generation (~1,176 LOC, 6 files)
 
@@ -192,7 +191,7 @@ Cross-validation, accuracy metrics, unified CV output, and QuAcq->ConGen progres
 | File | LOC | Purpose |
 |------|-----|---------|
 | `cross_validation.py` | 504 | n-fold CV (CONGEN + Interactive) with pre-generated fold support |
-| `interactive_metrics.py` | 391 | QuAcq-specific metrics (query count, convergence) |
+
 | `kb_comparator.py` | 267 | Compare learned KB vs GroundTruth FM. Strategies: description, clause, semantic (SAT-based equivalence) |
 | `report.py` | 281 | Generate CSV/JSON/LaTeX/Markdown reports; unified CV dict builder (`generate_unified_cv_dict`, `_enrich_constraints`) |
 | `accuracy.py` | 170 | Accuracy/precision/recall/F1 calculation |
@@ -429,10 +428,11 @@ CONGEN and QuAcq learning results:
 - QuAcqTask focused on interactive-specific state (bias, learned_kb)
 - Consistent field naming: `set_b` (assumption IDs) inherited from DiagnosisTask
 
-**Shared Duck-Typing Helpers** (`_task_compat.py`):
-- `get_clause_map(task)` — Normalize constraint→clauses mapping
-- `get_negated_clauses(task, c_id)` — Normalize negated clause lookup
-- `get_bg_clauses(task)` — Extract raw BG clauses from either task type
+**Shared SAT Utilities** (`sat_utils.py`):
+- `get_constraint_vars(constraint_clauses)` — Extract SAT variables from constraint CNF
+- `prune_rejecting(remaining_bias, config_assumptions, task)` — Filter constraints that reject config
+- `config_to_assumptions(config, task)` — Convert feature config to assumption literals
+- `violates_clauses(config_assumptions, clauses)` — Check if config violates clauses
 
 **Architecture Unification** (earlier):
 - QuAcq now uses **int assumption IDs** (identical to ConGen)

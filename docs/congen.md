@@ -306,7 +306,7 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 | `conacq/algorithms/acqmss/generate_ne.py` | 138 | GenerateNE negative example processing |
 | `conacq/algorithms/acqmss/task_preparation.py` | 239 | ConGenTaskPreparation setup |
 | `conacq/algorithms/acqmss/congen_model.py` | 257 | ConGenModel data container |
-| `conacq/algorithms/acqmss/congen_model_builder.py` | 150 | Builder for ConGenModel construction |
+| `conacq/algorithms/acqmss/congen_model_builder.py` | 162 | Builder for ConGenModel construction |
 
 ### Supporting Infrastructure
 
