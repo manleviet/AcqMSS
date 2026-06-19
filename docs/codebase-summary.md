@@ -1,8 +1,8 @@
 # AcqMSS Codebase Summary
 
-**Total Python Code**: ~21,300 lines across ~99 files (consolidated from ~104 files after QuAcq file mergers)
-**Main Packages**: conacq (~9,700 LOC) + explanation (~4,600 LOC) + apps (~3,025 LOC) + tests (~3,745 LOC)
-**Last Updated**: 2026-02-28 (QuAcqTask cleanup: pure data container, DescriptionProvider removed from learn())
+**Total Python Code**: ~21,800 lines across ~102 files
+**Main Packages**: conacq (~10,000 LOC) + explanation (~5,000 LOC) + apps (~3,025 LOC) + tests (~3,745 LOC)
+**Last Updated**: 2026-06-19 (Phase R refactor: Task-as-unit, VariableCodec, ConsistencyExecutor Protocol, ProcessExecutor + MemoizingExecutor, OracleAwareTaskPreparation)
 
 ## Package Structure
 
@@ -19,10 +19,10 @@ Primary constraint discovery algorithms:
 | `congen.py` | 149 | ConGen orchestration (direct params, no task object) |
 | `acqmss.py` | 104 | ACQMSS: divide-and-conquer MSS finding |
 | `reduce.py` | 104 | REDUCE: redundancy elimination via consistency checking |
-| `generate_ne.py` | 138 | GenerateNE: negated example generation (internal to ConGenModel.prepare()) |
-| `task_preparation.py` | 233 | Task hierarchy (DiagnosisTask → TestCaseTask → ConGenTask) + unified prep |
-| `congen_model.py` | 257 | ConGenModel - pure data container (bias + solver config), oracle-agnostic. Stores negated_constraint_map + next_available_id (computed at build time). Call prepare(oracle) before use. |
-| `congen_model_builder.py` | 162 | ConGenModelBuilder - fluent builder pattern. Requires oracle. build() computes negation (idempotent), auto-prepares when oracle+examples set. Returns unprepared model otherwise. |
+| `generate_ne.py` | 138 | GenerateNE: pure negated example generation (returns clauses, no mutation) |
+| `task_preparation.py` | 233 | Task hierarchy + ConGenTaskPreparation strategy (calls GenerateNE internally) |
+| `congen_model.py` | 257 | Immutable KB container; `prepare_task(task_input, oracle) → ConGenTask` |
+| `congen_model_builder.py` | 162 | Fluent builder (requires oracle for build-time negation computation) |
 | (Total: 1,331 LOC for main algorithms) |
 | (Subtotal: 1,439 LOC including both paradigm-specific builders) |
 
@@ -100,7 +100,7 @@ Utilities for converting query histories and managing example formats:
 | `io_utils.py` | ~25 | I/O utilities for example persistence |
 | `__init__.py` | ~1 | Package exports |
 
-**Oracle Sub-package** (`conacq/oracle/`, 10 files, ~1,000 LOC):
+**Oracle Sub-package** (`conacq/oracle/`, 11 files, ~1,100 LOC, Phase R integration):
 
 | File | LOC | Purpose |
 |------|-----|---------|
@@ -108,7 +108,8 @@ Utilities for converting query histories and managing example formats:
 | `fm_data.py` | 25 | FMData: frozen dataclass for FM metadata (features, feature_ids, root_feature, num_constraints, next_available_id). Decouples metadata from oracle. |
 | `bg_data.py` | 27 | BGData: frozen dataclass for background knowledge root constraint + negation pair. Extracted post-preparation from Oracle for ConGen consumption. Enables assumption ID allocation without overlap. |
 | `fm_oracle.py` | 200+ | FeatureModelOracle: FM oracle implementation. ABC methods: `is_valid()`, `ask()`. FM-specific: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`. |
-| `fm_oracle_model.py` | 280+ | FMOracleModel: assumption-guarded FM clauses, CheckerModel protocol. Exposes `bg_data` property + `get_bg_data()` for ConGen to extract root BG constraint. |
+| `fm_oracle_model.py` | 280+ | FMOracleModel: assumption-guarded FM clauses. Phase R: prepared via OracleAwareTaskPreparation. Exposes `bg_data` property + `get_bg_data()` for ConGen to extract root BG constraint. |
+| `oracle_aware_task_preparation.py` | 120 | OracleAwareTaskPreparation: mixin consolidating BG-copy-from-oracle for ConGen/QuAcq. BGDataProvider Protocol. |
 | `constraint_description.py` | 120 | CTC description extraction from FM (requires/excludes/hierarchical) |
 | `user_prompt.py` | 100+ | UserPromptOracle: interactive oracle. ABC methods: `is_valid()`, `ask()`. Raises NotImplementedError for FM-specific methods. |
 | `cached.py` | 80+ | CachedOracle: transparent caching wrapper. Caches `is_valid()`, delegates FM methods to base oracle. |
@@ -126,21 +127,15 @@ Utilities for converting query histories and managing example formats:
    - FM-specific extensions (FeatureModelOracle only): `get_fm_data()`, `get_features()`, `get_feature_ids()`, `complete_configuration()`, `get_cnf_clauses()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `get_constraint_descriptions()`
    - Delegates to `FMOracleModel` for SAT-based consistency checking
 
-4. **FMOracleModel Architecture**: FM clauses stored directly in `set_kb` (always active). Feature assignments become assumption-guarded unit clauses: `[-a_pos_i, fid]` and `[-a_neg_i, -fid]`. Satisfies `CheckerModel` protocol for `CheckerFactory` integration. Prepared via `OracleTaskPreparation` class. Exposes `bg_data` property (lazy-computed) and `get_bg_data()` method for ConGen to extract root background constraint pair post-preparation.
+4. **FMOracleModel (Phase R)**: FM clauses in `set_kb` with assumption-guarded feature assignments. Prepared via `OracleTaskPreparation`. Exposes `bg_data` property for root constraint extraction.
 
-5. **Feature ID Consistency**: The `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order) stored in `FmToPysat.variables` as the authoritative source. This ensures feature_ids match SAT variable IDs in CNF clauses. Using alphabetical sorting would cause critical mismatch with clause variable references.
+5. **Feature ID Consistency**: Uses flamapy's variable mapping (tree traversal order) from `FmToPysat.variables`. Ensures feature_ids match SAT variable IDs in CNF clauses.
 
-6. **Example Generator Refactoring**: Now typed as `FeatureModelOracle` (not generic `Oracle`). Use `oracle.complete_configuration()` for generating valid configs instead of direct SAT solver calls. Decouples generators from solver details.
+6. **GenerateNE (Phase R)**: Pure function returning `NEPerTestcase` list. Called by `ConGenTaskPreparation`, extends caller's KB copy from returned clauses (no mutation).
 
-7. **Assumption-Based Representation**: All checkers (Incremental and NonIncremental) use identical assumption-based data: `List[int]` for assumptions, used uniformly in algorithms (no `if is_incremental` branching).
+7. **Builder Pattern**: ConGenModelBuilder requires oracle for build-time negation. `build()` returns immutable KB. Call `model.prepare_task(task_input, oracle)` per fold.
 
-8. **GenerateNE Design**: Now invoked internally by `ConGenModel.prepare()`. Results simplified to `NEResult(new_clauses, set_neg_tv, next_available_id)`. Merged via inline code in `ConGenModel.prepare()` (no longer caller-invoked).
-
-9. **CheckerModel Protocol**: `FMOracleModel` and `ConGenModel` implement `get_kb()`, `get_assumptions()`, `use_incremental` for compatibility with `CheckerFactory`.
-
-10. **Builder Pattern** (commit 260227): ConGenModelBuilder encapsulates bias loading and configuration. Requires oracle via `with_oracle()` (needed for build-time negation computation). `build()` computes negation (idempotent) and auto-prepares when `with_examples()` is also set; returns unprepared model otherwise. Call `model.prepare(oracle, examples)` manually for CV reuse patterns.
-
-11. **Oracle Required at Build Time**: Oracle passed to `with_oracle()` for negation computation in `build()`. Same oracle can be passed to `model.prepare()` for example preparation. Enables cross-validation reuse without rebuilding model.
+8. **Assumption-Based Representation**: All checkers use identical assumption-based data (no `if is_incremental` branching in algorithms).
 
 #### conacq/runners/ — Execution Runners (~480 LOC, 4 files)
 
@@ -207,37 +202,40 @@ Cross-validation, accuracy metrics, unified CV output, and QuAcq->ConGen progres
 
 Diagnosis algorithms and SAT model abstraction:
 
-#### explanation/models/ — Diagnosis Models (~1,403 LOC, 5 files)
+#### explanation/models/ — Diagnosis Models & Task Abstraction (Phase R, ~1,600 LOC, 6 files)
 
-SAT model representation and construction:
+SAT model representation and immutable task units:
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `task_preparation.py` | 750 | Unified DiagnosisTaskPreparation, TestCaseTaskPreparation, factory classes |
+| `codec.py` | 50 | VariableCodec: single source of truth for variable↔name↔assumption translation (Phase R) |
 | `diagnosis_model_builder.py` | 300 | Builder pattern: construct DiagnosisModel with configuration |
 | `pysat_diagnosis_model.py` | 255 | DiagnosisModel: SAT instance + metadata (clauses, assumptions) |
 | `testsuite.py` | 75 | TestSuite: holds test cases + their configurations |
 
-#### explanation/operations/ — SAT Operations (~4,405 LOC, ~25 files)
+#### explanation/operations/ — SAT Operations (Phase R, ~4,800 LOC, ~26 files)
 
-Diagnosis algorithm implementations and SAT abstractions:
+Diagnosis algorithm implementations and executor abstractions:
 
 **Core Algorithm Files**:
 
 | File | LOC | Purpose |
 |------|-----|---------|
 | `profiler.py` | 800 | Profiling infrastructure: decorator-based timing, call counting |
-| `checker.py` | 450 | ConsistencyChecker ABC + implementations (both use assumption-based data; immutable) |
+| `checker.py` | 500 | ConsistencyChecker ABC + implementations (Phase R: serial ConsistencyExecutor); immutable, picklable |
+| `executor.py` | 300 | ProcessExecutor (shared pool), MemoizingExecutor (cache), ConsistencyCache (Phase R, NEW) |
 | `hsdag.py` | 350 | HSDAG tree search: optimization for multiple diagnoses/conflicts |
 | `pysat_explanation_builder.py` | 330 | Builder for diagnosis operations (FastDiag, QuickXPlain, KBDiag) |
 | `pysat_abstract_explanation.py` | 250 | Template method base for diagnosis operations |
 
-**Diagnosis Algorithm Implementations** (`algorithms/` subdirectory, ~2,000 LOC):
+**Diagnosis Algorithm Implementations** (`algorithms/` subdirectory, ~2,200 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
+| `algorithms/checker.py` | 120 | CheckerFactory: creates ConsistencyChecker from Task (Phase R) |
 | `algorithms/fastdiag.py` | 85 | FastDiag: breadth-first minimal diagnosis finding |
-| `algorithms/fastdiagp.py` | 150 | FastDiagP: parallel FastDiag variant |
+| `algorithms/fastdiagp.py` | 160 | FastDiagP: parallel variant using executor.submit() (Phase R rewrite) |
 | `algorithms/quickxplain.py` | 80 | QuickXPlain: minimal conflict finding |
 | `algorithms/kbdiag.py` | 100 | KBDiag: kernel-based diagnosis |
 | `algorithms/wipeoutr_fm.py` | 90 | WipeOutR_FM: feature model variant |
@@ -497,25 +495,20 @@ CONGEN and QuAcq learning results:
 - ConGenTaskPreparation calls `oracle.get_bg_data()` to extract root constraint post-preparation
 - Enables clean separation: Oracle owns Parts 1-4 of assumption ID layout; ConGen starts allocation at `next_available_id`
 
-**Build-Time Negation** (commit 260227):
-- ConGenModelBuilder.build() now computes negation (idempotent) before prepare()
-- ConGenModel stores negated_constraint_map + next_available_id (populated at build time)
-- ConGenModel.prepare() is idempotent: reads negated_constraint_map, never writes to it
-- QuAcqModelBuilder.build() follows same pattern: negation at build time
-
-**Earlier Changes** (still in place):
-- ConGenModel pure data container (bias + solver config only + negation maps)
-- ConGenModel.prepare(oracle, pos_examples, neg_examples) - reads negation maps, doesn't write
-- ConGenModelBuilder requires oracle (new requirement) for build-time negation
-- GenerateNE internalized to ConGenModel.prepare()
-- FMOracleModel with assumption-guarded clauses
-- Cross-validation reuse pattern (build once, prepare multiple times)
+**Phase R Architecture** (task-as-unit refactor):
+- Models are immutable KB containers (bias + negation maps)
+- `model.prepare_task(task_input, oracle) → Task` is pure: fresh Task per call
+- GenerateNE pure: returns clauses; caller extends its own KB copy
+- Checker built from Task, not model: `CheckerFactory.create_from_task(task, ...)`
+- use_incremental on operation level (CheckerFactory), not model builder
+- Oracle injected at prepare_task() time, not stored in model
+- Cross-validation: build once (expensive negation), prepare+shuffle per fold (cheap, pure)
 
 ## Build & Test Commands
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (from pyproject.toml + uv.lock)
+uv sync --extra dev        # or: pip install -e ".[dev]"
 
 # Run all tests (both modes)
 PYTHONPATH=. pytest tests/ -v

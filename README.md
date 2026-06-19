@@ -10,10 +10,13 @@ A research system for automatically acquiring constraints from feature models th
 git clone https://github.com/manleviet/AcqMSS.git
 cd AcqMSS
 
-python3.13 -m venv .venv
-source .venv/bin/activate  # Linux/macOS
+# Recommended: uv (installs from pyproject.toml + uv.lock)
+uv sync --extra dev          # creates .venv with runtime + dev (pytest) deps
 
-pip install -r requirements.txt
+# Alternative: stdlib venv + pip (editable install from pyproject.toml)
+python3.13 -m venv .venv
+source .venv/bin/activate    # Linux/macOS
+pip install -e ".[dev]"
 ```
 
 ### Run Tests
@@ -22,6 +25,9 @@ pip install -r requirements.txt
 PYTHONPATH=. pytest tests/ -v                        # All tests
 PYTHONPATH=. pytest tests/test_congen.py -v          # Specific file
 PYTHONPATH=. pytest tests/ -k "fastdiag" -v          # Pattern match
+
+# With uv (no PYTHONPATH needed; editable install resolves imports):
+uv run --no-sync pytest tests/ -v
 ```
 
 ### Basic Workflow
@@ -48,8 +54,9 @@ python -m apps.run_compare apps/conf/run_compare_config.toml -v
 Learn constraints from positive (valid) and negative (invalid) example configurations:
 
 ```python
-from conacq.algorithms import ConGen, ConGenModelBuilder
+from conacq.algorithms.acqmss import ConGen, ConGenModelBuilder
 from conacq.oracle import FeatureModelOracle
+from explanation.models.task_preparation import TaskInput
 from explanation.operations.algorithms.checker import CheckerFactory
 
 # Build model (no FM dependency)
@@ -58,18 +65,18 @@ model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
 # Create oracle
 oracle = FeatureModelOracle('data/fms/model.uvl')
 
-# Prepare with examples (calls GenerateNE internally)
-model.prepare(oracle, positive_examples=pos_examples, negative_examples=neg_examples)
+# Prepare task with examples (internally calls GenerateNE)
+task = model.prepare_task(TaskInput(positive_test_cases=pos_examples, negative_test_cases=neg_examples), oracle)
 
 # Create checker and run ConGen
-checker = CheckerFactory.create_from_model(model, profiler)
-congen = ConGen(checker, profiler)
+checker = CheckerFactory.create_from_task(task, solver_name='glucose4', use_incremental=True)
+congen = ConGen(checker)
 result = congen.acquire(
-    set_b=model.task.set_c,
-    set_bg=model.task.set_b,
-    set_tc=model.task.set_tc,
-    set_neg_tv=model.task.set_neg_tv,
-    negation_map=model.task.negation_map
+    set_c=task.set_c,
+    set_b=task.set_b,
+    set_tc=task.set_tc,
+    set_neg_tv=task.set_neg_tv,
+    negation_map=task.negation_map
 )
 ```
 

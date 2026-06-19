@@ -182,7 +182,7 @@ congen.md (ALGORITHM DETAILS)
 
 **CONGEN (Passive/Batch Learning)**
 - Learn from sets of valid/invalid example configurations
-- Process: `ConGenModel.prepare()` (internally runs GenerateNE) → ACQMSS → REDUCE
+- Process: `ConGenModel.prepare_task(TaskInput(...), oracle)` → GenerateNE (internal) → ACQMSS → REDUCE
 - Good for: Offline learning from examples
 - Time: 10-30 seconds (65 features), 30-60 minutes (6,467 features)
 
@@ -227,12 +227,13 @@ congen.md (ALGORITHM DETAILS)
 
 ### Design Patterns Used
 
-1. **Dependency Injection** — Algorithms accept pluggable ConsistencyChecker
-2. **Strategy Pattern** — Multiple solver implementations
-3. **Builder Pattern** — QuAcqModelBuilder, ConGenModelBuilder for configuration
+1. **Dependency Injection** — Algorithms accept pluggable ConsistencyExecutor (Protocol)
+2. **Strategy Pattern** — Multiple solver implementations (Incremental, Non-Incremental, SAT4J)
+3. **Builder Pattern** — QuAcqModelBuilder, ConGenModelBuilder for immutable KB construction
 4. **Facade Pattern** — High-level interfaces (QuAcqRunner, ConGenRunner)
 5. **Template Method** — PySATAbstractExplanation algorithm base
 6. **Shared Utility Methods** — Centralized utilities (e.g., QuickXPlain) across modules
+7. **Executor Pattern** — ConsistencyExecutor Protocol + ProcessExecutor for parallelism (Phase R)
 
 ## Common Tasks
 
@@ -342,7 +343,7 @@ All files are within size constraints (≤800 LOC per file) and follow documenta
 
 - **README.md** (project root) — Quick start and basic workflow
 - **CLAUDE.md** (project root) — Development context, workflows, commands
-- **requirements.txt** — Python dependencies
+- **pyproject.toml** / **uv.lock** — Python dependencies (runtime + `[dev]` extra)
 - **tests/** — Example usage patterns from test code
 - **apps/conf/** — Configuration examples for all applications
 
@@ -356,6 +357,7 @@ Documentation is updated when:
 - **New features added** — Document architecture and usage
 
 **Version History:**
+- v1.7 (2026-06-19): Phase R (Task-as-unit refactor) — immutable models, ConsistencyExecutor Protocol, parallel diagnosis
 - v1.6 (2026-02-28): QuAcqTask cleanup, DescriptionProvider removal, DI refactoring, system-architecture.md trimmed to 799 LOC
 - v1.5 (2026-02-18): ConGenModelBuilder auto-prepare pattern, BGData class, runner details
 - v1.4 (2026-02-17): Oracle refactoring (ABC slimmed, FMData, FeatureModelOracle extended)
