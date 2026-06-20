@@ -1,6 +1,6 @@
 # AcqMSS Code Standards & Guidelines
 
-**Last Updated**: 2026-02-28 (QuAcq DescriptionProvider refactoring: removed from learn(), pattern now matches ConGen)
+**Last Updated**: 2026-06-19 (Phase R refactor: immutable KB, pure Task, ConsistencyExecutor Protocol, operation-level solver mode, VariableCodec single source of truth)
 
 ## Language & Environment
 
@@ -199,16 +199,18 @@ class QuAcqRunner:
 
     def run(self, positive_examples=None, negative_examples=None, mode='oracle'):
         """Learn constraints interactively, resolve names."""
-        # Create checker from model (DI pattern)
         from explanation.operations.algorithms.checker import CheckerFactory
-        checker = CheckerFactory.create_from_model(self.model)
-
-        # Inject checker + model into query provider
-        query_prov = QueryProvider(checker=checker, model=self.model)
-
-        # Inject checker + model + root_assumption into DiscriminatingGenerator (NEW - commit 260228)
-        discrim_gen = DiscriminatingGenerator(checker, self.model, self.model.task.set_b[0])
-
+        
+        # Prepare task (fresh per run)
+        task = self.model.prepare_task(TaskInput(), self.oracle)
+        
+        # Create checker from Task (operation-level control)
+        checker = CheckerFactory.create_from_task(task, solver_name='glucose4', use_incremental=True)
+        
+        # Inject checker + task into collaborators
+        query_prov = QueryProvider(checker=checker, task=task, codec=task.codec)
+        discrim_gen = DiscriminatingGenerator(checker, task, task.set_b[0])
+        
         quacq = QuAcq.for_oracle(checker, self.oracle, query_prov, discrim_gen)
 
         # Algorithm returns raw assumption IDs
@@ -263,124 +265,125 @@ class FastDiag(PySATAbstractExplanation):
         pass
 ```
 
-### 5. Dependency Injection
+### 5. Dependency Injection & Executor Pattern (Phase R)
 
-Pass dependencies as constructor parameters and via factories:
+Pass dependencies as constructor parameters and via factories. **Key change**: solver mode is operation-level, not KB-level.
 
-**ConGen** (passive learning):
+**Immutable KB + Pure Task Pattern**:
 ```python
-class ConGen:
-    """Constraint acquisition via AcqMSS (mode-agnostic)."""
+# Build once (immutable KB)
+model = ConGenModelBuilder.from_bias('bias.json').with_oracle(oracle).build()
 
-    def __init__(self, checker: ConsistencyChecker, profiler: Optional[Profiler] = None):
-        self.checker = checker  # Injected (Incremental or NonIncremental)
-        self.profiler = profiler or NullProfiler()
+# Prepare per fold (pure function; fresh Task each call)
+task_input = TaskInput(positive_examples=fold_pos, negative_examples=fold_neg)
+task = model.prepare_task(task_input)  # Returns fresh ConGenTask; no mutation
 
-    def acquire(
-            self,
-            set_b: List[int],  # Bias assumption IDs
-            set_bg: List[int],  # Background assumption IDs
-            set_tc: List[int],  # E+ assumption IDs
-            set_neg_tv: List[int],  # NE assumption IDs
-            negation_map: Dict[int, int]  # Maps assumption ID → negated ID for REDUCE
-    ) -> CONGENResult:
-        """Learn constraints using injected checker."""
-        with self.profiler.measure('acqmss'):
-            mss = self._acqmss(set_b, set_neg_tv, set_tc, set_bg)
-        return Result(mss)
+# Create checker from Task (operation-level control)
+checker = CheckerFactory.create_from_task(
+    task,
+    solver_name='glucose4',
+    use_incremental=True,    # Control at operation, not KB
+    profiler_instance=profiler
+)
+
+# Inject executor (serial or parallel)
+congen = ConGen(checker=checker, profiler=profiler)
+result = congen.acquire(set_b=task.set_b, set_bg=task.set_c, ...)
 ```
 
-**QuAcq** (interactive learning with DI + mode dispatch):
+**ConsistencyExecutor Protocol** (algorithms depend on this abstraction):
+```python
+from typing import Protocol, Future
+
+class ConsistencyExecutor(Protocol):
+    """Service for running consistency checks (serial or parallel)."""
+    def is_consistent(set_c: List[int]) -> bool
+    def is_consistent_test_cases(set_c, set_tc, stop) -> List
+    def solve(set_c) -> Tuple[bool, Optional[List[int]]]  # Returns (sat, model)
+    def submit(set_c) -> Future[bool]  # Async lookahead (FastDiagP)
+
+# Serial executor (ConsistencyChecker itself)
+checker = CheckerFactory.create_from_task(task, use_incremental=True)
+# checker is a ConsistencyChecker (which implements ConsistencyExecutor)
+
+# Parallel executor (ProcessExecutor wrapping checker)
+executor = ProcessExecutor(set_kb, assumptions, solver_name, use_incremental)
+memo_executor = MemoizingExecutor(executor)  # Add caching
+
+# Both have identical method signatures; algorithms work with either
+```
+
+**ConGen** (passive learning with executor):
+```python
+class ConGen:
+    def __init__(self, checker: ConsistencyExecutor, profiler=None):
+        self.checker = checker  # Can be serial or parallel
+        self.profiler = profiler or NullProfiler()
+
+    def acquire(self, set_b, set_bg, set_tc, set_neg_tv, negation_map) -> ConGenResult:
+        """Learn constraints using injected executor."""
+        # No awareness of executor type; works with either serial or parallel
+        ...
+```
+
+**QuAcq** (interactive learning, Phase R):
 ```python
 class QuAcq:
-    """Interactive learning with DI pattern and mode dispatch (oracle/example)."""
-
-    def __init__(self, oracle: Oracle,
-                 query_provider: QueryProvider = None,
+    """Interactive learning with Task-based DI."""
+    def __init__(self, oracle: Oracle, query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
-                 profiler_instance: AbstractProfiler = None):
-        # All collaborators injected
+                 profiler: AbstractProfiler = None):
         self.oracle = oracle
         self.query_provider = query_provider
         self.discriminating_generator = discriminating_generator
-
-    @classmethod
-    def for_oracle(cls, checker: ConsistencyChecker, oracle: Oracle, query_prov: QueryProvider,
-                   discrim_gen: DiscriminatingGenerator,
-                   profiler: AbstractProfiler = None) -> 'QuAcq':
-        """Factory for oracle mode."""
-        return cls(checker, oracle, query_provider=query_prov, model=None,
-                   discriminating_generator=discrim_gen, profiler_instance=profiler)
-
-    @classmethod
-    def for_examples(cls, checker: ConsistencyChecker, oracle: Oracle, query_provider: QueryProvider,
-                     discrim_gen: DiscriminatingGenerator = None,
-                     profiler: AbstractProfiler = None) -> 'QuAcq':
-        """Factory for example-based modes."""
-        return cls(checker, oracle, query_provider=query_provider, model=None,
-                   discriminating_generator=discrim_gen, profiler_instance=profiler)
 
     def learn(self, set_c, set_b, set_kb, negation_map, assumptions,
               background_clauses, feature_ids, id_to_feature,
               constraint_clauses, negated_clauses,
               mode='oracle', max_queries=1000) -> QuAcqResult:
-        """Run learning (returns raw assumption IDs, no name resolution).
-
-        Runner layer resolves names via model.resolve_kb(result.kb_assumption_ids)
-        to match ConGen pattern: algorithm → IDs, runner → names.
-
-        Modes:
-        - 'oracle'/'automated'/'interactive': Query oracle via query_provider.generate_from_sat()
-        - 'example_only': Select from pool via query_provider.generate_from_pool()
-        - 'example_first': Pool first (via generate_from_pool()), fallback to SAT
+        """Run learning (Task-centric, returns raw IDs; runner resolves names).
+        
+        Modes: 'oracle'/'automated'/'interactive', 'example_only', 'example_first'
         """
-        # Mode dispatch: 'oracle', 'example_only', or 'example_first'
+        # Mode dispatch via single parameter; no mutating state on QuAcq
         ...
 ```
 
 
-# Usage with ConGenModelBuilder (fluent pattern)
+# Usage: Build once, prepare+shuffle per fold (cross-validation, Phase R)
 
-# Pattern: Build once, prepare+shuffle per fold (cross-validation)
 oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (ConGenModelBuilder
          .from_bias('data/bias/model.json')
-         .with_oracle(oracle)  # Required for build-time negation
-         .use_incremental(True)
-         .build())  # Returns unprepared model (negation computed at build time)
+         .with_oracle(oracle)           # Required for build-time negation
+         .build())                       # Returns immutable KB (negation computed)
 
-# Cross-validation pattern: build once, prepare multiple times
+# Pattern: Build once, prepare+shuffle per fold
 import random
-for fold_idx, (fold_pos, fold_neg) in enumerate(folds):
-    # Step 1: Prepare for this fold's examples (GenerateNE called internally)
-    model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
-
-    # Step 2: Shuffle bias iteration order (after prepare, for reproducibility)
-    shuffle_seed = fold_idx + 42
-    random.Random(shuffle_seed).shuffle(model.task.set_c)
-
-    # Step 3: Create checker and run ConGen
-    from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
-    checker = CheckerFactory.create_from_model(model, profiler)
-    congen = ConGen(checker, profiler)
-    result = congen.acquire(
-        set_b=model.task.set_c,
-        set_bg=model.task.set_b,
-        set_tc=model.task.set_tc,
-        set_neg_tv=model.task.set_neg_tv,
-        negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
-    )
-
-# Alternative: Use ConGenRunner facade (recommended for production)
+from conacq.algorithms import TaskInput
 from conacq.runners import ConGenRunner
 
+# Recommended: Use ConGenRunner facade
 runner = ConGenRunner('data/bias/model.json', 'data/fms/model.uvl')
 try:
     for fold_idx, (fold_pos, fold_neg) in enumerate(folds):
+        # runner handles prepare(task_input, oracle) + shuffle + acquire
         result = runner.run(fold_pos, fold_neg, shuffle_seed=fold_idx + 42)
-        # Result contains KB and metrics
 finally:
     runner.cleanup()
+
+# Manual control (when needed):
+from explanation.operations.algorithms.checker import CheckerFactory
+from conacq.algorithms import ConGen
+
+task_input = TaskInput(positive_examples=fold_pos, negative_examples=fold_neg)
+task = model.prepare_task(task_input, oracle)  # Pure function → fresh Task
+random.Random(seed).shuffle(task.set_c)         # Shuffle after prepare
+checker = CheckerFactory.create_from_task(task, solver_name='glucose4', use_incremental=True)
+congen = ConGen(checker=checker)
+result = congen.acquire(set_b=task.set_b, set_bg=task.set_c, 
+                       set_tc=task.set_tc, set_neg_tv=task.set_neg_tv, 
+                       negation_map=task.negation_map)
 ```
 
 **Benefits**:
@@ -396,14 +399,9 @@ Extract duplicated logic into static/class methods. Example: Violation checking 
 
 `QuAcqRunner` provides high-level facade for QuAcq learning. QuAcq processes negative examples with FindScope/FindC to identify violated constraints in both oracle and example-based modes.
 
-### 8. CheckerModel Protocol (Duck Typing)
+### 8. Task-as-Unit Pattern (Phase R)
 
-Classes implementing `CheckerModel` must provide:
-- `get_kb() -> List[List[int]]` — Return CNF clauses
-- `get_assumptions() -> List[int]` — Return all possible assumptions
-- `use_incremental: bool` — Flag for solver mode preference
-
-Both `ConGenModel` and `FMOracleModel` implement this protocol for integration with `CheckerFactory`.
+Models are immutable KBs; Tasks are immutable units of work. Each `model.prepare_task(task_input, oracle)` call returns a fresh, independent Task with its own assumption ID lists. All Tasks from the same KB share the same VariableCodec (KB-level single source of truth).
 
 ## Oracle Module Conventions
 
@@ -428,11 +426,11 @@ Both `ConGenModel` and `FMOracleModel` implement this protocol for integration w
    - Delegates to `FMOracleModel` for consistency checking
    - Uses incremental solver by default
 
-4. **FMOracleModel**: Assumption-guarded FM model
+4. **FMOracleModel**: Assumption-guarded FM model (Phase R)
    - FM clauses in `set_kb` (always active)
    - Feature assignments as assumption-guarded unit clauses: `[-a_pos_i, fid]`, `[-a_neg_i, -fid]`
-   - Satisfies `CheckerModel` protocol for `CheckerFactory`
-   - Exposes `bg_data` property and `get_bg_data()` method to extract root constraint
+   - Implements `ModelProtocol` (immutable KB + `get_codec()`)
+   - Exposes `bg_data` property for root constraint extraction
 
 5. **UserPromptOracle**: Interactive human oracle (implements `is_valid()` only)
 

@@ -11,7 +11,7 @@ from explanation.operations.algorithms.profiler import count_calls, get_global_p
 @count_calls('prune_calls')
 def prune_rejecting(
         checker,
-        model,
+        codec,
         remaining_bias: set,
         assignment: dict,
         root_assumption: int,
@@ -21,12 +21,20 @@ def prune_rejecting(
 
     A constraint is pruned if KB + root + assignment_assumptions + constraint is UNSAT.
 
-    Returns list of pruned constraint assumption IDs.
-    Mutates remaining_bias in-place.
+    Args:
+        checker: ConsistencyChecker instance
+        codec: VariableCodec for config_to_assumptions encoding
+        remaining_bias: Mutable set of remaining bias assumption IDs (mutated in-place)
+        assignment: Feature config dict {feature_name: bool}
+        root_assumption: Root BG assumption ID
+        profiler: Optional profiler instance
+
+    Returns:
+        List of pruned constraint assumption IDs.
     """
     if profiler is None:
         profiler = get_global_profiler()
-    config_assumptions = model.config_to_assumptions(assignment)
+    config_assumptions = codec.config_to_assumptions(assignment)
     base = [root_assumption] + config_assumptions
     pruned = []
     for c_id in list(remaining_bias):

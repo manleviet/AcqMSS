@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-28 (QueryProvider + ConsistencyChecker refactor: injected checker/model, unified SAT interface, get_model() extraction)
+**Last Updated**: 2026-06-19 (Phase R task-as-unit refactor: immutable KB, pure Task, ConsistencyExecutor abstraction, ProcessExecutor + memo cache, FMOracle hot-path unified)
 
 ## High-Level Overview
 
@@ -53,7 +53,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 
 #### conacq/algorithms/ — Acquisition Algorithms
 
-**Core API**:
+**Core API (Phase R - task-as-unit)**:
 
 ```python
 from conacq.algorithms import ConGen, ConGenModelBuilder
@@ -61,34 +61,31 @@ from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
 from conacq.oracle import FeatureModelOracle
 from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.executor import ProcessExecutor, MemoizingExecutor
 
-# Passive learning — Pattern 1: auto-prepare (oracle + examples at build time)
+# Passive learning — Pattern: build once, prepare+shuffle per fold (cross-validation)
 oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (ConGenModelBuilder.from_bias('data/bias/model.json')
-         .with_oracle(oracle).with_examples('data/examples/model.json').build())
+         .with_oracle(oracle)           # Required: oracle for build-time negation
+         .build())                       # Returns immutable KB (negation computed)
 
-# Passive learning — Pattern 2: manual prepare (CV reuse)
-model = ConGenModelBuilder.from_bias('data/bias/model.json').build()  # unprepared
-model.prepare(oracle, positive_examples=pos, negative_examples=neg)  # Calls GenerateNE internally
-
-checker = CheckerFactory.create_from_model(model, profiler)
-congen = ConGen(checker, profiler)
-result = congen.acquire(
-    set_b=model.task.set_c,
-    set_bg=model.task.set_b,
-    set_tc=model.task.set_tc,
-    set_neg_tv=model.task.set_neg_tv,
-    negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
-)
-
-# For cross-validation: build once, prepare per fold
-model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
-oracle = FeatureModelOracle('data/fms/model.uvl')
+# Build once, prepare per fold (each prepare_task call = fresh Task)
 for fold_pos, fold_neg in folds:
-    model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
-    # Use model.task for this fold
+    task_input = TaskInput(positive_examples=fold_pos, negative_examples=fold_neg)
+    task = model.prepare_task(task_input, oracle)  # Pure function → fresh ConGenTask
+    
+    # Shuffle bias iteration order, create checker, run ConGen
+    random.Random(seed).shuffle(task.set_c)
+    checker = CheckerFactory.create_from_task(
+        task, solver_name='glucose4', use_incremental=True, profiler_instance=profiler
+    )
+    congen = ConGen(checker, profiler=profiler)
+    result = congen.acquire(
+        set_b=task.set_b, set_bg=task.set_c, set_tc=task.set_tc,
+        set_neg_tv=task.set_neg_tv, negation_map=task.negation_map
+    )
 
-# Interactive learning — QuAcq (DI pattern, commit 260228)
+# Interactive learning — QuAcq (Phase R: task-based, DI pattern)
 from conacq.example_generators import QueryProvider
 from conacq.algorithms.quacq import DiscriminatingGenerator, QuAcq
 from explanation.operations.algorithms.checker import CheckerFactory
@@ -96,54 +93,55 @@ from explanation.operations.algorithms.checker import CheckerFactory
 oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
          .with_oracle(oracle)
-         .build())  # Returns prepared model, task ready
+         .build())
 
-# Build checker (injected dependency) — NEW pattern
-checker = CheckerFactory.create_from_model(model)
-
-# QueryProvider with injected checker + model — NEW: no solver_name parameter
-query_prov = QueryProvider(
-    checker=checker,    # Injected ConsistencyChecker
-    model=model         # For config_to_assumptions()
+# Per-run: prepare fresh Task (pure function)
+task = model.prepare_task(TaskInput(), oracle)
+checker = CheckerFactory.create_from_task(
+    task, solver_name='glucose4', use_incremental=True, profiler_instance=profiler
 )
 
-# DiscriminatingGenerator with injected checker + model (NEW - commit 260228)
-discrim_gen = DiscriminatingGenerator(checker, model, model.task.set_b[0])
+# Inject checker + Task into collaborators (no model dependency)
+query_prov = QueryProvider(
+    checker=checker,
+    task=task,           # Injected Task (not model)
+    codec=task.codec     # VariableCodec from KB
+)
 
-# QuAcq with checker parameter (NEW)
+discrim_gen = DiscriminatingGenerator(checker, task, task.set_b[0])
+
+# QuAcq with injected executor + oracle
 quacq = QuAcq.for_oracle(checker, oracle, query_prov, discrim_gen)
 
-# Run learning (simplified signature, no background_clauses/negated_clauses params)
+# Run learning (Task-centric, returns raw assumption IDs)
 result = quacq.learn(
-    set_c=model.task.set_c, set_b=model.task.set_b,
-    set_kb=model.task.set_kb, negation_map=model.task.negation_map,
-    assumptions=model.task.assumptions,
-    background_clauses=model.task.background_clauses,
-    feature_ids=model.task.feature_ids, id_to_feature=model.task.id_to_feature,
-    constraint_clauses=model.task.constraint_clauses,
-    negated_clauses=model.task.negated_clauses,
-    mode='oracle', max_queries=1000)  # → QuAcqResult with KB assumption IDs only
+    set_c=task.set_c, set_b=task.set_b,
+    set_kb=task.set_kb, negation_map=task.negation_map,
+    assumptions=task.assumptions,
+    background_clauses=task.background_clauses,
+    feature_ids=task.feature_ids, id_to_feature=task.id_to_feature,
+    constraint_clauses=task.constraint_clauses,
+    negated_clauses=task.negated_clauses,
+    mode='oracle', max_queries=1000)
 # Runner resolves names: kb_names, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
 
-# Query generation (instance methods on QueryProvider instance)
-config, c_id = query_prov.generate_from_sat(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)
-config, c_id = query_prov.generate_from_pool(remaining_bias, learned_kb, set_b)
-config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)
+# Query generation via codec (no model dependency)
+config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, 
+                                   negation_map, task.feature_ids, task.codec)
 ```
 
 **Key Algorithms**:
 1. **ConGen** — Passive constraint acquisition
-   - Input: Bias (B), E+ (set_tc), NE (set_neg_tv), BG (set_bg) as assumption IDs
+   - Input: Bias (B), E+ (set_tc), NE (set_neg_tv), BG (set_b) as assumption IDs
    - Process: Check consistency → ACQMSS → REDUCE
    - Output: CONGENResult with KB constraint names and assumption IDs
-   - **GenerateNE now called internally by `ConGenModel.prepare()`** (callers no longer invoke directly)
-   - Can be reused across CV folds: Call `model.prepare(oracle, fold_pos, fold_neg)` per fold (oracle reused)
+   - GenerateNE integrated into `ConGenTaskPreparation` (called by `model.prepare_task()`)
 
-2. **GenerateNE** — Create negated examples (internal API, not caller-invoked)
-   - **Invoked only internally by `ConGenModel.prepare()`**
+2. **GenerateNE** — Create negated examples (pure internal function)
+   - Invoked by `ConGenTaskPreparation.prepare()` during task preparation
    - Uses QuickXPlain to find minimal conflicts from E⁻
-   - Simplified result: `NEResult(new_clauses, set_neg_tv, next_available_id)` (removed `assumption_ids`, `neg_map`)
-   - Results merged in-place via inline code in `ConGenModel.prepare()`
+   - Pure: `generate()` returns `NEPerTestcase` list; does NOT mutate caller's KB
+   - Caller (strategy) extends its own KB copy from returned clauses
 
 3. **ACQMSS** — Divide-and-conquer maximum satisfiable subset finding
    - Recursively partition bias constraints
@@ -153,11 +151,9 @@ config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_m
    - Iterate over learned KB
    - Check if each constraint is necessary via consistency check
 
-5. **QuAcq** — Interactive and batch learning (two modes, paper-aligned)
-   - **Oracle mode** (original): GenerateQuery → Oracle.ask() → Update KB
-   - **Example mode** (paper-faithful): FindScope + FindC via oracle.is_valid() + DiscriminatingGenerator(C_L[Y])
-   - FindScope: O(|S| * log|X|) queries per call (oracle.is_valid + SAT-based bias pruning)
-   - FindC: O(|Gamma|) queries per call (oracle.is_valid + SAT-based rejection + DiscriminatingGenerator)
+5. **QuAcq** — Interactive and batch learning (two modes)
+   - Oracle mode: GenerateQuery → Oracle.ask() → Update KB
+   - Example mode: FindScope + FindC via oracle.is_valid()
 
 #### conacq/bias/ — Bias Generation
 
@@ -171,7 +167,7 @@ config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_m
 
 #### conacq/example_generators/ — Example & Query Generation
 
-**Purpose**: Generate diverse positive/negative configurations and discriminative queries for learning.
+**Purpose**: Generate diverse configurations and discriminative queries.
 
 **Components**:
 
@@ -180,17 +176,10 @@ config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_m
 2. **FeatureFrequency (FF)** — Weight by feature occurrence patterns
 3. **TwoCoverage (2-COV)** — Ensure feature pairs appear together
 
-**Query Generation & Selection** (commit 260228):
-- **QueryProvider** — Unified query/example provision with injected ConsistencyChecker
-  - Constructor: `QueryProvider(pool=None, seed=None, checker=ConsistencyChecker, model=QuAcqModel, profiler=None)`
-  - All SAT checks delegated to injected `checker` (no ad-hoc solver creation)
-  - Config-to-assumption conversion via injected `model.config_to_assumptions()`
-  - Three strategies:
-    1. `generate_from_pool(remaining_bias, learned_kb, set_b)` — Pool iteration with paper conditions
-    2. `generate_from_sat(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)` — SAT-based generation
-    3. `generate(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)` — Pool-first, SAT fallback
-  - **Consistency checks**: Both pool filtering conditions use `checker.is_consistent()`
-  - **SAT model extraction**: `checker.get_model()` returns assignment for config conversion
+**Query Generation** (Phase R):
+- **QueryProvider** — Unified query/example provision with injected checker
+  - All SAT checks delegated to `checker.is_consistent()` (no ad-hoc solver creation)
+  - Three strategies: pool-first, SAT-based, or pool+SAT fallback
 
 #### conacq/oracle/ — Oracle Implementations
 
@@ -202,38 +191,11 @@ config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_m
 
 **Key Classes**:
 
-1. **FMData** (`fm_data.py`): FM metadata (features, feature_ids, root, constraints, next_available_id)
-   - Created once by `FeatureModelOracle.get_fm_data()`, passed to decouple callers
-2. **FeatureModelOracle** (`fm_oracle.py`): FM-based oracle
-   - **ABC methods**: `is_valid(assignments)`, `ask(query)` for configuration validation
-   - **Extensions**: FM metadata access (FMData), SAT-based config completion, constraint descriptions
-   - Delegates consistency checks to `FMOracleModel` (incremental solver by default)
-
-3. **BGData** (`bg_data.py`): Root FM constraint as assumption-guarded clauses
-   - Contains root constraint pair (original + negated form) and negation mapping
-   - Extracted post-preparation via `FMOracleModel.bg_data` property
-   - Enables ConGen to allocate assumption IDs without overlap
-
-4. **FMOracleModel** (`fm_oracle_model.py`): SAT representation of FM for consistency checking
-   - FM clauses in `set_kb`; feature assignments guarded by assumption literals
-   - Implements `CheckerModel` protocol for `CheckerFactory` integration
-   - Prepared via `OracleTaskPreparation`; exposes `bg_data` property for root constraint extraction
-
-5. **UserPromptOracle** (`user_prompt.py`): Interactive human-in-the-loop oracle
-   - Raises `NotImplementedError` for `complete_configuration()` and `get_cnf_clauses()`
-   - Suitable for interactive learning only
-
-6. **CachedOracle** (`cached.py`): Transparent result caching wrapper
-   - Caches `is_valid()` results
-   - Delegates `complete_configuration()`, `get_cnf_clauses()` to base oracle
-
-7. **OracleData** (`extractor.py`): Extracted oracle data for evaluation
-   - Backward-compatible alias: `GroundTruthData`
-   - Reads FM directly (no solver)
-
-**Architecture Notes**:
-- Unified `Oracle` ABC with FM-specific extensions in concrete classes
-- FM metadata decoupled via `FMData` (explicit passing)
+- **FeatureModelOracle** — FM-based oracle with incremental solver
+- **FMOracleModel** — SAT representation of FM (Phase R) with assumption-guarded assignments
+- **UserPromptOracle** — Interactive human oracle
+- **CachedOracle** — Transparent result caching wrapper
+- **OracleData** — Extracted oracle data for evaluation
 
 **Critical Detail**: Feature ID consistency
 - `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)
@@ -265,9 +227,9 @@ finally:
 ```
 
 **BaseRunner ABC**:
-- `__init__(bias_path, fm_path, solver_name, use_incremental=True)` — Build once: load bias, create oracle with configured solver mode, build model
-- `run(**kwargs)` (abstract) — Run many: execute acquisition algorithm (prepare → shuffle → acquire)
-- `cleanup()` — Cleanup once: release oracle resources
+- `__init__(bias_path, fm_path, solver_name, use_incremental=True)` — Build: load bias, create oracle, build model
+- `run(**kwargs)` (abstract) — Execute: prepare_task → shuffle → acquire
+- `cleanup()` — Release oracle resources
 - `feature_ids` property — Get feature→SAT variable mapping
 
 **BaseRunResult** (9 shared fields):
@@ -278,28 +240,23 @@ finally:
 - Method: `get_performance_metrics()` returns PerformanceMetrics (with `n_mss=None` for interactive, actual value for ConGen)
 
 **ConGenRunner** (inherits BaseRunner):
-- `__init__`: Builds ConGenModel via ConGenModelBuilder (requires oracle for negation at build time)
+- `__init__`: Builds ConGenModel via ConGenModelBuilder (requires oracle for build-time negation)
 - `run(positive_examples, negative_examples, shuffle_seed=None)` → `ConGenRunResult`
-  - Per-fold: `model.prepare(oracle, E+, E-)`
+  - Prepare: `task = model.prepare_task(TaskInput(...), oracle)`
   - Shuffle: `random.Random(shuffle_seed).shuffle(task.set_c)` after prepare
-  - Run ConGen with shuffled bias iteration order
-- Calls `cleanup()` in CV wrapper functions via try/finally
+  - Acquire: Run ConGen with shuffled bias iteration order
+- `cleanup()` called in CV wrapper functions via try/finally
 
 **QuAcqRunner** (inherits BaseRunner):
-- `__init__`: Builds QuAcqModel via QuAcqModelBuilder (requires oracle for negation at build time, auto-prepares)
+- `__init__`: Builds QuAcqModel via QuAcqModelBuilder (requires oracle for build-time negation)
 - `run(positive_examples=None, negative_examples=None, mode='example_only', shuffle_seed=None)` → `QuAcqRunResult`
-  - Per-run: `model.prepare(oracle)` (fresh task, reuses built negation)
-  - Shuffle: `random.Random(shuffle_seed).shuffle(task.set_c)` after prepare
-  - Dispatch to oracle or example path based on mode
+  - Prepare: `task = model.prepare_task(TaskInput(), oracle)` (fresh task per run)
+  - Shuffle & dispatch based on mode
 - Modes: 'automated'/'interactive' (oracle), 'example_only'/'example_first' (examples)
-
-**Runners re-exported from `conacq.eval`** (for backward compat):
-- `BaseRunner`, `BaseRunResult` exported from `conacq/runners/__init__.py`
-- Then re-exported from `conacq/eval/__init__.py`
 
 #### conacq/eval/ — Evaluation Framework
 
-**Purpose**: Measure accuracy of learned constraints against ground truth; unified CV output pipeline.
+**Purpose**: Measure accuracy and generate CV reports.
 
 **Components**:
 - `cross_validation.py` — n-fold CV orchestration (CONGEN & Interactive modes); calls `runner.cleanup()` via try/finally
@@ -310,13 +267,7 @@ finally:
 - `report.py` — Generate CSV/JSON/LaTeX/Markdown reports; unified CV dict builder (`generate_unified_cv_dict`, `_enrich_constraints`)
 
 
-**Metrics**:
-```
-Accuracy  = (TP + TN) / (TP + TN + FP + FN)   [Primary]
-Precision = TP / (TP + FP)
-Recall    = TP / (TP + FN)
-F1        = 2 * P * R / (P + R)
-```
+**Metrics**: Accuracy, precision, recall, F1 (against ground truth FM)
 
 **Comparison Strategies** (in `kb_comparator.py`):
 - **description** — Compare constraint natural language descriptions (recommended)
@@ -327,70 +278,117 @@ F1        = 2 * P * R / (P + R)
 
 **Purpose**: Provide diagnosis algorithms and solver abstractions for constraint acquisition.
 
-#### explanation/models/ — Diagnosis Model Abstraction
+#### explanation/models/ — Diagnosis Task & Codec (Phase R)
 
-**Key Classes**:
+**Task Hierarchy** (immutable unit-of-work):
 ```python
-class DiagnosisModel:
-    """SAT representation of a system."""
-    clauses: list[list[int]]    # CNF clauses
-    variable_map: dict          # Feature → var ID
-    assumptions: list[int]      # Unit assumptions
-    solver: Solver              # PySAT solver instance
-
-class DiagnosisTask:
-    """Base task with assumptions (inherited by TestCaseTask and QuAcqTask)."""
-    assumptions: list[int]      # Control literals
+class Task(ABC):
+    """Immutable unit of work: KB + operation-specific state.
+    
+    Shared across all tasks: the KB (clauses + assumptions + negation map) + codec.
+    """
     set_kb: list[list[int]]     # CNF with assumption literals
     set_b: list[int]            # Background assumption IDs
     set_c: list[int]            # Bias assumption IDs
-    negation_map: Dict[int, int]   # Negation map: assumption_id → negated_id
+    assumptions: list[int]      # All assumption literals
+    negation_map: dict[int, int] # assumption_id → negated_id
+    describe: Optional[DescriptionProvider]  # Formatting (KB name resolution)
+    codec: Optional[VariableCodec]          # Variable name ↔ ID + config ↔ assumptions
 
-class TestCaseTask(DiagnosisTask):
-    """Task for test case scenarios (inherits from DiagnosisTask)."""
+class DiagnosisTask(Task):
+    """Base task with assumptions (shared fields only)."""
+    pass
+
+class TestCaseTask(Task):
+    """Task for test case scenarios (test-specific fields)."""
     set_tc: list[int]           # E+ assumption IDs
     set_tv: list[int]           # E- assumption IDs
 
 class ConGenTask(TestCaseTask):
-    """Task for ConGen - unified assumption-based format (inherits from TestCaseTask)."""
-    set_neg_tv: list[int]       # Negated example assumption IDs
+    """Task for ConGen passive learning."""
+    set_neg_tv: list[int]       # Negated example assumption IDs from GenerateNE
 
 class QuAcqTask(DiagnosisTask):
-    """Task for QuAcq interactive learning (inherits from DiagnosisTask).
-
-    Inheritance pattern:
-    - Inherits: set_kb, assumptions, set_b, set_c, negation_map from DiagnosisTask
-    - Adds: bias, learned_kb (interactive learning state)
-    - Adds: background_clauses (raw BG CNF for violation checking)
-    - Adds: constraint_clauses, negated_clauses (raw CNF per assumption ID)
-    - Adds: feature_ids, id_to_feature (feature mapping)
+    """Task for QuAcq interactive learning.
+    
+    Adds interactive-specific state (no inheritance change; sibling to TestCaseTask).
     """
     bias: set[int]              # Remaining bias assumption IDs
     learned_kb: list[int]       # Learned constraint assumption IDs
-    background_clauses: list[list[int]]  # Raw BG CNF (no guards) - extracted from Oracle
+    background_clauses: list[list[int]]  # Raw BG CNF (no guards)
     feature_ids: dict[str, int] # Feature name → SAT var ID
     id_to_feature: dict[int, str] # SAT var ID → feature name
     constraint_clauses: dict[int, list[list[int]]]  # constraint_id → raw clauses
     negated_clauses: dict[int, list[list[int]]]  # constraint_id → negated clauses
+
+class VariableCodec:
+    """Codec for variable/assumption/config translation (Phase R).
+    
+    Single source of truth for translating between feature names, SAT variable IDs,
+    and assumption literals for one KB. Built once at KB level; referenced by all Tasks.
+    
+    Attributes:
+        id_to_name: SAT var ID → feature name (always present)
+        pos_assignment_to_assumption: feature → assumption ID asserting True (optional)
+        neg_assignment_to_assumption: feature → assumption ID asserting False (optional)
+    """
+    id_to_name: dict[int, str]
+    pos_assignment_to_assumption: dict[str, int]  # optional
+    neg_assignment_to_assumption: dict[str, int]  # optional
+    
+    def config_to_assumptions(config: dict[str, bool]) -> list[int]
+    def model_to_config(model_lits: list[int]) -> dict[str, bool]
 ```
 
-#### explanation/operations/ — Diagnosis Algorithms
+#### explanation/operations/ — Diagnosis Algorithms & Executor Layer (Phase R)
 
-**Solver Abstraction Layer** (commit 260228):
-- `ConsistencyChecker(ABC)` — Abstract interface with two key methods:
-  - `is_consistent(set_c: List[int]) -> bool` — Check CNF formula satisfiability
-  - `get_model() -> Optional[List[int]]` — Extract SAT assignment after satisfiable check
-  - Both implementations use assumption-based data (set_c as enabled assumptions)
+**ConsistencyExecutor Protocol** (L2/L3 abstraction):
+```python
+class ConsistencyExecutor(Protocol):
+    """Service contract for running consistency checks.
+    
+    The single abstraction algorithms depend on. Serial implementation is
+    ConsistencyChecker itself (inline); parallel is ProcessExecutor (shared pool).
+    Both MUST give identical results — only timing differs.
+    """
+    def is_consistent(set_c: List[int]) -> bool
+    def is_consistent_test_cases(set_c, set_tc, stop_at_first_violation) -> List
+    def solve(set_c) -> Tuple[bool, Optional[List[int]]]  # Returns (sat, model)
+    def submit(set_c) -> Future[bool]  # Async lookahead (FastDiagP)
+```
+
+**Serial Executor** (`ConsistencyChecker` implementing `ConsistencyExecutor`):
 - `IncrementalPySATChecker` — Persistent solver (~50x faster, ideal for ConGen)
   - Computes delta: disabled assumptions = all_assumptions \ set_c
   - Calls solver with negated disabled assumptions
-  - `get_model()` returns solver's current model
-- `NonIncrementalPySATChecker` — Fresh solver per call (baseline for comparison)
+  - `solve()` returns (sat, model); `submit()` returns immediate future
+- `NonIncrementalPySATChecker` — Fresh solver per call (baseline)
   - Builds CNF from set_kb and set_c clauses each time
-  - `get_model()` returns None (no persistent state)
-- `CheckerFactory.create_from_model(model)` — Factory for creating checker instances based on model's `use_incremental` flag
+  - `solve()` returns (sat, None)
+- `SAT4JChecker` — External Java solver via subprocess
+- All support `is_consistent_test_cases()` for batch CC (used by KBDiag, ConGen)
 
-**Diagnosis Algorithms**: FastDiag (minimal diagnosis via HSDAG), QuickXPlain (minimal conflicts), KBDiag (kernel-based, used by ACQMSS), WipeOutR (domain-specific), HSDAG (tree optimization)
+**Parallel Executor** (`ProcessExecutor`, NEW in Phase R):
+- Shared multiprocess pool: each worker builds checker ONCE from KB (sent once via initializer)
+- Per call: only assumptions (picklable ints) shipped; bool or (bool, model) returned
+- Profiler (option B): workers use NullProfiler; main process counts at call boundary
+  - Result: serial ConsistencyChecker and ProcessExecutor report identical metrics
+- Used by FastDiagP for speculative lookahead (`submit()`)
+
+**Memoizing Cache** (`MemoizingExecutor`, NEW):
+- Decorator over any executor (serial or parallel)
+- Thread-safe hash map: assumptions-hash → resolved bool (never futures)
+- HIT does NOT count as a consistency check (no counter increment)
+- MISS delegates to inner executor, which increments boundary counter
+
+**Checker Factory** (Phase R):
+```python
+CheckerFactory.create_from_task(task, *, solver_name, use_incremental, profiler)
+# Returns ConsistencyChecker (serial executor) or ProcessExecutor (via wrapper)
+# Solver mode controlled at operation level, not KB level
+```
+
+**Diagnosis Algorithms**: FastDiag (minimal diagnosis via HSDAG), QuickXPlain (minimal conflicts), KBDiag (kernel-based, used by ACQMSS), WipeOutR (domain-specific), FastDiagP (parallel lookahead via executor)
 
 #### explanation/transformations/ — Model Converters
 
@@ -576,11 +574,10 @@ python -m apps.run_evaluation apps/conf/run_evaluation_config.toml -v
 ### 1. ConGen (Passive/Batch Learning)
 - Input: Pre-collected E+/E- examples
 - No user interaction required
-- Learns constraint KB in one pass (GenerateNE called by `ConGenModel.prepare()`, then ACQMSS → REDUCE)
-- **ConGenModel**: Pure data container (bias + solver config). Oracle injected at `prepare()` time.
-- **Preparation**: `model.prepare(oracle, positive_examples, negative_examples)` generates NE and populates `ConGenTask` (assumption-based).
-- **Reusable**: Build once, prepare multiple times per fold for cross-validation without rebuilding.
-- ConGenModel satisfies CheckerModel protocol (`get_kb()`, `get_assumptions()`, solver config)
+- Learns constraint KB in one pass (GenerateNE → ACQMSS → REDUCE)
+- **ConGenModel**: Immutable KB container (bias + negation map). Oracle injected at prepare_task() time.
+- **Task Factory**: `model.prepare_task(task_input, oracle)` returns fresh ConGenTask with E+/E-/NE
+- **CV Pattern**: Build once, prepare multiple times per fold without rebuilding
 - **Task Representation**: `ConGenTask` with assumption IDs (set_c, set_tc, set_neg_tv, negation_map)
 - Complexity: O(|B| * SAT checks)
 
@@ -609,85 +606,48 @@ Both paradigms use:
 ### ConGen Learning Flow
 ```
 Bias (JSON) + Feature Model (UVL) + Examples
-    ├─→ [__init__] ConGenModelBuilder.from_bias(bias_path)
-    │   ├─ .with_oracle(oracle)          # Required for build()
-    │   ├─ .use_incremental(True/False)
-    │   └─ .build() → ConGenModel
-    │       ├─ [BUILD TIME] Compute negation: bias constraints → negated_constraint_map (Tseitin, idempotent)
-    │       ├─ Store next_available_id (final tseitin var) in model
-    │       └─ No auto-prepare (for CV reuse pattern)
+    ├─→ [__init__] ConGenModelBuilder.from_bias(bias_path).with_oracle(oracle).build()
+    │   └─ Computes negation at build time (immutable KB)
     │
-    ├─→ [__init__] FeatureModelOracle.from(fm_path)
-    │   └─ Builds FMOracleModel with assumption-guarded FM clauses
+    ├─→ [run] task = model.prepare_task(TaskInput(E+, E-), oracle)
+    │   ├─ GenerateNE: E- → NE (internal to ConGenTaskPreparation)
+    │   └─ Returns fresh ConGenTask (independent per call, no state mutation)
     │
-    ├─→ [run] ConGenModel.prepare(oracle, pos_examples, neg_examples)
-    │   ├─ [PREPARE TIME] GenerateNE: E- → NE (assumption IDs) [internal to prepare()]
-    │   ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
-    │   └─ ConGenTaskPreparation: Create unified task from bias + NE
-    │       ├─ Use model.next_available_id (from build time)
-    │       └─ set_kb: CNF with assumption literals
-    │       └─ set_c: Bias assumption IDs (will be shuffled after prepare)
-    │       └─ set_tc: E+ assumption IDs
-    │       └─ set_neg_tv: NE assumption IDs (populated by GenerateNE)
+    ├─→ [run] Shuffle: random.Random(seed).shuffle(task.set_c) (after prepare)
     │
-    ├─→ [run] Shuffle bias iteration order (if shuffle_seed provided)
-    │   └─ random.Random(seed).shuffle(task.set_c)
+    ├─→ [run] checker = CheckerFactory.create_from_task(task, solver_name='...', use_incremental=...)
+    │   └─ Operation-level solver control (not on model)
     │
-    ├─→ [run] CheckerFactory.create_from_model(model)
-    │   └─ Returns Incremental or NonIncremental checker
-    │
-    └─→ [run] ConGen Algorithm (mode-agnostic)
+    └─→ [run] ConGen Algorithm
         ├─ acquire(set_b, set_bg, set_tc, set_neg_tv, negation_map, ...)
-        ├─ ACQMSS: Bias (set_c) → MSS via KBDiag
-        └─ REDUCE: MSS → KB (assumption IDs)
-
-Result: CONGENResult (KB constraint names + assumption IDs)
-    └─ Compare against ground truth (Bias)
-        └─ Accuracy/Precision/Recall metrics
+        ├─ ACQMSS: Bias → MSS via KBDiag
+        └─ REDUCE: MSS → KB
 ```
 
-**Key Changes** (commit 260228 - unified shuffle-after-prepare):
-- **Build-time Negation**: ConGenModelBuilder.build() computes negation at model construction (idempotent)
-- **Prepare is Idempotent**: ConGenModel.prepare() no longer writes negated_constraint_map; only reads from model
-- **Shuffle After Prepare**: Both runners shuffle task.set_c AFTER prepare(), not before (enables CV reuse)
-- **next_available_id Stored**: Model stores tseitin var offset for reuse across multiple prepare() calls
-- **ConGenModel**: Pure data container (no FM fields). Build once, prepare multiple times per fold.
-- **Oracle**: Created once in __init__, passed to build() and prepare(). Enables CV reuse without rebuild.
-- **GenerateNE**: Now internal to prepare() (callers no longer invoke directly).
-- **Mode-Agnostic Design**: ConGen, ACQMSS, REDUCE contain no solver-mode branching.
+**Phase R Design**:
+- **Immutable KB**: ConGenModel is pure data container; no mutation via prepare_task()
+- **Pure Task Factory**: Each prepare_task() call returns fresh, independent Task
+- **GenerateNE Pure**: Returns clauses; caller extends its own KB copy
+- **Operation-Level Control**: use_incremental on CheckerFactory, not model builder
+- **Oracle Injected**: Passed to prepare_task(), not stored in model
 
 ### QuAcq Interactive/Batch Flow (Paper-Aligned with oracle.is_valid())
 
-**Architecture** (commit 260228 - unified shuffle-after-prepare):
 ```
-Feature Model + Bias + Oracle (required for both modes)
-    ├─→ [__init__] QuAcqModelBuilder.from_bias(bias_path)
-    │   ├─ .with_oracle(oracle)          # Required
-    │   ├─ .use_incremental(True/False)  # Optional
-    │   └─ .build()
-    │       ├─ [BUILD TIME] Compute negation: bias constraints → negated_constraint_map (Tseitin)
-    │       ├─ Store next_available_id (final tseitin var) in model
-    │       └─ Auto-prepare with configured oracle (initial preparation at build time)
+Feature Model + Bias + Oracle
+    ├─→ [__init__] QuAcqModelBuilder.from_bias(bias_path).with_oracle(oracle).build()
+    │   └─ Computes negation at build time (immutable KB)
     │
-    ├─→ [run] QuAcqModel.prepare(oracle) - fresh task per run
-    │   └─ QuAcqTaskPreparation.prepare(model, oracle) creates QuAcqTask
-    │       ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
-    │       ├─ Inherits from DiagnosisTask: set_kb, assumptions, negation_map, set_b, set_c
-    │       ├─ Copy BG data from Oracle (Parts 1-3) → set_b (assumption IDs)
-    │       ├─ Store raw BG clauses (no guards) → background_clauses
-    │       ├─ Use negated forms from model (not recomputing Tseitin)
-    │       ├─ Assign assumption IDs (Part 5: paired original+negated)
-    │       ├─ Store raw clauses per assumption ID
-    │       │   ├─ constraint_clauses: assumption_id → raw CNF
-    │       │   └─ negated_clauses: assumption_id → negated CNF (from model.negated_constraint_map)
-    │       └─ QuAcqTask ready (bias: Set[int], learned_kb: List[int], inherited fields)
+    ├─→ [run] task = model.prepare_task(TaskInput(), oracle)
+    │   └─ Fresh QuAcqTask per run (independent, no mutation)
     │
-    ├─→ [run] Shuffle bias iteration order (if shuffle_seed provided)
-    │   └─ random.Random(seed).shuffle(task.set_c)
+    ├─→ [run] Shuffle: random.Random(seed).shuffle(task.set_c)
     │
-    └─→ [run] QuAcq Algorithm (oracle or example mode, both use oracle.is_valid())
-        ├─ Oracle mode: QuAcq.learn(task, oracle_mode='automated'/'interactive')
-        │   └─ GenerateQuery → oracle.is_valid() → Update KB with assumption IDs
+    ├─→ [run] checker = CheckerFactory.create_from_task(task, ...)
+    │   └─ Operation-level solver control
+    │
+    └─→ [run] QuAcq Algorithm (oracle or example mode)
+        ├─ GenerateQuery → oracle.is_valid() → Update KB
         │
         └─ Example mode: QuAcq.learn_from_examples(task, E+, E-)
             ├─ For each e in E-:
@@ -716,13 +676,13 @@ Result: QuAcqResult with assumption IDs + query history
     └─ kb_constraints: List[str] — Resolved by runner via model.resolve_kb()
 ```
 
-**Key Changes** (commit 260228 - unified shuffle-after-prepare):
-- **Build-time Negation**: QuAcqModelBuilder.build() computes negation (idempotent, like ConGen)
-- **Per-run Prepare**: model.prepare(oracle) refreshes task for each run (new assumption IDs per run)
-- **Shuffle After Prepare**: Shuffle task.set_c AFTER prepare(), matching ConGen pattern
-- **next_available_id Stored**: Model stores tseitin var offset for reuse across multiple prepare() calls
-- **Idempotent Negation Maps**: Both prepare() calls read negated_constraint_map (never write to it)
-- **Unified Pattern**: ConGen and QuAcq follow identical lifecycle (build-once → prepare+shuffle per run)
+**Phase R Design**:
+- **Immutable KB**: QuAcqModel is pure data container
+- **Per-run Prepare**: model.prepare_task(TaskInput(), oracle) returns fresh Task each run
+- **Pure Task**: No state mutation across calls; independent Tasks for each run
+- **Shuffle After Prepare**: Matches ConGen pattern (bias iteration randomization)
+- **Operation-Level Control**: use_incremental on CheckerFactory, not model
+- **Oracle Injected**: Passed to prepare_task(), not stored in model
 
 **File Organization** (Consolidated in conacq/algorithms/quacq/):
 - **task_preparation.py**: `QuAcqTask` class (inherits DiagnosisTask) + `QuAcqTaskPreparation`
@@ -759,24 +719,29 @@ Result: feature_ids matches SAT variable IDs in CNF
 - **Pattern**: All code using feature_ids must receive it from Oracle or same FM→SAT conversion
 - **Failure Mode**: Alphabetical sorting breaks mismatch → incorrect Oracle validation
 
-## Solver Architecture
+## Solver Architecture (Phase R)
 
-### Incremental Mode (Default)
+**Immutable KB + Pure Task**:
+- Model stores constraint_map, negated_constraint_map (read-only after build)
+- `model.prepare_task(task_input) -> Task` is pure: fresh Task each call (no mutation)
+- Checker built from Task, not model: `CheckerFactory.create_from_task(task, ...)`
+- Solver mode (`use_incremental`) chosen at operation-level via `with_incremental()` builder or `create_from_task()` parameter
+
+**Incremental Mode** (default):
 - Persistent solver instance across calls
 - ~50x faster for repeated SAT checks
 - Checkers immutable after construction
-- GenerateNE output merged before checker creation via `merge_ne_into_task()`
 
-### Non-Incremental Mode
+**Non-Incremental Mode**:
 - Fresh solver per call
 - Memory-light, clear isolation
 - Same assumption-based data representation as incremental
 - Good for verification and comparison
 
-### SAT4J Mode (Optional)
-- External Java solver via subprocess
-- Good for cross-validation and solver comparison
-- Subprocess overhead (~100-500ms per call)
+**Parallel Mode (ProcessExecutor)** (Phase R):
+- Shared multiprocess pool (L3); worker builds checker once from KB
+- Option B profiler: main process counts at boundary, workers use NullProfiler
+- Memo cache (KB-namespaced): deduplicates CC across concurrent submitters
 
 ## Performance Metrics
 

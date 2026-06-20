@@ -2,7 +2,7 @@
 Feature model oracle using SAT solver for validation.
 
 Loads a feature model from .uvl file, converts to CNF, and validates
-configurations via persistent PySAT solver.
+configurations via a persistent PySAT checker built once from the base task.
 """
 
 from typing import Dict, Optional, Set, List
@@ -13,6 +13,7 @@ from conacq.oracle.base import Oracle
 from conacq.oracle.bg_data import BGData
 from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel
+from explanation.models.task_preparation import DiagnosisTask
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
@@ -22,6 +23,10 @@ class FeatureModelOracle(Oracle):
 
     Loads a feature model, converts it to CNF, and uses a SAT solver
     to validate configurations.
+
+    The checker is built ONCE from the base task (prepare_task with no
+    configuration).  Per-query, we extend set_c with the codec-encoded
+    assignment assumptions rather than mutating the model.
 
     Extends Oracle ABC with FM-specific methods:
     get_fm_data(), complete_configuration(), get_features(), etc.
@@ -40,21 +45,30 @@ class FeatureModelOracle(Oracle):
         Args:
             fm_path: Path to feature model (.uvl format)
             solver_name: SAT solver name for checker
+            use_incremental: Whether to use incremental solver for membership queries
             profiler: Profiler instance (uses global if None)
         """
         self.fm_path = fm_path
-
         self.solver_name = solver_name
         self.profiler = profiler if profiler is not None else get_global_profiler()
 
-        # Prepares the model and checker
-        self._oracle_model = FMOracleModel.from_fm(fm_path).set_incremental(use_incremental).build()
-        self._checker = CheckerFactory.create_from_model(self._oracle_model, solver_name, self.profiler)
+        # Build model (loads FM, populates constraint_map/variables, calls prepare_task)
+        self._oracle_model = FMOracleModel.from_fm(fm_path).build()
+
+        # Obtain the base task (no configuration applied) and its codec
+        self._base_task: DiagnosisTask = self._oracle_model.prepare_task()
+
+        # Build checker ONCE from the base task
+        self._checker = CheckerFactory.create_from_task(
+            self._base_task,
+            solver_name=solver_name,
+            use_incremental=use_incremental,
+            profiler_instance=self.profiler,
+        )
 
         # Lazy-loaded for description extraction (most callers never need this)
         self._fm = None
 
-    # TODO: need check
     @property
     def fm(self):
         """Lazy-load FM for description extraction."""
@@ -70,6 +84,11 @@ class FeatureModelOracle(Oracle):
     def is_valid(self, assignments: Dict[str, bool]) -> bool:
         """Check if configuration is valid (satisfies FM constraints).
 
+        Builds the set_c for this query as:
+            base_set_c + codec.config_to_assumptions(assignments)
+
+        No model mutation — pure per-query computation.
+
         Args:
             assignments: Feature assignments {feature_name: True/False}
 
@@ -77,21 +96,23 @@ class FeatureModelOracle(Oracle):
             True if configuration is valid
         """
         if any(name not in self._oracle_model.variables for name in assignments):
-            raise KeyError(f"Unknown features in assignment: {set(assignments) - set(self._oracle_model.variables)}")
+            raise KeyError(
+                f"Unknown features in assignment: "
+                f"{set(assignments) - set(self._oracle_model.variables)}"
+            )
 
-        set_c = self._oracle_model.with_configuration(assignments).get_c()
+        codec = self._base_task.codec
+        # base_set_c: FM constraint assumptions only (no feature assignments)
+        base_set_c = self._oracle_model._base_set_c
+        config_assumptions = codec.config_to_assumptions(assignments)
+        set_c = base_set_c + config_assumptions
 
         return self._checker.is_consistent(set_c)
 
     # --- FM-specific extensions (not part of Oracle ABC) ---
 
-    # TODO: need check
     def get_fm_data(self) -> FMData:
-        """Create FMData snapshot from current oracle state.
-
-        Returns:
-            Frozen FMData with all FM metadata
-        """
+        """Create FMData snapshot from current oracle state."""
         return FMData(
             features=self.get_variables(),
             feature_ids=self.get_feature_ids(),
@@ -108,7 +129,6 @@ class FeatureModelOracle(Oracle):
         """Get all feature names."""
         return set(self._oracle_model.variables.keys())
 
-    # TODO: need check
     def get_feature_ids(self) -> Dict[str, int]:
         """Get feature name to SAT variable ID mapping."""
         return dict(self._oracle_model.variables)
@@ -116,12 +136,13 @@ class FeatureModelOracle(Oracle):
     def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
         """Complete a partial configuration to a full valid one via SAT solving.
 
-        If no valid completion exists for the given partial, falls back to
-        returning any valid configuration (ignoring partial constraints).
-        Returns None only if no valid configuration exists at all.
+        Uses a one-shot local Solver (not the persistent checker) because we
+        need get_model() from a fresh solve, and this path is not a hot-path.
+        Falls back to any valid configuration if partial constraints are
+        unsatisfiable.  Returns None only if no valid configuration exists.
 
         Args:
-            partial: Partial assignment {feature_name: True/False} for subset of features
+            partial: Partial assignment {feature_name: True/False}
 
         Returns:
             Full valid configuration dict, or None if no valid completion exists
@@ -151,20 +172,20 @@ class FeatureModelOracle(Oracle):
         return {name: fid in model
                 for name, fid in self._oracle_model.variables.items()}
 
-    # Convenience getters (delegate to model)
+    # Convenience getters (delegate to base task / model)
+
     def get_kb(self) -> List[List[int]]:
-        """Get the full knowledge base with assumptions."""
-        return self._oracle_model.task.set_kb
+        """Get the full knowledge base with assumptions (from base task)."""
+        return self._base_task.set_kb
 
     def get_assumptions(self) -> List[int]:
-        """Get the list of assumption literals."""
-        return self._oracle_model.task.assumptions
+        """Get the list of assumption literals (from base task)."""
+        return self._base_task.assumptions
 
     def get_c(self) -> List[int]:
         """Get the set of constraint assumptions (FM constraints only, excluding feature assignments)."""
-        return self._oracle_model.get_c()
+        return list(self._oracle_model._base_set_c)
 
-    # TODO: need check
     def get_root_feature(self) -> str:
         """Get root feature name."""
         return self.fm.root.name
@@ -174,7 +195,6 @@ class FeatureModelOracle(Oracle):
         root = self.get_root_feature()
         return list(self._oracle_model.constraint_map[root])
 
-    # TODO: need check
     def get_cnf_clauses(self) -> List[List[int]]:
         """Get the raw ground truth CNF clauses (without assumption guards)."""
         return self._oracle_model.get_fm_clauses()
@@ -190,7 +210,6 @@ class FeatureModelOracle(Oracle):
     def __repr__(self):
         return f"FeatureModelOracle(features={len(self._oracle_model.variables)})"
 
-    # TODO: need update
     def cleanup(self):
         """Release checker resources."""
         if hasattr(self, '_checker') and self._checker is not None:

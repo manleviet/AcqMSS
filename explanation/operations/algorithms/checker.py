@@ -5,13 +5,14 @@ Implementations: IncrementalPySATChecker (persistent solver with assumptions),
 NonIncrementalPySATChecker (fresh solver per check), SAT4JChecker (external Java solver).
 All support pickling for multiprocessing and context manager protocol.
 
-Use CheckerFactory.create_from_model() or CheckerFactory.create_sat4jchecker() to instantiate.
+Use CheckerFactory.create_from_task() or CheckerFactory.create_sat4jchecker() to instantiate.
 """
 import os
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
-from typing import List, Optional, Protocol, runtime_checkable
+from concurrent.futures import Future
+from typing import List, Optional, Protocol, Tuple, runtime_checkable
 
 from pysat.formula import CNF
 from pysat.solvers import Solver
@@ -20,21 +21,36 @@ from .profiler import get_global_profiler, count_calls, AbstractProfiler
 
 
 @runtime_checkable
-class CheckerModel(Protocol):
-    """Protocol for models compatible with CheckerFactory.
+class ConsistencyExecutor(Protocol):
+    """Service contract for running consistency checks (CC).
 
-    Any class with these attributes/methods satisfies this protocol
-    via structural subtyping (no inheritance needed).
+    The single abstraction algorithms depend on. The serial implementation is
+    ``ConsistencyChecker`` itself (runs inline); the parallel implementation is
+    ``ProcessExecutor`` (a shared process pool). Both MUST give identical
+    results — only timing/parallelism differs.
+
+    ``solve`` exists so callers never rely on a stateful ``get_model()`` after
+    ``is_consistent`` (under a process pool the SAT model lives in the worker,
+    so it must travel back with the result as picklable ints).
     """
-    use_incremental: bool
 
-    def get_kb(self) -> List[List[int]]: ...
+    def is_consistent(self, set_c: List) -> bool: ...
 
-    def get_assumptions(self) -> List[int]: ...
+    def is_consistent_test_cases(self, set_c: List, set_tc: List,
+                                 stop_at_first_violation: bool) -> List: ...
+
+    def solve(self, set_c: List) -> Tuple[bool, Optional[List[int]]]: ...
+
+    def submit(self, set_c: List) -> "Future": ...
 
 
 class ConsistencyChecker(ABC):
-    """Abstract base class for consistency checkers."""
+    """Abstract base class for consistency checkers.
+
+    Also the SERIAL ``ConsistencyExecutor``: ``solve``/``submit`` run inline
+    (no processes, no overhead). Pass a ConsistencyChecker wherever a
+    ConsistencyExecutor is expected for sequential execution.
+    """
 
     def __init__(self, profiler_instance: AbstractProfiler = None):
         self.profiler = profiler_instance if profiler_instance is not None else get_global_profiler()
@@ -70,6 +86,21 @@ class ConsistencyChecker(ABC):
             if stop_at_first_violation and len(set_tcp) > 0:
                 break
         return set_tcp
+
+    def solve(self, set_c: List) -> Tuple[bool, Optional[List[int]]]:
+        """One call = consistency + model: returns (sat, model_lits or None).
+
+        Replaces the stateful ``is_consistent(...); get_model()`` two-step so the
+        model travels with the result. Serial executor: runs inline.
+        """
+        sat = self.is_consistent(set_c)
+        return sat, (self.get_model() if sat else None)
+
+    def submit(self, set_c: List) -> Future:
+        """Serial executor: run the check inline and return a resolved future."""
+        future: Future = Future()
+        future.set_result(self.is_consistent(set_c))
+        return future
 
     @abstractmethod
     def copy(self):
@@ -266,16 +297,22 @@ class CheckerFactory:
                             profiler_instance=profiler_instance)
 
     @staticmethod
-    def create_from_model(model: CheckerModel,
-                          solver_name: str = 'glucose3',
-                          profiler_instance: AbstractProfiler = None) -> ConsistencyChecker:
-        if model.use_incremental:
+    def create_from_task(task,
+                         *,
+                         solver_name: str = 'glucose3',
+                         use_incremental: bool = True,
+                         profiler_instance: AbstractProfiler = None) -> ConsistencyChecker:
+        """Build a checker from a Task's KB + assumptions.
+
+        ``use_incremental`` selects the checker implementation (it is an
+        operation-level concern, not a property of the KB or task).
+        """
+        if use_incremental:
             return IncrementalPySATChecker(
-                model.get_kb(), model.get_assumptions(),
-                solver_name, profiler_instance
+                task.set_kb, task.assumptions, solver_name, profiler_instance
             )
         else:
             return NonIncrementalPySATChecker(
-                model.get_kb(), model.get_assumptions(),
-                solver_name, profiler_instance
+                task.set_kb, task.assumptions, solver_name, profiler_instance
             )
+

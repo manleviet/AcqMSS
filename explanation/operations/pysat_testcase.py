@@ -3,11 +3,9 @@
 This module provides diagnosis operations using the KBDiag algorithm
 which works with positive and negative test cases.
 """
-from typing import Tuple, Optional
+from typing import Tuple
 
-from explanation.models.pysat_diagnosis_model import DiagnosisModel
-from explanation.models.task_preparation import TaskInput
-from explanation.models.testsuite import TestSuite
+from explanation.models.task_preparation import Task
 from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.kbdiag_labeler import KBDiagLabeler, KBDiagParameters
@@ -49,40 +47,30 @@ class PySATTestCase(PySATAbstractExplanation):
             raise ValueError(f"the parameter m must be positive and greater than 1, got {value}")
         self._m = value
 
-    def _create_labeler(self, checker: ConsistencyChecker, model: DiagnosisModel) -> KBDiagLabeler:
+    def _create_labeler(self, checker: ConsistencyChecker, task: Task) -> KBDiagLabeler:
         """Create KBDiag labeler for HSDAG.
 
         Args:
             checker: Consistency checker instance
-            model: Diagnosis model
+            task: Task carrying set_c, set_b, set_tc, set_neg_tv
 
         Returns:
             KBDiagLabeler instance
         """
-        set_c = model.get_c()
-        set_b = model.get_b()
-        set_tc = model.get_tc()
-        set_neg_tv = model.get_neg_tv()
-
-        parameters = KBDiagParameters(set_c, set_b, set_tc, set_neg_tv)
+        parameters = KBDiagParameters(task.set_c, task.set_b, task.set_tc, task.set_neg_tv)
         return KBDiagLabeler(checker, self.m, parameters)
 
-    def prepare_hsdag(self, model: DiagnosisModel) -> Tuple[ConsistencyChecker, HSDAG]:
+    def prepare_hsdag(self, task: Task) -> Tuple[ConsistencyChecker, HSDAG]:
         """Prepare HSDAG with KBDiag labeler for test case computation.
 
-        This method uses the helper methods to:
-        1. Create a consistency checker
-        2. Create a KBDiag labeler
-        3. Configure HSDAG with operation parameters
-
         Args:
-            model: Diagnosis model to use
+            task: Task carrying KB, assumptions, and constraint sets
 
         Returns:
             Tuple of (consistency_checker, configured_hsdag)
         """
-        checker = self._create_checker(model)
-        labeler = self._create_labeler(checker, model)
+        checker = self._create_checker(task)
+        labeler = self._create_labeler(checker, task)
 
         return checker, self._create_hsdag(labeler)
 

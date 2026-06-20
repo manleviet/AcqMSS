@@ -19,15 +19,17 @@ from .sat_utils import prune_rejecting
 class FindScope:
     """Finds scope of violated constraint via partial membership queries.
 
-    All collaborators and invariants (oracle, checker, model, record_query,
-    root_assumption) injected at construction; per-call data passed to run().
+    All collaborators and invariants (oracle, checker, task, codec,
+    record_query, root_assumption) injected at construction;
+    per-call data passed to run().
     """
 
-    def __init__(self, oracle, checker: ConsistencyChecker, model, profiler,
-                 record_query, root_assumption: int):
+    def __init__(self, oracle, checker: ConsistencyChecker, task, codec,
+                 profiler, record_query, root_assumption: int):
         self.oracle = oracle
         self.checker = checker
-        self.model = model
+        self.task = task
+        self.codec = codec
         self.profiler = profiler
         self.record_query = record_query
         self.root_assumption = root_assumption
@@ -63,7 +65,9 @@ class FindScope:
 
             if is_consistent:
                 if partial:
-                    pruned = prune_rejecting(self.checker, self.model, remaining_bias, partial, self.root_assumption, self.profiler)
+                    pruned = prune_rejecting(self.checker, self.codec,
+                                            remaining_bias, partial,
+                                            self.root_assumption, self.profiler)
                     if pruned:
                         logging.debug('FindScope pruned %d constraints from partial query', len(pruned))
             else:

@@ -1,56 +1,52 @@
-"""Unified builder for creating configured DiagnosisModel instances.
+"""Builder for creating DiagnosisModel (KB) instances.
 
-This module provides a fluent builder interface for creating DiagnosisModel
-instances with various configurations for different use cases.
+The builder constructs the immutable knowledge base only — it loads/transforms a
+feature model and optionally creates negated constraint forms (a KB property).
+Per-task inputs (configuration, test cases, redundancy usage, incremental mode)
+are NOT set here: pass them to ``model.prepare_task(TaskInput(...))`` and choose
+the solver via the operation builder's ``with_incremental``/``with_solver``.
 """
 from typing import Optional
 
-from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models import FeatureModel
 
 from .pysat_diagnosis_model import DiagnosisModel
-from .task_preparation import TaskInput
-from .testsuite import TestSuite
 
 
 class DiagnosisModelBuilder:
-    """Unified builder for creating DiagnosisModel instances.
+    """Fluent builder that produces a KB-only DiagnosisModel.
 
-    Supports all use cases through a fluent interface:
+    The builder constructs only the immutable KB; the task type is chosen later
+    by the TaskInput passed to ``model.prepare_task(...)``. The single KB-level
+    option here is ``with_negation()`` (creates negated constraint forms, needed
+    only by WipeOutR_FM).
 
-    | Use Case            | Builder Config                                                            | Task Type     | Negation       |
-    |---------------------|---------------------------------------------------------------------------|---------------|----------------|
-    | 1. Config diagnosis | .with_configuration(cfg)                                                  | DiagnosisTask | No             |
-    | 2. Config + FM      | .with_configuration(cfg).with_cf_in_c()                                   | DiagnosisTask | No             |
-    | 3. FM diagnosis     | (default)                                                                 | DiagnosisTask | No             |
-    | 4. Error diagnosis  | .with_test_case(tc)                                                       | DiagnosisTask | No             |
-    | 5. KBDiag           | .with_positive_testcases(tc).with_negative_testcases(tv)                  | TestCaseTask  | Test cases     |
-    | 6. WipeOutR_T       | .with_testcases(ts)                                                       | TestCaseTask  | Test cases     |
-    | 7. WipeOutR_FM      | .for_redundancy()                                                         | DiagnosisTask | FM constraints |
-    | 8. CXPlain          | .with_requirement(req).with_configuration(cfg).with_sub_configuration(sc) | DiagnosisTask | Sub-config     |
+    End-to-end use cases (KB build → prepare_task input → task):
+
+    | Use Case             | KB build (this builder)        | prepare_task(TaskInput(...))                                   | Task Type     |
+    |----------------------|--------------------------------|---------------------------------------------------------------|---------------|
+    | 1. Config diagnosis  | .build()                       | configuration=cfg                                             | DiagnosisTask |
+    | 2. Config + FM       | .build()                       | configuration=cfg, with_cf_in_c=True                         | DiagnosisTask |
+    | 3. FM diagnosis      | .build()                       | () (defaults)                                                | DiagnosisTask |
+    | 4. Error diagnosis   | .build()                       | test_case=tc                                                 | DiagnosisTask |
+    | 5. KBDiag            | .build()                       | positive_test_cases=tc, negative_test_cases=tv               | TestCaseTask  |
+    | 6. WipeOutR_T        | .build()                       | positive_test_cases=ts, for_redundancy=True                  | TestCaseTask  |
+    | 7. WipeOutR_FM       | .with_negation().build()       | for_redundancy=True                                          | DiagnosisTask |
+    | 8. CXPlain (future)  | .build()                       | requirement=req, configuration=cfg, sub_configuration=sc     | DiagnosisTask |
 
     Examples:
         # Use Case 1: Configuration diagnosis
-        model = (DiagnosisModelBuilder
-            .from_fide("smartwatch.xml")
-            .with_configuration(config)
-            .use_incremental()
-            .build())
+        model = DiagnosisModelBuilder.from_fide("smartwatch.xml").build()
+        task = model.prepare_task(TaskInput(configuration=config))
 
         # Use Case 5: KBDiag with test cases
-        model = (DiagnosisModelBuilder
-            .from_uvl("feature_model.uvl")
-            .with_positive_testcases(positive_ts)
-            .with_negative_testcases(negative_ts)
-            .use_incremental()
-            .build())
+        model = DiagnosisModelBuilder.from_uvl("feature_model.uvl").build()
+        task = model.prepare_task(TaskInput(
+            positive_test_cases=positive_ts, negative_test_cases=negative_ts))
 
-        # Use Case 7: FM Redundancy Detection
-        model = (DiagnosisModelBuilder
-            .from_uvl("redundant_fm.uvl")
-            .for_redundancy()
-            .use_incremental()
-            .build())
+        # Use Case 7: FM redundancy detection (negated forms created at transform time)
+        model = DiagnosisModelBuilder.from_uvl("redundant_fm.uvl").with_negation().build()
+        task = model.prepare_task(TaskInput(for_redundancy=True))
     """
 
     def __init__(self):
@@ -60,37 +56,14 @@ class DiagnosisModelBuilder:
         self._source_path: Optional[str] = None
         self._feature_model: Optional[FeatureModel] = None
 
-        # Mode flags
-        self._for_redundancy: bool = False
-
-        # Solver configuration
-        self._use_incremental: bool = True
-
-        # Diagnosis inputs
-        self._configuration: Optional[Configuration] = None
-        self._test_case: Optional[Configuration] = None
-        self._with_cf_in_c: bool = False
-
-        # Test case inputs
-        self._positive_testcases: Optional[TestSuite] = None
-        self._negative_testcases: Optional[TestSuite] = None
-
-        # CXPlain inputs (for future)
-        self._requirement: Optional[Configuration] = None
-        self._sub_configuration: Optional[Configuration] = None
+        # KB-level: whether to create negated constraint forms (WipeOutR_FM).
+        self._create_negation: bool = False
 
     # === Source Methods (class methods) ===
 
     @classmethod
     def from_fide(cls, path: str) -> 'DiagnosisModelBuilder':
-        """Create builder from FeatureIDE XML file.
-
-        Args:
-            path: Path to FeatureIDE .fide/.xml file.
-
-        Returns:
-            DiagnosisModelBuilder instance.
-        """
+        """Create builder from FeatureIDE XML file."""
         builder = cls()
         builder._source_type = 'fide'
         builder._source_path = path
@@ -98,14 +71,7 @@ class DiagnosisModelBuilder:
 
     @classmethod
     def from_uvl(cls, path: str) -> 'DiagnosisModelBuilder':
-        """Create builder from UVL file.
-
-        Args:
-            path: Path to UVL file.
-
-        Returns:
-            DiagnosisModelBuilder instance.
-        """
+        """Create builder from UVL file."""
         builder = cls()
         builder._source_type = 'uvl'
         builder._source_path = path
@@ -113,14 +79,7 @@ class DiagnosisModelBuilder:
 
     @classmethod
     def from_dimacs(cls, path: str) -> 'DiagnosisModelBuilder':
-        """Create builder from DIMACS CNF file.
-
-        Args:
-            path: Path to DIMACS file.
-
-        Returns:
-            DiagnosisModelBuilder instance.
-        """
+        """Create builder from DIMACS CNF file."""
         builder = cls()
         builder._source_type = 'dimacs'
         builder._source_path = path
@@ -128,259 +87,43 @@ class DiagnosisModelBuilder:
 
     @classmethod
     def from_feature_model(cls, fm: FeatureModel) -> 'DiagnosisModelBuilder':
-        """Create builder from existing FeatureModel object.
-
-        Args:
-            fm: FeatureModel instance.
-
-        Returns:
-            DiagnosisModelBuilder instance.
-        """
+        """Create builder from existing FeatureModel object."""
         builder = cls()
         builder._source_type = 'feature_model'
         builder._feature_model = fm
         return builder
 
-    # === Mode Selection ===
+    # === KB options ===
 
-    def for_redundancy(self, enabled: bool = True) -> 'DiagnosisModelBuilder':
-        """Configure for FM constraint redundancy detection (WipeOutR_FM).
+    def with_negation(self, enabled: bool = True) -> 'DiagnosisModelBuilder':
+        """Create negated constraint forms in the KB (needed for WipeOutR_FM).
 
-        When enabled, creates negated forms for all constraints during transformation.
-
-        Args:
-            enabled: Whether to enable redundancy detection mode.
-
-        Returns:
-            Self for method chaining.
+        This is a KB property (it populates ``negated_constraint_map``). Whether a
+        given task *uses* the negated forms is a separate per-task decision via
+        ``TaskInput(for_redundancy=True)``.
         """
-        self._for_redundancy = enabled
+        self._create_negation = enabled
         return self
 
-    # === Configuration Methods ===
-
-    def with_configuration(self, config: Configuration) -> 'DiagnosisModelBuilder':
-        """Set configuration for diagnosis.
-
-        Args:
-            config: Configuration to diagnose.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._configuration = config
-        return self
-
-    def with_cf_in_c(self, enabled: bool = True) -> 'DiagnosisModelBuilder':
-        """Enable CF-in-C mode (configuration + FM in C set).
-
-        When enabled, both configuration and FM constraints are in set C,
-        with only root in set B.
-
-        Args:
-            enabled: Whether to enable CF-in-C mode.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._with_cf_in_c = enabled
-        return self
-
-    def with_test_case(self, test_case: Configuration) -> 'DiagnosisModelBuilder':
-        """Set single test case for error diagnosis.
-
-        Used for dead feature and false optional feature diagnosis.
-
-        Args:
-            test_case: Test case configuration.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._test_case = test_case
-        return self
-
-    def with_positive_testcases(self, testcases: TestSuite) -> 'DiagnosisModelBuilder':
-        """Set positive test cases for debugging/redundancy.
-
-        Positive test cases are configurations that SHOULD be valid.
-
-        Args:
-            testcases: TestSuite of positive test cases.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._positive_testcases = testcases
-        return self
-
-    def with_negative_testcases(self, testcases: TestSuite) -> 'DiagnosisModelBuilder':
-        """Set negative test cases for KBDiag.
-
-        Negative test cases are configurations that SHOULD be invalid.
-
-        Args:
-            testcases: TestSuite of negative test cases.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._negative_testcases = testcases
-        return self
-
-    def with_testcases(self, testcases: TestSuite) -> 'DiagnosisModelBuilder':
-        """Set examples for redundancy detection.
-
-        Args:
-            testcases: TestSuite of test cases.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._positive_testcases = testcases
-        self._for_redundancy = True
-        return self
-
-    def with_requirement(self, req: Configuration) -> 'DiagnosisModelBuilder':
-        """Set requirement for CXPlain (future use).
-
-        Args:
-            req: Requirement configuration.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._requirement = req
-        return self
-
-    def with_sub_configuration(self, sub_config: Configuration) -> 'DiagnosisModelBuilder':
-        """Set sub-configuration for CXPlain (future use).
-
-        Args:
-            sub_config: Sub-configuration.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._sub_configuration = sub_config
-        return self
-
-    # === Solver Mode ===
-
-    def use_incremental(self, enabled: bool = True) -> 'DiagnosisModelBuilder':
-        """Use incremental solver mode.
-
-        Incremental mode keeps solver state between checks, improving efficiency.
-
-        Args:
-            enabled: Whether to use incremental mode.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._use_incremental = enabled
-        return self
+    # Backwards-readable alias kept for redundancy KBs; same KB-level meaning.
+    for_redundancy = with_negation
 
     # === Build ===
 
     def build(self) -> DiagnosisModel:
-        """Build and return fully configured DiagnosisModel.
-
-        This method:
-        1. Validates builder state
-        2. Loads/transforms the feature model
-        3. Sets solver mode configuration
-        4. Assigns task inputs to model
-        5. Calls prepare() to prepare the task
-
-        Returns:
-            Fully configured DiagnosisModel with task prepared.
+        """Build and return the KB-only DiagnosisModel.
 
         Raises:
-            ValueError: If source is not specified or configuration is invalid.
+            ValueError: If source is not specified.
         """
-        # Validate
-        self._validate()
-
-        # Create model
-        model = self._create_model()
-
-        # Configure solver mode
-        model._use_incremental = self._use_incremental
-
-        # Create and assign TaskInput
-        model.task_input = TaskInput(
-            configuration=self._configuration,
-            test_case=self._test_case,
-            with_cf_in_c=self._with_cf_in_c,
-            positive_test_cases=self._positive_testcases,
-            negative_test_cases=self._negative_testcases,
-            for_redundancy=self._for_redundancy,
-            requirement=self._requirement,
-            sub_configuration=self._sub_configuration
-        )
-
-        # Prepare the task
-        model.prepare()
-
-        return model
-
-    def _validate(self) -> None:
-        """Validate builder state before building.
-
-        Validates:
-        1. Source is specified
-        2. Mutually exclusive inputs are not combined
-        3. Required combinations are present
-
-        Raises:
-            ValueError: If validation fails
-        """
-        # 1. Source validation
         if self._source_path is None and self._feature_model is None:
             raise ValueError(
                 "Source must be specified (use from_fide/from_uvl/from_dimacs/from_feature_model)")
-
-        # 2. Mutually exclusive inputs
-        if self._configuration and self._positive_testcases:
-            raise ValueError(
-                "Cannot combine configuration with test cases. "
-                "Use configuration for diagnosis (use cases 1-2) OR test cases for KBDiag/WipeOutR_T (use cases 5-6)")
-
-        if self._test_case and self._positive_testcases:
-            raise ValueError(
-                "Cannot combine test_case with positive_test_cases. "
-                "Use test_case for error diagnosis (use case 4) OR positive_test_cases for KBDiag/WipeOutR_T (use cases 5-6)")
-
-        if self._test_case and self._configuration:
-            raise ValueError(
-                "Cannot combine test_case with configuration. "
-                "Use configuration for diagnosis (use cases 1-2) OR test_case for error diagnosis (use case 4)")
-
-        # 3. Required combinations
-        if self._with_cf_in_c and not self._configuration:
-            raise ValueError(
-                "with_cf_in_c requires configuration. "
-                "Call .with_configuration(cfg) before .with_cf_in_c()")
-
-        if self._negative_testcases and not self._positive_testcases:
-            raise ValueError(
-                "negative_test_cases requires positive_test_cases. "
-                "Call .with_positive_testcases(tc) before .with_negative_testcases(tv)")
-
-        # 4. CXPlain validation (future)
-        if self._sub_configuration and not (self._requirement and self._configuration):
-            raise ValueError(
-                "sub_configuration requires both requirement and configuration. "
-                "Call .with_requirement(req) and .with_configuration(cfg) before .with_sub_configuration(sc)")
+        return self._create_model()
 
     def _create_model(self) -> DiagnosisModel:
-        """Create DiagnosisModel from source.
-
-        Uses lazy imports to avoid circular dependencies.
-        """
-        # Determine if negation is needed
-        needs_negation = self._for_redundancy
+        """Create DiagnosisModel from source. Lazy imports avoid circular deps."""
+        needs_negation = self._create_negation
 
         if self._source_type == 'fide':
             from flamapy.metamodels.fm_metamodel.transformations import FeatureIDEReader

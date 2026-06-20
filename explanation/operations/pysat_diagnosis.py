@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from explanation.models.pysat_diagnosis_model import DiagnosisModel
+from explanation.models.task_preparation import Task
 from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.fastdiag_labeler import FastDiagLabeler, FastDiagParameters
@@ -25,7 +25,7 @@ class PySATDiagnosis(PySATAbstractExplanation):
     Example:
         >>> operation = PySATDiagnosis()
         >>> operation.max_diagnoses = 5
-        >>> result = operation.execute(diagnosis_model)
+        >>> result = operation.execute(task)
         >>> messages = result.get_result()
     """
 
@@ -33,38 +33,30 @@ class PySATDiagnosis(PySATAbstractExplanation):
         """Initialize PySATDiagnosis operation with default values."""
         super().__init__(profiler_instance)
 
-    def _create_labeler(self, checker: ConsistencyChecker, model: DiagnosisModel) -> FastDiagLabeler:
+    def _create_labeler(self, checker: ConsistencyChecker, task: Task) -> FastDiagLabeler:
         """Create FastDiag labeler for diagnosis computation.
 
         Args:
             checker: Consistency checker instance
-            model: Diagnosis model
+            task: Task carrying set_c and set_b
 
         Returns:
             Configured FastDiagLabeler instance
         """
-        set_c = model.get_c()
-        set_b = model.get_b()
-
-        parameters = FastDiagParameters(set_c, set_b)
+        parameters = FastDiagParameters(task.set_c, task.set_b)
         return FastDiagLabeler(checker, parameters)
 
-    def prepare_hsdag(self, model: DiagnosisModel) -> Tuple[ConsistencyChecker, HSDAG]:
+    def prepare_hsdag(self, task: Task) -> Tuple[ConsistencyChecker, HSDAG]:
         """Prepare HSDAG with FastDiag labeler for diagnosis computation.
 
-        This method uses the helper methods to:
-        1. Create a consistency checker
-        2. Create a FastDiag labeler
-        3. Configure HSDAG with operation parameters
-
         Args:
-            model: Diagnosis model to use
+            task: Task carrying KB, assumptions, and constraint sets
 
         Returns:
             Tuple of (consistency_checker, configured_hsdag)
         """
-        checker = self._create_checker(model)
-        labeler = self._create_labeler(checker, model)
+        checker = self._create_checker(task)
+        labeler = self._create_labeler(checker, task)
 
         return checker, self._create_hsdag(labeler)
 

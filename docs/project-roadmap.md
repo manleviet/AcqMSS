@@ -1,6 +1,6 @@
 # AcqMSS Project Roadmap
 
-**Last Updated**: 2026-02-28
+**Last Updated**: 2026-06-19
 
 ## Executive Summary
 
@@ -110,6 +110,39 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - FindScope/FindC enables principled conflict resolution from examples
 - Fair comparison between CONGEN and QuAcq via shared CV folds
 - Reproducible evaluation with fixed fold assignments and bias orderings
+
+### Phase R: Task-as-Unit Refactor ✅ COMPLETE
+
+**Timeline**: June 2026
+**Status**: Core implementation and testing complete (351 tests green)
+
+**Completed**:
+- ✅ `Task` ABC (base, DiagnosisTask, TestCaseTask, ConGenTask, QuAcqTask, FMOracleTask)
+- ✅ Immutable model design (KB + codec only, no stateful mutations)
+- ✅ `VariableCodec` consolidating id↔name + config↔assumptions conversion
+- ✅ `TaskInput` dataclass replacing per-model builder setters
+- ✅ `ModelProtocol` (typing.Protocol) for KB abstraction
+- ✅ Pure `GenerateNE` (returns clauses, no caller mutation)
+- ✅ New `prepare_task(TaskInput) -> Task` API (replaces stateful `prepare()`)
+- ✅ `CheckerFactory.create_from_task()` (replaces `create_from_model()`)
+- ✅ `ConsistencyExecutor` Protocol (serial checker + parallel executor)
+- ✅ `ProcessExecutor` for parallel consistency checking (L2 FastDiagP lookahead)
+- ✅ `MemoizingExecutor` decorator for deduplication + caching
+- ✅ L2 FastDiagP rewritten (no internal pool, uses shared executor)
+- ✅ Diagnosis tests rewritten to new API (1,416 LOC, all passing)
+- ✅ Code review (4/4 hard guardrails PASS)
+- ✅ Flamapy 2.0.1 / Python 3.11 compatibility
+
+**Achievements**:
+- Models are now immutable KB containers (eliminates stateful bugs)
+- Tasks are the unit of computation (independent, composable)
+- Algorithms depend on `ConsistencyExecutor` Protocol (enables parallelism)
+- Serial (ConsistencyChecker) and parallel (ProcessExecutor) give identical results
+- L1 parallel HSDAG node threads ready for next phase (executor is thread-safe)
+
+**Deferred to Next Phase**:
+- L1 parallel HSDAG node threading (executor is designed for it, not yet implemented)
+- Port to canonical `explanation` repository
 
 ### Phase 6: Documentation & Polish 🔄 IN PROGRESS
 
@@ -358,6 +391,6 @@ pytest tests/test_diagnosis.py -k "with_profiling" -v
 
 ---
 
-**Document Version**: 1.3
-**Last Updated**: 2026-02-28
+**Document Version**: 1.4
+**Last Updated**: 2026-06-19 (Phase R complete)
 **Maintained By**: Development Team

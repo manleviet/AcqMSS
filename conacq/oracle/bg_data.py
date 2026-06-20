@@ -7,6 +7,7 @@ Parts 3+4, allowing ConGen to start its own ID allocation cleanly.
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
+from typing import Protocol, runtime_checkable
 
 
 @dataclass(frozen=True)
@@ -37,3 +38,17 @@ class BGData:
     assignment_assumptions: List[int] = field(default_factory=list)
     pos_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
     neg_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
+
+
+@runtime_checkable
+class BGDataProvider(Protocol):
+    """Protocol for objects that can supply BGData (Part 3 + Part 4 BG data).
+
+    Implemented by FeatureModelOracle. Task preparations type-check callers
+    against this protocol when they only need get_bg_data() — any additional
+    oracle methods (GenerateNE, get_c, etc.) remain typed via the concrete class.
+    """
+
+    def get_bg_data(self) -> BGData:
+        """Return root BG assumption data (Parts 3+4 of the shared ID layout)."""
+        ...

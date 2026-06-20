@@ -18,6 +18,8 @@ from explanation.models.task_preparation import (
     prepare_kb,
     _ASSUMPTION_PAIR_STRIDE,
 )
+from conacq.algorithms.oracle_aware_task_preparation import OracleAwareTaskPreparation
+
 if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
     from .quacq_model import QuAcqModel
@@ -43,8 +45,37 @@ class QuAcqTask(DiagnosisTask):
     # assumption_id -> raw clauses (WITHOUT assumption guards, for violation checking)
     constraint_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
 
+    def get_constraint_vars(self, assumption_id: int) -> set:
+        """Feature names referenced by constraint with given assumption ID.
 
-class QuAcqTaskPreparation:
+        Uses codec to translate raw clause variable IDs to feature names.
+        Returns empty set if assumption_id unknown or codec not attached.
+        """
+        if self.codec is None:
+            return set()
+        clauses = self.constraint_clauses.get(assumption_id, [])
+        return self.codec.get_constraint_vars(clauses)
+
+    def get_constraints_with_scope(self, scope: set, remaining_bias: set) -> list:
+        """Bias constraint IDs whose variables match scope.
+
+        Prefers exact scope match (c_vars == scope). Falls back to subset
+        match (c_vars ⊆ scope) if no exact matches found.
+        """
+        exact = []
+        subset = []
+        for aid in remaining_bias:
+            c_vars = self.get_constraint_vars(aid)
+            if not c_vars:
+                continue
+            if c_vars == scope:
+                exact.append(aid)
+            elif c_vars.issubset(scope):
+                subset.append(aid)
+        return exact if exact else subset
+
+
+class QuAcqTaskPreparation(OracleAwareTaskPreparation):
     """Prepare QuAcqTask from bias + oracle. No E+/E-.
 
     Assumption ID layout (QuAcq owns Parts 5-6):
@@ -67,17 +98,12 @@ class QuAcqTaskPreparation:
         result = QuAcqTask()
         provider = DescriptionProvider()
 
-        # Step 0: Copy BG data from Oracle (root constraint pair)
+        # Step 0: Copy BG data from Oracle (Parts 3 + 4).
+        # Part 3: root constraint pair (shared with ConGen via mixin).
+        # Part 4: feature assignment assumptions (QuAcq-specific pruning).
         bg_data = oracle.get_bg_data()
-        result.set_kb.extend(bg_data.set_kb)
-        result.assumptions.extend(list(bg_data.assumptions))
-        result.negation_map.update(bg_data.negation_map)
-        for aid, desc in bg_data.descriptions.items():
-            provider.add_constraint_description(aid, desc)
-
-        # Copy Part 4 data from BGData (feature assignment assumptions)
-        result.set_kb.extend(bg_data.assignment_clauses)
-        result.assumptions.extend(bg_data.assignment_assumptions)
+        self._copy_bg_data_part3(result, provider, bg_data)
+        self._copy_bg_data_part4(result, bg_data)
 
         # Step 1: Assign assumption IDs (negated forms from builder)
         id_assumption = model.next_available_id

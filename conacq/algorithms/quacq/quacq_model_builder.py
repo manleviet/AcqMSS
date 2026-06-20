@@ -8,6 +8,7 @@ from .quacq_model import QuAcqModel
 
 if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
+    from .task_preparation import QuAcqTask
 
 
 class QuAcqModelBuilder:
@@ -15,16 +16,20 @@ class QuAcqModelBuilder:
 
     Examples:
         oracle = FeatureModelOracle('data/fms/model.uvl')
-        model = (QuAcqModelBuilder
-                 .from_bias('data/bias/model.json')
-                 .with_oracle(oracle)
-                 .build())  # Returns prepared model with task ready
+        builder = (QuAcqModelBuilder
+                   .from_bias('data/bias/model.json')
+                   .with_oracle(oracle))
+        model = builder.build()
+        task = builder.last_task   # QuAcqTask prepared during build()
+        checker = CheckerFactory.create_from_task(task)
     """
 
     def __init__(self) -> None:
         self._bias_path: Optional[str] = None
         self._oracle: Optional[FeatureModelOracle] = None
-        self._use_incremental: bool = True
+
+        # Last prepared task (set by build())
+        self.last_task: Optional['QuAcqTask'] = None
 
     @classmethod
     def from_bias(cls, bias_path: str) -> QuAcqModelBuilder:
@@ -38,15 +43,11 @@ class QuAcqModelBuilder:
         self._oracle = oracle
         return self
 
-    def use_incremental(self, enabled: bool = True) -> QuAcqModelBuilder:
-        """Set incremental solver mode."""
-        self._use_incremental = enabled
-        return self
-
     def build(self) -> QuAcqModel:
         """Build and return prepared QuAcqModel.
 
-        Computes negation at build time, then auto-prepares.
+        Computes negation at build time, then prepares a QuAcqTask.
+        The prepared task is stored on self.last_task for retrieval by callers.
 
         Raises:
             ValueError: If bias path or oracle missing
@@ -61,8 +62,6 @@ class QuAcqModelBuilder:
         model = QuAcqModel()
         model.constraint_map = bias.to_constraint_map()
         model.variables = bias.feature_ids
-        model.features = {var_id: name for name, var_id in model.variables.items()}
-        model.use_incremental = self._use_incremental
 
         # Compute negation at build time (before prepare)
         next_tseitin_var = self._oracle.get_bg_data().next_available_id
@@ -71,10 +70,7 @@ class QuAcqModelBuilder:
             model.negated_constraint_map[f"NOT({key})"] = neg_clauses
         model.next_available_id = next_tseitin_var
 
-        model.pos_assignment_to_assumption = dict(self._oracle.get_bg_data().pos_assignment_to_assumption)
-        model.neg_assignment_to_assumption = dict(self._oracle.get_bg_data().neg_assignment_to_assumption)
-
-        model.prepare(self._oracle)
+        self.last_task = model.prepare_task(self._oracle)
         return model
 
     def _validate(self) -> None:

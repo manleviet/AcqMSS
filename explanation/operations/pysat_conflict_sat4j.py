@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from explanation.models.pysat_diagnosis_model import DiagnosisModel
+from explanation.models.task_preparation import Task
 from explanation.operations.algorithms.checker import ConsistencyChecker, CheckerFactory
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.quickxplain_labeler import QuickXPlainLabeler, \
@@ -10,7 +10,7 @@ from explanation.operations.pysat_abstract_explanation import PySATAbstractExpla
 
 
 class PySATConflictSAT4J(PySATAbstractExplanation):
-    """Operation that computes conflicts and diagnoses using HSDAG and QuickXPlain.
+    """Operation that computes conflicts and diagnoses using HSDAG and QuickXPlain with SAT4J solver.
 
     This operation identifies conflicts (sets of constraints that are inconsistent)
     and diagnoses (minimal sets of constraints whose removal makes the system consistent)
@@ -24,53 +24,45 @@ class PySATConflictSAT4J(PySATAbstractExplanation):
         solver_name: SAT solver to use (default: 'glucose3')
 
     Example:
-        >>> operation = PySATConflict()
+        >>> operation = PySATConflictSAT4J()
         >>> operation.max_conflicts = 10
-        >>> result = operation.execute(diagnosis_model)
+        >>> result = operation.execute(task)
         >>> messages = result.get_result()
     """
 
     def __init__(self, profiler_instance: AbstractProfiler = None) -> None:
-        """Initialize PySATConflict operation with default values."""
+        """Initialize PySATConflictSAT4J operation with default values."""
         super().__init__(profiler_instance)
 
-    def _create_labeler(self, checker: ConsistencyChecker, model: DiagnosisModel) -> QuickXPlainLabeler:
+    def _create_labeler(self, checker: ConsistencyChecker, task: Task) -> QuickXPlainLabeler:
         """Create QuickXPlain labeler for conflict detection.
 
         Args:
             checker: Consistency checker instance
-            model: Diagnosis model
+            task: Task carrying set_c and set_b
 
         Returns:
             Configured QuickXPlainLabeler instance
         """
-        set_c = model.get_c()
-        set_b = model.get_b()
-
-        parameters = QuickXPlainParameters(set_c, set_b)
+        parameters = QuickXPlainParameters(task.set_c, task.set_b)
         return QuickXPlainLabeler(checker, parameters)
 
-    def _create_checker(self, model: DiagnosisModel) -> ConsistencyChecker:
-        """Create ConsistencyChecker instance for diagnosis model."""
+    def _create_checker(self, task: Task) -> ConsistencyChecker:
+        """Create SAT4J checker from task KB and assumptions."""
         return CheckerFactory.create_sat4jchecker(
-            self.profiler, set_kb=model.get_kb(), assumptions=model.get_assumptions())
+            self.profiler, set_kb=task.set_kb, assumptions=task.assumptions)
 
-    def prepare_hsdag(self, model: DiagnosisModel) -> Tuple[ConsistencyChecker, HSDAG]:
+    def prepare_hsdag(self, task: Task) -> Tuple[ConsistencyChecker, HSDAG]:
         """Prepare HSDAG with QuickXPlain labeler for conflict detection.
 
-        This method uses the helper methods to:
-        1. Create a consistency checker
-        2. Create a QuickXPlain labeler
-        3. Configure HSDAG with operation parameters
-
         Args:
-            model: Diagnosis model to use
+            task: Task carrying KB, assumptions, and constraint sets
 
         Returns:
             Tuple of (consistency_checker, configured_hsdag)
         """
-        checker = self._create_checker(model)
-        labeler = self._create_labeler(checker, model)
+        checker = self._create_checker(task)
+        labeler = self._create_labeler(checker, task)
 
         return checker, self._create_hsdag(labeler)
 

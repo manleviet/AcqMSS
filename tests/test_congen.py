@@ -47,31 +47,28 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
         is_incremental: Use incremental mode
 
     Returns:
-        Tuple of (checker, task, profiler)
+        Tuple of (checker, task, profiler, description_provider)
     """
     profiler = get_global_profiler()
 
     # Create oracle
     oracle = FeatureModelOracle(fm_path, use_incremental=False)
 
-    # Build and prepare model
-    model = (ConGenModelBuilder
-             .from_bias(bias_path)
-             .use_incremental(is_incremental)
-             .with_oracle(oracle)
-             .with_examples(examples_path)
-             .build())
+    # Build and prepare model (auto-prepares because with_examples is set)
+    builder = (ConGenModelBuilder
+               .from_bias(bias_path)
+               .with_oracle(oracle)
+               .with_examples(examples_path))
+    model = builder.build()
 
-    # Load examples and prepare with oracle
-    # examples = ExampleIO.load_json(examples_path)
-    # pos = [e.assignments for e in examples.positive]
-    # neg = [e.assignments for e in examples.negative]
-    # model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
+    # task is stored on builder.last_task after auto-prepare
+    task = builder.last_task
+    # Create checker from task (not from model) — new API
+    checker = CheckerFactory.create_from_task(task, solver_name='glucose4',
+                                              use_incremental=is_incremental,
+                                              profiler_instance=profiler)
 
-    task = model.task
-    checker = CheckerFactory.create_from_model(model, 'glucose4', profiler)
-
-    return checker, task, profiler, model.description_provider
+    return checker, task, profiler, task.describe
 
 
 class TestCONGEN:
@@ -285,21 +282,22 @@ class TestConGenModelBuilder:
     """Tests for ConGenModelBuilder auto-prepare patterns."""
 
     def test_auto_prepare_from_file(self):
-        """Pattern 1: with_oracle + with_examples → build returns prepared model."""
+        """Pattern 1: with_oracle + with_examples → build stores task on builder.last_task."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
         oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
-        model = (ConGenModelBuilder
-                 .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle)
-                 .with_examples(str(EXAMPLES_FF_PATH))
-                 .build())
-        assert model.task is not None
-        assert len(model.get_kb()) > 0
+        builder = (ConGenModelBuilder
+                   .from_bias(str(BIAS_PATH))
+                   .with_oracle(oracle)
+                   .with_examples(str(EXAMPLES_FF_PATH)))
+        model = builder.build()
+        # task is stored on builder.last_task after auto-prepare
+        assert builder.last_task is not None
+        assert len(builder.last_task.set_kb) > 0
 
     def test_auto_prepare_from_data(self):
-        """Pattern 2: with_oracle + with_examples_data → build returns prepared model."""
+        """Pattern 2: with_oracle + with_examples_data → builder.last_task populated."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
@@ -309,12 +307,12 @@ class TestConGenModelBuilder:
         neg = [e.assignments for e in examples.negative]
 
         oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
-        model = (ConGenModelBuilder
-                 .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle)
-                 .with_examples_data(positive_examples=pos, negative_examples=neg)
-                 .build())
-        assert model.task is not None
+        builder = (ConGenModelBuilder
+                   .from_bias(str(BIAS_PATH))
+                   .with_oracle(oracle)
+                   .with_examples_data(positive_examples=pos, negative_examples=neg))
+        model = builder.build()
+        assert builder.last_task is not None
 
     def test_build_without_oracle_raises(self):
         """build() without oracle → ValueError."""
@@ -325,7 +323,7 @@ class TestConGenModelBuilder:
             ConGenModelBuilder.from_bias(str(BIAS_PATH)).build()
 
     def test_cv_re_prepare(self):
-        """Pattern 3: build once with oracle, prepare per fold."""
+        """Pattern 3: build once with oracle, prepare_task per fold (idempotent)."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
@@ -340,13 +338,15 @@ class TestConGenModelBuilder:
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]
 
-        # First prepare
-        model.prepare(oracle, positive_examples=pos, negative_examples=neg)
-        task1_kb = list(model.get_kb())
+        # First prepare — returns fresh task directly
+        task_input1 = ConGenModelBuilder._make_task_input(model, pos, neg)
+        task1 = model.prepare_task(task_input1, oracle)
+        task1_kb = list(task1.set_kb)
 
-        # Re-prepare (idempotent)
-        model.prepare(oracle, positive_examples=pos, negative_examples=neg)
-        task2_kb = list(model.get_kb())
+        # Re-prepare (idempotent — same inputs produce same KB)
+        task_input2 = ConGenModelBuilder._make_task_input(model, pos, neg)
+        task2 = model.prepare_task(task_input2, oracle)
+        task2_kb = list(task2.set_kb)
 
         assert task1_kb == task2_kb
 
@@ -361,13 +361,13 @@ class TestConGenModelBuilder:
         neg = [e.assignments for e in examples.negative]
 
         oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
-        model = (ConGenModelBuilder
-                 .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle)
-                 .with_examples('nonexistent.json')  # Would fail if used
-                 .with_examples_data(positive_examples=pos, negative_examples=neg)
-                 .build())
-        assert model.task is not None  # Used raw data, not file
+        builder = (ConGenModelBuilder
+                   .from_bias(str(BIAS_PATH))
+                   .with_oracle(oracle)
+                   .with_examples('nonexistent.json')  # Would fail if used
+                   .with_examples_data(positive_examples=pos, negative_examples=neg))
+        model = builder.build()
+        assert builder.last_task is not None  # Used raw data, not file
 
 
 class TestOracleFeatureIds:

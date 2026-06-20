@@ -78,6 +78,7 @@ class BaseRunner(ABC):
         self.bias_path = bias_path
         self.fm_path = fm_path
         self.solver_name = solver_name
+        self.use_incremental = use_incremental
 
         # Create oracle once (reused across runs)
         from conacq.oracle import FeatureModelOracle

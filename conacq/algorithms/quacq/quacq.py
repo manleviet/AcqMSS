@@ -26,6 +26,8 @@ from explanation.operations.algorithms.profiler import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
 from .quacq_model import QuAcqModel
+from .task_preparation import QuAcqTask
+from explanation.models.codec import VariableCodec
 
 
 @dataclass
@@ -50,7 +52,11 @@ class QuAcq:
     Single learn() method with mode dispatch.
 
     Args:
+        checker: ConsistencyChecker for SAT operations
         oracle: Oracle for membership queries
+        task: QuAcqTask with constraint data (set_c, set_b, negation_map, codec)
+        codec: VariableCodec for config/model encoding
+        model: QuAcqModel (optional, used only for model.variables in learn())
         query_provider: Unified query provider (pool + SAT strategies)
         discriminating_generator: For FindC discriminating examples (required for oracle mode)
         profiler_instance: Optional profiler
@@ -58,13 +64,17 @@ class QuAcq:
 
     def __init__(self, checker: ConsistencyChecker,
                  oracle: Oracle,
+                 task: Optional[QuAcqTask] = None,
+                 codec: Optional[VariableCodec] = None,
                  model: Optional[QuAcqModel] = None,
                  query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
                  profiler_instance: AbstractProfiler = None) -> None:
         self.checker = checker
         self.oracle = oracle
-        self.model = model  # QuAcqModel (optional, enables SAT-based pruning)
+        self.task = task
+        self.codec = codec
+        self.model = model  # QuAcqModel (optional, for model.variables only)
         self.profiler = profiler_instance if profiler_instance else get_global_profiler()
         self.result: Optional[QuAcqResult] = None
 
@@ -76,10 +86,12 @@ class QuAcq:
                    oracle: Oracle,
                    query_provider: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
+                   task: QuAcqTask = None,
+                   codec: VariableCodec = None,
                    model: QuAcqModel = None,
                    profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for oracle-based learning. discrim_gen required."""
-        return cls(checker, oracle, model=model,
+        return cls(checker, oracle, task=task, codec=codec, model=model,
                    query_provider=query_provider,
                    discriminating_generator=discrim_gen,
                    profiler_instance=profiler)
@@ -89,10 +101,12 @@ class QuAcq:
                      oracle: Oracle,
                      query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
+                     task: QuAcqTask = None,
+                     codec: VariableCodec = None,
                      model: QuAcqModel = None,
                      profiler: AbstractProfiler = None) -> 'QuAcq':
         """Factory for example-based learning."""
-        return cls(checker, oracle, model=model,
+        return cls(checker, oracle, task=task, codec=codec, model=model,
                    query_provider=query_provider,
                    discriminating_generator=discrim_gen,
                    profiler_instance=profiler)
@@ -136,7 +150,16 @@ class QuAcq:
                 n_queries += 1
                 query_history.append((config.copy(), answer, source))
 
-        all_variables = set(self.model.variables.keys()) if self.model else set()
+        # Resolve all_variables: prefer task.codec.id_to_name values, fall back to model.variables
+        if self.task is not None and self.task.codec is not None:
+            all_variables = set(self.task.codec.id_to_name.values())
+        elif self.model is not None:
+            all_variables = set(self.model.variables.keys())
+        else:
+            all_variables = set()
+
+        # Root assumption for FindScope/FindC/prune_rejecting
+        root_assumption = set_b[0] if set_b else 0
 
         logging.info('QuAcq starting: Bias=%d constraints, mode=%s', len(remaining_bias), mode)
 
@@ -184,15 +207,17 @@ class QuAcq:
 
             # Step 3: Process answer
             if answer:
-                pruned = prune_rejecting(self.checker, self.model, remaining_bias, query, set_b[0], self.profiler)
+                pruned = prune_rejecting(self.checker, self.codec, remaining_bias,
+                                         query, root_assumption, self.profiler)
                 logging.debug('Pruned %d constraints', len(pruned))
             else:
                 if n_queries >= max_queries:
                     convergence_reason = 'max_queries'
                     break
 
-                find_scope = FindScope(self.oracle, self.checker, self.model, self.profiler,
-                                       record_query, set_b[0])
+                find_scope = FindScope(self.oracle, self.checker, self.task,
+                                       self.codec, self.profiler,
+                                       record_query, root_assumption)
                 scope_vars = find_scope.run(
                     e=query, R=set(), Y=all_variables,
                     ask_query=False,
@@ -202,8 +227,9 @@ class QuAcq:
                 scope = set(scope_vars)
                 # Adds scope-derived constraint to knowledge base or falls back to tested constraint
                 if scope:
-                    find_c = FindC(self.oracle, self.checker, self.model,
-                                   self.profiler, record_query, set_b[0],
+                    find_c = FindC(self.oracle, self.checker, self.task,
+                                   self.codec, self.profiler, record_query,
+                                   root_assumption,
                                    generator=self.discriminating_generator)
                     c_id = find_c.run(
                         e=query, scope=scope,

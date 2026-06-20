@@ -20,17 +20,20 @@ Example Usage:
     from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
     from conacq.example_generators import QueryProvider
 
-    model = (QuAcqModelBuilder
-             .from_bias('data/bias/model-bias.json')
-             .with_oracle(oracle)
-             .build())
-    task = model.task
-    checker = CheckerFactory.create_from_model(model)
-    query_provider = QueryProvider()
+    builder = (QuAcqModelBuilder
+               .from_bias('data/bias/model-bias.json')
+               .with_oracle(oracle))
+    model = builder.build()
+    task = builder.last_task       # QuAcqTask prepared during build()
+    codec = task.codec             # VariableCodec attached to task
+    checker = CheckerFactory.create_from_task(task)
+    query_provider = QueryProvider(checker=checker, codec=codec)
     profiler = get_global_profiler()
     discrim_gen = DiscriminatingGenerator(
-        checker=checker, model=model, profiler=profiler, root_assumption=task.set_b[0])
-    quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
+        checker=checker, task=task, codec=codec,
+        profiler=profiler, root_assumption=task.set_b[0])
+    quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
+                              task=task, codec=codec, model=model)
     result = quacq.learn(
         set_c=task.set_c, set_b=task.set_b,
         negation_map=task.negation_map, mode='oracle')

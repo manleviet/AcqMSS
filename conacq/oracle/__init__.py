@@ -11,7 +11,7 @@ Provides ground truth interfaces for classifying configurations:
 """
 
 from .base import Oracle
-from .bg_data import BGData
+from .bg_data import BGData, BGDataProvider
 from .fm_data import FMData
 from .fm_oracle import FeatureModelOracle
 from .user_prompt import UserPromptOracle
@@ -23,6 +23,7 @@ from .constraint_description import extract_constraint_descriptions
 __all__ = [
     'Oracle',
     'BGData',
+    'BGDataProvider',
     'FMData',
     'FeatureModelOracle',
     'UserPromptOracle',

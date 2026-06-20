@@ -1,173 +1,135 @@
 """
-Oracle models for ConsistencyChecker integration.
+Oracle model for FM validation via SAT solver.
 
-FMOracleModel: Assumption-guarded FM validation (incremental checker).
-Satisfies CheckerModel Protocol for use with CheckerFactory.create_from_model().
+FMOracleModel: Immutable KB container for FM constraints + feature variables.
+Satisfies ModelProtocol. Provides prepare_task() returning a DiagnosisTask
+with attached VariableCodec (id_to_name + pos/neg assignment maps from Part 4).
+
+FMOracleTaskPreparation: static preparation logic (unchanged structure).
 """
 
 from typing import Dict, List, Optional
 
-from flamapy.metamodels.configuration_metamodel.models import Configuration
-
 from conacq.oracle.bg_data import BGData
 from explanation.models import DiagnosisTask, DescriptionProvider
-from explanation.models.task_preparation import PreparationOutput, prepare_kb, _ASSUMPTION_PAIR_STRIDE
+from explanation.models.codec import VariableCodec
+from explanation.models.task_preparation import (
+    PreparationOutput,
+    prepare_kb,
+    _ASSUMPTION_PAIR_STRIDE,
+)
 
 
 class FMOracleModel:
-    """Model for Oracle FM validation via ConsistencyChecker.
+    """Thin KB container for Oracle FM validation.
 
-    Uses constraint_map + variables pattern (same as DiagnosisModel/ConGenModel).
-    Satisfies CheckerModel Protocol after prepare().
+    Holds FM constraint_map, variables, and negated_constraint_map (for
+    redundancy detection).  Satisfies ModelProtocol so preparation
+    strategies can read it directly.
 
-    FM clauses go directly into set_kb (always active).
-    Feature assignments become assumption-guarded unit clauses:
-      [-a_pos_i, fid]  → if a_pos_i active, feature must be true
-      [-a_neg_i, -fid] → if a_neg_i active, feature must be false
+    Call prepare_task() to obtain a fresh DiagnosisTask with attached
+    VariableCodec (codec).  The returned task is self-contained; the
+    model itself carries no per-task mutable state.
     """
 
     def __init__(self):
         self._fm_path: str = ""
 
-        # map clauses to relationships/constraint
+        # ModelProtocol fields -------------------------------------------------
+        # constraint_map: FM constraint name -> raw CNF clauses
         self.constraint_map: Dict[str, List[List[int]]] = {}
-        # map negated clauses to relationships/constraint (for redundancy detection)
+        # negated_constraint_map: "NOT(name)" -> negated CNF clauses
         self.negated_constraint_map: Dict[str, List[List]] = {}
-        # map feature names to IDs (for debugging and description generation)
+        # variables: feature name -> SAT variable ID
         self.variables: Dict[str, int] = {}
-        # Used as starting ID for assumption literals to avoid conflicts.
+        # next_available_id: first ID safe for new assumption literals
         self.next_available_id: int = 1000
 
-        self.configuration: Optional[Configuration] = None
-
-        # CheckerModel protocol attributes
-        self._use_incremental: bool = True
-
-        # Populated after prepare()
-        self._base_set_c: List = []
-        self._pos_assignment_to_assumption: Dict[str, int] = {}
-        self._neg_assignment_to_assumption: Dict[str, int] = {}
-        # Populated after prepare()
+        # Internal state set by prepare_task (for BG extraction) ---------------
         self._bg_data: Optional[BGData] = None
-        self._task: Optional[DiagnosisTask] = None
-        self._description_provider: Optional[DescriptionProvider] = None
-
-    @property
-    def task(self) -> DiagnosisTask:
-        """Get prepared task. Call prepare() first."""
-        if self._task is None:
-            raise RuntimeError("Call prepare() first")
-        return self._task
-
-    @property
-    def description_provider(self) -> DescriptionProvider:
-        """Get description provider. Call prepare() first."""
-        if self._description_provider is None:
-            raise RuntimeError("Call prepare() first")
-        return self._description_provider
 
     @property
     def bg_data(self) -> BGData:
-        """Root BG data for ConGen. Call prepare() first."""
+        """Root BG data for ConGen. Call prepare_task() first."""
         if self._bg_data is None:
-            raise RuntimeError("Call prepare() first")
+            raise RuntimeError("Call prepare_task() first")
         return self._bg_data
 
-    @property
-    def use_incremental(self) -> bool:
-        """Whether to use incremental solver."""
-        return self._use_incremental
+    def prepare_task(self, configuration=None) -> DiagnosisTask:
+        """Build a fresh DiagnosisTask from the FM constraint_map.
 
-    def set_incremental(self, enabled: bool = True) -> 'FMOracleModel':
-        """Set incremental solver mode (builder pattern)."""
-        self._use_incremental = enabled
-        return self
+        Attaches a VariableCodec (codec) with:
+          - id_to_name: {var_id: feature_name}
+          - pos_assignment_to_assumption: {name: assumption_id for feature=true}
+          - neg_assignment_to_assumption: {name: assumption_id for feature=false}
 
-    # Convenience getters (delegate to result)
-    def get_c(self) -> List:
-        """Get the set of potentially faulty constraints."""
-        return self.task.set_c
+        Also populates self._bg_data for ConGen/BG extraction.
 
-    def get_kb(self) -> List[List[int]]:
-        """Get the full knowledge base with assumptions."""
-        return self.task.set_kb
+        Args:
+            configuration: Optional Dict[str, bool] or Configuration to
+                apply immediately (sets task.set_c to base FM assumptions
+                + per-feature assignment assumptions).
 
-    def get_assumptions(self) -> List[int]:
-        """Get the list of assumption literals."""
-        return self.task.assumptions
+        Returns:
+            Fresh DiagnosisTask with task.codec attached.
+        """
+        output = FMOracleTaskPreparation.prepare(self, configuration)
+        task = output.task
+
+        # Build codec from Part 4 maps created during preparation
+        codec = VariableCodec(
+            id_to_name={vid: name for name, vid in self.variables.items()},
+            pos_assignment_to_assumption=dict(self._pos_assignment_to_assumption),
+            neg_assignment_to_assumption=dict(self._neg_assignment_to_assumption),
+        )
+        task.codec = codec
+        task.describe = output.description_provider
+
+        return task
+
+    # -------------------------------------------------------------------------
+    # Convenience helpers (used by FeatureModelOracle)
+    # -------------------------------------------------------------------------
 
     def get_fm_clauses(self) -> List[List[int]]:
-        """Get FM CNF clauses (without assumption guards).
-
-        Returns the original clauses from constraint_map, not the
-        assumption-guarded versions stored in task.set_kb.
-        """
+        """Raw FM CNF clauses (without assumption guards)."""
         return [clause for clauses in self.constraint_map.values()
                 for clause in clauses]
 
-    def _config_to_assumptions(self, configuration) -> list:
-        """Convert feature config to assignment assumption IDs.
-
-        Args:
-            configuration: Dict[str, bool] or Configuration object
-
-        Returns:
-            List of assumption IDs for the given feature assignments
-        """
-        items = configuration.elements.items() if hasattr(configuration, 'elements') else configuration.items()
-        return [self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[feat]
-                for feat, value in items]
-
-    def with_configuration(self, configuration) -> 'FMOracleModel':
-        """Apply feature config: updates set_c with base + assignment assumptions.
-
-        Args:
-            configuration: Dict[str, bool] or Configuration object
-
-        Returns:
-            self (for fluent chaining)
-        """
-        self.task.set_c = self._base_set_c + self._config_to_assumptions(configuration)
-        return self
-
-    def prepare(self, configuration=None) -> DiagnosisTask:
-        """Build set_kb + assumptions from constraint_map and variables.
-
-        Args:
-            configuration: Optional Dict[str, bool] or Configuration to apply immediately
-        """
-        output = FMOracleTaskPreparation.prepare(self, configuration)
-
-        self._task = output.task
-        self._description_provider = output.description_provider
-
-        return self._task
+    # -------------------------------------------------------------------------
+    # Factory / builder methods
+    # -------------------------------------------------------------------------
 
     @classmethod
     def from_fm(cls, fm_path: str) -> 'FMOracleModel':
-        """Factory: create from FM and prepare."""
-        builder = cls()
-        builder._fm_path = fm_path
-        return builder
+        """Factory: create model from FM path (not yet built)."""
+        obj = cls()
+        obj._fm_path = fm_path
+        return obj
 
     def build(self) -> 'FMOracleModel':
-        """Convenience method for chaining: build and prepare."""
+        """Load FM from file, populate constraint_map/variables, call prepare_task()."""
         from flamapy.metamodels.fm_metamodel.transformations import UVLReader
         from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 
         fm = UVLReader(self._fm_path).transform()
-        # FmToDiagPysat creates both constraint_map and negated_constraint_map for redundancy detection.
         fm_model = FmToDiagPysat(fm, create_negation=True).transform()
 
         self.constraint_map = fm_model.constraint_map
         self.negated_constraint_map = fm_model.negated_constraint_map
-
         self.variables = fm_model.variables
         self.next_available_id = fm_model.next_available_id
 
-        self.prepare(configuration=self.configuration)
+        # Prepare task to populate _bg_data (needed by oracle before any query)
+        self.prepare_task()
 
         return self
+
+    # Populated by FMOracleTaskPreparation during prepare_task(): the FM-constraint
+    # base assumptions and the Part-4 assignment-assumption maps the codec is built from.
+    _pos_assignment_to_assumption: Dict[str, int]
+    _neg_assignment_to_assumption: Dict[str, int]
+    _base_set_c: List[int]
 
 
 class FMOracleTaskPreparation:
@@ -227,6 +189,7 @@ class FMOracleTaskPreparation:
             neg_assignment_to_assumption[name] = a_neg
             id_assumption += 1
 
+        # Store Part 4 maps on the model so prepare_task() can build codec
         model._pos_assignment_to_assumption = pos_assignment_to_assumption
         model._neg_assignment_to_assumption = neg_assignment_to_assumption
 
@@ -237,7 +200,14 @@ class FMOracleTaskPreparation:
 
         # Step 3b: apply configuration if provided
         if configuration is not None:
-            result.set_c = model._base_set_c + model._config_to_assumptions(configuration)
+            items = (configuration.elements.items()
+                     if hasattr(configuration, 'elements') else configuration.items())
+            config_assumptions = [
+                pos_assignment_to_assumption[feat] if value
+                else neg_assignment_to_assumption[feat]
+                for feat, value in items
+            ]
+            result.set_c = model._base_set_c + config_assumptions
 
         # Extract Part 4 data (assignment clauses added after Part 3)
         assignment_clauses = result.set_kb[assignment_kb_start:]
@@ -262,5 +232,3 @@ class FMOracleTaskPreparation:
             task=result,
             description_provider=provider
         )
-
-

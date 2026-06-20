@@ -114,7 +114,6 @@ class ConGenRunner(BaseRunner):
         self.model = (ConGenModelBuilder
                       .from_bias(bias_path)
                       .with_oracle(self.oracle)
-                      .use_incremental(use_incremental)
                       .build())
 
     @property
@@ -150,21 +149,25 @@ class ConGenRunner(BaseRunner):
                 checker = None
                 try:
                     # Prepare for this fold's examples (runs GenerateNE)
-                    self.model.prepare(
-                        oracle=self.oracle,
-                        positive_examples=positive_examples,
-                        negative_examples=negative_examples
+                    from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
+                    task_input = ConGenModelBuilder._make_task_input(
+                        self.model,
+                        positive_examples or [],
+                        negative_examples or []
                     )
-                    task = self.model.task
+                    task = self.model.prepare_task(task_input, self.oracle)
 
                     # Shuffle bias iteration order if seed provided
                     if shuffle_seed is not None:
                         random.Random(shuffle_seed).shuffle(task.set_c)
                         logging.debug('Shuffled set_c with seed=%d', shuffle_seed)
 
-                    # Create checker via factory
-                    checker = CheckerFactory.create_from_model(
-                        self.model, self.solver_name, profiler
+                    # Create checker from task (use_incremental chosen by runner)
+                    checker = CheckerFactory.create_from_task(
+                        task,
+                        solver_name=self.solver_name,
+                        use_incremental=self.use_incremental,
+                        profiler_instance=profiler,
                     )
 
                     # Run ConGen
@@ -204,9 +207,10 @@ class ConGenRunner(BaseRunner):
 
             profiler_snapshot = profiler.to_dict()
 
-            # Resolve assumption IDs -> clauses/names via model
+            # Resolve assumption IDs -> clauses/names via model (task holds describe)
             bg_clauses, kb_clauses, kb_names, redundant_names = \
-                self.model.resolve_result(result)
+                self.model.resolve_result(task, result,
+                                          bg_clauses=self.oracle.get_root_clauses())
 
             run_result = ConGenRunResult(
                 kb_constraints=kb_names,

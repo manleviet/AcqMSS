@@ -129,6 +129,18 @@ class PySATExplanationBuilder(ABC):
         self._operation.solver_name = solver_name
         return self
 
+    def with_incremental(self: T, enabled: bool = True) -> T:
+        """Enable or disable incremental SAT solving.
+
+        Args:
+            enabled: Whether to use incremental solving (default: True)
+
+        Returns:
+            Self for method chaining
+        """
+        self._operation.use_incremental = enabled
+        return self
+
     def build(self) -> PySATAbstractExplanation:
         """Build and return the configured operation.
 
@@ -344,6 +356,18 @@ class PySATRedundancyTestCasesBuilder:
         self._operation.solver_name = solver_name
         return self
 
+    def with_incremental(self, enabled: bool = True) -> 'PySATRedundancyTestCasesBuilder':
+        """Enable or disable incremental SAT solving.
+
+        Args:
+            enabled: Whether to use incremental solving (default: True)
+
+        Returns:
+            Self for method chaining
+        """
+        self._operation.use_incremental = enabled
+        return self
+
     def build(self) -> PySATRedundancyTestCases:
         """Build and return the configured operation.
 
@@ -406,6 +430,18 @@ class PySATRedundancyConstraintsBuilder:
             Self for method chaining
         """
         self._operation.solver_name = solver_name
+        return self
+
+    def with_incremental(self, enabled: bool = True) -> 'PySATRedundancyConstraintsBuilder':
+        """Enable or disable incremental SAT solving.
+
+        Args:
+            enabled: Whether to use incremental solving (default: True)
+
+        Returns:
+            Self for method chaining
+        """
+        self._operation.use_incremental = enabled
         return self
 
     def build(self) -> PySATRedundancyConstraints:

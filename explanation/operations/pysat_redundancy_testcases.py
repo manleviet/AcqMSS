@@ -3,11 +3,9 @@
 This module provides an operation for detecting redundant test cases
 in a test suite using the WipeOutR_T algorithm.
 """
-from typing import List, Tuple, cast
+from typing import List
 
-from flamapy.core.models import VariabilityModel
-
-from explanation.models.pysat_diagnosis_model import DiagnosisModel
+from explanation.models.task_preparation import Task
 from explanation.operations.algorithms.profiler import AbstractProfiler
 from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
 from explanation.operations.pysat_testcase import PySATTestCase
@@ -23,8 +21,8 @@ class PySATRedundancyTestCases(PySATTestCase):
     meaning t_gamma logically follows from t_alpha.
 
     Attributes:
-        redundant: List of redundant test case IDs
-        non_redundant: List of non-redundant test case IDs
+        redundant: Formatted string of redundant test case names
+        non_redundant: Formatted string of non-redundant test case names
     """
 
     def __init__(self, profiler_instance: AbstractProfiler = None) -> None:
@@ -34,46 +32,42 @@ class PySATRedundancyTestCases(PySATTestCase):
         self.non_redundant: str = '[]'
 
     # Not used - override execute() instead
-    def _create_labeler(self, checker, model):
+    def _create_labeler(self, checker, task):
         pass
 
     # Not used - override execute() instead
-    def prepare_hsdag(self, model):
+    def prepare_hsdag(self, task):
         pass
 
-    def execute(self, model: VariabilityModel) -> 'PySATRedundancyTestCases':
+    def execute(self, task: Task) -> 'PySATRedundancyTestCases':
         """Execute redundancy detection using WipeOutR_T algorithm.
 
         Args:
-            model: Variability model (will be cast to DiagnosisModel)
+            task: Task carrying KB, assumptions, test case sets, and description provider
 
         Returns:
             Self for method chaining
         """
-        model = cast(DiagnosisModel, model)
-
-        # Create checker using parent's method
-        checker = self._create_checker(model)
+        # Create checker from task
+        checker = self._create_checker(task)
 
         try:
             # Use WipeOutR_T instead of HSDAG
             wipeoutr = WipeOutR_T(checker, self.profiler)
             redundant, non_redundant = wipeoutr.find_redundant_testcases(
-                model.get_tc(), model.get_negation_map())
+                task.set_tc, task.negation_map)
 
             # Format result messages
-            self._format_result_messages(model, redundant, non_redundant)
+            self._format_result_messages(task, redundant, non_redundant)
         finally:
             checker.cleanup()
 
         return self
 
-    def _format_result_messages(self, model: DiagnosisModel, redundant: List, non_redundant: List) -> None:
+    def _format_result_messages(self, task: Task, redundant: List, non_redundant: List) -> None:
         """Format result messages for display."""
-        redundant_names = [model.description_provider.get_description(r)
-                           for r in redundant]
-        non_redundant_names = [model.description_provider.get_description(r)
-                               for r in non_redundant]
+        redundant_names = [task.describe.get_description(r) for r in redundant]
+        non_redundant_names = [task.describe.get_description(r) for r in non_redundant]
 
         self.redundant = f"[{', '.join(redundant_names)}]" if redundant_names else '[]'
         self.non_redundant = f"[{', '.join(non_redundant_names)}]" if non_redundant_names else '[]'
@@ -84,9 +78,9 @@ class PySATRedundancyTestCases(PySATTestCase):
         self.result_messages = [redundant_msg, non_redundant_msg]
 
     def get_redundant(self) -> str:
-        """Get list of redundant test case IDs."""
+        """Get formatted string of redundant test case names."""
         return self.redundant
 
     def get_non_redundant(self) -> str:
-        """Get list of non-redundant test case IDs."""
+        """Get formatted string of non-redundant test case names."""
         return self.non_redundant

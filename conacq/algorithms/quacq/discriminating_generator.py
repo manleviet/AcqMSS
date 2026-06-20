@@ -21,13 +21,17 @@ class DiscriminatingGenerator:
 
     Args:
         checker: ConsistencyChecker with full KB loaded
-        model: QuAcqModel for constraint variable lookup and config conversion
+        task: QuAcqTask for constraint variable lookup and negation_map
+        codec: VariableCodec for SAT model -> config conversion
+        profiler: Profiler instance
         root_assumption: Root BG assumption ID
     """
 
-    def __init__(self, checker: ConsistencyChecker, model, profiler, root_assumption: int) -> None:
+    def __init__(self, checker: ConsistencyChecker, task, codec, profiler,
+                 root_assumption: int) -> None:
         self.checker = checker
-        self.model = model
+        self.task = task
+        self.codec = codec
         self.profiler = profiler
         self.root_assumption = root_assumption
 
@@ -44,15 +48,17 @@ class DiscriminatingGenerator:
             scope: Variable scope Y (feature names)
 
         Returns:
-            Config dict if SAT, None if UNSAT
+            Config dict if SAT, None if UNSAT or task/codec not available
         """
+        if self.task is None or self.codec is None:
+            return None
+
         # C_L[Y]: assumption IDs of learned constraints whose vars are in scope
         cl_y = [c_id for c_id in learned_kb
-                if self.model.get_constraint_vars(c_id).issubset(scope)]
+                if self.task.get_constraint_vars(c_id).issubset(scope)]
 
         # Get negated assumption for c_j
-        negation_map = self.model.get_negation_map()
-        neg_j = negation_map.get(c_j)
+        neg_j = self.task.negation_map.get(c_j)
         if neg_j is None:
             return None
 
@@ -60,6 +66,7 @@ class DiscriminatingGenerator:
         set_c = [self.root_assumption] + cl_y + [c_i, neg_j]
 
         self.profiler.increment("dis_gen_consistency_checks")
-        if self.checker.is_consistent(set_c):
-            return self.model.model_to_config(self.checker.get_model())
+        sat, model_lits = self.checker.solve(set_c)
+        if sat:
+            return self.codec.model_to_config(model_lits)
         return None

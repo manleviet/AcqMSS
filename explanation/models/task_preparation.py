@@ -9,13 +9,15 @@ Strategy hierarchy:
   - TestCaseTaskPreparation (single impl, mode via constructor)
 
 Task hierarchy:
-- DiagnosisTask (base, with assumptions)
-  - TestCaseTask (adds test case fields)
+- Task (ABC) — the unit: shared constraint sets + assumptions, plus an attached
+  formatter (describe) and variable codec (codec).
+  - DiagnosisTask (diagnosis/conflict operations)
+  - TestCaseTask (adds test case fields; base of conacq ConGenTask)
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, List, Dict, Optional, TYPE_CHECKING
+from typing import Any, List, Dict, Optional, Protocol, runtime_checkable, TYPE_CHECKING
 
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models.feature_model import Feature
@@ -25,6 +27,7 @@ from explanation.operations.algorithms.utils import get_hashcode
 
 if TYPE_CHECKING:
     from .pysat_diagnosis_model import DiagnosisModel
+    from .codec import VariableCodec
 
 # Each constraint produces a pair of assumptions (original + negated),
 # so we stride by 2 to select only original assumptions.
@@ -73,6 +76,23 @@ class TaskInput:
         return self.positive_test_cases is not None
 
 
+# === MODEL CONTRACT ===
+
+@runtime_checkable
+class ModelProtocol(Protocol):
+    """Structural contract for a KB that preparation strategies read.
+
+    A model is an immutable knowledge base: constraint clauses (+ optional
+    negated forms), the feature→variable-ID map, and the next free assumption
+    ID. Per-task inputs are NOT part of this contract — they arrive as the
+    explicit ``task_input`` argument to ``prepare()``.
+    """
+    constraint_map: Dict[str, List[List[int]]]
+    negated_constraint_map: Dict[str, List[List[int]]]
+    variables: Dict[str, int]
+    next_available_id: int
+
+
 # === UTILITIES ===
 
 def convert_keys_to_features(configuration: Configuration) -> Configuration:
@@ -85,11 +105,13 @@ def convert_keys_to_features(configuration: Configuration) -> Configuration:
 # === RESULT DATA CLASSES (Core data only) ===
 
 @dataclass
-class DiagnosisTask:
-    """Base class for a diagnosis task.
+class Task(ABC):
+    """The unit of work algorithms operate on.
 
-    Contains core data needed by algorithms, including assumptions
-    for both incremental and non-incremental modes.
+    Bundles the constraint sets + assumptions a checker/algorithm needs, and
+    carries its own formatter (``describe``) and variable codec (``codec``),
+    both attached by ``model.prepare_task()``. Concrete units are DiagnosisTask
+    and TestCaseTask; never instantiated directly.
     """
     # set of constraints which could be faulty
     set_c: List = field(default_factory=list)
@@ -102,6 +124,10 @@ class DiagnosisTask:
     negation_map: Dict = field(default_factory=dict)
     # list of assumptions for solver
     assumptions: List = field(default_factory=list)
+    # formatter for result rendering (attached by model.prepare_task)
+    describe: Optional["DescriptionProvider"] = None
+    # variable codec: id<->name + config<->assumptions (attached by model.prepare_task)
+    codec: Optional["VariableCodec"] = None
 
     def get_cf(self) -> List:
         """Get all constraints (C ∪ B)."""
@@ -109,12 +135,22 @@ class DiagnosisTask:
 
 
 @dataclass
-class TestCaseTask(DiagnosisTask):
-    """Base class for tasks with test cases.
+class DiagnosisTask(Task):
+    """Concrete task for diagnosis/conflict operations.
+
+    Carries only the shared fields from Task (no extra state); used by
+    FastDiag, QuickXPlain, WipeOutR_FM, QuAcq (via QuAcqTask), FMOracle.
+    """
+    pass
+
+
+@dataclass
+class TestCaseTask(Task):
+    """Task with test cases.
 
     Contains common fields for both incremental and non-incremental modes.
     Used by KBDiag algorithm with positive/negative test cases,
-    and WipeOutR_T for test case redundancy detection.
+    WipeOutR_T for test case redundancy detection, and conacq ConGen.
     """
     # positive test cases (original form)
     set_tc: List = field(default_factory=list)
@@ -206,12 +242,11 @@ class DiagnosisTaskPreparationStrategy(ABC):
     - Error diagnosis with test case
     - Redundancy detection (with negated_constraint_map)
 
-    The model parameter accepts any object with: constraint_map, negated_constraint_map,
-    variables, task_input, next_available_id, background_knowledge (duck-typed).
+    ``model`` is a ModelProtocol KB; per-task inputs arrive via ``task_input``.
     """
 
     @abstractmethod
-    def prepare(self, model: Any) -> PreparationOutput:
+    def prepare(self, model: 'ModelProtocol', task_input: TaskInput) -> PreparationOutput:
         """Prepare diagnosis task and return result with description provider."""
         pass
 
@@ -228,12 +263,11 @@ class TestCaseTaskPreparationStrategy(ABC):
     Used for KBDiag algorithm with positive/negative test cases,
     WipeOutR_T for test case redundancy detection, and ConGen.
 
-    The model parameter accepts any object with: constraint_map, negated_constraint_map,
-    variables, task_input, next_available_id, background_knowledge (duck-typed).
+    ``model`` is a ModelProtocol KB; per-task inputs arrive via ``task_input``.
     """
 
     @abstractmethod
-    def prepare(self, model: Any) -> PreparationOutput:
+    def prepare(self, model: 'ModelProtocol', task_input: TaskInput) -> PreparationOutput:
         """Prepare test case task and return result with description provider."""
         pass
 
@@ -355,11 +389,9 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+    def prepare(self, model: 'ModelProtocol', task_input: TaskInput) -> PreparationOutput:
         result = DiagnosisTask()
         provider = DescriptionProvider()
-
-        task_input = model.task_input
 
         # Determine if negated forms should be used
         negated_constraint_map = model.negated_constraint_map if task_input.for_redundancy else None
@@ -494,11 +526,9 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+    def prepare(self, model: 'ModelProtocol', task_input: TaskInput) -> PreparationOutput:
         result = TestCaseTask()
         provider = DescriptionProvider()
-
-        task_input = model.task_input
 
         # Start assumption IDs after Tseitin variables
         id_assumption = model.next_available_id
@@ -561,31 +591,24 @@ class DiagnosisFormatter:
 class TaskPreparationFactory:
     """Factory for creating task preparation strategies.
 
-    Uses single cached instances since incremental/non-incremental
-    distinction only affects the checker, not preparation.
+    Uses single cached instances. The incremental/non-incremental distinction
+    affects only the checker, never preparation, so strategies are stateless
+    and shared.
     """
 
     _diagnosis: DiagnosisTaskPreparation = None
     _testcase: TestCaseTaskPreparation = None
 
     @classmethod
-    def create_diagnosis(cls, is_incremental: bool) -> DiagnosisTaskPreparationStrategy:
-        """Create diagnosis task preparation strategy.
-
-        Args:
-            is_incremental: Kept for API compatibility (does not affect preparation)
-        """
+    def create_diagnosis(cls) -> DiagnosisTaskPreparationStrategy:
+        """Create (cached) diagnosis task preparation strategy."""
         if cls._diagnosis is None:
             cls._diagnosis = DiagnosisTaskPreparation()
         return cls._diagnosis
 
     @classmethod
-    def create_testcase(cls, is_incremental: bool = True) -> TestCaseTaskPreparationStrategy:
-        """Create test case task preparation strategy.
-
-        Args:
-            is_incremental: Kept for API compatibility (does not affect preparation)
-        """
+    def create_testcase(cls) -> TestCaseTaskPreparationStrategy:
+        """Create (cached) test case task preparation strategy."""
         if cls._testcase is None:
             cls._testcase = TestCaseTaskPreparation()
         return cls._testcase

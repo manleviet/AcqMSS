@@ -172,11 +172,11 @@ class QuAcqRunner(BaseRunner):
 
         # Build model once (expensive negation computed here, not per run)
         from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
-        self.model = (QuAcqModelBuilder
-                      .from_bias(bias_path)
-                      .with_oracle(self.oracle)
-                      .use_incremental(use_incremental)
-                      .build())
+        builder = (QuAcqModelBuilder
+                   .from_bias(bias_path)
+                   .with_oracle(self.oracle))
+        self.model = builder.build()
+        # builder.last_task is the initial prepared task; run() re-prepares per call
         self.max_queries = max_queries
         self.query_mode = query_mode
 
@@ -236,16 +236,19 @@ class QuAcqRunner(BaseRunner):
                 checker = None
                 try:
                     # Re-prepare model for this run (fresh task, reuses negation)
-                    self.model.prepare(self.oracle)
-                    task = self.model.task
+                    task = self.model.prepare_task(self.oracle)
+                    codec = task.codec
 
                     if shuffle_seed is not None:
                         random.Random(shuffle_seed).shuffle(task.set_c)
                         logging.debug('Shuffled bias (set_c) with seed=%d', shuffle_seed)
 
-                    # Create checker via factory
-                    checker = CheckerFactory.create_from_model(
-                        self.model, self.solver_name, profiler
+                    # Create checker from task (use_incremental chosen by runner)
+                    checker = CheckerFactory.create_from_task(
+                        task,
+                        solver_name=self.solver_name,
+                        use_incremental=self.use_incremental,
+                        profiler_instance=profiler,
                     )
 
                     # Extract flat params from task
@@ -253,10 +256,10 @@ class QuAcqRunner(BaseRunner):
 
                     if is_oracle_mode:
                         result = self._run_oracle_mode(
-                            checker, task, task_data, profiler, mode)
+                            checker, task, codec, task_data, profiler, mode)
                     else:
                         result = self._run_example_mode(
-                            checker, task, task_data, profiler,
+                            checker, task, codec, task_data, profiler,
                             positive_examples, negative_examples,
                             mode, shuffle_seed)
 
@@ -300,8 +303,8 @@ class QuAcqRunner(BaseRunner):
 
             profiler_snapshot = profiler.to_dict()
 
-            # Resolve KB names and clauses, get BG clauses
-            kb_names, kb_clauses = self.model.resolve_kb(result.kb_assumption_ids)
+            # Resolve KB names and clauses via model (takes task explicitly)
+            kb_names, kb_clauses = self.model.resolve_kb(task, result.kb_assumption_ids)
             bg_clauses = self.oracle.get_root_clauses()
 
             run_result = QuAcqRunResult(
@@ -345,32 +348,32 @@ class QuAcqRunner(BaseRunner):
 
         return run_result
 
-    def _run_oracle_mode(self, checker, task, task_data, profiler, mode):
+    def _run_oracle_mode(self, checker, task, codec, task_data, profiler, mode):
         """Run oracle-based learning via QuAcq.learn(mode='oracle')."""
         if mode == 'interactive':
             from conacq.oracle import UserPromptOracle
-            # learn_oracle = UserPromptOracle(list(task.feature_ids.keys()))
             learn_oracle = UserPromptOracle(list(self.model.variables.keys()))
         else:
             learn_oracle = self.oracle
 
-        query_provider = QueryProvider(checker=checker,
-                                       model=self.model,
+        query_provider = QueryProvider(checker=checker, codec=codec,
                                        profiler_instance=profiler)
         discrim_gen = DiscriminatingGenerator(
             checker=checker,
-            model=self.model,
+            task=task,
+            codec=codec,
             profiler=profiler,
             root_assumption=task.set_b[0])
 
         quacq = QuAcq.for_oracle(checker, learn_oracle, query_provider, discrim_gen,
-                                 model=self.model, profiler=profiler)
+                                  task=task, codec=codec, model=self.model,
+                                  profiler=profiler)
 
         return quacq.learn(
             **task_data, mode='oracle',
             max_queries=self.max_queries)
 
-    def _run_example_mode(self, checker, task, task_data, profiler,
+    def _run_example_mode(self, checker, task, codec, task_data, profiler,
                           positive_examples, negative_examples,
                           mode, shuffle_seed):
         """Run example-based learning via QuAcq.learn(mode=...)."""
@@ -379,7 +382,7 @@ class QuAcqRunner(BaseRunner):
             pool=mixed_examples,
             seed=shuffle_seed,
             checker=checker,
-            model=self.model,
+            codec=codec,
             profiler_instance=profiler)
 
         # For example_first, also need discrim_gen
@@ -387,13 +390,16 @@ class QuAcqRunner(BaseRunner):
         if mode == 'example_first':
             discrim_gen = DiscriminatingGenerator(
                 checker=checker,
-                model=self.model,
+                task=task,
+                codec=codec,
                 profiler=profiler,
                 root_assumption=task.set_b[0])
 
         quacq = QuAcq(
             checker=checker,
             oracle=self.oracle,
+            task=task,
+            codec=codec,
             model=self.model,
             query_provider=query_provider,
             discriminating_generator=discrim_gen,

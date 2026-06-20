@@ -1,6 +1,6 @@
 # AcqMSS Project Overview & Product Development Requirements (PDR)
 
-**Last Updated**: 2026-02-28
+**Last Updated**: 2026-06-19 (Phase R: Task-as-unit refactor)
 
 ## Executive Summary
 
@@ -47,7 +47,7 @@ Build a **production-ready constraint acquisition framework** that:
 - Handle up to 1,000 bias constraints per model
 
 **Key Algorithms**:
-1. GenerateNE — Create negated examples from E- (invoked internally by ConGenModel.prepare())
+1. GenerateNE — Create negated examples from E- (pure, returns clauses; Phase R)
 2. ACQMSS — Find maximum satisfiable subset of bias
 3. REDUCE — Eliminate redundant constraints
 
@@ -299,6 +299,17 @@ SAT Infrastructure (explanation/)
 - Shared CV fold generation
 - Pre-generated fold support for reproducibility
 
+### Phase R: Task-as-Unit Refactor (Completed - 2026-06-19)
+- Immutable Model design (KB + codec only, no stateful mutations)
+- `Task` ABC as the unit of computation (replaces stateful model.task facade)
+- `VariableCodec` consolidating id↔name + config↔assumptions
+- `ConsistencyExecutor` Protocol for serial/parallel diagnosis
+- `ProcessExecutor` for parallel consistency checking (L2 FastDiagP lookahead)
+- Pure `GenerateNE` (returns clauses, no caller mutation)
+- New `prepare_task(TaskInput) -> Task` API (immutable, independent tasks)
+- `CheckerFactory.create_from_task()` replacing `.create_from_model()`
+- L1 parallel HSDAG node threads deferred to next phase (executor is ready)
+
 ### Phase 6: Documentation & Polish (In Progress)
 - Comprehensive API documentation
 - Architecture guides
@@ -321,10 +332,11 @@ SAT Infrastructure (explanation/)
 ## Known Limitations & Future Work
 
 ### Current Limitations
-1. No parallel solver support (sequential only)
+1. HSDAG node parallelism deferred (L1 threading not yet implemented)
 2. FM parsing limited to UVL format
 3. Oracle requires ground truth (not interactive with real users)
 4. No incremental learning across different FM versions
+5. SAT4J solver not wired into ProcessExecutor (PySAT only for parallel)
 
 ### Future Enhancements
 1. FastDiagP parallel implementation

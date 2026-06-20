@@ -1,6 +1,6 @@
 # ConGen - Constraint Acquisition With Maximum Satisfiable Subsets
 
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-06-19 (Phase R: Task-as-unit refactor)
 
 **Paper:** Leviet M. — MSS-based Passive Constraint Acquisition for Feature Models
 
@@ -135,9 +135,10 @@ Converts negative examples E- into NE constraints that the KB must satisfy.
 
 **Subset minimality**: Assumes negative examples are subset-minimal — no proper subset of an e- is also negative.
 
-**Implementation**: `conacq/algorithms/generate_ne.py` — `GenerateNE.generate()` (193 LOC)
-- Called internally by `ConGenModel.prepare()`, not by callers directly
-- Uses QuickXPlain from `explanation/operations/algorithms/quickxplain.py` (80 LOC)
+**Implementation**: `conacq/algorithms/generate_ne.py` — `GenerateNE.generate()` (pure function)
+- Returns `NEPerTestcase` list; caller extends its own KB copy from returned clauses (Phase R)
+- Uses QuickXPlain from `explanation/operations/algorithms/quickxplain.py`
+- Invoked by `ConGenTaskPreparation` during `model.prepare_task(task_input, oracle)`
 
 ## AcqMSS (Algorithm 2)
 
@@ -329,15 +330,17 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 
 ## Implementation Details Beyond Paper
 
-1. **ConGenModel.prepare()**: Runs GenerateNE internally — callers don't invoke it separately
-2. **Builder pattern**: `ConGenModelBuilder` encapsulates file loading + model construction (auto-prepares if oracle+examples set)
-3. **CheckerModel protocol**: `get_kb()`, `get_assumptions()`, `use_incremental` for CheckerFactory
-4. **Assumption-based representation**: All data as `List[int]` assumption IDs, solver mode-agnostic
-5. **negation_map**: `Dict[int, int]` maps assumption ID → negated form for REDUCE
-6. **Tseitin encoding**: Used to negate CNF clauses for REDUCE redundancy checks
-7. **BGData extraction**: Post-preparation, `FMOracleModel.get_bg_data()` returns frozen dataclass with root constraint + negation map
-8. **CV fold reuse**: `model.prepare(fold_pos, fold_neg)` supports multiple fold evaluations
-9. **Profiler integration**: `@measure_time`, `@count_calls` decorators on all algorithm methods
+1. **Immutable Model Design** (Phase R): Models are thin KB containers; `prepare_task(TaskInput, oracle)` returns fresh Task per call
+2. **GenerateNE Pure Refactor** (Phase R): Returns NE clauses instead of mutating caller's task; caller extends its own copy
+3. **Builder pattern**: `ConGenModelBuilder` encapsulates file loading + model construction; returns immutable KB
+4. **VariableCodec** (Phase R): Consolidates `id_to_name` (and optional assignment assumptions) for config↔assumptions conversion
+5. **Assumption-based representation**: All data as `List[int]` assumption IDs, solver mode-agnostic
+6. **negation_map**: `Dict[int, int]` maps assumption ID → negated form for REDUCE
+7. **Tseitin encoding**: Used to negate CNF clauses for REDUCE redundancy checks
+8. **TaskInput class** (Phase R): Replaces per-task builder setters; holds positive_test_cases, negative_test_cases, for_redundancy flag
+9. **CV fold reuse**: `model.prepare_task(TaskInput(fold_pos, fold_neg), oracle)` supports multiple fold evaluations
+10. **Profiler integration**: `@measure_time`, `@count_calls` decorators on all algorithm methods
+11. **ConsistencyExecutor Protocol** (Phase R): Algorithms depend on executor Protocol, not raw checker; enables parallel diagnosis via ProcessExecutor
 
 ## Shared Infrastructure with QuAcq
 
@@ -362,28 +365,26 @@ ConGen and QuAcq share significant infrastructure:
 ConGen supports n-fold cross-validation with shared folds for fair comparison with QuAcq:
 
 ```python
-from conacq.algorithms.congen import ConGenModelBuilder
+from conacq.algorithms.acqmss import ConGenModelBuilder
 from conacq.oracle import FeatureModelOracle
 from conacq.eval.fold_io import load_folds
 from conacq.eval.cross_validation import n_fold_cross_validation
+from explanation.models.task_preparation import TaskInput
 
 # Load pre-generated folds (shared with QuAcq)
 fold_data = load_folds('data/cv_folds.json')
 
-# Build model (auto-prepare: oracle + examples passed at build time)
+# Build immutable model (KB only, no auto-prepare)
 oracle = FeatureModelOracle('data/fms/model.uvl')
-model = (ConGenModelBuilder
-    .from_bias('data/bias/model.json')
-    .with_oracle(oracle)
-    .with_examples('data/examples/examples.json')
-    .build())
+model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
 
-# Run cross-validation
-results = n_fold_cross_validation(model, fold_data=fold_data, n_splits=5)
+# Run cross-validation (prepares task per fold via prepare_task)
+results = n_fold_cross_validation(model, oracle, fold_data=fold_data, n_splits=5)
 ```
 
 **Key features**:
-- Per-fold bias shuffling (shuffle_seeds in FoldData)
+- Per-fold task creation via `model.prepare_task(TaskInput(fold_pos, fold_neg), oracle)`
 - Shared folds with QuAcq for fair comparison via `fold_io.py`
 - Accuracy, precision, recall, F1 per fold and aggregated
 - CSV/JSON/LaTeX export of results
+- Each fold produces an independent Task with its own codec and describe provider

@@ -26,6 +26,7 @@ from parameterized import parameterized
 
 from explanation.models import DiagnosisModelBuilder
 from explanation.models.pysat_diagnosis_model import DiagnosisModel
+from explanation.models.task_preparation import TaskInput, Task
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.fastdiag import FastDiag
 from explanation.operations.algorithms.fastdiagp import FastDiagP
@@ -198,12 +199,12 @@ def print_profiler_status(profiler):
     status = "ENABLED" if profiler.is_profiling else "DISABLED"
     print(f"Profiler {status}.")
 
-def create_checker(use_sat4j: bool, model: DiagnosisModel):
-    """Create appropriate checker based on configuration."""
+def create_checker(use_sat4j: bool, task: Task, is_incremental: bool = True):
+    """Create appropriate checker from a task based on configuration."""
     if use_sat4j:
         return CheckerFactory.create_sat4jchecker(
-            set_kb=model.get_kb(), assumptions=model.get_assumptions())
-    return CheckerFactory.create_from_model(model)
+            set_kb=task.set_kb, assumptions=task.assumptions)
+    return CheckerFactory.create_from_task(task, use_incremental=is_incremental)
 
 def _skip_disabled(test_name: str):
     """Create unittest.skipIf decorator for disabled tests."""
@@ -226,18 +227,16 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             fastdiag = FastDiag(checker)
-            diagnosis = fastdiag.find_diagnosis(model.get_c(), model.get_b())
+            diagnosis = fastdiag.find_diagnosis(task.set_c, task.set_b)
 
             profiler.print_summary(include_raw_timers=True)
 
-            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], model)
+            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], task)
             print(f"{diag_mess}")
             assert diag_mess == 'Diagnosis: [(5) IMPLIES[Smartwatch][Analog]]'
 
@@ -250,18 +249,16 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             quickxplain = QuickXPlain(checker)
-            conflict = quickxplain.find_conflict(model.get_c(), model.get_b())
+            conflict = quickxplain.find_conflict(task.set_c, task.set_b)
 
             profiler.print_summary(include_raw_timers=True)
 
-            cs_mess = _format_results("Conflict", "Conflicts", [conflict], model)
+            cs_mess = _format_results("Conflict", "Conflicts", [conflict], task)
             print(f"{cs_mess}")
             assert cs_mess == 'Conflict: [(3) OR[NOT[Analog][]][NOT[Cellular][]], (4) IMPLIES[Smartwatch][Cellular], (5) IMPLIES[Smartwatch][Analog]]'
 
@@ -274,18 +271,16 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling), ProfilerMode.MULTI_PROCESS) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             fastdiagp = FastDiagP(checker)
-            diagnosis = fastdiagp.find_diagnosis(model.get_c(), model.get_b())
+            diagnosis = fastdiagp.find_diagnosis(task.set_c, task.set_b)
 
             profiler.print_summary(include_raw_timers=True)
 
-            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], model)
+            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], task)
             print(diag_mess)
             assert diag_mess == 'Diagnosis: [(5) IMPLIES[Smartwatch][Analog]]'
 
@@ -299,17 +294,14 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .use_incremental(is_incremental)
-                     .with_positive_testcases(positive_testcases)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(positive_test_cases=positive_testcases))
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             kbdiag = KBDiag(checker)
-            _, diagnosis = kbdiag.find_diagnosis(model.get_c(), model.get_b(), model.get_tc())
+            _, diagnosis = kbdiag.find_diagnosis(task.set_c, task.set_b, task.set_tc)
 
-            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], model)
+            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], task)
 
             profiler.print_summary(include_raw_timers=True)
             print(diag_mess)
@@ -326,18 +318,16 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .use_incremental(is_incremental)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             kbdiag = KBDiag(checker)
-            _, diagnosis = kbdiag.find_diagnosis(model.get_c(), model.get_b(), model.get_tc(), model.get_neg_tv())
+            _, diagnosis = kbdiag.find_diagnosis(task.set_c, task.set_b, task.set_tc, task.set_neg_tv)
 
-            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], model)
+            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], task)
 
             profiler.print_summary(include_raw_timers=True)
             print(diag_mess)
@@ -354,18 +344,16 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_2_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_2)
-                     .use_incremental(is_incremental)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_2).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             kbdiag = KBDiag(checker)
-            _, diagnosis = kbdiag.find_diagnosis(model.get_c(), model.get_b(), model.get_tc(), model.get_neg_tv())
+            _, diagnosis = kbdiag.find_diagnosis(task.set_c, task.set_b, task.set_tc, task.set_neg_tv)
 
-            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], model)
+            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], task)
 
             profiler.print_summary(include_raw_timers=True)
             print(diag_mess)
@@ -382,18 +370,16 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_2_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_2)
-                     .use_incremental(is_incremental)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_2).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             kbdiag = KBDiag(checker)
-            _, diagnosis = kbdiag.find_diagnosis(model.get_c(), model.get_b(), model.get_tc(), model.get_neg_tv())
+            _, diagnosis = kbdiag.find_diagnosis(task.set_c, task.set_b, task.set_tc, task.set_neg_tv)
 
-            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], model)
+            diag_mess = _format_results("Diagnosis", "Diagnoses", [diagnosis], task)
 
             profiler.print_summary(include_raw_timers=True)
             print(diag_mess)
@@ -408,17 +394,14 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .use_incremental(is_incremental)
-                     .with_positive_testcases(positive_testcases)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(positive_test_cases=positive_testcases))
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             quickxplain = QuickXPlainWithTestCases(checker)
-            _, cs = quickxplain.find_conflict_set(model.get_c(), model.get_b(), model.get_tc())
+            _, cs = quickxplain.find_conflict_set(task.set_c, task.set_b, task.set_tc)
 
-            cs_mess = _format_results("Conflict", "Conflicts", [cs], model)
+            cs_mess = _format_results("Conflict", "Conflicts", [cs], task)
 
             profiler.print_summary(include_raw_timers=True)
             print(cs_mess)
@@ -434,18 +417,16 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .use_incremental(is_incremental)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            checker = create_checker(use_sat4j, model)
+            checker = create_checker(use_sat4j, task, is_incremental)
             quickxplain = QuickXPlainWithTestCases(checker)
-            _, cs = quickxplain.find_conflict_set(model.get_c(), model.get_b(), model.get_tc(), model.get_neg_tv())
+            _, cs = quickxplain.find_conflict_set(task.set_c, task.set_b, task.set_tc, task.set_neg_tv)
 
-            diag_mess = _format_results("Conflict", "Conflicts", [cs], model)
+            diag_mess = _format_results("Conflict", "Conflicts", [cs], task)
 
             profiler.print_summary(include_raw_timers=True)
             print(diag_mess)
@@ -464,14 +445,13 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            builder = (PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis())
+            builder = (PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_diagnosis().with_incremental(is_incremental))
             hsdag = builder.with_max_diagnoses(1).build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -487,14 +467,13 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            builder = PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis()
+            builder = (PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_diagnosis().with_incremental(is_incremental))
             hsdag = builder.with_max_diagnoses(2).build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -511,14 +490,13 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            builder = PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis()
+            builder = (PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_diagnosis().with_incremental(is_incremental))
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -540,14 +518,13 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
+            builder = (PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_conflict().with_incremental(is_incremental))
             hsdag = builder.with_max_conflicts(1).build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -565,14 +542,13 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
+            builder = (PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_conflict().with_incremental(is_incremental))
             hsdag = builder.with_max_diagnoses(1).with_depth_first_search(True).build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -590,14 +566,13 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
+            builder = (PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_conflict().with_incremental(is_incremental))
             hsdag = builder.with_max_conflicts(2).build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -615,14 +590,13 @@ class DiagnosisTest(unittest.TestCase):
         with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
+            task = model.prepare_task()
 
-            builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
+            builder = (PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_conflict().with_incremental(is_incremental))
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -645,15 +619,13 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             configuration = ConfigurationBasicReader(Resources.CONF_NONVALID).transform()
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_CONSISTENT)
-                     .with_configuration(configuration)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_CONSISTENT).build()
+            task = model.prepare_task(TaskInput(configuration=configuration))
 
-            builder = PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis()
+            builder = (PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_diagnosis().with_incremental(is_incremental))
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             assert result == ['Diagnoses: [E-ink = true],[Analog = true]',
@@ -669,15 +641,13 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             configuration = ConfigurationBasicReader(Resources.CONF_NONVALID).transform()
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_CONSISTENT)
-                     .with_configuration(configuration)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_CONSISTENT).build()
+            task = model.prepare_task(TaskInput(configuration=configuration))
 
-            builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
+            builder = (PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_conflict().with_incremental(is_incremental))
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -695,15 +665,13 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             test_case = ConfigurationBasicReader(Resources.CONF_TESTCASE).transform()
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_DEADFEATURE)
-                     .with_test_case(test_case)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_DEADFEATURE).build()
+            task = model.prepare_task(TaskInput(test_case=test_case))
 
-            builder = PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis()
+            builder = (PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_diagnosis().with_incremental(is_incremental))
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -723,15 +691,13 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             test_case = ConfigurationBasicReader(Resources.CONF_TESTCASE).transform()
-            model = (DiagnosisModelBuilder
-                     .from_fide(Resources.FM_DEADFEATURE)
-                     .with_test_case(test_case)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_fide(Resources.FM_DEADFEATURE).build()
+            task = model.prepare_task(TaskInput(test_case=test_case))
 
-            builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
+            builder = (PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j
+                       else PySATDiagnosisBuilder.for_conflict().with_incremental(is_incremental))
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             print(result)
@@ -754,18 +720,15 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(positive_test_cases=positive_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = builder.with_max_diagnoses(1).build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -785,21 +748,19 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = (builder
                      .with_max_diagnoses(1)
                      .build())
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -818,18 +779,15 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(positive_test_cases=positive_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -850,20 +808,18 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = (builder
                      .build())
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -880,18 +836,15 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_2)
-                     .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_2).build()
+            task = model.prepare_task(TaskInput(positive_test_cases=positive_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = builder.with_max_diagnoses(1).build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -911,21 +864,19 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_2_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_2)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_2).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = (builder
                      .with_max_diagnoses(1)
                      .build())
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -944,18 +895,15 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_2)
-                     .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_2).build()
+            task = model.prepare_task(TaskInput(positive_test_cases=positive_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -973,20 +921,18 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_2_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_2_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_2)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_2).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = (builder
                      .build())
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -1006,18 +952,15 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(positive_test_cases=positive_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             op = builder.with_max_diagnoses(1).build()
-            op.execute(model)
+            op.execute(task)
             result = op.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -1030,7 +973,7 @@ class DiagnosisTest(unittest.TestCase):
                 'CheckR[1,1]QType ]']
 
     @parameterized.expand(STANDARD_PARAMS)
-    @_skip_disabled('hsdag_quickxplainwithtestcases_1diag_1_neg')
+    @_skip_disabled('hsdag_quickxplainwithtestcases_1cs_1_neg')
     def test_hsdag_quickxplainwithtestcases_1diag_1_neg(self, name, is_incremental, solver_name, use_sat4j, enable_profiling):
         print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
@@ -1039,21 +982,19 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = (builder
                      .with_max_diagnoses(1)
                      .build())
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -1071,18 +1012,15 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(positive_test_cases=positive_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = builder.build()
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -1104,20 +1042,18 @@ class DiagnosisTest(unittest.TestCase):
 
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
             negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_10_1)
-                     .with_positive_testcases(positive_testcases)
-                     .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_10_1).build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=positive_testcases,
+                negative_test_cases=negative_testcases))
 
-            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
+            builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging().with_incremental(is_incremental)
             if builder is None:
                 return
 
             hsdag = (builder
                      .build())
-            hsdag.execute(model)
+            hsdag.execute(task)
             result = hsdag.get_result()
 
             profiler.print_summary(include_raw_timers=True)
@@ -1167,32 +1103,29 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             # Load model with negated forms created during transformation
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_REDUNDANT)
-                     .for_redundancy(True)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_REDUNDANT).with_negation().build()
+            task = model.prepare_task(TaskInput(for_redundancy=True))
 
             # Verify negated constraint map is populated
             print(f"Constraint map: {list(model.constraint_map.keys())}")
             print(f"Negated constraint map: {list(model.negated_constraint_map.keys())}")
             assert len(model.negated_constraint_map) > 0, "Negated constraint map should be populated"
 
-            # Get constraint IDs and negation map
-            set_cf = model.get_cf()
-            negation_map = model.get_negation_map()
+            # Get constraint IDs and negation map from task
+            set_cf = task.get_cf()
+            negation_map = task.negation_map
 
             print(f"CF (constraint IDs): {set_cf}")
             print(f"negation_map: {negation_map}")
             assert len(set_cf) > 0, "Should have constraints"
             assert len(negation_map) > 0, "Should have negated forms"
 
-            builder = None if use_sat4j else PySATRedundancyConstraintsBuilder.for_redundancy_constraints(profiler)
+            builder = None if use_sat4j else PySATRedundancyConstraintsBuilder.for_redundancy_constraints(profiler).with_incremental(is_incremental)
             if builder is None:
                 return
 
             operation = builder.build()
-            operation.execute(model)
+            operation.execute(task)
 
             # Get results
             result = operation.get_result()
@@ -1227,11 +1160,8 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             # Load model with negated forms created during transformation
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_REDUNDANT)
-                     .for_redundancy(True)
-                     .use_incremental(is_incremental)
-                     .build())
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_REDUNDANT).with_negation().build()
+            task = model.prepare_task(TaskInput(for_redundancy=True))
 
             # Verify negated constraint map is populated
             print(f"Constraint map: {list(model.constraint_map.keys())}")
@@ -1239,13 +1169,13 @@ class DiagnosisTest(unittest.TestCase):
             assert len(model.negated_constraint_map) > 0, "Negated constraint map should be populated"
 
             # Create and configure the operation using builder
-            builder = None if use_sat4j else PySATRedundancyConstraintsBuilder.for_redundancy_constraints(profiler)
+            builder = None if use_sat4j else PySATRedundancyConstraintsBuilder.for_redundancy_constraints(profiler).with_incremental(is_incremental)
             if builder is None:
                 return
             operation = builder.build()
 
             # Execute the operation
-            operation.execute(model)
+            operation.execute(task)
 
             # Get results
             redundant = operation.get_redundant()
@@ -1263,8 +1193,8 @@ class DiagnosisTest(unittest.TestCase):
             # The constraint "RedundantFM => FeatureA" should be detected as redundant
             assert len(redundant) >= 1, f"Expected at least 1 redundant constraint, got {len(redundant)}"
 
-            # Verify total count matches
-            assert len(redundant) + len(non_redundant) == len(model.get_c()), \
+            # Verify total count matches (use task.set_c for constraint count)
+            assert len(redundant) + len(non_redundant) == len(task.set_c), \
                 "Total redundant + non-redundant should equal all constraints"
 
             assert operation.get_result()[0] == 'Redundant constraints: [(Constraint 0) IMPLIES[RedundantFM][FeatureA]]'
@@ -1293,23 +1223,23 @@ class DiagnosisTest(unittest.TestCase):
             print_profiler_status(profiler)
 
             testsuite = TestSuiteReader(Resources.REDUNDANT_TESTSUITE).transform()
-            model = (DiagnosisModelBuilder
-                     .from_uvl(Resources.FM_REDUNDANT)
-                     .with_testcases(testsuite)
-                     .use_incremental(is_incremental)
-                     .build())
+            # WipeOutR_T: negation on KB + positive_test_cases + for_redundancy=True
+            model = DiagnosisModelBuilder.from_uvl(Resources.FM_REDUNDANT).with_negation().build()
+            task = model.prepare_task(TaskInput(
+                positive_test_cases=testsuite,
+                for_redundancy=True))
 
             print(f"Test suite has {len(testsuite.testcases)} test cases")
             for i, tc in enumerate(testsuite.testcases):
                 print(f"  t{i + 1}: {tc}")
 
-            builder = None if use_sat4j else PySATRedundancyTestCasesBuilder.for_redundancy_test_cases(profiler)
+            builder = None if use_sat4j else PySATRedundancyTestCasesBuilder.for_redundancy_test_cases(profiler).with_incremental(is_incremental)
             if builder is None:
                 return
 
             operation = (builder
                          .build())
-            operation.execute(model)
+            operation.execute(task)
 
             # Get results
             result = operation.get_result()

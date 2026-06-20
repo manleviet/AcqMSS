@@ -18,10 +18,12 @@ from explanation.models.task_preparation import (
     prepare_kb,
     _ASSUMPTION_PAIR_STRIDE,
 )
+from conacq.algorithms.oracle_aware_task_preparation import OracleAwareTaskPreparation
 from .generate_ne import GenerateNE
 
 if TYPE_CHECKING:
     from explanation.models.testsuite import TestSuite
+    from explanation.models.task_preparation import TaskInput
     from .congen_model import ConGenModel
     from conacq.oracle import FeatureModelOracle
 
@@ -48,7 +50,7 @@ class ConGenTask(TestCaseTask):
     pass  # No additional fields needed
 
 
-class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
+class ConGenTaskPreparation(OracleAwareTaskPreparation, TestCaseTaskPreparationStrategy):
     """Prepare ConGen task using assumptions.
 
     Data mapping:
@@ -67,8 +69,12 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel, oracle: FeatureModelOracle) -> PreparationOutput:
+    def prepare(self, model: 'ConGenModel', task_input: 'TaskInput',
+                oracle: 'FeatureModelOracle') -> PreparationOutput:
         """Prepare ConGen task from model. BG from Oracle, oracle for GenerateNE.
+
+        task_input is passed explicitly (not read from model state) so each
+        call is pure and returns an independent Task.
 
         Shared Assumption ID Layout (ConGen owns Parts 5-8):
           Parts 1-4: Owned by Oracle (see OracleTaskPreparation)
@@ -82,15 +88,12 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         """
         result = ConGenTask()
         provider = DescriptionProvider()
-        task_input = model.task_input
 
-        # Step 0: Copy BG data from Oracle (root constraint pair from Part 3)
+        # Step 0: Copy BG data from Oracle (root constraint pair from Part 3).
+        # Part 4 (assignment assumptions) is NOT copied here — ConGen does not
+        # use feature-assignment assumption pruning (that is QuAcq-specific).
         bg_data = oracle.get_bg_data()
-        result.set_kb.extend(bg_data.set_kb)
-        result.assumptions.extend(list(bg_data.assumptions))
-        result.negation_map.update(bg_data.negation_map)
-        for aid, desc in bg_data.descriptions.items():
-            provider.add_constraint_description(aid, desc)
+        self._copy_bg_data_part3(result, provider, bg_data)
 
         # Step 1: Prepare bias constraints as set_c (negated forms from builder)
         bias_start_pos = len(result.assumptions)
@@ -115,7 +118,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
 
         # NOTE: Do NOT update model.next_available_id here.
         # model.next_available_id was set by the builder at build time and should remain fixed.
-        # Updating it here would cause subsequent prepare() calls to allocate IDs from wrong range.
+        # Updating it here would cause subsequent prepare_task() calls to allocate IDs from wrong range.
 
         logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, set_tv=%d',
                       len(result.set_c), len(result.set_tc), len(result.set_tv))
@@ -126,22 +129,26 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             self,
             result: ConGenTask,
             provider: DescriptionProvider,
-            model: ConGenModel,
-            oracle: FeatureModelOracle,
-            testsuite: TestSuite,
+            model: 'ConGenModel',
+            oracle: 'FeatureModelOracle',
+            testsuite: 'TestSuite',
             id_assumption: int
     ) -> int:
         """Step 3: Generate NE from negative examples.
 
-        Orchestrates: GenerateNE -> combine -> negate -> populate task.
+        GenerateNE is pure: it returns NE clauses without mutating result.set_kb.
+        We extend result.set_kb here after receiving the returned NE clauses.
         """
-
         generate_ne = GenerateNE(oracle)
         ne_results, id_assumption = generate_ne.generate(
             testsuite, model.variables, result.set_kb, result.assumptions, id_assumption)
 
         neg_tv_ids = [ne.ne_id for ne in ne_results]
         descs = [ne.desc for ne in ne_results]
+
+        # Extend result KB with the returned NE clauses
+        for ne in ne_results:
+            result.set_kb.append(ne.ne_clause)
 
         ne_id, id_assumption = self._combine_ne_constraints(
             result, provider, neg_tv_ids, descs, id_assumption)

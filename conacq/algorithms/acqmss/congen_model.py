@@ -1,21 +1,17 @@
 """
 Model for ConGen algorithm.
 
-Pure data container for bias constraints and solver config.
-Oracle injected at prepare() time — model has no FM dependency.
+Thin KB + codec container. Holds bias constraints; oracle injected at
+prepare_task() time — model has no FM dependency.
 
-Uses existing classes from explanation module:
-- Assignment, TestCase, TestSuite from explanation.models.testsuite
-- TaskInput, DescriptionProvider from explanation.models.task_preparation
-
-ConGenModel uses composition to delegate task preparation to ConGenTaskPreparation.
-Call prepare(oracle) before accessing task or description_provider.
+prepare_task(task_input, oracle) -> ConGenTask with attached codec + describe.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
+from explanation.models.codec import VariableCodec
 from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
@@ -26,160 +22,76 @@ if TYPE_CHECKING:
 
 
 class ConGenModel:
-    """Pure data container for ConGen algorithm.
+    """Thin KB container for ConGen algorithm.
 
-    Holds bias constraints, variables, and solver config.
-    Oracle injected at prepare() time — no FM dependency.
+    Holds bias constraints, variables, and negated_constraint_map (for
+    redundancy detection).  Satisfies ModelProtocol.
 
-    Call prepare(oracle) before accessing task or description_provider.
+    Call prepare_task(task_input, oracle) to get a fresh ConGenTask with
+    attached VariableCodec (codec: just id_to_name — ConGen has no
+    per-feature assignment assumptions).
+
+    Each call to prepare_task returns an independent, fresh Task.
+    Callers (runners, tests) must hold the returned task explicitly.
     """
 
     def __init__(self) -> None:
-        # map clauses to bias relationships/constraint
+        # ModelProtocol fields
         self.constraint_map: Dict[str, List[List[int]]] = {}
-        # map negated clauses to bias relationships/constraint (for redundancy detection)
         self.negated_constraint_map: Dict[str, List[List[int]]] = {}
-        # map feature names to IDs (for debugging and description generation)
         self.variables: Dict[str, int] = {}
-        # Used as starting ID for assumption literals to avoid conflicts.
-        # Set by builder at build time (after negation computation).
         self.next_available_id: int = 1000
 
-        # CheckerModel protocol attributes
-        self._use_incremental: bool = True
+    # -------------------------------------------------------------------------
+    # Sole public entry point: prepare_task
+    # -------------------------------------------------------------------------
 
-        # Background knowledge (e.g., root feature IDs) to include in set_b
-        # self.background_knowledge: List[int] = []
+    def prepare_task(
+            self,
+            task_input: TaskInput,
+            oracle: 'FeatureModelOracle',
+    ) -> ConGenTask:
+        """Prepare a fresh ConGenTask including GenerateNE.
 
-        # Task input populated by builder or caller before prepare()
-        self._task_input: TaskInput = TaskInput()
+        Oracle injected here — model stays FM-agnostic.
+        Can be called multiple times (e.g., for CV folds); each call returns
+        an independent, fresh Task.
 
-        # Populated after prepare()
-        self._task: Optional[ConGenTask] = None
-        self._description_provider: Optional[DescriptionProvider] = None
-        self._root_constraint: Optional[List[List[int]]] = None
-
-    @property
-    def use_incremental(self) -> bool:
-        """Whether to use incremental solver."""
-        return self._use_incremental
-
-    @property
-    def task_input(self) -> TaskInput:
-        """Get task input."""
-        return self._task_input
-
-    @task_input.setter
-    def task_input(self, value: TaskInput) -> None:
-        """Set task input."""
-        self._task_input = value
-
-    @property
-    def task(self) -> Optional[ConGenTask]:
-        """Get prepared task, or None if prepare() has not been called."""
-        return self._task
-
-    @property
-    def description_provider(self) -> DescriptionProvider:
-        """Get description provider. Call prepare() first."""
-        if self._description_provider is None:
-            raise RuntimeError("Call prepare() first")
-        return self._description_provider
-
-    def _require_task(self) -> ConGenTask:
-        """Return task or raise if not prepared."""
-        if self._task is None:
-            raise RuntimeError("Model not prepared. Call prepare() first.")
-        return self._task
-
-    # Convenience getters (delegate to result)
-    def get_c(self) -> List:
-        """Get the set of potentially faulty constraints."""
-        return self._require_task().set_c
-
-    def get_b(self) -> List:
-        """Get the background knowledge."""
-        return self._require_task().set_b
-
-    def get_cf(self) -> List:
-        """Get all constraints (C ∪ B) for redundancy detection.
-
-        Returns:
-            List of all constraint IDs (set_c + set_b).
-        """
-        return self._require_task().get_cf()
-
-    def get_kb(self) -> List[List]:
-        """Get the full knowledge base with assumptions."""
-        return self._require_task().set_kb
-
-    def get_negation_map(self) -> dict:
-        """Get the mapping from original to negated assumption IDs.
-
-        Returns:
-            Dict mapping original assumption ID to negated assumption ID,
-            or empty dict if no negated forms.
-        """
-        return self._require_task().negation_map
-
-    def get_assumptions(self) -> List:
-        """Get the list of assumption literals."""
-        return self._require_task().assumptions
-
-    def get_tc(self) -> List:
-        """Get the positive test cases (debugging task only).
-
-        Returns:
-            List of positive test case assumptions, or empty list if not debugging task.
-        """
-        if isinstance(self.task, TestCaseTask):
-            return self.task.set_tc
-        return []
-
-    def get_tv(self) -> List:
-        """Get the negative test cases (debugging task only).
-
-        Returns:
-            List of negative test case assumptions, or empty list if not debugging task.
-        """
-        if isinstance(self.task, TestCaseTask):
-            return self.task.set_tv
-        return []
-
-    def get_neg_tv(self) -> List:
-        """Get the negated negative test cases (debugging task only).
-
-        Used by KBDiag for B = B ∪ neg_Tν.
-
-        Returns:
-            List of negated negative test case assumptions, or empty list if not debugging task.
-        """
-        if isinstance(self.task, TestCaseTask):
-            return self.task.set_neg_tv
-        return []
-
-    def get_neg_tc(self) -> List:
-        """Get the negated positive test cases (debugging task only).
-
-        Used for WipeOutR algorithm.
-
-        Returns:
-            List of negated positive test case assumptions, or empty list if not debugging task.
-        """
-        if isinstance(self.task, TestCaseTask):
-            return self.task.set_neg_tc
-        return []
-
-    def _resolve_ids(self, assumption_ids: List[int]) -> Tuple[List[List[int]], List[str]]:
-        """Resolve assumption IDs to clauses and names via constraint_map.
+        Attaches VariableCodec (id_to_name only — no per-feature assignment
+        assumptions for ConGen) to the returned task.
 
         Args:
-            assumption_ids: Assumption IDs to resolve.
+            task_input: TaskInput with positive/negative test cases + for_redundancy
+            oracle: FeatureModelOracle for NE generation and FM metadata
 
         Returns:
-            (clauses, names) — clauses from constraint_map, names from description_provider.
+            Fresh ConGenTask with task.codec and task.describe attached.
         """
-        provider = self.description_provider
+        from .task_preparation import ConGenTaskPreparation
+
+        preparation = ConGenTaskPreparation()
+        output = preparation.prepare(self, task_input, oracle)
+
+        assert isinstance(output.task, ConGenTask)
+        task = output.task
+
+        # Build codec: id_to_name only (ConGen has no assignment-assumption layer)
+        codec = VariableCodec(
+            id_to_name={vid: name for name, vid in self.variables.items()},
+        )
+        task.codec = codec
+        task.describe = output.description_provider
+
+        return task
+
+    # -------------------------------------------------------------------------
+    # Result resolution (used by ConGenRunner)
+    # -------------------------------------------------------------------------
+
+    def _resolve_ids(self, task: ConGenTask,
+                     assumption_ids: List[int]) -> Tuple[List[List[int]], List[str]]:
+        """Resolve assumption IDs to clauses and names via constraint_map."""
+        provider = task.describe
         clauses: List[List[int]] = []
         names: List[str] = []
         for aid in assumption_ids:
@@ -189,60 +101,27 @@ class ConGenModel:
                 clauses.extend(self.constraint_map[name])
         return clauses, names
 
-    def resolve_result(self, result: ConGenResult) -> Tuple[List[List[int]], List[List[int]], List[str], List[str]]:
+    def resolve_result(self, task: ConGenTask, result: 'ConGenResult',
+                       bg_clauses: Optional[List[List[int]]] = None,
+                       ) -> Tuple[List[List[int]], List[List[int]], List[str], List[str]]:
         """Resolve a ConGenResult into clauses and names.
 
         Args:
+            task: ConGenTask whose describe maps assumption IDs to names
             result: ConGenResult with assumption IDs.
+            bg_clauses: Root/BG clauses (from oracle.get_root_clauses()); defaults to [].
 
         Returns:
             (bg_clauses, kb_clauses, kb_names, redundant_names)
         """
-        bg_clauses = self._root_constraint or []
-        kb_clauses, kb_names = self._resolve_ids(result.kb_assumption_ids)
-        _, redundant_names = self._resolve_ids(result.redundant_ids)
-        return bg_clauses, kb_clauses, kb_names, redundant_names
+        bg = bg_clauses or []
+        kb_clauses, kb_names = self._resolve_ids(task, result.kb_assumption_ids)
+        _, redundant_names = self._resolve_ids(task, result.redundant_ids)
+        return bg, kb_clauses, kb_names, redundant_names
 
-    def prepare(
-            self,
-            oracle: FeatureModelOracle,
-            positive_examples: Optional[List[Dict[str, bool]]] = None,
-            negative_examples: Optional[List[Dict[str, bool]]] = None
-    ) -> ConGenTask:
-        """Prepare ConGen task including GenerateNE.
-
-        Oracle injected here — model stays FM-agnostic.
-        Can be called multiple times (e.g., for CV folds).
-
-        Args:
-            oracle: Feature model oracle for NE generation and FM metadata
-            positive_examples: Optional new E+ (for fold reuse)
-            negative_examples: Optional new E- (for fold reuse)
-
-        Returns:
-            ConGenTask with set_neg_tv already populated.
-        """
-        # Update task_input if new examples provided
-        if positive_examples is not None or negative_examples is not None:
-            pos_tc = self._examples_to_testsuite(positive_examples or [])
-            neg_tc = self._examples_to_testsuite(negative_examples or [])
-            self.task_input = TaskInput(
-                positive_test_cases=pos_tc,
-                negative_test_cases=neg_tc,
-                for_redundancy=True
-            )
-
-        # Run ConGenTaskPreparation (oracle provides BGData + GenerateNE)
-        from .task_preparation import ConGenTaskPreparation
-        preparation = ConGenTaskPreparation()
-        output = preparation.prepare(self, oracle)
-
-        assert isinstance(output.task, ConGenTask)
-        self._task = output.task
-        self._description_provider = output.description_provider
-        self._root_constraint = oracle.get_root_clauses()
-
-        return self._task
+    # -------------------------------------------------------------------------
+    # Static helpers
+    # -------------------------------------------------------------------------
 
     @staticmethod
     def _examples_to_testsuite(examples: List[Dict[str, bool]]) -> TestSuite:

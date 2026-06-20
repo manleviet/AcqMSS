@@ -9,6 +9,7 @@ from .congen_model import ConGenModel
 
 if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
+    from .task_preparation import ConGenTask
 
 
 class ConGenModelBuilder:
@@ -17,25 +18,28 @@ class ConGenModelBuilder:
     Examples:
         # Pattern 1: Auto-prepare from file
         oracle = FeatureModelOracle('data/fms/model.uvl')
-        model = (ConGenModelBuilder
-                 .from_bias('data/bias/model.json')
-                 .with_oracle(oracle)
-                 .with_examples('data/examples/model.json')
-                 .build())  # Returns prepared model
+        builder = (ConGenModelBuilder
+                   .from_bias('data/bias/model.json')
+                   .with_oracle(oracle)
+                   .with_examples('data/examples/model.json'))
+        model = builder.build()
+        task = builder.last_task  # ConGenTask from auto-prepare
 
         # Pattern 2: Auto-prepare from raw data
-        model = (ConGenModelBuilder
-                 .from_bias('data/bias/model.json')
-                 .with_oracle(oracle)
-                 .with_examples_data(positive_examples=pos, negative_examples=neg)
-                 .build())  # Returns prepared model
+        builder = (ConGenModelBuilder
+                   .from_bias('data/bias/model.json')
+                   .with_oracle(oracle)
+                   .with_examples_data(positive_examples=pos, negative_examples=neg))
+        model = builder.build()
+        task = builder.last_task
 
         # Pattern 3: CV build-once, prepare per fold
         model = (ConGenModelBuilder.from_bias('data/bias/model.json')
                  .with_oracle(oracle)
                  .build())
         for fold_pos, fold_neg in folds:
-            model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
+            task_input = ConGenModelBuilder.make_task_input(model, fold_pos, fold_neg)
+            task = model.prepare_task(task_input, oracle)
     """
 
     def __init__(self):
@@ -49,8 +53,8 @@ class ConGenModelBuilder:
         self._positive_examples: Optional[List[Dict[str, bool]]] = None
         self._negative_examples: Optional[List[Dict[str, bool]]] = None
 
-        # Solver configuration
-        self._use_incremental: bool = True
+        # Last prepared task (set by build() when examples are provided)
+        self.last_task: Optional['ConGenTask'] = None
 
     @classmethod
     def from_bias(cls, bias_path: str) -> 'ConGenModelBuilder':
@@ -88,16 +92,13 @@ class ConGenModelBuilder:
         self._examples_path = None
         return self
 
-    def use_incremental(self, enabled: bool = True) -> 'ConGenModelBuilder':
-        """Set incremental solver mode."""
-        self._use_incremental = enabled
-        return self
 
     def build(self) -> ConGenModel:
         """Build and return configured ConGenModel.
 
         Computes negation at build time (requires oracle).
-        Auto-prepares if examples are also set.
+        Auto-prepares if examples are also set; the resulting task is
+        stored on self.last_task for retrieval by the caller.
 
         Raises:
             ValueError: If bias path or oracle missing
@@ -112,7 +113,6 @@ class ConGenModelBuilder:
         model = ConGenModel()
         model.constraint_map = bias.to_constraint_map()
         model.variables = bias.feature_ids
-        model._use_incremental = self._use_incremental
 
         # Compute negation at build time (requires oracle for next_available_id)
         next_tseitin_var = self._oracle.get_bg_data().next_available_id
@@ -121,14 +121,12 @@ class ConGenModelBuilder:
             model.negated_constraint_map[f"NOT({key})"] = neg_clauses
         model.next_available_id = next_tseitin_var
 
-        # Auto-prepare when examples present
+        # Auto-prepare when examples are present; cache the task on the builder
+        self.last_task = None
         if self._has_examples():
             pos, neg = self._resolve_examples()
-            model.prepare(
-                oracle=self._oracle,
-                positive_examples=pos,
-                negative_examples=neg or []
-            )
+            task_input = self._make_task_input(model, pos, neg or [])
+            self.last_task = model.prepare_task(task_input, self._oracle)
 
         return model
 
@@ -137,6 +135,10 @@ class ConGenModelBuilder:
         if not self._has_examples():
             return None
         return self._resolve_examples()
+
+    # -------------------------------------------------------------------------
+    # Internal helpers
+    # -------------------------------------------------------------------------
 
     def _has_examples(self) -> bool:
         """Check if examples were provided (file or data)."""
@@ -160,3 +162,27 @@ class ConGenModelBuilder:
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]
         return pos, neg
+
+    @staticmethod
+    def _make_task_input(model: ConGenModel,
+                         positive_examples: List[Dict[str, bool]],
+                         negative_examples: List[Dict[str, bool]]):
+        """Build a TaskInput from example lists."""
+        from explanation.models.task_preparation import TaskInput
+        from explanation.models.testsuite import Assignment, TestCase, TestSuite
+
+        def to_testsuite(examples):
+            testcases = [
+                TestCase(assignments=[
+                    Assignment(feature=name, value=value)
+                    for name, value in ex.items()
+                ])
+                for ex in examples
+            ]
+            return TestSuite(testcases=testcases)
+
+        return TaskInput(
+            positive_test_cases=to_testsuite(positive_examples),
+            negative_test_cases=to_testsuite(negative_examples),
+            for_redundancy=True,
+        )

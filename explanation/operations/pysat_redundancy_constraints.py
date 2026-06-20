@@ -3,12 +3,9 @@
 This module provides an operation for detecting redundant constraints
 in a feature model using the WipeOutR_FM algorithm.
 """
-from typing import List, cast
+from typing import List
 
-from flamapy.core.models import VariabilityModel
-
-from explanation.models.pysat_diagnosis_model import DiagnosisModel
-from explanation.models.task_preparation import TaskInput
+from explanation.models.task_preparation import Task
 from explanation.operations.algorithms.profiler import AbstractProfiler
 from explanation.operations.algorithms.wipeoutr_fm import WipeOutR_FM
 from explanation.operations.pysat_diagnosis import PySATDiagnosis
@@ -35,47 +32,43 @@ class PySATRedundancyConstraints(PySATDiagnosis):
         self.non_redundant: List = []
 
     # Not used - override execute() instead
-    def _create_labeler(self, checker, model):
+    def _create_labeler(self, checker, task):
         pass
 
     # Not used - override execute() instead
-    def prepare_hsdag(self, model):
+    def prepare_hsdag(self, task):
         pass
 
-    def execute(self, model: VariabilityModel) -> 'PySATRedundancyConstraints':
+    def execute(self, task: Task) -> 'PySATRedundancyConstraints':
         """Execute redundancy detection using WipeOutR_FM algorithm.
 
         Args:
-            model: Variability model (will be cast to DiagnosisModel)
+            task: Task carrying KB, assumptions, constraint sets, and description provider
 
         Returns:
             Self for method chaining
         """
-        model = cast(DiagnosisModel, model)
-
-        # Create checker using parent's method
-        checker = self._create_checker(model)
+        # Create checker from task
+        checker = self._create_checker(task)
 
         try:
             # Use WipeOutR_FM to find redundant constraints
             wipeoutr = WipeOutR_FM(checker, self.profiler)
-            c = list(reversed(model.get_c()))
+            c = list(reversed(task.set_c))
             self.redundant, self.non_redundant = wipeoutr.find_redundancies(
-                c, model.get_negation_map())
+                c, task.negation_map)
 
             # Format result messages
-            self._format_result_messages(model)
+            self._format_result_messages(task)
         finally:
             checker.cleanup()
 
         return self
 
-    def _format_result_messages(self, model: DiagnosisModel) -> None:
+    def _format_result_messages(self, task: Task) -> None:
         """Format result messages for display."""
-        redundant_names = [model.description_provider.get_description(r)
-                           for r in self.redundant]
-        non_redundant_names = [model.description_provider.get_description(r)
-                               for r in self.non_redundant]
+        redundant_names = [task.describe.get_description(r) for r in self.redundant]
+        non_redundant_names = [task.describe.get_description(r) for r in self.non_redundant]
 
         if self.redundant:
             redundant_msg = f"Redundant constraints: [{', '.join(redundant_names)}]"

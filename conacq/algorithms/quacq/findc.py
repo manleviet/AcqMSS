@@ -20,15 +20,17 @@ from explanation.operations.algorithms.profiler import measure_time, count_calls
 class FindC:
     """Finds constraint with given scope violated by example.
 
-    All collaborators and invariants (oracle, checker, model, record_query,
-    root_assumption, generator) injected at construction; per-call data passed to run().
+    All collaborators and invariants (oracle, checker, task, codec,
+    record_query, root_assumption, generator) injected at construction;
+    per-call data passed to run().
     """
 
-    def __init__(self, oracle, checker: ConsistencyChecker, model, profiler,
-                 record_query, root_assumption: int, generator=None):
+    def __init__(self, oracle, checker: ConsistencyChecker, task, codec,
+                 profiler, record_query, root_assumption: int, generator=None):
         self.oracle = oracle
         self.checker = checker
-        self.model = model
+        self.task = task
+        self.codec = codec
         self.profiler = profiler
         self.record_query = record_query
         self.root_assumption = root_assumption
@@ -60,7 +62,7 @@ class FindC:
             Constraint ID (int) or None
         """
         # Get candidate constraints: bias constraints whose scope matches
-        candidates = self.model.get_constraints_with_scope(scope, remaining_bias)
+        candidates = self.task.get_constraints_with_scope(scope, remaining_bias)
 
         if not candidates:
             logging.debug('FindC: no candidates with scope %s', scope)
@@ -71,7 +73,7 @@ class FindC:
 
         # Filter to constraints that actually reject e (SAT-based)
         rejecting = []
-        e_assumptions = self.model.config_to_assumptions(e)
+        e_assumptions = self.codec.config_to_assumptions(e)
         base = [self.root_assumption] + e_assumptions
 
         for c_id in candidates:

@@ -1,6 +1,6 @@
 # QuAcq - Constraint Acquisition via Partial Queries (IJCAI 2013)
 
-**Last Updated**: 2026-02-28 (Merged ExampleProvider + QueryGenerator → unified QueryProvider)
+**Last Updated**: 2026-06-19 (Phase R: Task-as-unit refactor, ConsistencyExecutor Protocol)
 
 **Paper:** Bessiere, Coletta, Hebrard, Katsirelos, Lazaar, Narodytska, Quimper, Walsh
 
@@ -143,32 +143,32 @@ After scope `Y` is found, identifies the specific constraint violated by generat
 
 ## Query Generation (QueryProvider)
 
-Unified `QueryProvider` class (conacq/example_generators/query_provider.py) merges pool-based and SAT-based strategies with injected ConsistencyChecker.
+Unified `QueryProvider` class (conacq/example_generators/query_provider.py) merges pool-based and SAT-based strategies with injected ConsistencyExecutor (Protocol).
 
-**Architecture** (NEW: commit 260228):
-- **No ad-hoc solver creation**: QueryProvider uses injected `checker` + `model` parameters
-- **ConsistencyChecker protocol**: Both conditions (satisfies KB+BG, violates bias) use `checker.is_consistent()`
-- **SAT model extraction**: `checker.get_model()` returns parsed SAT assignment for config generation
+**Architecture** (Phase R):
+- **No ad-hoc solver creation**: QueryProvider uses injected `executor` (ConsistencyExecutor Protocol)
+- **ConsistencyExecutor Protocol**: Both conditions (satisfies KB+BG, violates bias) use `executor.is_consistent()`
+- **SAT model extraction**: `executor.solve(assumptions) -> (sat, model_lits)` for config generation
 - **Assumption-based filtering**: All SAT queries use assumption IDs for KB, BG, and bias constraints
 
-**Constructor** (NEW):
+**Constructor** (Phase R):
 ```python
 QueryProvider(
     pool: Optional[List[Dict[str, bool]]] = None,
     seed: Optional[int] = None,
-    checker: ConsistencyChecker = None,  # Injected (NEW)
-    model: QuAcqModel = None,            # Injected for config_to_assumptions (NEW)
+    executor: ConsistencyExecutor = None,  # Injected Protocol (Phase R)
+    codec: VariableCodec = None,           # Injected for config↔assumptions (Phase R)
     profiler_instance: AbstractProfiler = None
 )
 ```
 
 **Three methods** mapping to three modes:
 - `generate_from_pool(remaining_bias, learned_kb, set_b)` → `example_only` mode
-  - Condition 1: `checker.is_consistent(C_L + BG + config_assumptions)` (satisfies KB+BG)
-  - Condition 2: `checker.is_consistent([c_id] + config_assumptions)` (violates bias constraint)
+  - Condition 1: `executor.is_consistent(C_L + BG + config_assumptions)` (satisfies KB+BG)
+  - Condition 2: `executor.is_consistent([c_id] + config_assumptions)` (violates bias constraint)
 - `generate_from_sat(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)` → `oracle` mode
-  - For each remaining constraint c_id: `checker.is_consistent(C_L + BG + [neg(c_id)])`
-  - Extract model: `model_lits = checker.get_model()` → convert to config dict
+  - For each remaining constraint c_id: `executor.is_consistent(C_L + BG + [neg(c_id)])`
+  - Extract model: `(sat, model_lits) = executor.solve(assumptions)` → convert to config dict
 - `generate(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)` → `example_first` mode
   - Try pool first, fallback to SAT
 
@@ -204,9 +204,9 @@ QueryProvider(
 **Two Paradigms** (Now Unified via Assumption IDs):
 
 1. **CONGEN** (passive): Learns from E+/E- in one batch pass (GenerateNE → ACQMSS → REDUCE)
-   - **GenerateNE called internally by `ConGenModel.prepare()`** (not by callers)
+   - GenerateNE pure: returns clauses; caller extends its KB copy (Phase R)
+   - Invoked by `ConGenTaskPreparation` during `model.prepare_task(task_input, oracle)`
    - Uses `ConGenTask` (assumption-based constraint IDs)
-   - Immutable checkers after construction
 
 2. **QuAcq** (active/interactive): Two modes via `QuAcqModel` + `QuAcqTask`
    - **Oracle mode**: Queries user via GenerateQuery
@@ -341,51 +341,56 @@ The following classes are **no longer available**:
 | `InteractiveLearner` | `QuAcqModelBuilder` + `QuAcq` | `learner.py` | High-level facade; use builder pattern instead |
 | `InteractiveResult` (alias) | `QuAcqResult` | `result.py` | Merged into `quacq.py` |
 
-**Recommended Pattern** (DI-based, post-refactor, commit 260228):
+**Recommended Pattern** (DI-based, Phase R task-as-unit):
 ```python
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
 from conacq.example_generators import QueryProvider
 from conacq.oracle import FeatureModelOracle
 from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.executor import ProcessExecutor
 
-# Build and prepare model
+# Build immutable model (KB only)
+model = QuAcqModelBuilder.from_bias('data/bias/model.json').build()
+
+# Create oracle and prepare task
 oracle = FeatureModelOracle('data/fms/model.uvl')
-model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
-         .with_oracle(oracle)
-         .build())  # Returns prepared QuAcqModel
+task = model.prepare_task(oracle)
 
-# Build checker and query provider (injected dependencies)
-checker = CheckerFactory.create_from_model(model)
+# Build executor (serial or parallel) from task
+executor = CheckerFactory.create_from_task(task, solver_name='glucose4', use_incremental=True)
+# For parallel: executor = ProcessExecutor(task.set_kb, solver_name='glucose4', n_workers=4)
+
+# Query provider with injected executor + codec (Phase R)
 query_provider = QueryProvider(
-    checker=checker,    # Injected (NEW)
-    model=model,        # For config_to_assumptions (NEW)
-    pool=None           # Optional: provide pool for example-based mode
+    executor=executor,      # Injected ConsistencyExecutor Protocol
+    codec=task.codec,       # Injected VariableCodec for config↔assumptions
+    pool=None               # Optional: provide pool for example-based mode
 )
 
-# DiscriminatingGenerator with injected checker + model (NEW - commit 260228)
-discrim_gen = DiscriminatingGenerator(checker, model, model.task.set_b[0])
+# DiscriminatingGenerator with injected executor (Phase R)
+discrim_gen = DiscriminatingGenerator(executor, task, task.set_b[0])
 
 # Build QuAcq with dependencies (oracle mode)
-quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
+quacq = QuAcq.for_oracle(executor, oracle, query_provider, discrim_gen)
 
-# Run learning (returns raw assumption IDs, simplified signature)
+# Run learning (returns raw assumption IDs)
 result = quacq.learn(
-    set_c=model.task.set_c,
-    set_b=model.task.set_b,
-    set_kb=model.task.set_kb,
-    negation_map=model.task.negation_map,
-    assumptions=model.task.assumptions,
-    background_clauses=model.task.background_clauses,
-    feature_ids=model.task.feature_ids,
-    id_to_feature=model.task.id_to_feature,
-    constraint_clauses=model.task.constraint_clauses,
-    negated_clauses=model.task.negated_clauses,
+    set_c=task.set_c,
+    set_b=task.set_b,
+    set_kb=task.set_kb,
+    negation_map=task.negation_map,
+    assumptions=task.assumptions,
+    background_clauses=task.background_clauses,
+    feature_ids=task.feature_ids,
+    id_to_feature=task.id_to_feature,
+    constraint_clauses=task.constraint_clauses,
+    negated_clauses=task.negated_clauses,
     mode='oracle',
     max_queries=1000
 )
 
-# Runner layer resolves constraint names (matches ConGen pattern)
-kb_names, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
+# Runner layer resolves constraint names
+kb_names, kb_clauses = model.resolve_kb(task, result.kb_assumption_ids)
 print(f"Learned KB: {kb_names}")
 print(f"Queries: {result.n_queries}")
 ```
@@ -395,18 +400,18 @@ print(f"Queries: {result.n_queries}")
 from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import CheckerFactory
 
-# Build checker from model
-checker = CheckerFactory.create_from_model(model)
+# Build executor from task
+executor = CheckerFactory.create_from_task(task, solver_name='glucose4', use_incremental=True)
 
-# QueryProvider with pool for example-based learning (injected dependencies)
+# QueryProvider with pool for example-based learning (Phase R)
 query_provider = QueryProvider(
     pool=examples_list,
     seed=42,
-    checker=checker,    # Injected (NEW)
-    model=model         # For config_to_assumptions (NEW)
+    executor=executor,  # Injected ConsistencyExecutor Protocol
+    codec=task.codec    # Injected VariableCodec
 )
 
-quacq = QuAcq.for_examples(checker, oracle, query_provider, discrim_gen=None)
+quacq = QuAcq.for_examples(executor, oracle, query_provider, discrim_gen=None)
 
 # Run with pool only (no SAT, no discriminating generator needed)
 result = quacq.learn(..., mode='example_only', ...)
@@ -415,10 +420,10 @@ result = quacq.learn(..., mode='example_only', ...)
 query_provider_mixed = QueryProvider(
     pool=examples_list,
     seed=42,
-    checker=checker,
-    model=model
+    executor=executor,
+    codec=task.codec
 )
-quacq_mixed = QuAcq.for_examples(checker, oracle, query_provider_mixed, discrim_gen=discrim_gen)
+quacq_mixed = QuAcq.for_examples(executor, oracle, query_provider_mixed, discrim_gen=discrim_gen)
 result = quacq_mixed.learn(..., mode='example_first', ...)
 ```
 

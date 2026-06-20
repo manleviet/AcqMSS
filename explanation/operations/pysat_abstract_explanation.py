@@ -1,24 +1,23 @@
 from abc import abstractmethod
-from typing import cast, List, Tuple, Optional
+from typing import List, Tuple, Optional
 
-from flamapy.core.models import VariabilityModel
 from flamapy.core.operations import Operation
 
-from explanation.models.pysat_diagnosis_model import DiagnosisModel
+from explanation.models.task_preparation import Task, DiagnosisFormatter
 from explanation.operations.algorithms.checker import ConsistencyChecker, CheckerFactory
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.labeler import IHSLabelable
 from explanation.operations.algorithms.profiler import AbstractProfiler, get_global_profiler
 
 
-def _format_results(singular: str, plural: str, items: List, model: DiagnosisModel) -> str:
+def _format_results(singular: str, plural: str, items: List, task: Task) -> str:
     """Format a list of results (conflicts or diagnoses) for display.
 
     Args:
         singular: Singular form of the item type (e.g., "Conflict", "Diagnosis")
         plural: Plural form of the item type (e.g., "Conflicts", "Diagnoses")
         items: List of items to format
-        model: DiagnosisModel instance for pretty printing
+        task: Task instance carrying the description provider
 
     Returns:
         Formatted string representation of the results
@@ -27,32 +26,27 @@ def _format_results(singular: str, plural: str, items: List, model: DiagnosisMod
         return f'No {singular.lower()} found'
 
     label = singular if len(items) == 1 else plural
-    formatted_items = model.format_diagnoses(items)
+    formatted_items = DiagnosisFormatter.format(items, task.describe)
     return f'{label}: {formatted_items}'
 
 
-def _execute_hsdag(model: DiagnosisModel, hsdag: HSDAG) -> Tuple[str, str]:
+def _execute_hsdag(task: Task, hsdag: HSDAG) -> Tuple[str, str]:
     """Execute HSDAG algorithm and format results.
 
     Args:
-        model: The diagnosis model containing constraint mappings
+        task: The task carrying description provider for result formatting
         hsdag: Configured HSDAG instance to execute
 
     Returns:
         Tuple of (conflicts_message, diagnoses_message) formatted for display
-
-    Note:
-        The function constructs the HSDAG tree and retrieves both
-        conflicts and diagnoses, formatting them using the model's
-        pretty print functionality.
     """
     hsdag.construct()
 
     diagnoses = hsdag.get_diagnoses()
     conflicts = hsdag.get_conflicts()
 
-    conflicts_message = _format_results('Conflict', 'Conflicts', conflicts, model)
-    diagnoses_message = _format_results('Diagnosis', 'Diagnoses', diagnoses, model)
+    conflicts_message = _format_results('Conflict', 'Conflicts', conflicts, task)
+    diagnoses_message = _format_results('Diagnosis', 'Diagnoses', diagnoses, task)
 
     return conflicts_message, diagnoses_message
 
@@ -65,6 +59,7 @@ class PySATAbstractExplanation(Operation):
 
     Attributes:
         solver_name: SAT solver to use (default: 'glucose3')
+        use_incremental: Whether to use incremental SAT solving (default: True)
         max_conflicts: Maximum number of conflicts to find (None means no limit)
         max_diagnoses: Maximum number of diagnoses to find (None means no limit)
         max_depth: Maximum depth of HSDAG tree (None means no limit)
@@ -78,6 +73,7 @@ class PySATAbstractExplanation(Operation):
 
         self.result = False
         self.solver_name: str = 'glucose3'
+        self.use_incremental: bool = True
         self.result_messages: List[str] = []
 
         self.checker: Optional[ConsistencyChecker] = None
@@ -168,28 +164,31 @@ class PySATAbstractExplanation(Operation):
         """
         return self.hsdag.get_conflicts() if self.hsdag else []
 
-    def _create_checker(self, model: DiagnosisModel) -> ConsistencyChecker:
-        """Create consistency checker from model.
+    def _create_checker(self, task: Task) -> ConsistencyChecker:
+        """Create consistency checker from task.
 
         Subclasses can override this to use different solvers or configurations.
 
         Args:
-            model: Diagnosis model
+            task: Task carrying set_kb and assumptions
 
         Returns:
             Configured consistency checker instance
         """
-        return CheckerFactory.create_from_model(model, self.solver_name, self.profiler)
+        return CheckerFactory.create_from_task(
+            task, solver_name=self.solver_name,
+            use_incremental=self.use_incremental,
+            profiler_instance=self.profiler)
 
     @abstractmethod
-    def _create_labeler(self, checker: ConsistencyChecker, model: DiagnosisModel) -> IHSLabelable:
+    def _create_labeler(self, checker: ConsistencyChecker, task: Task) -> IHSLabelable:
         """Create appropriate labeler for this operation type.
 
         This is the key extension point - each operation type creates its own labeler.
 
         Args:
             checker: Consistency checker instance
-            model: Diagnosis model
+            task: Task carrying set_c, set_b, set_tc, etc.
 
         Returns:
             Configured labeler instance (QuickXPlainLabeler, FastDiagLabeler, etc.)
@@ -199,11 +198,8 @@ class PySATAbstractExplanation(Operation):
     def _create_hsdag(self, labeler: IHSLabelable) -> HSDAG:
         """Configure HSDAG with common parameters.
 
-        This method applies the standard configuration parameters to an HSDAG instance.
-        Subclasses can override this if they need custom configuration logic.
-
         Args:
-            hsdag: HSDAG instance to configure
+            labeler: Labeler instance to use
 
         Returns:
             Configured HSDAG instance
@@ -215,7 +211,7 @@ class PySATAbstractExplanation(Operation):
         hsdag.max_depth = self.max_depth if self.max_depth is not None else 0
         return hsdag
 
-    def execute(self, model: VariabilityModel) -> 'PySATAbstractExplanation':
+    def execute(self, task: Task) -> 'PySATAbstractExplanation':
         """Execute the diagnosis operation.
 
         This is the main entry point that orchestrates the diagnosis process:
@@ -225,21 +221,15 @@ class PySATAbstractExplanation(Operation):
         4. Clean up resources
 
         Args:
-            model: Variability model (will be cast to DiagnosisModel)
+            task: Task carrying the KB, assumptions, and description provider
 
         Returns:
             Self for method chaining
-
-        Note:
-            Profiler integration tracks preparation time, execution time,
-            and result counts (num_diagnoses, num_conflicts).
         """
-        model = cast(DiagnosisModel, model)
-
-        self.checker, self.hsdag = self.prepare_hsdag(model)
+        self.checker, self.hsdag = self.prepare_hsdag(task)
 
         try:
-            cs_mess, diag_mess = _execute_hsdag(model, self.hsdag)
+            cs_mess, diag_mess = _execute_hsdag(task, self.hsdag)
             self.set_result_messages(cs_mess, diag_mess)
         finally:
             if self.checker is not None:
@@ -249,42 +239,22 @@ class PySATAbstractExplanation(Operation):
         return self
 
     @abstractmethod
-    def prepare_hsdag(self, model: DiagnosisModel) -> Tuple[ConsistencyChecker, HSDAG]:
+    def prepare_hsdag(self, task: Task) -> Tuple[ConsistencyChecker, HSDAG]:
         """Prepare HSDAG with appropriate labeler for specific operation type.
 
-        This is the main extension point for different operation types
-        (Conflict, Diagnosis, Repair, etc.). Each subclass implements its own
-        labeler strategy while optionally reusing common helper methods.
-
-        Subclasses can either:
-        1. Use helper methods (_create_checker,
-           _create_labeler, _create_hsdag) for standard behavior
-        2. Override this method completely for maximum flexibility
+        This is the main extension point for different operation types.
 
         Args:
-            model: Diagnosis model to use
+            task: Task carrying KB, assumptions, and constraint sets
 
         Returns:
             Tuple of (consistency_checker, configured_hsdag)
-
-        Example:
-            def prepare_hsdag(self, model):
-                set_c = model.get_c()
-                set_b = model.get_b()
-                checker = self._create_checker(model)
-                labeler = self._create_labeler(checker, set_c, set_b)
-                hsdag = HSDAG(labeler)
-                return checker, self._configure_hsdag(hsdag)
         """
         pass
 
     @abstractmethod
     def set_result_messages(self, cs_mess: str, diag_mess: str) -> None:
         """Set result messages in appropriate order for this operation type.
-
-        Different operation types may want to present results in different orders.
-        For example, conflict operations show conflicts first, while diagnosis
-        operations show diagnoses first.
 
         Args:
             cs_mess: Formatted conflicts message

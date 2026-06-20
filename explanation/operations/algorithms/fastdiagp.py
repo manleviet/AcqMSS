@@ -3,19 +3,23 @@
 FastDiagP
 https://github.com/AIG-ist-tugraz/FastDiagP
 
-Deep first search approach
-The assumption of consistency of B U C is taken into account first
+Deep first search approach.
+The assumption of consistency of B U C is taken into account first.
 
-Limit the number of generated consistency checks to maxGCC
-maxNumGenCC = min(numCores - 1, 7)
+Parallelized direct diagnosis: speculative lookahead submits consistency checks
+(CCs) to a shared ConsistencyExecutor; a memoizing cache (inside the executor)
+dedups CCs across the main search and the speculation. FastDiagP no longer owns
+a process pool or a lookup table — it depends only on the ConsistencyExecutor
+abstraction, so the same code runs serially (ConsistencyChecker) or in parallel
+(ProcessExecutor) with identical results.
 """
 
 import logging
-import multiprocessing as mp
+import os
 from typing import List
 
 from . import utils
-from .checker import ConsistencyChecker
+from .executor import MemoizingExecutor
 from .profiler import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split, diff
 
@@ -28,20 +32,21 @@ class FastDiagP:
     In Proceedings of the AAAI Conference on Artificial Intelligence (Vol. 37, No. 5, pp. 6442-6449).
     """
 
-    def __init__(self, checker: ConsistencyChecker, profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, executor, profiler_instance: AbstractProfiler = None) -> None:
         """
         Initialize FastDiagP algorithm.
 
-        :param checker: ConsistencyChecker instance
-        :param profiler_instance: Optional profiler for metrics tracking
+        :param executor: a ConsistencyExecutor — a ConsistencyChecker for serial
+            runs, or a ProcessExecutor for parallel runs. Wrapped in a
+            MemoizingExecutor so speculative lookahead and the main checks share
+            one dedup cache (this replaces the old internal lookup_table).
+        :param profiler_instance: Optional profiler for metrics tracking.
         """
-        self.checker = checker
+        self.executor = (executor if isinstance(executor, MemoizingExecutor)
+                         else MemoizingExecutor(executor, profiler_instance))
         self.profiler = profiler_instance if profiler_instance is not None else get_global_profiler()
         self.maxNumGenCC = 0
-
-        self.lookup_table = {}
         self.counter_readyCC = 0
-        self.pool = None
         self.currentNumGenCC = 0
         self.genhash = ""
 
@@ -60,31 +65,23 @@ class FastDiagP:
         :return: a diagnosis or an empty set
         """
         logging.debug('fastDiag [C=%s, B=%s]', set_c, set_b)
-        # print(f'fastDiag [C={C}, B={B}]')
 
         # if isEmpty(C) or consistent(B U C) return Φ
-        if len(set_c) == 0 or self.checker.is_consistent(set_b + set_c):
+        if len(set_c) == 0 or self.executor.is_consistent(set_b + set_c):
             logging.debug('return Φ')
-            # print('return Φ')
             return []
 
         # return C \ FD(C, B, Φ)
-        numCores = mp.cpu_count()
-
-        self.maxNumGenCC = min(numCores - 1, 4)
+        num_cores = os.cpu_count() or 2
+        self.maxNumGenCC = min(num_cores - 1, 4)
         self.profiler.set_gauge('maxNumGenCC', self.maxNumGenCC)
-        self.pool = mp.Pool(self.maxNumGenCC)
 
         mss = self._fd([], set_c, set_b)
         diag = diff(set_c, mss)
 
-        self.profiler.set_gauge('lookup_table_size', len(self.lookup_table))
-
-        self.pool.close()
-        self.pool.terminate()
+        self.profiler.set_gauge('lookup_table_size', len(self.executor.cache))
 
         logging.debug('return %s', diag)
-        # print(f'return {diag}')
         return diag
 
     @count_calls('fd_calls')
@@ -110,7 +107,6 @@ class FastDiagP:
         logging.debug('>>> FD [Δ=%s, C=%s, B=%s]', delta, set_c, set_b)
 
         # if Δ != Φ and consistent(B U C) return C;
-        # if len(delta) != 0 and self.checker.is_consistent(set_b + set_c):
         if len(delta) != 0 and self.is_consistent_with_lookahead(set_c, set_b, delta):
             logging.debug('<<< return %s', set_c)
             return set_c
@@ -140,7 +136,7 @@ class FastDiagP:
         BwithC = set_b + set_c
 
         self.genhash = hashcode = utils.get_hashcode(BwithC)
-        if not (hashcode in self.lookup_table):
+        if hashcode not in self.executor.cache:
             self.currentNumGenCC = 1  # reset the number of generated consistency checks
 
             self.profiler.increment('lookahead_calls')
@@ -149,21 +145,11 @@ class FastDiagP:
         else:
             self.profiler.increment('lookup_CC_ok')
 
-        return self.lookup_CC(hashcode)
-
-    def lookup_CC(self, hashcode: str) -> (bool, float):
-        result = self.lookup_table.get(hashcode)
-
-        if result.ready:
-            self.profiler.increment('ready')
-            # self.counter_readyCC = self.counter_readyCC + 1
-        else:
-            self.profiler.increment('not_ready')
-        return result.get()
+        # The executor memo dedups: speculation may already have resolved this CC;
+        # otherwise it is computed now. Either way the bool is identical.
+        return self.executor.is_consistent(BwithC)
 
     def lookahead(self, set_c: List, set_b: List, delta: List, level: int) -> None:
-        # logging.debug(">>> lookahead [l={}, Δ={}, C={}, B={}]".format(level, Δ, C, B))
-
         if self.currentNumGenCC < self.maxNumGenCC:
             BwithC = set_b + set_c
 
@@ -173,21 +159,17 @@ class FastDiagP:
                 hashcode = self.genhash
                 self.genhash = ""
 
-            if not (hashcode in self.lookup_table):  # and hashcode not in need_to_checks:
+            if hashcode not in self.executor.cache:
                 self.currentNumGenCC = self.currentNumGenCC + 1
 
-                # create a new consistency checker for each lookahead
-                checker = self.checker.copy()
-
-                future = self.pool.apply_async(checker.is_consistent, args=(BwithC,))
-                self.lookup_table.update({hashcode: future})
-
-                # logging.debug(">>> addCC [l={}, C={}]".format(level, hashcode))
+                # Speculatively submit this CC to the shared executor; the result
+                # lands in the executor's memo cache (dedup across submitters).
+                self.executor.submit(BwithC)
 
             # B U C assumed consistent
             if len(delta) > 1 and len(delta[0]) == 1:
                 hashcode = utils.get_hashcode(BwithC + delta[0])
-                if hashcode in self.lookup_table:  # case 2.1
+                if hashcode in self.executor.cache:  # case 2.1
                     delta2l, delta2r = utils.split(delta[1])
                     delta_prime = delta.copy()
                     del delta_prime[0]
