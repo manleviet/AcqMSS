@@ -43,14 +43,15 @@ Usage Patterns:
            # ... algorithm logic ...
            pass
 
-3. Multi-process algorithms (FastDiagP pattern):
+3. Multi-process algorithms (ProcessExecutor, option B):
    profiler = use_global_profiler(ProfilerPreset.BENCHMARK)
-   profiler.start(mode=ProfilerMode.MULTI_PROCESS)
+   profiler.start()
 
    try:
-       pool = mp.Pool(4)
-       # Main process records metrics, workers do computation
-
+       # ProcessExecutor counts CC calls in the MAIN process at the call boundary,
+       # and each worker's checker carries its own started Profiler so per-call
+       # solver_time is harvested and recorded back on this main profiler.
+       ...
    finally:
        profiler.stop()
 
@@ -65,19 +66,17 @@ Usage Patterns:
    profiler.stop()
    profiler.print_summary()
 
-Multiprocessing Considerations:
--------------------------------
-Two patterns for multiprocessing:
+Multiprocessing Considerations (ProcessExecutor, option B):
+----------------------------------------------------------
+The profiler is always a plain single-process object (regular dict, no Manager):
 
-1. Main process records metrics (FastDiagP pattern):
-   - Main profiler uses MULTI_PROCESS mode
-   - Workers do computation only
-   - Main process records all metrics
-
-2. Workers with independent profilers:
-   - Each worker creates Profiler() instance
-   - Workers return metrics via to_dict()
-   - Main process aggregates metrics
+- Call counts: ProcessExecutor increments counters in the MAIN process at the
+  call/submit boundary, so they survive regardless of where the solve ran.
+- solver_time: each worker's checker holds its own started Profiler, records
+  solver_time per call (same PySAT clock as serial), and the worker returns that
+  value so the main process records it on the main profiler. Summed parallel
+  solver_time is cumulative CPU-effort (> wall-clock); do not conflate it with the
+  @measure_time wall-clock measured at the main process.
 
 See class Profiler docstring for detailed examples and best practices.
 """
@@ -90,9 +89,8 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from enum import Enum
 from functools import wraps
-from multiprocessing import Manager
 from threading import Lock
-from typing import Dict, List, Any, Optional, Callable, Union
+from typing import Dict, List, Any, Optional, Callable
 
 
 class MetricType(Enum):
@@ -100,12 +98,6 @@ class MetricType(Enum):
     COUNTER = "counter"  # Integer counts (incremental)
     TIMER = "timer"  # Time measurements (list of durations)
     GAUGE = "gauge"  # Any value (last write wins)
-
-
-class ProfilerMode(Enum):
-    """Operating modes for the profiler."""
-    SINGLE_THREAD = "single_thread"  # For single-threaded algorithms
-    MULTI_PROCESS = "multi_process"  # For multiprocessing algorithms
 
 
 class ProfilerError(Exception):
@@ -137,7 +129,7 @@ class AbstractProfiler(ABC):
 
     Example Implementation:
         class MyCustomProfiler(AbstractProfiler):
-            def start(self, mode=None):
+            def start(self):
                 # Implementation
                 pass
 
@@ -151,13 +143,8 @@ class AbstractProfiler(ABC):
     # ========== Lifecycle Methods ==========
 
     @abstractmethod
-    def start(self, mode=None) -> None:
-        """
-        Start profiling session.
-
-        Args:
-            mode: Optional profiling mode (implementation-specific)
-        """
+    def start(self) -> None:
+        """Start profiling session."""
         pass
 
     @abstractmethod
@@ -364,7 +351,7 @@ class NullProfiler(AbstractProfiler):
 
         return NullTimer()
 
-    def start(self, mode=None) -> None:
+    def start(self) -> None:
         """No-op start."""
         pass
 
@@ -439,15 +426,15 @@ class Profiler(AbstractProfiler):
 
     Multiprocessing Usage:
 
-        Approach 1: Main Process Records Metrics (FastDiagP Pattern)
-        -------------------------------------------------------------
+        Approach 1: Main Process Records Metrics (ProcessExecutor Pattern)
+        ------------------------------------------------------------------
         The main process coordinates workers and records all metrics.
         Workers perform computation only.
 
         Example:
             # Main process profiler
             main_profiler = use_global_profiler(ProfilerPreset.BENCHMARK)
-            main_profiler.start(mode=ProfilerMode.MULTI_PROCESS)
+            main_profiler.start()
 
             pool = mp.Pool(processes=4)
 
@@ -526,64 +513,37 @@ class Profiler(AbstractProfiler):
     def __init__(self):
         """Initialize a new profiler instance (not a singleton)."""
         self._is_profiling = False
-        self._mode = ProfilerMode.SINGLE_THREAD
-        self._profile: Optional[Union[Dict, Any]] = None
-        self._manager: Optional[Any] = None
+        self._profile: Optional[Dict] = None
         self._metrics_metadata: Dict[str, MetricType] = {}
         self._start_time: Optional[float] = None
         self._lock = Lock()  # Instance-level lock
 
     # ========== Lifecycle Management ==========
 
-    def start(self, mode: ProfilerMode = ProfilerMode.SINGLE_THREAD) -> None:
+    def start(self) -> None:
         """
-        Start profiling with specified mode.
+        Start profiling.
 
-        Args:
-            mode: ProfilerMode.SINGLE_THREAD (default) or ProfilerMode.MULTI_PROCESS
-
-                SINGLE_THREAD: Uses regular dict for metrics. Fast and simple.
-                    - Use for single-threaded algorithms (FastDiag, QuickXPlain, HSDAG)
-                    - Thread-safe due to GIL and explicit locks
-
-                MULTI_PROCESS: Uses Manager.dict() for metrics. Required when
-                    spawning worker processes that need to be picklable.
-                    - Use for algorithms that create multiprocessing.Pool
-                    - Prevents pickle errors when passing objects to workers
-                    - Note: Workers have separate profiler instances and cannot
-                      directly access the main process's profiler. Record metrics
-                      in the main process or use explicit shared Manager.dict.
-                    - Example usage: FastDiagP algorithm
+        Uses a regular dict for metrics (single-process). Multiprocessing is handled
+        by ProcessExecutor's option-B pattern: the main process counts calls at the
+        boundary, and workers carry their own profilers for solver_time — so the main
+        profiler never needs shared (Manager.dict) state.
 
         Raises:
             ProfilerError: If profiler is already running. Call stop() first.
 
         Example:
-            # Single-threaded
             profiler.start()
             # ... run algorithm ...
-            profiler.stop()
-
-            # Multi-process (FastDiagP pattern)
-            profiler.start(mode=ProfilerMode.MULTI_PROCESS)
-            pool = mp.Pool(4)
-            # ... use pool ...
-            pool.close()
             profiler.stop()
         """
         with self._lock:
             if self._is_profiling:
                 raise ProfilerError("Profiler is already running. Call stop() first.")
 
-            self._mode = mode
             self._is_profiling = True
             self._start_time = time.perf_counter()
-
-            if mode == ProfilerMode.MULTI_PROCESS:
-                self._manager = Manager()
-                self._profile = self._manager.dict()
-            else:
-                self._profile = {}
+            self._profile = {}
 
     def stop(self) -> None:
         """Stop profiling and cleanup resources."""
@@ -599,18 +559,6 @@ class Profiler(AbstractProfiler):
                 self._profile['_profiler_total_time'] = total_time
                 self._start_time = None
 
-            # Keep profile data for export, but convert Manager.dict to regular dict BEFORE cleanup
-            if self._profile is not None and hasattr(self._profile, '_getvalue'):
-                self._profile = dict(self._profile)
-
-            # Cleanup multiprocessing resources AFTER converting the dict
-            if self._manager is not None:
-                try:
-                    self._manager.shutdown()
-                except Exception:
-                    pass  # Manager might be already shutdown
-                self._manager = None
-
     def reset(self) -> None:
         """Reset all profiling data."""
         with self._lock:
@@ -623,11 +571,6 @@ class Profiler(AbstractProfiler):
     def is_profiling(self) -> bool:
         """Check if profiler is currently active."""
         return self._is_profiling
-
-    @property
-    def mode(self) -> ProfilerMode:
-        """Get current profiler mode."""
-        return self._mode
 
     # ========== Metric Recording ==========
 
@@ -661,16 +604,7 @@ class Profiler(AbstractProfiler):
         self._register_metric(key, MetricType.TIMER)
 
         with self._lock:
-            if key not in self._profile:
-                self._profile[key] = []
-
-            # Handle both regular dict and Manager.dict
-            current = self._profile[key]
-            if isinstance(current, list):
-                self._profile[key] = current + [duration]
-            else:
-                # Manager.dict doesn't support in-place modification
-                self._profile[key] = list(current) + [duration]
+            self._profile.setdefault(key, []).append(duration)
 
     def set_gauge(self, key: str, value: Any) -> None:
         """
@@ -757,9 +691,6 @@ class Profiler(AbstractProfiler):
             return {}
 
         with self._lock:
-            # Convert Manager.dict to regular dict if needed
-            if hasattr(self._profile, '_getvalue'):
-                return dict(self._profile)
             return dict(self._profile)
 
     def has_metric(self, key: str) -> bool:
@@ -1190,7 +1121,7 @@ def use_global_profiler(preset: ProfilerPreset) -> AbstractProfiler:
 
 
 @contextmanager
-def profiler_session(preset: ProfilerPreset, mode: ProfilerMode = ProfilerMode.SINGLE_THREAD):
+def profiler_session(preset: ProfilerPreset):
     """Context manager for profiler lifecycle: create, reset, start, yield, stop.
 
     Higher-level wrapper around use_global_profiler() that manages the full
@@ -1198,7 +1129,6 @@ def profiler_session(preset: ProfilerPreset, mode: ProfilerMode = ProfilerMode.S
 
     Args:
         preset: ProfilerPreset enum value (DISABLED or BENCHMARK)
-        mode: Profiling mode (SINGLE_THREAD or MULTI_PROCESS)
 
     Yields:
         The configured profiler instance
@@ -1211,7 +1141,7 @@ def profiler_session(preset: ProfilerPreset, mode: ProfilerMode = ProfilerMode.S
     """
     profiler = use_global_profiler(preset)
     profiler.reset()
-    profiler.start(mode=mode)
+    profiler.start()
     try:
         yield profiler
     finally:

@@ -3,7 +3,8 @@ Consistency checkers for CNF formula satisfiability.
 
 Implementations: IncrementalPySATChecker (persistent solver with assumptions),
 NonIncrementalPySATChecker (fresh solver per check), SAT4JChecker (external Java solver).
-All support pickling for multiprocessing and context manager protocol.
+All support the context manager protocol. Parallelism is handled by ProcessExecutor,
+which builds checkers in-worker from the KB — checkers themselves are never pickled.
 
 Use CheckerFactory.create_from_task() or CheckerFactory.create_sat4jchecker() to instantiate.
 """
@@ -102,24 +103,9 @@ class ConsistencyChecker(ABC):
         future.set_result(self.is_consistent(set_c))
         return future
 
-    @abstractmethod
-    def copy(self):
-        """Create a copy for multiprocessing."""
-        pass
-
     def cleanup(self) -> None:
         """Release resources. Override in subclasses with persistent state."""
         pass
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        state['profiler'] = None
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        if self.profiler is None:
-            self.profiler = get_global_profiler()
 
     def __enter__(self):
         return self
@@ -158,26 +144,10 @@ class IncrementalPySATChecker(ConsistencyChecker):
             return None
         return self.solver.get_model()
 
-    def copy(self):
-        return IncrementalPySATChecker(
-            self.set_kb, self.assumptions, self.solver_name, self.profiler
-        )
-
     def cleanup(self) -> None:
         if hasattr(self, 'solver') and self.solver is not None:
             self.solver.delete()
             self.solver = None
-
-    def __getstate__(self):
-        state = super().__getstate__()
-        if 'solver' in state:
-            state['solver'] = None
-        return state
-
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        if hasattr(self, 'solver_name') and hasattr(self, 'set_kb'):
-            self.solver = Solver(self.solver_name, bootstrap_with=self.set_kb, use_timer=True)
 
 
 class NonIncrementalPySATChecker(ConsistencyChecker):
@@ -208,12 +178,6 @@ class NonIncrementalPySATChecker(ConsistencyChecker):
     def get_model(self) -> Optional[List[int]]:
         """Return cached model from last is_consistent() call."""
         return self._cached_model
-
-    def copy(self):
-        return NonIncrementalPySATChecker(
-            list(self.set_kb), list(self.assumptions),
-            self.solver_name, self.profiler
-        )
 
 
 class SAT4JChecker(ConsistencyChecker):
@@ -276,12 +240,6 @@ class SAT4JChecker(ConsistencyChecker):
     def get_model(self) -> Optional[List[int]]:
         """Return cached model from last is_consistent() call."""
         return self._cached_model
-
-    def copy(self):
-        return SAT4JChecker(
-            list(self.set_kb), list(self.assumptions),
-            self.jar_path, self.profiler, self.timeout
-        )
 
 
 class CheckerFactory:

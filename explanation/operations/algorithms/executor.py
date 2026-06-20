@@ -17,10 +17,20 @@ Pieces:
   cache HIT is NOT a consistency check (no counter increment); only a MISS
   delegates to the inner executor, which counts the real solve at the boundary.
 
-Profiler (option B): workers use ``NullProfiler``; ``ProcessExecutor`` increments
-the call counters in the MAIN process at the call/submit boundary, so counts are
-never lost to worker processes. A serial ``ConsistencyChecker`` and a
-``ProcessExecutor`` therefore report identical counts for identical work.
+Profiler (option B): ``ProcessExecutor`` increments the call counters in the MAIN
+process at the call/submit boundary, so counts are never lost to worker processes.
+A serial ``ConsistencyChecker`` and a ``ProcessExecutor`` therefore report identical
+counts for identical work.
+
+``solver_time`` (return-and-aggregate): each worker's checker holds a real, started
+``Profiler``, so the serial per-call ``record_time("solver_time", solver.time())`` (the
+SAME PySAT clock as the serial path) fires inside the worker. The worker harvests that
+just-recorded value and returns it with the result; ``ProcessExecutor`` records it on the
+MAIN profiler next to the ``increment(...)``. Caveat: the summed parallel ``solver_time``
+is cumulative CPU-effort and is ``>`` wall-clock — wall-clock comes from ``@measure_time``
+at the main process; do not conflate the two. (Each worker keeps one growing
+``solver_time`` list for its lifetime; bounded because a ``ProcessExecutor`` is short-lived
+— one per diagnosis.)
 """
 import multiprocessing as mp
 import threading
@@ -32,7 +42,9 @@ from .checker import (
     IncrementalPySATChecker,
     NonIncrementalPySATChecker,
 )
-from .profiler import get_global_profiler, AbstractProfiler, NullProfiler
+from .profiler import (
+    get_global_profiler, AbstractProfiler, create_profiler, ProfilerPreset,
+)
 from .utils import get_hashcode
 
 
@@ -44,22 +56,36 @@ def _init_worker(set_kb: List[List[int]], assumptions: List[int],
                  solver_name: str, use_incremental: bool) -> None:
     """Pool initializer: build the worker's checker ONCE from the KB.
 
-    Runs in each worker process. Uses NullProfiler (option B): per-solve metrics
-    in the worker are intentionally dropped; the main process counts at the
-    call boundary so nothing is lost.
+    Runs in each worker process. The checker holds a real, STARTED ``Profiler`` so
+    its serial ``record_time("solver_time", solver.time())`` fires in the worker
+    (same PySAT clock as the serial path); the worker harvests that value and
+    returns it, and the main process counts calls at the boundary (option B).
     """
     global _worker_checker
     checker_cls = IncrementalPySATChecker if use_incremental else NonIncrementalPySATChecker
-    _worker_checker = checker_cls(set_kb, assumptions, solver_name, NullProfiler())
+    profiler = create_profiler(ProfilerPreset.BENCHMARK)
+    profiler.start()
+    _worker_checker = checker_cls(set_kb, assumptions, solver_name, profiler)
 
 
-def _worker_is_consistent(set_c: List[int]) -> bool:
-    return _worker_checker.is_consistent(set_c)
+def _worker_solver_time() -> float:
+    """Last ``solver_time`` recorded by this worker's checker (this call's value).
+
+    Calls are sequential within a worker process, so the final list entry is the
+    duration of the solve that just completed.
+    """
+    return _worker_checker.profiler.get_metric("solver_time", [0.0])[-1]
 
 
-def _worker_solve(set_c: List[int]) -> Tuple[bool, Optional[List[int]]]:
+def _worker_is_consistent(set_c: List[int]) -> Tuple[bool, float]:
+    result = _worker_checker.is_consistent(set_c)
+    return result, _worker_solver_time()
+
+
+def _worker_solve(set_c: List[int]) -> Tuple[bool, Optional[List[int]], float]:
     sat = _worker_checker.is_consistent(set_c)
-    return sat, (_worker_checker.get_model() if sat else None)
+    model = _worker_checker.get_model() if sat else None
+    return sat, model, _worker_solver_time()
 
 
 class ConsistencyCache:
@@ -115,7 +141,9 @@ class ProcessExecutor:
 
     def is_consistent(self, set_c: List[int]) -> bool:
         self.profiler.increment("is_consistent_calls")
-        return self._pool.apply(_worker_is_consistent, (set_c,))
+        result, dt = self._pool.apply(_worker_is_consistent, (set_c,))
+        self.profiler.record_time("solver_time", dt)
+        return result
 
     def is_consistent_test_cases(self, set_c: List[int], set_tc: List[int],
                                  stop_at_first_violation: bool) -> List[int]:
@@ -123,7 +151,9 @@ class ProcessExecutor:
         set_tcp: List[int] = []
         for tc in set_tc:
             self.profiler.increment("is_consistent_calls")
-            if not self._pool.apply(_worker_is_consistent, (set_c + [tc],)):
+            result, dt = self._pool.apply(_worker_is_consistent, (set_c + [tc],))
+            self.profiler.record_time("solver_time", dt)
+            if not result:
                 set_tcp.append(tc)
             if stop_at_first_violation and set_tcp:
                 break
@@ -131,15 +161,25 @@ class ProcessExecutor:
 
     def solve(self, set_c: List[int]) -> Tuple[bool, Optional[List[int]]]:
         self.profiler.increment("is_consistent_calls")
-        return self._pool.apply(_worker_solve, (set_c,))
+        sat, model, dt = self._pool.apply(_worker_solve, (set_c,))
+        self.profiler.record_time("solver_time", dt)
+        return sat, model
 
     def submit(self, set_c: List[int]) -> Future:
         """Dispatch an async CC; returns a concurrent.futures.Future[bool]."""
         self.profiler.increment("is_consistent_calls")
         future: Future = Future()
+
+        def _on_done(res: Tuple[bool, float]) -> None:
+            # Runs on the pool's result-handler thread in the MAIN process, so it
+            # reaches the main profiler (record_time is lock-guarded → thread-safe).
+            sat, dt = res
+            self.profiler.record_time("solver_time", dt)
+            future.set_result(sat)
+
         self._pool.apply_async(
             _worker_is_consistent, (set_c,),
-            callback=future.set_result,
+            callback=_on_done,
             error_callback=future.set_exception,
         )
         return future

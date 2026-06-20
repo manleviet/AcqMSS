@@ -99,12 +99,42 @@ class TestProcessExecutorParity(unittest.TestCase):
         self.assertEqual(baseline, diag_serial)
         self.assertEqual(baseline, diag_parallel)
 
+    def test_process_executor_records_solver_time(self):
+        """The parallel path records solver_time (not just the call count).
+
+        Workers run their checker under a real started Profiler (option B), so the
+        serial per-call solver.time() recording fires in the worker and is harvested
+        back to the main profiler — across is_consistent / solve / test_cases.
+        """
+        from explanation.operations.algorithms.profiler import (
+            create_profiler, ProfilerPreset,
+        )
+        _, task = _inconsistent_task()
+
+        prof = create_profiler(ProfilerPreset.BENCHMARK); prof.start()
+        executor = ProcessExecutor(task.set_kb, task.assumptions,
+                                   n_workers=2, profiler_instance=prof)
+        try:
+            probe = list(task.set_b) + list(task.set_c)
+            executor.is_consistent(probe)
+            executor.solve(probe)
+            executor.is_consistent_test_cases(list(task.set_b), list(task.set_c),
+                                              stop_at_first_violation=False)
+        finally:
+            executor.cleanup()
+
+        self.assertGreater(prof.get_metric('is_consistent_calls', 0), 0)
+        solver_time = prof.get_metric('solver_time', [])
+        self.assertTrue(solver_time, "parallel path recorded no solver_time")
+        self.assertTrue(all(dt >= 0 for dt in solver_time))
+        self.assertTrue(any(dt > 0 for dt in solver_time))
+
     def test_consistency_check_count_parity(self):
         """Serial and parallel executors count is_consistent_calls identically.
 
         Guards the option-B boundary counting + in-flight dedup: a speculative
         submit and its later blocking check share ONE solve, so parallel does not
-        double-count relative to serial.
+        double-count relative to serial. Both paths must also record solver_time.
         """
         from explanation.operations.algorithms.profiler import (
             create_profiler, ProfilerPreset,
@@ -129,6 +159,13 @@ class TestProcessExecutorParity(unittest.TestCase):
 
         self.assertGreater(n_serial, 0)
         self.assertEqual(n_serial, n_parallel)
+
+        # Both paths record solver_time (presence + positivity, not equality).
+        for label, prof in (("serial", ps), ("parallel", pp)):
+            solver_time = prof.get_metric('solver_time', [])
+            self.assertTrue(solver_time, f"{label} recorded no solver_time")
+            self.assertTrue(any(dt > 0 for dt in solver_time),
+                            f"{label} solver_time has no positive value")
 
 
 class TestMemoizingExecutor(unittest.TestCase):

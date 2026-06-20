@@ -31,7 +31,7 @@ from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.fastdiag import FastDiag
 from explanation.operations.algorithms.fastdiagp import FastDiagP
 from explanation.operations.algorithms.kbdiag import KBDiag
-from explanation.operations.algorithms.profiler import ProfilerMode, ProfilerPreset, profiler_session
+from explanation.operations.algorithms.profiler import ProfilerPreset, profiler_session
 from explanation.operations.algorithms.quickxplain import QuickXPlain
 from explanation.operations.algorithms.quickxplain_with_testcases import QuickXPlainWithTestCases
 from explanation.operations.pysat_abstract_explanation import _format_results
@@ -268,7 +268,7 @@ class DiagnosisTest(unittest.TestCase):
         """Test FastDiagP (parallel) to find one diagnosis."""
         print_test_header(name, is_incremental, solver_name, use_sat4j, enable_profiling)
 
-        with profiler_session(_profiler_preset(enable_profiling), ProfilerMode.MULTI_PROCESS) as profiler:
+        with profiler_session(_profiler_preset(enable_profiling)) as profiler:
             print_profiler_status(profiler)
 
             model = DiagnosisModelBuilder.from_fide(Resources.FM_INCONSISTENT).build()
