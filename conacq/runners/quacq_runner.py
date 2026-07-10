@@ -11,7 +11,7 @@ Builds model once in __init__(), re-prepares per run() for fresh task.
 import logging
 import random
 import tracemalloc
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import List, Dict, Optional, Tuple
 
 from conacq.example_generators import QueryProvider
@@ -239,8 +239,11 @@ class QuAcqRunner(BaseRunner):
                     self.model.prepare(self.oracle)
                     task = self.model.task
 
+                    # Task is frozen: shuffle a copy and rebind, never mutate in place.
                     if shuffle_seed is not None:
-                        random.Random(shuffle_seed).shuffle(task.set_c)
+                        shuffled_set_c = list(task.set_c)
+                        random.Random(shuffle_seed).shuffle(shuffled_set_c)
+                        task = replace(task, set_c=shuffled_set_c)
                         logging.debug('Shuffled bias (set_c) with seed=%d', shuffle_seed)
 
                     # Create checker via factory

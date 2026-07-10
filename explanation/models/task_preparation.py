@@ -8,14 +8,19 @@ Strategy hierarchy:
 - TestCaseTaskPreparationStrategy: For operations with test cases (KBDiag, WipeOutR_T)
   - TestCaseTaskPreparation (single impl, mode via constructor)
 
-Task hierarchy:
-- DiagnosisTask (base, with assumptions)
-  - TestCaseTask (adds test case fields)
+Task hierarchy (immutable, pure data — no methods/codec/describe):
+- Task (ABC): intrinsic solve fields only
+  - DiagnosisTask: marker (no extra fields)
+  - TestCaseTask: adds test-case fields
+
+Tasks are ``@dataclass(frozen=True)``: preparation builds every field into
+local variables and constructs the frozen task once at the end (build-then-freeze).
+Derived quantities live in free functions (e.g. ``cf(task)``), never on the task.
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, List, Dict, Optional, TYPE_CHECKING
+from typing import Any, List, Dict, Optional, Tuple, TYPE_CHECKING
 
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models.feature_model import Feature
@@ -34,9 +39,9 @@ _ASSUMPTION_SINGLE_STRIDE = 1
 
 # === INPUT DATA CLASS ===
 
-@dataclass
+@dataclass(frozen=True)
 class TaskInput:
-    """Input parameters for task preparation.
+    """Immutable input parameters for task preparation.
 
     Single source of truth for user inputs passed through:
     DiagnosisModelBuilder → DiagnosisModel → TaskPreparation
@@ -51,6 +56,8 @@ class TaskInput:
     6. WipeOutR_T: positive_test_cases + for_redundancy=True
     7. WipeOutR_FM: for_redundancy=True
     8. CXPlain (future): requirement + configuration + sub_configuration
+
+    Construct directly or via the use-case factory classmethods below.
     """
     # Diagnosis inputs
     configuration: Optional[Configuration] = None
@@ -68,9 +75,57 @@ class TaskInput:
     requirement: Optional[Configuration] = None
     sub_configuration: Optional[Configuration] = None
 
+    def __post_init__(self):
+        # Diagnosis-config inputs and test-case inputs are mutually exclusive:
+        # a task is either configuration/error diagnosis OR a test-case task.
+        if self.positive_test_cases is not None and (
+                self.configuration is not None or self.test_case is not None):
+            raise ValueError(
+                "TaskInput: configuration/test_case cannot be combined with "
+                "positive_test_cases (diagnosis-config and test-case inputs are "
+                "mutually exclusive).")
+
     def is_testcase_task(self) -> bool:
         """Check if this input is for a test case task."""
         return self.positive_test_cases is not None
+
+    # --- Use-case factories (map 1:1 to the use cases above) ---
+
+    @classmethod
+    def fm_diagnosis(cls) -> 'TaskInput':
+        """Use case 3: feature-model diagnosis (no inputs)."""
+        return cls()
+
+    @classmethod
+    def config(cls, configuration: Configuration) -> 'TaskInput':
+        """Use case 1: configuration diagnosis."""
+        return cls(configuration=configuration)
+
+    @classmethod
+    def config_with_cf(cls, configuration: Configuration) -> 'TaskInput':
+        """Use case 2: configuration + feature-model diagnosis."""
+        return cls(configuration=configuration, with_cf_in_c=True)
+
+    @classmethod
+    def error(cls, test_case: Configuration) -> 'TaskInput':
+        """Use case 4: error diagnosis (debugging)."""
+        return cls(test_case=test_case)
+
+    @classmethod
+    def testcases(cls, positive: TestSuite,
+                  negative: Optional[TestSuite] = None) -> 'TaskInput':
+        """Use case 5: KBDiag with positive (+ optional negative) test cases."""
+        return cls(positive_test_cases=positive, negative_test_cases=negative)
+
+    @classmethod
+    def redundancy_fm(cls) -> 'TaskInput':
+        """Use case 7: WipeOutR_FM (FM-constraint redundancy)."""
+        return cls(for_redundancy=True)
+
+    @classmethod
+    def redundancy_t(cls, positive: TestSuite) -> 'TaskInput':
+        """Use case 6: WipeOutR_T (test-case redundancy)."""
+        return cls(positive_test_cases=positive, for_redundancy=True)
 
 
 # === UTILITIES ===
@@ -82,48 +137,56 @@ def convert_keys_to_features(configuration: Configuration) -> Configuration:
     return Configuration(new_elements)
 
 
-# === RESULT DATA CLASSES (Core data only) ===
+# === RESULT DATA CLASSES (Core data only, immutable) ===
 
-@dataclass
-class DiagnosisTask:
-    """Base class for a diagnosis task.
+@dataclass(frozen=True)
+class Task(ABC):
+    """Immutable unit-of-work: intrinsic solve fields only.
 
-    Contains core data needed by algorithms, including assumptions
-    for both incremental and non-incremental modes.
+    Pure data — no methods, no codec, no describe. Derived quantities are free
+    functions (e.g. ``cf(task)``); formatting context lives outside the task.
+    Frozen so a task built from one KB can be executed concurrently without
+    aliasing hazards.
     """
     # set of constraints which could be faulty
-    set_c: List = field(default_factory=list)
+    set_c: List[int] = field(default_factory=list)
     # background knowledge (i.e., the knowledge that is known to be true)
-    set_b: List = field(default_factory=list)
+    set_b: List[int] = field(default_factory=list)
     # set of all CNF with added assumptions
-    set_kb: List = field(default_factory=list)
+    set_kb: List[List[int]] = field(default_factory=list)
     # mapping: original assumption ID -> negated assumption ID
     # Used by WipeOutR_FM (constraints) and WipeOutR_T (test cases)
-    negation_map: Dict = field(default_factory=dict)
+    negation_map: Dict[int, int] = field(default_factory=dict)
     # list of assumptions for solver
-    assumptions: List = field(default_factory=list)
-
-    def get_cf(self) -> List:
-        """Get all constraints (C ∪ B)."""
-        return self.set_b + self.set_c
+    assumptions: List[int] = field(default_factory=list)
 
 
-@dataclass
-class TestCaseTask(DiagnosisTask):
-    """Base class for tasks with test cases.
+@dataclass(frozen=True)
+class DiagnosisTask(Task):
+    """Marker for diagnosis-shaped tasks (no test-case fields)."""
+    pass
 
-    Contains common fields for both incremental and non-incremental modes.
+
+@dataclass(frozen=True)
+class TestCaseTask(Task):
+    """Task with test cases.
+
     Used by KBDiag algorithm with positive/negative test cases,
-    and WipeOutR_T for test case redundancy detection.
+    WipeOutR_T for test case redundancy detection, and ConGen.
     """
     # positive test cases (original form)
-    set_tc: List = field(default_factory=list)
+    set_tc: List[int] = field(default_factory=list)
     # negative test cases (original form)
-    set_tv: List = field(default_factory=list)
+    set_tv: List[int] = field(default_factory=list)
     # negated negative test cases (for KBDiag: B = B ∪ neg_Tν)
-    set_neg_tv: List = field(default_factory=list)
+    set_neg_tv: List[int] = field(default_factory=list)
     # negated positive test cases (for WipeOutR)
-    set_neg_tc: List = field(default_factory=list)
+    set_neg_tc: List[int] = field(default_factory=list)
+
+
+def cf(task: Task) -> List[int]:
+    """All constraints (C ∪ B) for a task. Free function (was ``Task.get_cf``)."""
+    return task.set_b + task.set_c
 
 
 # === DESCRIPTION PROVIDERS (For formatting only) ===
@@ -190,7 +253,7 @@ class DescriptionProvider:
 @dataclass
 class PreparationOutput:
     """Container for preparation result and description provider."""
-    task: DiagnosisTask
+    task: Task
     description_provider: DescriptionProvider
 
 
@@ -245,20 +308,20 @@ class TestCaseTaskPreparationStrategy(ABC):
 
 
 # === SHARED KB PREPARATION FUNCTIONS ===
+# These mutate the caller's local accumulation lists (build-then-freeze); the
+# frozen task is constructed once, at the end of each strategy's prepare().
 
-def prepare_kb(result: DiagnosisTask,
+def prepare_kb(set_kb: List[List[int]],
+               assumptions: List[int],
+               negation_map: Dict[int, int],
                provider: DescriptionProvider,
                constraint_map: Dict[str, List[List]],
                id_assumption: int,
                negated_constraint_map: Optional[Dict[str, List[List]]]) -> int:
-    """Prepare KB with assumptions and optionally negated forms.
+    """Populate KB with assumptions and optionally negated forms.
 
-    Args:
-        result: Task to populate with KB data
-        provider: Description provider for formatting
-        constraint_map: Constraint name to clauses mapping
-        id_assumption: Starting assumption ID
-        negated_constraint_map: Optional negated constraints for redundancy detection
+    Appends guarded clauses to ``set_kb``, assumption IDs to ``assumptions`` and
+    original→negated pairs to ``negation_map``.
 
     Returns:
         Next available assumption ID
@@ -270,9 +333,9 @@ def prepare_kb(result: DiagnosisTask,
             # assumption => clause (i.e., -assumption v clause)
             new_clause = clause.copy()
             new_clause.append(-original_id)
-            result.set_kb.append(new_clause)
+            set_kb.append(new_clause)
 
-        result.assumptions.append(original_id)
+        assumptions.append(original_id)
         provider.add_constraint_description(original_id, key)
         id_assumption += 1
 
@@ -284,29 +347,25 @@ def prepare_kb(result: DiagnosisTask,
                 for neg_clause in negated_constraint_map[negated_key]:
                     new_neg_clause = neg_clause.copy()
                     new_neg_clause.append(-negated_id)
-                    result.set_kb.append(new_neg_clause)
+                    set_kb.append(new_neg_clause)
 
-                result.assumptions.append(negated_id)
-                result.negation_map[original_id] = negated_id
+                assumptions.append(negated_id)
+                negation_map[original_id] = negated_id
                 provider.add_constraint_description(negated_id, negated_key)
                 id_assumption += 1
 
     return id_assumption
 
 
-def prepare_configuration(result: DiagnosisTask,
+def prepare_configuration(set_kb: List[List[int]],
+                          assumptions: List[int],
                           provider: DescriptionProvider,
                           variables: Dict[str, int],
                           configuration: Configuration,
                           id_assumption: int) -> int:
-    """Prepare configuration with assumptions.
+    """Populate configuration assumptions.
 
-    Args:
-        result: Task to populate
-        provider: Description provider
-        variables: Variable name to ID mapping
-        configuration: Configuration to prepare
-        id_assumption: Starting assumption ID
+    Appends guarded unit clauses to ``set_kb`` and assumption IDs to ``assumptions``.
 
     Returns:
         Next available assumption ID
@@ -321,8 +380,8 @@ def prepare_configuration(result: DiagnosisTask,
         var = variables[feat.name] if value else -1 * variables[feat.name]
         clause = [var, -1 * id_assumption]
 
-        result.assumptions.append(id_assumption)
-        result.set_kb.append(clause)
+        assumptions.append(id_assumption)
+        set_kb.append(clause)
         provider.add_configuration_description(id_assumption, desc)
 
         id_assumption += 1
@@ -356,9 +415,7 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         return self._mode_name
 
     def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
-        result = DiagnosisTask()
         provider = DescriptionProvider()
-
         task_input = model.task_input
 
         # Determine if negated forms should be used
@@ -367,72 +424,96 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         # Use next_available_id to avoid conflicts with Tseitin variables
         id_assumption = model.next_available_id
 
+        # Local accumulation (build-then-freeze)
+        set_kb: List[List[int]] = []
+        assumptions: List[int] = []
+        negation_map: Dict[int, int] = {}
+
         # Prepare KB with assumptions and optionally negated forms
         id_assumption = prepare_kb(
-            result, provider, model.constraint_map, id_assumption, negated_constraint_map)
+            set_kb, assumptions, negation_map, provider,
+            model.constraint_map, id_assumption, negated_constraint_map)
 
-        start_id_config = len(result.assumptions)
+        start_id_config = len(assumptions)
         if task_input.configuration is not None:
             id_assumption = prepare_configuration(
-                result, provider, model.variables, task_input.configuration, id_assumption)
+                set_kb, assumptions, provider, model.variables,
+                task_input.configuration, id_assumption)
 
-        start_id_test_case = len(result.assumptions)
+        start_id_test_case = len(assumptions)
         if task_input.test_case is not None:
             prepare_configuration(
-                result, provider, model.variables, task_input.test_case, id_assumption)
+                set_kb, assumptions, provider, model.variables,
+                task_input.test_case, id_assumption)
 
         # Assign set_c and set_b
         has_negated_forms = negated_constraint_map is not None
-        self._assign_sets(result, task_input, start_id_config, start_id_test_case, has_negated_forms)
+        set_b, set_c = self._assign_sets(
+            assumptions, task_input, start_id_config, start_id_test_case, has_negated_forms)
 
-        return PreparationOutput(result, provider)
+        task = DiagnosisTask(
+            set_c=set_c, set_b=set_b, set_kb=set_kb,
+            negation_map=negation_map, assumptions=assumptions)
+        return PreparationOutput(task, provider)
 
-    def _assign_sets(self, result: DiagnosisTask, task_input: TaskInput,
+    def _assign_sets(self, assumptions: List[int], task_input: TaskInput,
                      start_id_config: int, start_id_test: int,
-                     has_negated_forms: bool = True) -> None:
-        """Assign set_c and set_b based on use case."""
+                     has_negated_forms: bool = True) -> Tuple[List[int], List[int]]:
+        """Compute (set_b, set_c) from assumptions based on use case."""
         # With negation: [root, neg_root, c1, neg_c1, ...] -> step=2
         # Without negation: [root, c1, c2, ...] -> step=1
         step = _ASSUMPTION_PAIR_STRIDE if has_negated_forms else _ASSUMPTION_SINGLE_STRIDE
 
+        set_b: List[int] = []
+        set_c: List[int] = []
+
         if task_input.configuration is not None:
             if not task_input.with_cf_in_c:
                 # C = configuration, B = FM + root
-                result.set_b = [result.assumptions[i] for i in range(0, start_id_config, step)]
-                result.set_c = result.assumptions[start_id_config:]
+                set_b = [assumptions[i] for i in range(0, start_id_config, step)]
+                set_c = list(assumptions[start_id_config:])
             else:
                 # C = configuration + FM, B = root only
-                result.set_b = [result.assumptions[0]]
-                result.set_c = [result.assumptions[i] for i in range(step, start_id_config, step)] + \
-                               result.assumptions[start_id_config:]
+                set_b = [assumptions[0]]
+                set_c = [assumptions[i] for i in range(step, start_id_config, step)] + \
+                    list(assumptions[start_id_config:])
         else:
             if task_input.test_case is not None:
                 # C = FM constraints, B = root + test case
-                result.set_b = [result.assumptions[0]] + result.assumptions[start_id_test:]
-                result.set_c = [result.assumptions[i] for i in range(step, start_id_config, step)]
+                set_b = [assumptions[0]] + list(assumptions[start_id_test:])
+                set_c = [assumptions[i] for i in range(step, start_id_config, step)]
             else:
                 if has_negated_forms:
                     # Redundancy detection: C = CF (PySATModel, no root), B = {}
-                    result.set_c = result.assumptions[step:len(result.assumptions):step]
+                    set_c = list(assumptions[step:len(assumptions):step])
                 else:
                     # C = FM constraints, B = root only
-                    result.set_b = [result.assumptions[0]]
-                    result.set_c = [result.assumptions[i] for i in range(step, len(result.assumptions), step)]
+                    set_b = [assumptions[0]]
+                    set_c = [assumptions[i] for i in range(step, len(assumptions), step)]
+
+        return set_b, set_c
 
 
 # === TEST CASE STRATEGY ===
 
-def prepare_testsuite_with_negation(result: TestCaseTask,
+def prepare_testsuite_with_negation(set_kb: List[List[int]],
+                                    assumptions: List[int],
+                                    negation_map: Dict[int, int],
                                     provider: DescriptionProvider,
                                     variables: Dict[str, int],
                                     testsuite: TestSuite,
-                                    id_assumption: int,
-                                    is_negative: bool) -> int:
-    """Prepare test cases with assumptions and their negated forms.
+                                    id_assumption: int) -> Tuple[int, List[int]]:
+    """Populate test cases with assumptions and their negated forms.
 
-    Each test case gets two assumption IDs: original and negated.
-    The negated form is a single clause with all literals negated.
+    Each test case gets two assumption IDs: original and negated. The negated
+    form is a single clause with all literals negated. Appends to ``set_kb``,
+    ``assumptions`` and ``negation_map``; returns the negated assumption IDs
+    (in test-case order) so the caller can route them to set_neg_tv/set_neg_tc.
+
+    Returns:
+        (next available assumption ID, negated assumption IDs)
     """
+    negated_ids: List[int] = []
     for testcase in testsuite.testcases:
         # --- Original form ---
         original_id = id_assumption
@@ -446,9 +527,9 @@ def prepare_testsuite_with_negation(result: TestCaseTask,
             desc_parts.append(f'{assignment.feature}={"true" if assignment.value else "false"}')
             var = variables[assignment.feature] if assignment.value else -variables[assignment.feature]
             literals.append(var)
-            result.set_kb.append([var, -original_id])
+            set_kb.append([var, -original_id])
 
-        result.assumptions.append(original_id)
+        assumptions.append(original_id)
         desc = ' & '.join(desc_parts)
         provider.add_test_case_description(original_id, desc)
         id_assumption += 1
@@ -457,20 +538,16 @@ def prepare_testsuite_with_negation(result: TestCaseTask,
         negated_id = id_assumption
         negated_clause = [-lit for lit in literals]
         negated_clause.append(-negated_id)
-        result.set_kb.append(negated_clause)
+        set_kb.append(negated_clause)
 
-        result.assumptions.append(negated_id)
+        assumptions.append(negated_id)
         provider.add_test_case_description(negated_id, f"NOT({' & '.join(desc_parts)})")
+        negated_ids.append(negated_id)
 
-        if is_negative:
-            result.set_neg_tv.append(negated_id)
-        else:
-            result.set_neg_tc.append(negated_id)
-
-        result.negation_map[original_id] = negated_id
+        negation_map[original_id] = negated_id
         id_assumption += 1
 
-    return id_assumption
+    return id_assumption, negated_ids
 
 
 class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
@@ -495,50 +572,68 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
         return self._mode_name
 
     def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
-        result = TestCaseTask()
         provider = DescriptionProvider()
-
         task_input = model.task_input
 
         # Start assumption IDs after Tseitin variables
         id_assumption = model.next_available_id
 
+        # Local accumulation (build-then-freeze)
+        set_kb: List[List[int]] = []
+        assumptions: List[int] = []
+        negation_map: Dict[int, int] = {}
+        set_neg_tv: List[int] = []
+        set_neg_tc: List[int] = []
+
         # Prepare KB (no negated forms needed for TestCaseTask)
         id_assumption = prepare_kb(
-            result, provider, model.constraint_map, id_assumption, negated_constraint_map=None)
+            set_kb, assumptions, negation_map, provider,
+            model.constraint_map, id_assumption, negated_constraint_map=None)
 
         # Prepare positive test cases with negated forms
-        start_id_tc = len(result.assumptions)
-        id_assumption = prepare_testsuite_with_negation(
-            result, provider, model.variables, task_input.positive_test_cases, id_assumption, is_negative=False)
+        start_id_tc = len(assumptions)
+        id_assumption, pos_negated_ids = prepare_testsuite_with_negation(
+            set_kb, assumptions, negation_map, provider, model.variables,
+            task_input.positive_test_cases, id_assumption)
+        set_neg_tc.extend(pos_negated_ids)
 
         # Prepare negative test cases with negated forms if provided
-        start_id_tv = len(result.assumptions)
+        start_id_tv = len(assumptions)
         if task_input.negative_test_cases is not None:
-            prepare_testsuite_with_negation(
-                result, provider, model.variables, task_input.negative_test_cases, id_assumption, is_negative=True)
+            id_assumption, neg_negated_ids = prepare_testsuite_with_negation(
+                set_kb, assumptions, negation_map, provider, model.variables,
+                task_input.negative_test_cases, id_assumption)
+            set_neg_tv.extend(neg_negated_ids)
 
-        self._assign_sets(result, start_id_tc, start_id_tv, task_input.negative_test_cases is not None)
+        set_b, set_c, set_tc, set_tv = self._assign_sets(
+            assumptions, start_id_tc, start_id_tv, task_input.negative_test_cases is not None)
 
-        return PreparationOutput(result, provider)
+        task = TestCaseTask(
+            set_c=set_c, set_b=set_b, set_kb=set_kb,
+            negation_map=negation_map, assumptions=assumptions,
+            set_tc=set_tc, set_tv=set_tv,
+            set_neg_tv=set_neg_tv, set_neg_tc=set_neg_tc)
+        return PreparationOutput(task, provider)
 
-    def _assign_sets(self, result: TestCaseTask,
+    def _assign_sets(self, assumptions: List[int],
                      start_id_tc: int, start_id_tv: int,
-                     has_negative_test_cases: bool) -> None:
-        """Assign sets from assumptions.
+                     has_negative_test_cases: bool
+                     ) -> Tuple[List[int], List[int], List[int], List[int]]:
+        """Compute (set_b, set_c, set_tc, set_tv) from assumptions.
 
         Each test case has two assumptions (original + negated),
         so extract only the original assumptions for set_tc and set_tv.
         """
-        result.set_b = [result.assumptions[0]]
-        result.set_c = result.assumptions[1:start_id_tc]
+        set_b = [assumptions[0]]
+        set_c = list(assumptions[1:start_id_tc])
 
-        tc_tv_assumptions = result.assumptions[start_id_tc:]
+        tc_tv_assumptions = assumptions[start_id_tc:]
         original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), _ASSUMPTION_PAIR_STRIDE)]
 
         num_tc_original = (start_id_tv - start_id_tc) // _ASSUMPTION_PAIR_STRIDE
-        result.set_tc = original_tc_tv[:num_tc_original]
-        result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
+        set_tc = original_tc_tv[:num_tc_original]
+        set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
+        return set_b, set_c, set_tc, set_tv
 
 
 # === FORMATTER ===

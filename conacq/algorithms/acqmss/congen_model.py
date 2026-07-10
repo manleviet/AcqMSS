@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask
+from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask, cf
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
 
@@ -107,7 +107,7 @@ class ConGenModel:
         Returns:
             List of all constraint IDs (set_c + set_b).
         """
-        return self._require_task().get_cf()
+        return cf(self._require_task())
 
     def get_kb(self) -> List[List]:
         """Get the full knowledge base with assumptions."""

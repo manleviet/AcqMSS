@@ -9,7 +9,7 @@ Also contains QuAcqTaskPreparation (co-located: creation logic next to data).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from explanation.models.task_preparation import (
     DescriptionProvider,
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from .quacq_model import QuAcqModel
 
 
-@dataclass
+@dataclass(frozen=True)
 class QuAcqTask(DiagnosisTask):
     """Immutable task for QuAcq constraint acquisition.
 
@@ -57,6 +57,8 @@ class QuAcqTaskPreparation:
                 oracle: FeatureModelOracle) -> PreparationOutput:
         """Prepare QuAcqTask from model and oracle.
 
+        Build-then-freeze: accumulate into locals, construct frozen QuAcqTask once.
+
         Args:
             model: QuAcqModel with bias constraint_map
             oracle: FeatureModelOracle for BG data and feature IDs
@@ -64,40 +66,50 @@ class QuAcqTaskPreparation:
         Returns:
             PreparationOutput with QuAcqTask and DescriptionProvider
         """
-        result = QuAcqTask()
         provider = DescriptionProvider()
+
+        # Local accumulation
+        set_kb: List[List[int]] = []
+        assumptions: List[int] = []
+        negation_map: Dict[int, int] = {}
 
         # Step 0: Copy BG data from Oracle (root constraint pair)
         bg_data = oracle.get_bg_data()
-        result.set_kb.extend(bg_data.set_kb)
-        result.assumptions.extend(list(bg_data.assumptions))
-        result.negation_map.update(bg_data.negation_map)
+        set_kb.extend(bg_data.set_kb)
+        assumptions.extend(list(bg_data.assumptions))
+        negation_map.update(bg_data.negation_map)
         for aid, desc in bg_data.descriptions.items():
             provider.add_constraint_description(aid, desc)
 
         # Copy Part 4 data from BGData (feature assignment assumptions)
-        result.set_kb.extend(bg_data.assignment_clauses)
-        result.assumptions.extend(bg_data.assignment_assumptions)
+        set_kb.extend(bg_data.assignment_clauses)
+        assumptions.extend(bg_data.assignment_assumptions)
 
         # Step 1: Assign assumption IDs (negated forms from builder)
         id_assumption = model.next_available_id
-        bias_start_pos = len(result.assumptions)
+        bias_start_pos = len(assumptions)
         id_assumption = prepare_kb(
-            result, provider, model.constraint_map,
-            id_assumption, model.negated_constraint_map)
+            set_kb, assumptions, negation_map, provider,
+            model.constraint_map, id_assumption, model.negated_constraint_map)
         # Assign set_b and set_c from assumptions
-        self._assign_sets(result, bias_start_pos)
+        set_b, set_c = self._assign_sets(assumptions, bias_start_pos)
 
         # Step 2: Build constraint_clauses mapping
-        for aid in result.set_c:
+        constraint_clauses: Dict[int, List[List[int]]] = {}
+        for aid in set_c:
             name = provider.get_description(aid)
             if name in model.constraint_map:
-                result.constraint_clauses[aid] = model.constraint_map[name]
+                constraint_clauses[aid] = model.constraint_map[name]
 
-        return PreparationOutput(result, provider)
+        task = QuAcqTask(
+            set_c=set_c, set_b=set_b, set_kb=set_kb,
+            negation_map=negation_map, assumptions=assumptions,
+            constraint_clauses=constraint_clauses)
+        return PreparationOutput(task, provider)
 
     @staticmethod
-    def _assign_sets(result: QuAcqTask, bias_start_pos: int) -> None:
-        """Assign set_b and set_c from assumptions."""
-        result.set_b = [result.assumptions[0]]
-        result.set_c = list(result.assumptions[bias_start_pos::_ASSUMPTION_PAIR_STRIDE])
+    def _assign_sets(assumptions: List[int], bias_start_pos: int) -> Tuple[List[int], List[int]]:
+        """Compute (set_b, set_c) from assumptions."""
+        set_b = [assumptions[0]]
+        set_c = list(assumptions[bias_start_pos::_ASSUMPTION_PAIR_STRIDE])
+        return set_b, set_c

@@ -405,26 +405,17 @@ CONGEN and QuAcq learning results:
 | tests/ | ~3,745 | 8 | ~468 | ✅ Comprehensive coverage |
 | **Total** | **~21,970** | **~108** | **~203** | ✅ **Production ready** |
 
-**Recent Changes** (QuAcqTask Inheritance Refactoring - commit 260227):
-
-**Task Hierarchy Refactoring**:
-- **DiagnosisTask** → Base class for both TestCaseTask and QuAcqTask
-  - Holds common assumption-based fields: `set_kb`, `assumptions`, `set_b`, `set_c`, `negation_map`
-- **TestCaseTask(DiagnosisTask)** → For test case scenarios (used by ConGen preparation)
-  - Adds: `set_tc` (E+ assumption IDs), `set_tv` (E- assumption IDs)
-- **ConGenTask(TestCaseTask)** → For passive constraint acquisition
-  - Adds: `set_neg_tv` (negated example assumption IDs from GenerateNE)
-- **QuAcqTask(DiagnosisTask)** → For interactive constraint acquisition (NEW inheritance)
-  - Inherits: `set_kb`, `assumptions`, `set_b`, `set_c`, `negation_map` from DiagnosisTask
-  - Adds: `bias` (remaining constraint IDs), `learned_kb` (discovered constraints)
-  - Adds: `background_clauses` (raw BG CNF for violation checking), `feature_ids`, `id_to_feature`
-  - Adds: `constraint_clauses`, `negated_clauses` (raw clause maps by ID)
+**Task Family** (immutable pure data — `@dataclass(frozen=True)`, no methods):
+- **Task(ABC)** → Base holding intrinsic solve fields (single source of truth): `set_c`, `set_b`, `set_kb`, `negation_map`, `assumptions`. No methods — derived quantities are free functions (`cf(task)` = `set_b + set_c`).
+- **DiagnosisTask(Task)** → Marker for diagnosis-shaped tasks (no test-case fields).
+- **TestCaseTask(Task)** → Adds `set_tc`/`set_tv` (E+/E- IDs), `set_neg_tv`/`set_neg_tc` (negated forms).
+- **ConGenTask(TestCaseTask)** → Passive acquisition (marker; `set_neg_tv` populated by GenerateNE).
+- **QuAcqTask(DiagnosisTask)** → Adds `constraint_clauses` (raw CNF clauses keyed by assumption ID).
+- **TaskInput** → Frozen input; `__post_init__` rejects mutually-exclusive combos (config/test_case vs positive_test_cases); use-case factories `fm_diagnosis`/`config`/`config_with_cf`/`error`/`testcases`/`redundancy_fm`/`redundancy_t`.
 
 **Benefits**:
-- Eliminates duplicate field definitions across task types
-- Clear inheritance hierarchy: DiagnosisTask is single source of truth for shared fields
-- QuAcqTask focused on interactive-specific state (bias, learned_kb)
-- Consistent field naming: `set_b` (assumption IDs) inherited from DiagnosisTask
+- Immutable units-of-work built via build-then-freeze (fields computed into locals, task constructed once at end) → two tasks from one KB are safe to execute concurrently.
+- Pure data: no codec/describe/get_cf on the task; formatting context and derived helpers live outside it.
 
 **Shared SAT Utilities** (`sat_utils.py`):
 - `get_constraint_vars(constraint_clauses)` — Extract SAT variables from constraint CNF

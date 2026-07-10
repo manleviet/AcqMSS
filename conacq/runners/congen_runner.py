@@ -7,7 +7,7 @@ Runs ConGen directly to:
 """
 
 from typing import List, Dict, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import random
 import tracemalloc
 import logging
@@ -157,9 +157,12 @@ class ConGenRunner(BaseRunner):
                     )
                     task = self.model.task
 
-                    # Shuffle bias iteration order if seed provided
+                    # Shuffle bias iteration order if seed provided.
+                    # Task is frozen: shuffle a copy and rebind, never mutate in place.
                     if shuffle_seed is not None:
-                        random.Random(shuffle_seed).shuffle(task.set_c)
+                        shuffled_set_c = list(task.set_c)
+                        random.Random(shuffle_seed).shuffle(shuffled_set_c)
+                        task = replace(task, set_c=shuffled_set_c)
                         logging.debug('Shuffled set_c with seed=%d', shuffle_seed)
 
                     # Create checker via factory

@@ -11,6 +11,7 @@ from .task_preparation import (
     TestCaseTask,
     DescriptionProvider,
     DiagnosisFormatter,
+    cf,
 )
 
 
@@ -120,7 +121,7 @@ class DiagnosisModel(PySATModel):
         Returns:
             List of all constraint IDs (set_c + set_b).
         """
-        return self.task.get_cf()
+        return cf(self.task)
 
     def get_kb(self) -> List[List]:
         """Get the full knowledge base with assumptions."""

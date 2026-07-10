@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from explanation.models.task_preparation import (
     TestCaseTask,
@@ -26,9 +26,9 @@ if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
 
 
-@dataclass
+@dataclass(frozen=True)
 class ConGenTask(TestCaseTask):
-    """Task for ConGen algorithm.
+    """Immutable task for ConGen algorithm.
 
     Inherits from TestCaseTask with mapping:
     - set_c: Bias constraints (B) - assumption IDs
@@ -79,52 +79,75 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
 
         ConGen starts from bg_data.next_available_id (end of Oracle Part 4).
         Root BG (Part 3 first pair) is copied from Oracle via BGData.
+
+        Build-then-freeze: every field accumulates into a local, then the frozen
+        ConGenTask is constructed once at the end.
         """
-        result = ConGenTask()
         provider = DescriptionProvider()
         task_input = model.task_input
 
+        # Local accumulation
+        set_kb: List[List[int]] = []
+        assumptions: List[int] = []
+        negation_map: Dict[int, int] = {}
+        set_neg_tv: List[int] = []
+        set_neg_tc: List[int] = []
+
         # Step 0: Copy BG data from Oracle (root constraint pair from Part 3)
         bg_data = oracle.get_bg_data()
-        result.set_kb.extend(bg_data.set_kb)
-        result.assumptions.extend(list(bg_data.assumptions))
-        result.negation_map.update(bg_data.negation_map)
+        set_kb.extend(bg_data.set_kb)
+        assumptions.extend(list(bg_data.assumptions))
+        negation_map.update(bg_data.negation_map)
         for aid, desc in bg_data.descriptions.items():
             provider.add_constraint_description(aid, desc)
 
         # Step 1: Prepare bias constraints as set_c (negated forms from builder)
-        bias_start_pos = len(result.assumptions)
+        bias_start_pos = len(assumptions)
         id_assumption = model.next_available_id
         id_assumption = prepare_kb(
-            result, provider, model.constraint_map,
-            id_assumption, model.negated_constraint_map)
+            set_kb, assumptions, negation_map, provider,
+            model.constraint_map, id_assumption, model.negated_constraint_map)
 
-        # Step 2: Prepare E+ as set_tc
-        tc_start_pos = len(result.assumptions)
-        id_assumption = prepare_testsuite_with_negation(
-            result, provider, model.variables, task_input.positive_test_cases, id_assumption, is_negative=False)
+        # Step 2: Prepare E+ as set_tc (its negated forms populate the
+        # ConGen-unused set_neg_tc, preserved for task-content parity)
+        tc_start_pos = len(assumptions)
+        id_assumption, pos_negated_ids = prepare_testsuite_with_negation(
+            set_kb, assumptions, negation_map, provider, model.variables,
+            task_input.positive_test_cases, id_assumption)
+        set_neg_tc.extend(pos_negated_ids)
 
-        tv_start_pos = len(result.assumptions)
-        self._assign_sets(result, bias_start_pos, tc_start_pos, tv_start_pos, task_input.negative_test_cases is not None)
+        tv_start_pos = len(assumptions)
+        set_b, set_c, set_tc, set_tv = self._assign_sets(
+            assumptions, bias_start_pos, tc_start_pos, tv_start_pos,
+            task_input.negative_test_cases is not None)
 
-        # Step 3: Prepare E- as NE via GenerateNE
+        # Step 3: Prepare E- as NE via GenerateNE (appends to set_kb/assumptions/set_neg_tv)
         testsuite = task_input.negative_test_cases
         if testsuite is not None and len(testsuite.testcases) > 0:
             id_assumption = self._prepare_negative_examples(
-                result, provider, model, oracle, testsuite, id_assumption)
+                set_kb, assumptions, negation_map, set_neg_tv,
+                provider, model, oracle, testsuite, id_assumption)
 
         # NOTE: Do NOT update model.next_available_id here.
         # model.next_available_id was set by the builder at build time and should remain fixed.
         # Updating it here would cause subsequent prepare() calls to allocate IDs from wrong range.
 
         logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, set_tv=%d',
-                      len(result.set_c), len(result.set_tc), len(result.set_tv))
+                      len(set_c), len(set_tc), len(set_tv))
 
-        return PreparationOutput(result, provider)
+        task = ConGenTask(
+            set_c=set_c, set_b=set_b, set_kb=set_kb,
+            negation_map=negation_map, assumptions=assumptions,
+            set_tc=set_tc, set_tv=set_tv,
+            set_neg_tv=set_neg_tv, set_neg_tc=set_neg_tc)
+        return PreparationOutput(task, provider)
 
     def _prepare_negative_examples(
             self,
-            result: ConGenTask,
+            set_kb: List[List[int]],
+            assumptions: List[int],
+            negation_map: Dict[int, int],
+            set_neg_tv: List[int],
             provider: DescriptionProvider,
             model: ConGenModel,
             oracle: FeatureModelOracle,
@@ -133,28 +156,30 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     ) -> int:
         """Step 3: Generate NE from negative examples.
 
-        Orchestrates: GenerateNE -> combine -> negate -> populate task.
+        Orchestrates: GenerateNE -> combine -> negate -> populate locals.
         """
 
         generate_ne = GenerateNE(oracle)
         ne_results, id_assumption = generate_ne.generate(
-            testsuite, model.variables, result.set_kb, result.assumptions, id_assumption)
+            testsuite, model.variables, set_kb, assumptions, id_assumption)
 
         neg_tv_ids = [ne.ne_id for ne in ne_results]
         descs = [ne.desc for ne in ne_results]
 
         ne_id, id_assumption = self._combine_ne_constraints(
-            result, provider, neg_tv_ids, descs, id_assumption)
+            set_kb, assumptions, set_neg_tv, provider, neg_tv_ids, descs, id_assumption)
 
         negated_ne_id, id_assumption = self._create_negated_ne(
-            result, provider, ne_id, neg_tv_ids, id_assumption)
+            set_kb, assumptions, provider, ne_id, neg_tv_ids, id_assumption)
 
-        result.negation_map[ne_id] = negated_ne_id
+        negation_map[ne_id] = negated_ne_id
         return id_assumption
 
     @staticmethod
     def _combine_ne_constraints(
-            result: ConGenTask,
+            set_kb: List[List[int]],
+            assumptions: List[int],
+            set_neg_tv: List[int],
             provider: DescriptionProvider,
             neg_tv_ids: List[int],
             descs: List[str],
@@ -168,22 +193,23 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         if len(neg_tv_ids) > 1:
             ne_id = id_assumption
             for neg_tv_id in neg_tv_ids:
-                result.set_kb.append([neg_tv_id, -ne_id])
-            result.assumptions.append(ne_id)
+                set_kb.append([neg_tv_id, -ne_id])
+            assumptions.append(ne_id)
             provider.add_test_case_description(ne_id, f"({' AND '.join(descs)})")
-            result.set_neg_tv.append(ne_id)
+            set_neg_tv.append(ne_id)
             id_assumption += 1
         else:
             ne_id = neg_tv_ids[0]
-            result.assumptions.append(ne_id)
+            assumptions.append(ne_id)
             provider.add_test_case_description(ne_id, descs[0])
-            result.set_neg_tv.append(ne_id)
+            set_neg_tv.append(ne_id)
 
         return ne_id, id_assumption
 
     @staticmethod
     def _create_negated_ne(
-            result: ConGenTask,
+            set_kb: List[List[int]],
+            assumptions: List[int],
             provider: DescriptionProvider,
             ne_id: int,
             neg_tv_ids: List[int],
@@ -198,36 +224,38 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             negated_ne_ids = []
             for neg_tv_id in neg_tv_ids:
                 negated_ne_id = id_assumption
-                result.set_kb.append([-neg_tv_id, -negated_ne_id])
+                set_kb.append([-neg_tv_id, -negated_ne_id])
                 negated_ne_ids.append(negated_ne_id)
                 id_assumption += 1
             negated_ne_id = id_assumption
-            result.set_kb.append(negated_ne_ids + [-negated_ne_id])
+            set_kb.append(negated_ne_ids + [-negated_ne_id])
         else:
             negated_ne_id = id_assumption
-            result.set_kb.append([-ne_id, -negated_ne_id])
+            set_kb.append([-ne_id, -negated_ne_id])
 
-        result.assumptions.append(negated_ne_id)
+        assumptions.append(negated_ne_id)
         provider.add_test_case_description(negated_ne_id, f"NOT({provider.get_description(ne_id)})")
         id_assumption += 1
 
         return negated_ne_id, id_assumption
 
-    def _assign_sets(self, result: ConGenTask,
+    def _assign_sets(self, assumptions: List[int],
                      bias_start_id: int,
                      start_id_tc: int, start_id_tv: int,
-                     has_negative_test_cases: bool) -> None:
-        """Assign sets from assumptions.
+                     has_negative_test_cases: bool
+                     ) -> Tuple[List[int], List[int], List[int], List[int]]:
+        """Compute (set_b, set_c, set_tc, set_tv) from assumptions.
 
         Each test case has two assumptions (original + negated),
         so extract only the original assumptions for set_tc and set_tv.
         """
-        result.set_b = [result.assumptions[0]]
-        result.set_c = result.assumptions[bias_start_id:start_id_tc:_ASSUMPTION_PAIR_STRIDE]
+        set_b = [assumptions[0]]
+        set_c = list(assumptions[bias_start_id:start_id_tc:_ASSUMPTION_PAIR_STRIDE])
 
-        tc_tv_assumptions = result.assumptions[start_id_tc:]
+        tc_tv_assumptions = assumptions[start_id_tc:]
         original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), _ASSUMPTION_PAIR_STRIDE)]
 
         num_tc_original = (start_id_tv - start_id_tc) // _ASSUMPTION_PAIR_STRIDE
-        result.set_tc = original_tc_tv[:num_tc_original]
-        result.set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
+        set_tc = original_tc_tv[:num_tc_original]
+        set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
+        return set_b, set_c, set_tc, set_tv
