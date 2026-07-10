@@ -25,7 +25,7 @@ Example Usage:
              .with_oracle(oracle)
              .build())
     task = model.task
-    checker = CheckerFactory.create_from_model(model)
+    checker = CheckerFactory.create_from_task(task, use_incremental=model.use_incremental)
     query_provider = QueryProvider()
     profiler = get_global_profiler()
     discrim_gen = DiscriminatingGenerator(

@@ -38,7 +38,7 @@ class QuAcqModel(KBModel):
     def __init__(self) -> None:
         super().__init__()
 
-        # Store incremental preference for CheckerModel protocol
+        # Solver selection consumed by CheckerFactory.create_from_task()
         self.use_incremental: bool = True
 
         # Populated after prepare()
@@ -142,7 +142,7 @@ class QuAcqModel(KBModel):
 
         assert isinstance(output.task, QuAcqTask)
         self._task = output.task
-        self._description_provider = output.description_provider
+        self._description_provider = output.describe
 
         return self._task
 

@@ -166,8 +166,9 @@ class ConGenRunner(BaseRunner):
                         logging.debug('Shuffled set_c with seed=%d', shuffle_seed)
 
                     # Create checker via factory
-                    checker = CheckerFactory.create_from_model(
-                        self.model, self.solver_name, profiler
+                    checker = CheckerFactory.create_from_task(
+                        self.model.task, self.solver_name,
+                        self.model.use_incremental, profiler
                     )
 
                     # Run ConGen

@@ -14,7 +14,7 @@ from explanation.models.task_preparation import (
     TestCaseTask,
     TestCaseTaskPreparationStrategy,
     DescriptionProvider,
-    PreparationOutput, prepare_testsuite_with_negation,
+    PreparedTask, prepare_testsuite_with_negation,
     prepare_kb,
     _ASSUMPTION_PAIR_STRIDE,
 )
@@ -42,7 +42,7 @@ class ConGenTask(TestCaseTask):
     Inherited from TestCaseTask (unused by ConGen):
     - set_neg_tc
 
-    Naming: Use DescriptionProvider (from PreparationOutput) to map assumption IDs
+    Naming: Use DescriptionProvider (from PreparedTask) to map assumption IDs
     to human-readable names. It covers all assumptions (bias, root, test cases, NE).
     """
     pass  # No additional fields needed
@@ -67,7 +67,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel, oracle: FeatureModelOracle) -> PreparationOutput:
+    def prepare(self, model: ConGenModel, oracle: FeatureModelOracle) -> PreparedTask:
         """Prepare ConGen task from model. BG from Oracle, oracle for GenerateNE.
 
         Shared Assumption ID Layout (ConGen owns Parts 5-8):
@@ -140,7 +140,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             negation_map=negation_map, assumptions=assumptions,
             set_tc=set_tc, set_tv=set_tv,
             set_neg_tv=set_neg_tv, set_neg_tc=set_neg_tc)
-        return PreparationOutput(task, provider)
+        return PreparedTask(task, provider)
 
     def _prepare_negative_examples(
             self,

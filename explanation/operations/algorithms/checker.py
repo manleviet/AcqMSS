@@ -5,32 +5,18 @@ Implementations: IncrementalPySATChecker (persistent solver with assumptions),
 NonIncrementalPySATChecker (fresh solver per check), SAT4JChecker (external Java solver).
 All support pickling for multiprocessing and context manager protocol.
 
-Use CheckerFactory.create_from_model() or CheckerFactory.create_sat4jchecker() to instantiate.
+Use CheckerFactory.create_from_task() or CheckerFactory.create_sat4jchecker() to instantiate.
 """
 import os
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import List, Optional
 
 from pysat.formula import CNF
 from pysat.solvers import Solver
 
 from profiling import get_global_profiler, count_calls, AbstractProfiler
-
-
-@runtime_checkable
-class CheckerModel(Protocol):
-    """Protocol for models compatible with CheckerFactory.
-
-    Any class with these attributes/methods satisfies this protocol
-    via structural subtyping (no inheritance needed).
-    """
-    use_incremental: bool
-
-    def get_kb(self) -> List[List[int]]: ...
-
-    def get_assumptions(self) -> List[int]: ...
 
 
 class ConsistencyChecker(ABC):
@@ -266,16 +252,23 @@ class CheckerFactory:
                             profiler_instance=profiler_instance)
 
     @staticmethod
-    def create_from_model(model: CheckerModel,
-                          solver_name: str = 'glucose3',
-                          profiler_instance: AbstractProfiler = None) -> ConsistencyChecker:
-        if model.use_incremental:
+    def create_from_task(task,
+                         solver_name: str = 'glucose3',
+                         use_incremental: bool = True,
+                         profiler_instance: AbstractProfiler = None) -> ConsistencyChecker:
+        """Build a checker from a task's KB + assumptions.
+
+        ``use_incremental`` selects the checker implementation; it is an
+        operation-level concern, not a property of the KB or task. Reads
+        ``task.set_kb`` and ``task.assumptions``.
+        """
+        if use_incremental:
             return IncrementalPySATChecker(
-                model.get_kb(), model.get_assumptions(),
+                task.set_kb, task.assumptions,
                 solver_name, profiler_instance
             )
         else:
             return NonIncrementalPySATChecker(
-                model.get_kb(), model.get_assumptions(),
+                task.set_kb, task.assumptions,
                 solver_name, profiler_instance
             )

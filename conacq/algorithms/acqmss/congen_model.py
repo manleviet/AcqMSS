@@ -38,7 +38,7 @@ class ConGenModel(KBModel):
     def __init__(self) -> None:
         super().__init__()
 
-        # CheckerModel protocol attributes
+        # Solver selection consumed by CheckerFactory.create_from_task()
         self._use_incremental: bool = True
 
         # Background knowledge (e.g., root feature IDs) to include in set_b
@@ -232,7 +232,7 @@ class ConGenModel(KBModel):
 
         assert isinstance(output.task, ConGenTask)
         self._task = output.task
-        self._description_provider = output.description_provider
+        self._description_provider = output.describe
         self._root_constraint = oracle.get_root_clauses()
 
         return self._task

@@ -3,7 +3,7 @@
 import pytest
 
 from conacq.oracle.fm_oracle_model import FMOracleModel
-from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
+from explanation.operations.algorithms.checker import CheckerFactory
 
 
 def _make_oracle_model(constraint_map, variables, next_available_id):
@@ -27,9 +27,11 @@ class TestOracleModel:
         assert len(model.get_kb()) == 1 + 4
 
     def test_satisfies_checker_model_protocol(self):
-        """FMOracleModel satisfies CheckerModel Protocol."""
+        """FMOracleModel exposes the task + use_incremental used by create_from_task."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, 2)
-        assert isinstance(model, CheckerModel)
+        assert isinstance(model.use_incremental, bool)
+        assert model.task.set_kb is not None
+        assert model.task.assumptions is not None
 
     def test_constraint_map_and_variables(self):
         """Verify constraint_map + variables stored correctly."""
@@ -60,7 +62,7 @@ class TestOracleModel:
     def test_checker_integration_sat(self):
         """CheckerFactory creates valid checker; SAT case."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        checker = CheckerFactory.create_from_model(model, 'glucose4')
+        checker = CheckerFactory.create_from_task(model.task, 'glucose4', model.use_incremental)
 
         # f1=True, f2=True → SAT
         model.with_configuration({"f1": True, "f2": True})
@@ -70,7 +72,7 @@ class TestOracleModel:
     def test_checker_integration_unsat(self):
         """CheckerFactory creates valid checker; UNSAT case."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        checker = CheckerFactory.create_from_model(model, 'glucose4')
+        checker = CheckerFactory.create_from_task(model.task, 'glucose4', model.use_incremental)
 
         # f1=False, f2=False → UNSAT (neither true violates f1 OR f2)
         model.with_configuration({"f1": False, "f2": False})

@@ -50,7 +50,9 @@ class FeatureModelOracle(Oracle):
 
         # Prepares the model and checker
         self._oracle_model = FMOracleModel.from_fm(fm_path).set_incremental(use_incremental).build()
-        self._checker = CheckerFactory.create_from_model(self._oracle_model, solver_name, self.profiler)
+        self._checker = CheckerFactory.create_from_task(
+            self._oracle_model.task, solver_name,
+            self._oracle_model.use_incremental, self.profiler)
 
         # Lazy-loaded for description extraction (most callers never need this)
         self._fm = None

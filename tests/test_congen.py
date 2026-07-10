@@ -69,7 +69,8 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     # model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
 
     task = model.task
-    checker = CheckerFactory.create_from_model(model, 'glucose4', profiler)
+    checker = CheckerFactory.create_from_task(
+        model.task, 'glucose4', model.use_incremental, profiler)
 
     return checker, task, profiler, model.description_provider
 

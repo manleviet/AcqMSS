@@ -2,7 +2,8 @@
 Oracle models for ConsistencyChecker integration.
 
 FMOracleModel: Assumption-guarded FM validation (incremental checker).
-Satisfies CheckerModel Protocol for use with CheckerFactory.create_from_model().
+Exposes get_kb()/get_assumptions()/use_incremental + a prepared task for use
+with CheckerFactory.create_from_task().
 """
 
 from dataclasses import replace
@@ -15,14 +16,14 @@ from conacq.oracle.bg_data import BGData
 from explanation.models import DiagnosisTask, DescriptionProvider
 from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
 from explanation.models.encoding import config_to_assignment_assumptions
-from explanation.models.task_preparation import PreparationOutput, prepare_kb, _ASSUMPTION_PAIR_STRIDE
+from explanation.models.task_preparation import PreparedTask, prepare_kb, _ASSUMPTION_PAIR_STRIDE
 
 
 class FMOracleModel(KBModel):
     """Model for Oracle FM validation via ConsistencyChecker.
 
     Uses constraint_map + variables pattern (same as DiagnosisModel/ConGenModel).
-    Satisfies CheckerModel Protocol after prepare().
+    Exposes get_kb()/get_assumptions()/use_incremental + a prepared task after prepare().
 
     FM clauses go directly into set_kb (always active).
     Feature assignments become assumption-guarded unit clauses:
@@ -36,7 +37,7 @@ class FMOracleModel(KBModel):
 
         self.configuration: Optional[Configuration] = None
 
-        # CheckerModel protocol attributes
+        # Solver selection consumed by CheckerFactory.create_from_task()
         self._use_incremental: bool = True
 
         # Populated after prepare()
@@ -142,7 +143,7 @@ class FMOracleModel(KBModel):
         output = FMOracleTaskPreparation.prepare(self, configuration)
 
         self._task = output.task
-        self._description_provider = output.description_provider
+        self._description_provider = output.describe
 
         return self._task
 
@@ -190,7 +191,7 @@ class FMOracleTaskPreparation:
     """
 
     @staticmethod
-    def prepare(model: 'FMOracleModel', configuration=None) -> PreparationOutput:
+    def prepare(model: 'FMOracleModel', configuration=None) -> PreparedTask:
         provider = DescriptionProvider()
 
         # Use next_available_id to avoid conflicts with Tseitin variables
@@ -271,9 +272,9 @@ class FMOracleTaskPreparation:
         task = DiagnosisTask(
             set_c=set_c, set_b=[], set_kb=set_kb,
             negation_map=negation_map, assumptions=assumptions)
-        return PreparationOutput(
+        return PreparedTask(
             task=task,
-            description_provider=provider
+            describe=provider
         )
 
 

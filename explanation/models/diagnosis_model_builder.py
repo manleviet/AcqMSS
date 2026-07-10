@@ -284,17 +284,18 @@ class DiagnosisModelBuilder:
     # === Build ===
 
     def build(self) -> DiagnosisModel:
-        """Build and return fully configured DiagnosisModel.
+        """Build and return the immutable DiagnosisModel (KB only).
 
         This method:
         1. Validates builder state
         2. Loads/transforms the feature model
-        3. Sets solver mode configuration
-        4. Assigns task inputs to model
-        5. Calls prepare() to prepare the task
+
+        Per-task inputs are NOT stored on the model. Callers obtain them via
+        ``build_task_input()`` and derive a task with ``model.prepare_task(...)``.
+        Solver mode (``use_incremental``) is an operation/checker concern.
 
         Returns:
-            Fully configured DiagnosisModel with task prepared.
+            Immutable DiagnosisModel (KB).
 
         Raises:
             ValueError: If source is not specified or configuration is invalid.
@@ -302,14 +303,16 @@ class DiagnosisModelBuilder:
         # Validate
         self._validate()
 
-        # Create model
-        model = self._create_model()
+        # Create model (KB only)
+        return self._create_model()
 
-        # Configure solver mode
-        model._use_incremental = self._use_incremental
+    def build_task_input(self) -> TaskInput:
+        """Return the configured per-task inputs for ``model.prepare_task``.
 
-        # Create and assign TaskInput
-        model.task_input = TaskInput(
+        Returns:
+            TaskInput capturing configuration/test-case/redundancy selections.
+        """
+        return TaskInput(
             configuration=self._configuration,
             test_case=self._test_case,
             with_cf_in_c=self._with_cf_in_c,
@@ -319,11 +322,6 @@ class DiagnosisModelBuilder:
             requirement=self._requirement,
             sub_configuration=self._sub_configuration
         )
-
-        # Prepare the task
-        model.prepare()
-
-        return model
 
     def _validate(self) -> None:
         """Validate builder state before building.

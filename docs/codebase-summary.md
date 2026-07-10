@@ -212,8 +212,9 @@ SAT model representation and immutable task units:
 | `encoding.py` | 60 | Free-function encoders (config↔literals, config→assignment-assumptions, clause→names). No codec class; name↔id maps passed in. |
 | `assignment_assumption_map.py` | 20 | `AssignmentAssumptionMap` frozen holder of pos/neg assignment→assumption maps (prep-derived) |
 | `kb_protocol.py` | 25 | `KBProtocol` — read-only name↔id catalog contract (id_to_name/name_to_id + constraint maps) |
-| `diagnosis_model_builder.py` | 300 | Builder pattern: construct DiagnosisModel with configuration |
-| `pysat_diagnosis_model.py` | 265 | DiagnosisModel: SAT instance + metadata; exposes id_to_name/name_to_id (aliases features/variables) |
+| `diagnosis_model_builder.py` | 300 | Builder: `build()` → immutable KB model; `build_task_input()` → per-task `TaskInput` |
+| `pysat_diagnosis_model.py` | 110 | DiagnosisModel: immutable KB (no task/use_incremental state); `prepare_task(task_input)` → `PreparedTask`; exposes id_to_name/name_to_id |
+| `task_preparation.py` | — | Preparation strategies + `PreparedTask(task, describe, assignment_map)` result container (was `PreparationOutput`) |
 | `testsuite.py` | 75 | TestSuite: holds test cases + their configurations |
 
 **Single-source name↔id (T2):** the name↔id catalog lives on the KB, exposed read-only via `MappingProxyType` under KB Protocol names (`id_to_name`/`name_to_id`). `DiagnosisModel` aliases PySATModel `features`/`variables`. The conacq `KBModel` base (`conacq/kb_model.py`) is **domain-neutral**: its `__init__` owns the shared KB fields (`constraint_map`, `negated_constraint_map`, `next_available_id`, and the generic-named `_name_to_id`/`_id_to_name`) and exposes read-only views — no feature-model terms in the base. ConGen/QuAcq/FMOracle call `super().__init__()` then set only model-specific values; builders populate `_name_to_id`/`_id_to_name` at build; external callers read via the `name_to_id`/`id_to_name` properties (cannot mutate the catalog). The `encoding` free functions receive these maps as parameters — no `VariableCodec`, no per-model encoding duplication.
@@ -245,9 +246,9 @@ Diagnosis algorithm implementations and executor abstractions:
 | `algorithms/wipeoutr_t.py` | 110 | WipeOutR_T: test case variant |
 | `algorithms/utils.py` | 120 | split, diff, negate_cnf_tseitin utilities |
 
-**Operation Wrappers** (pysat_*_*.py files, 10 files, ~1,800 LOC):
+**Operation Wrappers** (pysat_*.py files, 8 files):
 
-Each wraps diagnosis algorithms for specific use cases (diagnosis vs conflict, PySAT vs SAT4J, various test modes).
+Each wraps diagnosis algorithms for specific use cases (conflict, diagnosis, testcase/KBDiag, redundancy). Operations take a `PreparedTask`: `op.execute(prepared)` reads `prepared.task` to solve and `prepared.describe` to format. Solver selection is operation-level: `use_incremental` and `use_sat4j` are op attributes; `CheckerFactory.create_from_task(task, solver_name, use_incremental, profiler)` builds the checker. The standalone `pysat_conflict_sat4j.py`/`pysat_diagnosis_sat4j.py` wrappers were folded into `PySATConflict`/`PySATDiagnosis` via `use_sat4j` (builder entry points `for_conflict_sat4j`/`for_diagnosis_sat4j` remain).
 
 #### explanation/transformations/ — Model Converters (~292 LOC, 5 files)
 

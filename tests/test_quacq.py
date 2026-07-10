@@ -81,7 +81,8 @@ def prepared_model(interactive_model):
 @pytest.fixture
 def checker(prepared_model):
     """Create checker from prepared QuAcqModel."""
-    return CheckerFactory.create_from_model(prepared_model)
+    return CheckerFactory.create_from_task(
+        prepared_model.task, use_incremental=prepared_model.use_incremental)
 
 
 def _minimal_checker():
@@ -269,7 +270,8 @@ class TestIntegration:
             task = model.task
             task_data = _learn_params_from_model(model)
 
-            checker = CheckerFactory.create_from_model(model)
+            checker = CheckerFactory.create_from_task(
+                model.task, use_incremental=model.use_incremental)
             query_provider = QueryProvider(checker=checker, model=model)
             discrim_gen = DiscriminatingGenerator(
                 checker=checker, model=model,

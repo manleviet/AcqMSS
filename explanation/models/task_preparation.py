@@ -25,6 +25,7 @@ from typing import Any, List, Dict, Optional, Tuple, TYPE_CHECKING
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models.feature_model import Feature
 
+from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
 from explanation.models.testsuite import TestSuite
 from explanation.operations.algorithms.utils import get_hashcode
 
@@ -248,13 +249,25 @@ class DescriptionProvider:
         self.configuration_map = {}
 
 
-# === PREPARATION OUTPUT ===
+# === PREPARED TASK (preparation result container) ===
 
 @dataclass
-class PreparationOutput:
-    """Container for preparation result and description provider."""
+class PreparedTask:
+    """Preparation result: the pure Task plus its formatting/assignment context.
+
+    - ``task``: immutable, pure solve data (set_c/set_b/set_kb/assumptions/...).
+    - ``describe``: DescriptionProvider used only to format results (never
+      algorithm logic).
+    - ``assignment_map``: feature-assignment → assumption-ID layer. Empty for
+      plain diagnosis/test-case preparation (no assignment layer); populated by
+      oracle-style preparation.
+
+    Operations read ``prepared.task`` to solve and ``prepared.describe`` to
+    format their results.
+    """
     task: Task
-    description_provider: DescriptionProvider
+    describe: DescriptionProvider
+    assignment_map: AssignmentAssumptionMap = field(default_factory=AssignmentAssumptionMap)
 
 
 # === STRATEGY INTERFACES ===
@@ -270,11 +283,11 @@ class DiagnosisTaskPreparationStrategy(ABC):
     - Redundancy detection (with negated_constraint_map)
 
     The model parameter accepts any object with: constraint_map, negated_constraint_map,
-    variables, task_input, next_available_id, background_knowledge (duck-typed).
+    variables, next_available_id, background_knowledge (duck-typed).
     """
 
     @abstractmethod
-    def prepare(self, model: Any) -> PreparationOutput:
+    def prepare(self, model: Any, task_input: TaskInput) -> PreparedTask:
         """Prepare diagnosis task and return result with description provider."""
         pass
 
@@ -292,11 +305,11 @@ class TestCaseTaskPreparationStrategy(ABC):
     WipeOutR_T for test case redundancy detection, and ConGen.
 
     The model parameter accepts any object with: constraint_map, negated_constraint_map,
-    variables, task_input, next_available_id, background_knowledge (duck-typed).
+    variables, next_available_id, background_knowledge (duck-typed).
     """
 
     @abstractmethod
-    def prepare(self, model: Any) -> PreparationOutput:
+    def prepare(self, model: Any, task_input: TaskInput) -> PreparedTask:
         """Prepare test case task and return result with description provider."""
         pass
 
@@ -414,9 +427,8 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+    def prepare(self, model: 'DiagnosisModel', task_input: TaskInput) -> PreparedTask:
         provider = DescriptionProvider()
-        task_input = model.task_input
 
         # Determine if negated forms should be used
         negated_constraint_map = model.negated_constraint_map if task_input.for_redundancy else None
@@ -454,7 +466,7 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         task = DiagnosisTask(
             set_c=set_c, set_b=set_b, set_kb=set_kb,
             negation_map=negation_map, assumptions=assumptions)
-        return PreparationOutput(task, provider)
+        return PreparedTask(task, provider)
 
     def _assign_sets(self, assumptions: List[int], task_input: TaskInput,
                      start_id_config: int, start_id_test: int,
@@ -571,9 +583,8 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: 'DiagnosisModel') -> PreparationOutput:
+    def prepare(self, model: 'DiagnosisModel', task_input: TaskInput) -> PreparedTask:
         provider = DescriptionProvider()
-        task_input = model.task_input
 
         # Start assumption IDs after Tseitin variables
         id_assumption = model.next_available_id
@@ -613,7 +624,7 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
             negation_map=negation_map, assumptions=assumptions,
             set_tc=set_tc, set_tv=set_tv,
             set_neg_tv=set_neg_tv, set_neg_tc=set_neg_tc)
-        return PreparationOutput(task, provider)
+        return PreparedTask(task, provider)
 
     def _assign_sets(self, assumptions: List[int],
                      start_id_tc: int, start_id_tv: int,
@@ -664,23 +675,15 @@ class TaskPreparationFactory:
     _testcase: TestCaseTaskPreparation = None
 
     @classmethod
-    def create_diagnosis(cls, is_incremental: bool) -> DiagnosisTaskPreparationStrategy:
-        """Create diagnosis task preparation strategy.
-
-        Args:
-            is_incremental: Kept for API compatibility (does not affect preparation)
-        """
+    def create_diagnosis(cls) -> DiagnosisTaskPreparationStrategy:
+        """Create diagnosis task preparation strategy (incremental-agnostic)."""
         if cls._diagnosis is None:
             cls._diagnosis = DiagnosisTaskPreparation()
         return cls._diagnosis
 
     @classmethod
-    def create_testcase(cls, is_incremental: bool = True) -> TestCaseTaskPreparationStrategy:
-        """Create test case task preparation strategy.
-
-        Args:
-            is_incremental: Kept for API compatibility (does not affect preparation)
-        """
+    def create_testcase(cls) -> TestCaseTaskPreparationStrategy:
+        """Create test case task preparation strategy (incremental-agnostic)."""
         if cls._testcase is None:
             cls._testcase = TestCaseTaskPreparation()
         return cls._testcase

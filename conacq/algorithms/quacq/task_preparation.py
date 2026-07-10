@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 from explanation.models.task_preparation import (
     DescriptionProvider,
     DiagnosisTask,
-    PreparationOutput,
+    PreparedTask,
     prepare_kb,
     _ASSUMPTION_PAIR_STRIDE,
 )
@@ -54,7 +54,7 @@ class QuAcqTaskPreparation:
     """
 
     def prepare(self, model: QuAcqModel,
-                oracle: FeatureModelOracle) -> PreparationOutput:
+                oracle: FeatureModelOracle) -> PreparedTask:
         """Prepare QuAcqTask from model and oracle.
 
         Build-then-freeze: accumulate into locals, construct frozen QuAcqTask once.
@@ -64,7 +64,7 @@ class QuAcqTaskPreparation:
             oracle: FeatureModelOracle for BG data and feature IDs
 
         Returns:
-            PreparationOutput with QuAcqTask and DescriptionProvider
+            PreparedTask with QuAcqTask and DescriptionProvider
         """
         provider = DescriptionProvider()
 
@@ -105,7 +105,7 @@ class QuAcqTaskPreparation:
             set_c=set_c, set_b=set_b, set_kb=set_kb,
             negation_map=negation_map, assumptions=assumptions,
             constraint_clauses=constraint_clauses)
-        return PreparationOutput(task, provider)
+        return PreparedTask(task, provider)
 
     @staticmethod
     def _assign_sets(assumptions: List[int], bias_start_pos: int) -> Tuple[List[int], List[int]]:
