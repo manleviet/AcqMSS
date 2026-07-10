@@ -16,7 +16,7 @@ from typing import List, Dict, Optional, Tuple
 
 from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
+from profiling import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
 from ..algorithms import QuAcq
 from ..algorithms.quacq.discriminating_generator import DiscriminatingGenerator

@@ -11,7 +11,7 @@ from explanation.models.testsuite import TestSuite
 from explanation.operations.algorithms.checker import ConsistencyChecker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.kbdiag_labeler import KBDiagLabeler, KBDiagParameters
-from explanation.operations.algorithms.profiler import AbstractProfiler
+from profiling import AbstractProfiler
 from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
 
 

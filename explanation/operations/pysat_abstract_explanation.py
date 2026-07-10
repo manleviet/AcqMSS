@@ -8,7 +8,7 @@ from explanation.models.pysat_diagnosis_model import DiagnosisModel
 from explanation.operations.algorithms.checker import ConsistencyChecker, CheckerFactory
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.labeler import IHSLabelable
-from explanation.operations.algorithms.profiler import AbstractProfiler, get_global_profiler
+from profiling import AbstractProfiler, get_global_profiler
 
 
 def _format_results(singular: str, plural: str, items: List, model: DiagnosisModel) -> str:

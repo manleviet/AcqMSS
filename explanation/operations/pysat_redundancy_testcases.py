@@ -8,7 +8,7 @@ from typing import List, Tuple, cast
 from flamapy.core.models import VariabilityModel
 
 from explanation.models.pysat_diagnosis_model import DiagnosisModel
-from explanation.operations.algorithms.profiler import AbstractProfiler
+from profiling import AbstractProfiler
 from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
 from explanation.operations.pysat_testcase import PySATTestCase
 

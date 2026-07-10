@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Union, Any
 from .labeler.labeler import IHSLabelable, LabelerType, AbstractHSParameters
 from .node import Node, NodeStatus
 from .. import utils
-from ..profiler import measure_time, get_global_profiler, AbstractProfiler
+from profiling import measure_time, get_global_profiler, AbstractProfiler
 from ..utils import diff, contains, get_hashcode
 
 

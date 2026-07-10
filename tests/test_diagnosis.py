@@ -30,7 +30,7 @@ from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.fastdiag import FastDiag
 from explanation.operations.algorithms.fastdiagp import FastDiagP
 from explanation.operations.algorithms.kbdiag import KBDiag
-from explanation.operations.algorithms.profiler import ProfilerMode, ProfilerPreset, profiler_session
+from profiling import ProfilerMode, ProfilerPreset, profiler_session
 from explanation.operations.algorithms.quickxplain import QuickXPlain
 from explanation.operations.algorithms.quickxplain_with_testcases import QuickXPlainWithTestCases
 from explanation.operations.pysat_abstract_explanation import _format_results

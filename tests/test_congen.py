@@ -19,7 +19,7 @@ from explanation.operations.algorithms.checker import (
     IncrementalPySATChecker,
     CheckerFactory
 )
-from explanation.operations.algorithms.profiler import get_global_profiler
+from profiling import get_global_profiler
 
 # Test data paths
 DATA_DIR = Path(__file__).parent.parent / "data"

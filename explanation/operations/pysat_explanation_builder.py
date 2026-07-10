@@ -22,7 +22,7 @@ from explanation.operations.pysat_diagnosis import PySATDiagnosis
 from explanation.operations.pysat_diagnosis_sat4j import PySATDiagnosisSAT4J
 from explanation.operations.pysat_redundancy_testcases import PySATRedundancyTestCases
 from explanation.operations.pysat_redundancy_constraints import PySATRedundancyConstraints
-from explanation.operations.algorithms.profiler import AbstractProfiler
+from profiling import AbstractProfiler
 from explanation.operations.pysat_testcase_quickxplain import PySATTestCaseQuickXPlain
 
 # Type variable for method chaining with correct return types

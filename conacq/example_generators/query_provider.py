@@ -11,7 +11,7 @@ import logging
 import random
 from typing import Optional, Dict, List, Tuple, TYPE_CHECKING
 
-from explanation.operations.algorithms.profiler import (
+from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
 

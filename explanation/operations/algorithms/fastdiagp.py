@@ -16,7 +16,7 @@ from typing import List
 
 from . import utils
 from .checker import ConsistencyChecker
-from .profiler import get_global_profiler, measure_time, count_calls, AbstractProfiler
+from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split, diff
 
 

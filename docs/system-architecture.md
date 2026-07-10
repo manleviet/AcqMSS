@@ -741,7 +741,7 @@ Result: QuAcqResult with assumption IDs + query history
 conacq/ uses explanation/ components:
 - **ACQMSS**: Uses KBDiag from explanation.operations.algorithms
 - **Consistency Checking**: Pluggable ConsistencyChecker abstraction (Incremental, NonIncremental, SAT4J)
-- **Profiling**: Optional global profiler pattern (minimal overhead when disabled)
+- **Profiling**: Optional global profiler pattern (minimal overhead when disabled). Lives in the top-level `profiling/` package (neutral infra imported directly by both `explanation` and `conacq`); consumers type-annotate against the `ProfilerProtocol` @runtime_checkable Protocol.
 - **CNF Format**: Unified list[list[int]] representation across all components
 
 **Feature ID Consistency (CRITICAL)**:

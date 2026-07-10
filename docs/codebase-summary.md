@@ -226,7 +226,6 @@ Diagnosis algorithm implementations and executor abstractions:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `profiler.py` | 800 | Profiling infrastructure: decorator-based timing, call counting |
 | `checker.py` | 500 | ConsistencyChecker ABC + implementations (Phase R: serial ConsistencyExecutor); immutable, picklable |
 | `executor.py` | 300 | ProcessExecutor (shared pool), MemoizingExecutor (cache), ConsistencyCache (Phase R, NEW) |
 | `hsdag.py` | 350 | HSDAG tree search: optimization for multiple diagnoses/conflicts |
@@ -260,6 +259,19 @@ Feature model to SAT conversion:
 | `dimacs_to_diag_pysat.py` | 81 | DIMACS CNF → DiagnosisModel |
 | `dimacs_to_configuration.py` | 59 | DIMACS variable assignments → Configuration |
 | `testsuite_reader.py` | 42 | Read test suites from files |
+
+### profiling/ — Profiling Infrastructure (top-level package)
+
+Neutral infrastructure imported directly by **both** `explanation` and `conacq` (not nested under either). Split by concern from the former 1,220-LOC `explanation/operations/algorithms/profiler.py`:
+
+| File | Purpose |
+|------|---------|
+| `protocol.py` | `Profiler` @runtime_checkable Protocol (consumers type-annotate against it; facade re-exports as `ProfilerProtocol`) + `AbstractProfiler` ABC + `NullProfiler` + `MetricType` + `ProfilerError` |
+| `core.py` | concrete `Profiler` (metrics, stats, CSV/console reporting) + `ProfilerMode` |
+| `decorators.py` | `measure_time`, `count_calls` |
+| `presets.py` | `ProfilerPreset`, `create_profiler` |
+| `registry.py` | `get/set/use_global_profiler`, `profiler_session` |
+| `__init__.py` | facade re-exporting the full public surface (`from profiling import X`) |
 
 ### apps/ — Standalone Applications (~3,025 LOC, 11 files)
 
@@ -562,7 +574,7 @@ python -m apps.run_evaluation apps/conf/run_evaluation_config.toml -v
 ## File Size Analysis
 
 Largest files (by line count):
-- `explanation/operations/profiler.py` — 1,192 LOC (profiling infrastructure)
+- `profiling/` — top-level package (split from the former 1,220-LOC `explanation/operations/algorithms/profiler.py`); neutral infra imported directly by both `explanation` and `conacq`
 - `explanation/models/task_preparation.py` — 952 LOC (SAT task setup)
 - `tests/test_diagnosis.py` — 1,416 LOC (diagnosis tests)
 - `apps/extract_results.py` — 621 LOC (result processing, DRY-refactored from 1,139 LOC)

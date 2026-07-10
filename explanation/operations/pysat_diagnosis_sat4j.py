@@ -4,7 +4,7 @@ from explanation.models.pysat_diagnosis_model import DiagnosisModel
 from explanation.operations.algorithms.checker import ConsistencyChecker, CheckerFactory
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.fastdiag_labeler import FastDiagLabeler, FastDiagParameters
-from explanation.operations.algorithms.profiler import AbstractProfiler
+from profiling import AbstractProfiler
 from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
 
 

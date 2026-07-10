@@ -11,7 +11,7 @@ import logging
 from typing import List, Dict, Tuple
 
 from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.profiler import (
+from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
 from explanation.operations.algorithms.utils import diff

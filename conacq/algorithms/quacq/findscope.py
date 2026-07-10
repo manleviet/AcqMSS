@@ -12,7 +12,7 @@ import logging
 from typing import List
 
 from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.profiler import measure_time, count_calls
+from profiling import measure_time, count_calls
 from .sat_utils import prune_rejecting
 
 

@@ -5,7 +5,7 @@ Pure functions extracted from QuAcqTask — shared by FindScope, FindC,
 DiscriminatingGenerator, and QuAcq.learn().
 """
 
-from explanation.operations.algorithms.profiler import count_calls, get_global_profiler
+from profiling import count_calls, get_global_profiler
 
 
 @count_calls('prune_calls')

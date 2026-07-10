@@ -15,7 +15,7 @@ from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel
 from explanation.models.encoding import variable_literals_to_config
 from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler, measure_time, count_calls
+from profiling import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
 
 class FeatureModelOracle(Oracle):

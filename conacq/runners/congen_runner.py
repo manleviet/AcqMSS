@@ -15,7 +15,7 @@ import logging
 from conacq.algorithms.acqmss.congen import ConGen
 from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
 from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
+from profiling import profiler_session, ProfilerPreset
 
 from conacq.eval.performance_metrics import PerformanceMetrics
 from .base_runner import BaseRunResult, BaseRunner

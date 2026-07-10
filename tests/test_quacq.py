@@ -22,7 +22,7 @@ from conacq.example_generators import QueryProvider
 from explanation.operations.algorithms.checker import (
     CheckerFactory, NonIncrementalPySATChecker,
 )
-from explanation.operations.algorithms.profiler import (
+from profiling import (
     get_global_profiler,
     use_global_profiler,
     ProfilerPreset

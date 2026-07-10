@@ -16,7 +16,7 @@ from typing import List, Optional, Protocol, runtime_checkable
 from pysat.formula import CNF
 from pysat.solvers import Solver
 
-from .profiler import get_global_profiler, count_calls, AbstractProfiler
+from profiling import get_global_profiler, count_calls, AbstractProfiler
 
 
 @runtime_checkable

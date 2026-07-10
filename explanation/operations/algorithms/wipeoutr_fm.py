@@ -8,7 +8,7 @@ import logging
 from typing import List, Dict, Tuple
 
 from .checker import ConsistencyChecker
-from .profiler import get_global_profiler, measure_time, count_calls, AbstractProfiler
+from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import diff
 
 

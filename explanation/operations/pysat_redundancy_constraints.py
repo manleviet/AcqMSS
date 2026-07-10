@@ -9,7 +9,7 @@ from flamapy.core.models import VariabilityModel
 
 from explanation.models.pysat_diagnosis_model import DiagnosisModel
 from explanation.models.task_preparation import TaskInput
-from explanation.operations.algorithms.profiler import AbstractProfiler
+from profiling import AbstractProfiler
 from explanation.operations.algorithms.wipeoutr_fm import WipeOutR_FM
 from explanation.operations.pysat_diagnosis import PySATDiagnosis
 
