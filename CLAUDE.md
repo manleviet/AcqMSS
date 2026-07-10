@@ -38,7 +38,7 @@ PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
 - **GenerateNE**: Called internally by `ConGenModel.prepare()`, not by callers
 - **CheckerModel protocol**: Both `ConGenModel` and `FMOracleModel` implement `get_kb()`, `get_assumptions()`, `use_incremental`
 - **Test control**: `ENABLED_TESTS` and `ENABLED_PARAMS` dicts at top of test files toggle specific tests
-- **Known pytest warnings**: `TestSuiteReader` triggers PytestCollectionWarning (has `__init__`); `pytest.mark.slow` is unregistered
+- **Known pytest warnings**: `TestSuiteReader` triggers PytestCollectionWarning (has `__init__`). The `slow` marker is registered in `pyproject.toml` `[tool.pytest.ini_options]`; shared fixtures/paths live in `tests/conftest.py` + `tests/resource_paths.py`.
 
 ## Documentation Management
 
