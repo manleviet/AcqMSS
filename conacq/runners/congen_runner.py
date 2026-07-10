@@ -120,7 +120,7 @@ class ConGenRunner(BaseRunner):
     @property
     def feature_ids(self) -> Dict[str, int]:
         """Feature name -> SAT variable ID mapping."""
-        return self.model.variables
+        return self.model.name_to_id
 
     def run(
             self,

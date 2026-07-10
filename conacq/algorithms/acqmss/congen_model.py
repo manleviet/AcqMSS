@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
+from conacq.kb_model import KBModel
 from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask, cf
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from .congen import ConGenResult
 
 
-class ConGenModel:
+class ConGenModel(KBModel):
     """Pure data container for ConGen algorithm.
 
     Holds bias constraints, variables, and solver config.
@@ -35,15 +36,7 @@ class ConGenModel:
     """
 
     def __init__(self) -> None:
-        # map clauses to bias relationships/constraint
-        self.constraint_map: Dict[str, List[List[int]]] = {}
-        # map negated clauses to bias relationships/constraint (for redundancy detection)
-        self.negated_constraint_map: Dict[str, List[List[int]]] = {}
-        # map feature names to IDs (for debugging and description generation)
-        self.variables: Dict[str, int] = {}
-        # Used as starting ID for assumption literals to avoid conflicts.
-        # Set by builder at build time (after negation computation).
-        self.next_available_id: int = 1000
+        super().__init__()
 
         # CheckerModel protocol attributes
         self._use_incremental: bool = True

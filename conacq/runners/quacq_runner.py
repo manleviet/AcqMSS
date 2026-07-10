@@ -183,7 +183,7 @@ class QuAcqRunner(BaseRunner):
     @property
     def feature_ids(self) -> Dict[str, int]:
         """Feature name -> SAT variable ID mapping from bias."""
-        return self.model.variables
+        return self.model.name_to_id
 
     def run(
             self,
@@ -353,7 +353,7 @@ class QuAcqRunner(BaseRunner):
         if mode == 'interactive':
             from conacq.oracle import UserPromptOracle
             # learn_oracle = UserPromptOracle(list(task.feature_ids.keys()))
-            learn_oracle = UserPromptOracle(list(self.model.variables.keys()))
+            learn_oracle = UserPromptOracle(list(self.model.name_to_id.keys()))
         else:
             learn_oracle = self.oracle
 

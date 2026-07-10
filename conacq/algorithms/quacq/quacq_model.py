@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
+from conacq.kb_model import KBModel
+from explanation.models import encoding
+from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
 from explanation.models.task_preparation import DescriptionProvider
 
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation
@@ -17,7 +20,7 @@ if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
 
 
-class QuAcqModel:
+class QuAcqModel(KBModel):
     """Model for QuAcq interactive learning, parallel to ConGenModel.
 
     Pure data container for bias constraints and solver config.
@@ -33,14 +36,7 @@ class QuAcqModel:
     """
 
     def __init__(self) -> None:
-        # Constraint name -> raw CNF clauses
-        self.constraint_map: Dict[str, List[List[int]]] = {}
-        # Constraint NOT(name) -> negated CNF clauses (populated by builder)
-        self.negated_constraint_map: Dict[str, List[List[int]]] = {}
-        # Feature name -> SAT variable ID (from bias)
-        self.variables: Dict[str, int] = {}
-        # Next available assumption ID (set by builder after negation)
-        self.next_available_id: int = 0
+        super().__init__()
 
         # Store incremental preference for CheckerModel protocol
         self.use_incremental: bool = True
@@ -49,7 +45,6 @@ class QuAcqModel:
         self._task: Optional[QuAcqTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
 
-        self.features: Dict[int, str] = {}  # id -> feature's name
         self.pos_assignment_to_assumption: Dict[str, int] = {}
         self.neg_assignment_to_assumption: Dict[str, int] = {}
 
@@ -122,18 +117,16 @@ class QuAcqModel:
         Returns:
             List of assumption IDs for the given feature assignments
         """
-        return [self.pos_assignment_to_assumption[feat] if val
-                else self.neg_assignment_to_assumption[feat]
-                for feat, val in config.items()
-                if feat in self.pos_assignment_to_assumption]
+        return encoding.config_to_assignment_assumptions(
+            config,
+            AssignmentAssumptionMap(
+                self.pos_assignment_to_assumption,
+                self.neg_assignment_to_assumption))
 
     def get_constraint_vars(self, assumption_id: int) -> Set[str]:
         """Get feature names for constraint by assumption ID."""
-        task = self._require_task()
-        clauses = task.constraint_clauses.get(assumption_id, [])
-        return {self.features[abs(lit)]
-                for clause in clauses for lit in clause
-                if abs(lit) in self.features}
+        clauses = self._require_task().constraint_clauses.get(assumption_id, [])
+        return encoding.get_constraint_vars(clauses, self.id_to_name)
 
     def prepare(self, oracle: 'FeatureModelOracle') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.
@@ -173,12 +166,7 @@ class QuAcqModel:
 
     def model_to_config(self, model):
         """Convert SAT model to configuration dictionary."""
-        config = {}
-        for lit in model:
-            var = abs(lit)
-            if var in self.features:
-                config[self.features[var]] = lit > 0
-        return config
+        return encoding.variable_literals_to_config(model, self.id_to_name)
 
     def get_constraints_with_scope(self,
                                    scope: set,

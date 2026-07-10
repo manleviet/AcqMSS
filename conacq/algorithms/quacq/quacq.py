@@ -136,7 +136,7 @@ class QuAcq:
                 n_queries += 1
                 query_history.append((config.copy(), answer, source))
 
-        all_variables = set(self.model.variables.keys()) if self.model else set()
+        all_variables = set(self.model.name_to_id.keys()) if self.model else set()
 
         logging.info('QuAcq starting: Bias=%d constraints, mode=%s', len(remaining_bias), mode)
 

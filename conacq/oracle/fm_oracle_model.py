@@ -10,12 +10,15 @@ from typing import Dict, List, Optional
 
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 
+from conacq.kb_model import KBModel
 from conacq.oracle.bg_data import BGData
 from explanation.models import DiagnosisTask, DescriptionProvider
+from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
+from explanation.models.encoding import config_to_assignment_assumptions
 from explanation.models.task_preparation import PreparationOutput, prepare_kb, _ASSUMPTION_PAIR_STRIDE
 
 
-class FMOracleModel:
+class FMOracleModel(KBModel):
     """Model for Oracle FM validation via ConsistencyChecker.
 
     Uses constraint_map + variables pattern (same as DiagnosisModel/ConGenModel).
@@ -28,16 +31,8 @@ class FMOracleModel:
     """
 
     def __init__(self):
+        super().__init__()
         self._fm_path: str = ""
-
-        # map clauses to relationships/constraint
-        self.constraint_map: Dict[str, List[List[int]]] = {}
-        # map negated clauses to relationships/constraint (for redundancy detection)
-        self.negated_constraint_map: Dict[str, List[List]] = {}
-        # map feature names to IDs (for debugging and description generation)
-        self.variables: Dict[str, int] = {}
-        # Used as starting ID for assumption literals to avoid conflicts.
-        self.next_available_id: int = 1000
 
         self.configuration: Optional[Configuration] = None
 
@@ -115,9 +110,11 @@ class FMOracleModel:
         Returns:
             List of assumption IDs for the given feature assignments
         """
-        items = configuration.elements.items() if hasattr(configuration, 'elements') else configuration.items()
-        return [self._pos_assignment_to_assumption[feat] if value else self._neg_assignment_to_assumption[feat]
-                for feat, value in items]
+        return config_to_assignment_assumptions(
+            configuration,
+            AssignmentAssumptionMap(
+                self._pos_assignment_to_assumption,
+                self._neg_assignment_to_assumption))
 
     def with_configuration(self, configuration) -> 'FMOracleModel':
         """Apply feature config: updates set_c with base + assignment assumptions.
@@ -168,7 +165,8 @@ class FMOracleModel:
         self.constraint_map = fm_model.constraint_map
         self.negated_constraint_map = fm_model.negated_constraint_map
 
-        self.variables = fm_model.variables
+        self._name_to_id = fm_model.variables
+        self._id_to_name = fm_model.features
         self.next_available_id = fm_model.next_available_id
 
         self.prepare(configuration=self.configuration)
@@ -217,7 +215,7 @@ class FMOracleTaskPreparation:
         pos_assignment_to_assumption = {}
         neg_assignment_to_assumption = {}
 
-        for name, fid in model.variables.items():
+        for name, fid in model.name_to_id.items():
             # a_pos: if active → feature must be true
             a_pos = id_assumption
             desc = f'{name}=true'

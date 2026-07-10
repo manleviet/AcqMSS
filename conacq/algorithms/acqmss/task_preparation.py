@@ -112,7 +112,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         # ConGen-unused set_neg_tc, preserved for task-content parity)
         tc_start_pos = len(assumptions)
         id_assumption, pos_negated_ids = prepare_testsuite_with_negation(
-            set_kb, assumptions, negation_map, provider, model.variables,
+            set_kb, assumptions, negation_map, provider, model.name_to_id,
             task_input.positive_test_cases, id_assumption)
         set_neg_tc.extend(pos_negated_ids)
 
@@ -161,7 +161,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
 
         generate_ne = GenerateNE(oracle)
         ne_results, id_assumption = generate_ne.generate(
-            testsuite, model.variables, set_kb, assumptions, id_assumption)
+            testsuite, model.name_to_id, set_kb, assumptions, id_assumption)
 
         neg_tv_ids = [ne.ne_id for ne in ne_results]
         descs = [ne.desc for ne in ne_results]

@@ -339,7 +339,7 @@ class TestQuAcqTask:
         task = prepared_model.task
         assert isinstance(task, QuAcqTask)
         assert len(task.set_c) > 0
-        assert len(prepared_model.variables) > 0
+        assert len(prepared_model.name_to_id) > 0
 
         # All bias IDs should be ints
         for aid in task.set_c:
@@ -376,7 +376,7 @@ class TestQuAcqModel:
     def test_builder(self, interactive_model):
         """Test model creation via builder."""
         assert len(interactive_model.constraint_map) > 0
-        assert len(interactive_model.variables) > 0
+        assert len(interactive_model.name_to_id) > 0
         assert interactive_model.task is not None
 
     def test_prepare(self, prepared_model):
@@ -598,7 +598,7 @@ class TestQueryProviderPoolFiltering:
     def test_pool_filtering_skips_invalid(self, prepared_model, checker):
         """Pool examples not satisfying KB+BG are skipped."""
         task = prepared_model.task
-        features = list(prepared_model.variables.keys())
+        features = list(prepared_model.name_to_id.keys())
         # All-false config almost certainly invalid (root must be true)
         invalid_config = {f: False for f in features}
         provider = QueryProvider(pool=[invalid_config], seed=42,
@@ -616,14 +616,14 @@ class TestSatUtils:
 
     def test_get_constraint_vars(self):
         model = QuAcqModel()
-        model.features = {1: 'a', 2: 'b', 3: 'c'}
+        model._id_to_name = {1: 'a', 2: 'b', 3: 'c'}
         model._task = QuAcqTask(constraint_clauses={10: [[1, -2], [3]]})
         result = model.get_constraint_vars(10)
         assert result == {'a', 'b', 'c'}
 
     def test_get_constraint_vars_missing(self):
         model = QuAcqModel()
-        model.features = {}
+        model._id_to_name = {}
         model._task = QuAcqTask(constraint_clauses={})
         result = model.get_constraint_vars(99)
         assert result == set()
@@ -634,7 +634,7 @@ class TestSatUtils:
         scope = {'a', 'b'}
         # Build minimal model with synthetic task
         model = QuAcqModel()
-        model.features = id_to_feature
+        model._id_to_name = id_to_feature
         model._task = QuAcqTask(constraint_clauses=constraint_clauses)
         result = model.get_constraints_with_scope(scope, {10, 12})
         assert result == [10]  # exact match
@@ -645,7 +645,7 @@ class TestSatUtils:
         scope = {'a', 'b'}
         # Build minimal model with synthetic task
         model = QuAcqModel()
-        model.features = id_to_feature
+        model._id_to_name = id_to_feature
         model._task = QuAcqTask(constraint_clauses=constraint_clauses)
         result = model.get_constraints_with_scope(scope, {10, 12})
         # No exact match, both are subsets

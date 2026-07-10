@@ -111,7 +111,8 @@ class ConGenModelBuilder:
 
         model = ConGenModel()
         model.constraint_map = bias.to_constraint_map()
-        model.variables = bias.feature_ids
+        model._name_to_id = bias.feature_ids
+        model._id_to_name = {vid: name for name, vid in bias.feature_ids.items()}
         model._use_incremental = self._use_incremental
 
         # Compute negation at build time (requires oracle for next_available_id)

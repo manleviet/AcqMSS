@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Set
 from enum import Enum
 
+from explanation.models.encoding import config_to_variable_literals
+
 
 class ExampleType(Enum):
     """Classification of an example (test case)"""
@@ -89,12 +91,7 @@ class Example:
             List of literals where positive = True, negative = False
             Example: [1, -2, 3] means f1=True, f2=False, f3=True
         """
-        literals = []
-        for name, value in sorted(self.assignments.items()):
-            if name in feature_ids:
-                fid = feature_ids[name]
-                literals.append(fid if value else -fid)
-        return literals
+        return config_to_variable_literals(self.assignments, feature_ids)
 
     def to_clause(self, feature_ids: Dict[str, int]) -> List[int]:
         """

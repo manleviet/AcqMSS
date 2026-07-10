@@ -208,11 +208,15 @@ SAT model representation and immutable task units:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `task_preparation.py` | 750 | Unified DiagnosisTaskPreparation, TestCaseTaskPreparation, factory classes |
-| `codec.py` | 50 | VariableCodec: single source of truth for variable↔name↔assumption translation (Phase R) |
+| `task_preparation.py` | 750 | Task family (frozen) + DiagnosisTaskPreparation/TestCaseTaskPreparation, factory classes |
+| `encoding.py` | 60 | Free-function encoders (config↔literals, config→assignment-assumptions, clause→names). No codec class; name↔id maps passed in. |
+| `assignment_assumption_map.py` | 20 | `AssignmentAssumptionMap` frozen holder of pos/neg assignment→assumption maps (prep-derived) |
+| `kb_protocol.py` | 25 | `KBProtocol` — read-only name↔id catalog contract (id_to_name/name_to_id + constraint maps) |
 | `diagnosis_model_builder.py` | 300 | Builder pattern: construct DiagnosisModel with configuration |
-| `pysat_diagnosis_model.py` | 255 | DiagnosisModel: SAT instance + metadata (clauses, assumptions) |
+| `pysat_diagnosis_model.py` | 265 | DiagnosisModel: SAT instance + metadata; exposes id_to_name/name_to_id (aliases features/variables) |
 | `testsuite.py` | 75 | TestSuite: holds test cases + their configurations |
+
+**Single-source name↔id (T2):** the name↔id catalog lives on the KB, exposed read-only via `MappingProxyType` under KB Protocol names (`id_to_name`/`name_to_id`). `DiagnosisModel` aliases PySATModel `features`/`variables`. The conacq `KBModel` base (`conacq/kb_model.py`) is **domain-neutral**: its `__init__` owns the shared KB fields (`constraint_map`, `negated_constraint_map`, `next_available_id`, and the generic-named `_name_to_id`/`_id_to_name`) and exposes read-only views — no feature-model terms in the base. ConGen/QuAcq/FMOracle call `super().__init__()` then set only model-specific values; builders populate `_name_to_id`/`_id_to_name` at build; external callers read via the `name_to_id`/`id_to_name` properties (cannot mutate the catalog). The `encoding` free functions receive these maps as parameters — no `VariableCodec`, no per-model encoding duplication.
 
 #### explanation/operations/ — SAT Operations (Phase R, ~4,800 LOC, ~26 files)
 

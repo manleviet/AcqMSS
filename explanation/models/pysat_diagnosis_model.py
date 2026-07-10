@@ -1,6 +1,7 @@
 """Diagnosis model."""
 
-from typing import List, Dict, Optional
+from types import MappingProxyType
+from typing import List, Dict, Mapping, Optional
 
 from flamapy.metamodels.pysat_metamodel.models import PySATModel
 
@@ -73,6 +74,17 @@ class DiagnosisModel(PySATModel):
     def use_incremental(self) -> bool:
         """Whether to use incremental solver."""
         return self._use_incremental
+
+    # KB Protocol: read-only name↔id catalog (aliases PySATModel.features/variables)
+    @property
+    def id_to_name(self) -> Mapping[int, str]:
+        """SAT variable id → feature name (read-only view)."""
+        return MappingProxyType(self.features)
+
+    @property
+    def name_to_id(self) -> Mapping[str, int]:
+        """Feature name → SAT variable id (read-only view)."""
+        return MappingProxyType(self.variables)
 
     def add_clause_to_map(self, description: str, clauses: List[List]) -> None:
         """Add clauses with description to constraint map."""

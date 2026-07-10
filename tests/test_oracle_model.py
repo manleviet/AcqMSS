@@ -10,7 +10,7 @@ def _make_oracle_model(constraint_map, variables, next_available_id):
     """Test helper: create FMOracleModel from raw data and prepare."""
     model = FMOracleModel()
     model.constraint_map = constraint_map
-    model.variables = variables
+    model._name_to_id = variables
     model.next_available_id = next_available_id
     model.prepare()
     return model
@@ -38,7 +38,7 @@ class TestOracleModel:
         model = _make_oracle_model(constraint_map, variables, next_available_id=3)
 
         assert model.constraint_map == constraint_map
-        assert model.variables == variables
+        assert model.name_to_id == variables
 
     def test_config_to_active_assumptions(self):
         """Config dict correctly maps to assumption IDs."""

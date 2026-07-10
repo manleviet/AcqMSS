@@ -13,6 +13,7 @@ from conacq.oracle.base import Oracle
 from conacq.oracle.bg_data import BGData
 from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel
+from explanation.models.encoding import variable_literals_to_config
 from explanation.operations.algorithms.checker import CheckerFactory
 from explanation.operations.algorithms.profiler import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
@@ -76,8 +77,8 @@ class FeatureModelOracle(Oracle):
         Returns:
             True if configuration is valid
         """
-        if any(name not in self._oracle_model.variables for name in assignments):
-            raise KeyError(f"Unknown features in assignment: {set(assignments) - set(self._oracle_model.variables)}")
+        if any(name not in self._oracle_model.name_to_id for name in assignments):
+            raise KeyError(f"Unknown features in assignment: {set(assignments) - set(self._oracle_model.name_to_id)}")
 
         set_c = self._oracle_model.with_configuration(assignments).get_c()
 
@@ -106,12 +107,12 @@ class FeatureModelOracle(Oracle):
 
     def get_variables(self) -> Set[str]:
         """Get all feature names."""
-        return set(self._oracle_model.variables.keys())
+        return set(self._oracle_model.name_to_id.keys())
 
     # TODO: need check
     def get_feature_ids(self) -> Dict[str, int]:
         """Get feature name to SAT variable ID mapping."""
-        return dict(self._oracle_model.variables)
+        return dict(self._oracle_model.name_to_id)
 
     def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
         """Complete a partial configuration to a full valid one via SAT solving.
@@ -128,7 +129,7 @@ class FeatureModelOracle(Oracle):
         """
         assumptions = []
         for name, value in partial.items():
-            fid = self._oracle_model.variables[name]
+            fid = self._oracle_model.name_to_id[name]
             assumptions.append(fid if value else -fid)
 
         solver = Solver(name=self.solver_name)
@@ -148,8 +149,7 @@ class FeatureModelOracle(Oracle):
 
     def _model_to_config(self, model: List[int]) -> Dict[str, bool]:
         """Convert SAT model to feature config dict."""
-        return {name: fid in model
-                for name, fid in self._oracle_model.variables.items()}
+        return variable_literals_to_config(model, self._oracle_model.id_to_name)
 
     # Convenience getters (delegate to model)
     def get_kb(self) -> List[List[int]]:
@@ -188,7 +188,7 @@ class FeatureModelOracle(Oracle):
         return self._oracle_model.next_available_id
 
     def __repr__(self):
-        return f"FeatureModelOracle(features={len(self._oracle_model.variables)})"
+        return f"FeatureModelOracle(features={len(self._oracle_model.name_to_id)})"
 
     # TODO: need update
     def cleanup(self):
