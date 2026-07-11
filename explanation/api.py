@@ -26,6 +26,8 @@ from explanation.models.task_preparation import (
     cf,
     prepare_kb,
     prepare_testsuite_with_negation,
+    prepare_variable_assignments,
+    slice_assumptions,
 )
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from explanation.models.encoding import (
@@ -57,6 +59,8 @@ __all__ = [
     'cf',
     'prepare_kb',
     'prepare_testsuite_with_negation',
+    'prepare_variable_assignments',
+    'slice_assumptions',
     # Test-suite data
     'Assignment',
     'TestCase',

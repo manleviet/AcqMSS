@@ -16,6 +16,7 @@ from explanation.api import (
     DiagnosisTask,
     PreparedTask,
     prepare_kb,
+    slice_assumptions,
 )
 if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
@@ -110,5 +111,5 @@ class QuAcqTaskPreparation:
     def _assign_sets(assumptions: List[int], bias_start_pos: int) -> Tuple[List[int], List[int]]:
         """Compute (set_b, set_c) from assumptions."""
         set_b = [assumptions[0]]
-        set_c = list(assumptions[bias_start_pos::2])
+        set_c = slice_assumptions(assumptions, bias_start_pos, None, 2)
         return set_b, set_c

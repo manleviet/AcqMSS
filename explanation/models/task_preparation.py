@@ -138,6 +138,19 @@ def convert_keys_to_features(configuration: Configuration) -> Configuration:
     return Configuration(new_elements)
 
 
+def slice_assumptions(assumptions: List[int], start: int = 0,
+                      stop: Optional[int] = None, stride: int = 1) -> List[int]:
+    """Return ``assumptions[start:stop:stride]`` as a list.
+
+    Single home for the offset+stride arithmetic that carves set_b/set_c/set_tc/
+    set_tv out of the flat assumption list. Paired layouts (each constraint or
+    test case stored as an original + negated form) pass
+    ``stride=_ASSUMPTION_PAIR_STRIDE`` to pick only the originals; unpaired
+    layouts use the default stride 1.
+    """
+    return list(assumptions[start:stop:stride])
+
+
 # === RESULT DATA CLASSES (Core data only, immutable) ===
 
 @dataclass(frozen=True)
@@ -402,6 +415,47 @@ def prepare_configuration(set_kb: List[List[int]],
     return id_assumption
 
 
+def _add_assignment_assumption(set_kb: List[List[int]], assumptions: List[int],
+                               provider: DescriptionProvider, assumption_id: int,
+                               feature_id: int, description: str, *, value: bool) -> int:
+    """Add one assumption-guarded feature-assignment clause; return the next id.
+
+    ``value=True``  → clause ``[-a, feature_id]``  (assumption active ⇒ feature true)
+    ``value=False`` → clause ``[-a, -feature_id]`` (assumption active ⇒ feature false)
+    """
+    literal = feature_id if value else -feature_id
+    set_kb.append([-assumption_id, literal])
+    assumptions.append(assumption_id)
+    provider.add_configuration_description(assumption_id, description)
+    return assumption_id + 1
+
+
+def prepare_variable_assignments(set_kb: List[List[int]], assumptions: List[int],
+                                 provider: DescriptionProvider,
+                                 name_to_id: Dict[str, int],
+                                 id_assumption: int):
+    """Append paired (feature=true, feature=false) assignment assumptions.
+
+    Builds the variable-assignment block of the oracle assumption layout: for
+    each feature, two assumption-guarded clauses forcing it true / false when
+    the corresponding assumption is active. Mutates ``set_kb`` / ``assumptions``
+    (build-then-freeze).
+
+    Returns:
+        (next_id, pos_map, neg_map) where the maps are feature name → assumption id.
+    """
+    pos_assignment_to_assumption: Dict[str, int] = {}
+    neg_assignment_to_assumption: Dict[str, int] = {}
+    for name, fid in name_to_id.items():
+        pos_assignment_to_assumption[name] = id_assumption
+        id_assumption = _add_assignment_assumption(
+            set_kb, assumptions, provider, id_assumption, fid, f'{name}=true', value=True)
+        neg_assignment_to_assumption[name] = id_assumption
+        id_assumption = _add_assignment_assumption(
+            set_kb, assumptions, provider, id_assumption, fid, f'{name}=false', value=False)
+    return id_assumption, pos_assignment_to_assumption, neg_assignment_to_assumption
+
+
 # === DIAGNOSIS STRATEGY ===
 
 class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
@@ -482,26 +536,26 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         if task_input.configuration is not None:
             if not task_input.with_cf_in_c:
                 # C = configuration, B = FM + root
-                set_b = [assumptions[i] for i in range(0, start_id_config, step)]
-                set_c = list(assumptions[start_id_config:])
+                set_b = slice_assumptions(assumptions, 0, start_id_config, step)
+                set_c = slice_assumptions(assumptions, start_id_config)
             else:
                 # C = configuration + FM, B = root only
                 set_b = [assumptions[0]]
-                set_c = [assumptions[i] for i in range(step, start_id_config, step)] + \
-                    list(assumptions[start_id_config:])
+                set_c = slice_assumptions(assumptions, step, start_id_config, step) + \
+                    slice_assumptions(assumptions, start_id_config)
         else:
             if task_input.test_case is not None:
                 # C = FM constraints, B = root + test case
-                set_b = [assumptions[0]] + list(assumptions[start_id_test:])
-                set_c = [assumptions[i] for i in range(step, start_id_config, step)]
+                set_b = [assumptions[0]] + slice_assumptions(assumptions, start_id_test)
+                set_c = slice_assumptions(assumptions, step, start_id_config, step)
             else:
                 if has_negated_forms:
                     # Redundancy detection: C = CF (PySATModel, no root), B = {}
-                    set_c = list(assumptions[step:len(assumptions):step])
+                    set_c = slice_assumptions(assumptions, step, None, step)
                 else:
                     # C = FM constraints, B = root only
                     set_b = [assumptions[0]]
-                    set_c = [assumptions[i] for i in range(step, len(assumptions), step)]
+                    set_c = slice_assumptions(assumptions, step, None, step)
 
         return set_b, set_c
 
@@ -634,16 +688,17 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
 
         Each test case has two assumptions (original + negated),
         so extract only the original assumptions for set_tc and set_tv.
+        Invariant: (start_id_tv - start_id_tc) is even (whole original+negated
+        pairs), so slicing originals directly from each sub-region is exact.
         """
         set_b = [assumptions[0]]
-        set_c = list(assumptions[1:start_id_tc])
+        set_c = slice_assumptions(assumptions, 1, start_id_tc)
 
-        tc_tv_assumptions = assumptions[start_id_tc:]
-        original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), _ASSUMPTION_PAIR_STRIDE)]
-
-        num_tc_original = (start_id_tv - start_id_tc) // _ASSUMPTION_PAIR_STRIDE
-        set_tc = original_tc_tv[:num_tc_original]
-        set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
+        # Each test case is stored as an (original, negated) pair; stride by 2 to
+        # keep only the originals, sliced directly from each sub-region.
+        set_tc = slice_assumptions(assumptions, start_id_tc, start_id_tv, _ASSUMPTION_PAIR_STRIDE)
+        set_tv = (slice_assumptions(assumptions, start_id_tv, None, _ASSUMPTION_PAIR_STRIDE)
+                  if has_negative_test_cases else [])
         return set_b, set_c, set_tc, set_tv
 
 

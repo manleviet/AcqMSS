@@ -16,6 +16,7 @@ from explanation.api import (
     DescriptionProvider,
     PreparedTask, prepare_testsuite_with_negation,
     prepare_kb,
+    slice_assumptions,
 )
 from .generate_ne import GenerateNE
 
@@ -247,14 +248,15 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
 
         Each test case has two assumptions (original + negated),
         so extract only the original assumptions for set_tc and set_tv.
+        Invariant: (start_id_tv - start_id_tc) is even (whole original+negated
+        pairs), so slicing originals directly from each sub-region is exact.
         """
         set_b = [assumptions[0]]
-        set_c = list(assumptions[bias_start_id:start_id_tc:2])
+        set_c = slice_assumptions(assumptions, bias_start_id, start_id_tc, 2)
 
-        tc_tv_assumptions = assumptions[start_id_tc:]
-        original_tc_tv = [tc_tv_assumptions[i] for i in range(0, len(tc_tv_assumptions), 2)]
-
-        num_tc_original = (start_id_tv - start_id_tc) // 2
-        set_tc = original_tc_tv[:num_tc_original]
-        set_tv = original_tc_tv[num_tc_original:] if has_negative_test_cases else []
+        # Each test case is stored as an (original, negated) pair; stride by 2 to
+        # keep only the originals, sliced directly from each sub-region.
+        set_tc = slice_assumptions(assumptions, start_id_tc, start_id_tv, 2)
+        set_tv = (slice_assumptions(assumptions, start_id_tv, None, 2)
+                  if has_negative_test_cases else [])
         return set_b, set_c, set_tc, set_tv

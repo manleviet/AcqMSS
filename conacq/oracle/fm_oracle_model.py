@@ -20,6 +20,8 @@ from explanation.api import (
     config_to_assignment_assumptions,
     PreparedTask,
     prepare_kb,
+    prepare_variable_assignments,
+    slice_assumptions,
 )
 
 
@@ -214,39 +216,19 @@ class FMOracleTaskPreparation:
             set_kb, assumptions, negation_map, provider,
             model.constraint_map, id_assumption, negated_constraint_map)
 
-        # Step 2: Feature assignments → assumption-guarded
+        # Step 2: Feature assignments → assumption-guarded (paired true/false)
         assignments_start_index = len(assumptions)
         assignment_kb_start = len(set_kb)
-        pos_assignment_to_assumption = {}
-        neg_assignment_to_assumption = {}
-
-        for name, fid in model.name_to_id.items():
-            # a_pos: if active → feature must be true
-            a_pos = id_assumption
-            desc = f'{name}=true'
-            set_kb.append([-a_pos, fid])
-
-            assumptions.append(a_pos)
-            provider.add_configuration_description(a_pos, desc)
-            pos_assignment_to_assumption[name] = a_pos
-            id_assumption += 1
-
-            # a_neg: if active → feature must be false
-            a_neg = id_assumption
-            desc = f'{name}=false'
-            set_kb.append([-a_neg, -fid])
-
-            assumptions.append(a_neg)
-            provider.add_configuration_description(a_neg, desc)
-            neg_assignment_to_assumption[name] = a_neg
-            id_assumption += 1
+        id_assumption, pos_assignment_to_assumption, neg_assignment_to_assumption = (
+            prepare_variable_assignments(
+                set_kb, assumptions, provider, model.name_to_id, id_assumption))
 
         model._pos_assignment_to_assumption = pos_assignment_to_assumption
         model._neg_assignment_to_assumption = neg_assignment_to_assumption
 
-        # Step 3: compute and cache base set_c (FM constraint assumptions only)
-        model._base_set_c = [assumptions[i]
-                             for i in range(0, assignments_start_index, 2)]
+        # Step 3: compute and cache base set_c (FM constraint assumptions only —
+        # originals of the paired Part-3 layout, stride 2)
+        model._base_set_c = slice_assumptions(assumptions, 0, assignments_start_index, 2)
         set_c = list(model._base_set_c)
 
         # Step 3b: apply configuration if provided
