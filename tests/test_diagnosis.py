@@ -240,7 +240,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             checker = create_checker(use_sat4j, prepared, is_incremental)
@@ -264,7 +263,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             checker = create_checker(use_sat4j, prepared, is_incremental)
@@ -288,7 +286,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             checker = create_checker(use_sat4j, prepared, is_incremental)
@@ -313,7 +310,6 @@ class DiagnosisTest(unittest.TestCase):
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_1)
-                     .use_incremental(is_incremental)
                      .with_positive_testcases(positive_testcases)
                      )
 
@@ -340,7 +336,6 @@ class DiagnosisTest(unittest.TestCase):
             negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_1)
-                     .use_incremental(is_incremental)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
                      )
@@ -368,7 +363,6 @@ class DiagnosisTest(unittest.TestCase):
             negative_testcases = TestSuiteReader(Resources.FM_10_2_NEGATIVE_TESTCASES).transform()
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_2)
-                     .use_incremental(is_incremental)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
                      )
@@ -396,7 +390,6 @@ class DiagnosisTest(unittest.TestCase):
             negative_testcases = TestSuiteReader(Resources.FM_10_2_NEGATIVE_TESTCASES).transform()
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_2)
-                     .use_incremental(is_incremental)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
                      )
@@ -422,7 +415,6 @@ class DiagnosisTest(unittest.TestCase):
             positive_testcases = TestSuiteReader(Resources.FM_10_1_POSITIVE_TESTCASES).transform()
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_1)
-                     .use_incremental(is_incremental)
                      .with_positive_testcases(positive_testcases)
                      )
 
@@ -448,7 +440,6 @@ class DiagnosisTest(unittest.TestCase):
             negative_testcases = TestSuiteReader(Resources.FM_10_1_NEGATIVE_TESTCASES).transform()
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_1)
-                     .use_incremental(is_incremental)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
                      )
@@ -478,7 +469,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             builder = (PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis())
@@ -502,7 +492,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis()
@@ -527,7 +516,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis()
@@ -557,7 +545,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
@@ -583,7 +570,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
@@ -609,7 +595,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
@@ -635,7 +620,6 @@ class DiagnosisTest(unittest.TestCase):
 
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_INCONSISTENT)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
@@ -667,7 +651,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_CONSISTENT)
                      .with_configuration(configuration)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis()
@@ -692,7 +675,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_CONSISTENT)
                      .with_configuration(configuration)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
@@ -719,7 +701,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_DEADFEATURE)
                      .with_test_case(test_case)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_diagnosis_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_diagnosis()
@@ -748,7 +729,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_fide(Resources.FM_DEADFEATURE)
                      .with_test_case(test_case)
-                     .use_incremental(is_incremental)
                      )
 
             builder = PySATDiagnosisBuilder.for_conflict_sat4j() if use_sat4j else PySATDiagnosisBuilder.for_conflict()
@@ -780,7 +760,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_1)
                      .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -813,7 +792,6 @@ class DiagnosisTest(unittest.TestCase):
                      .from_uvl(Resources.FM_10_1)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -846,7 +824,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_1)
                      .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -880,7 +857,6 @@ class DiagnosisTest(unittest.TestCase):
                      .from_uvl(Resources.FM_10_1)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -910,7 +886,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_2)
                      .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -943,7 +918,6 @@ class DiagnosisTest(unittest.TestCase):
                      .from_uvl(Resources.FM_10_2)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -976,7 +950,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_2)
                      .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -1007,7 +980,6 @@ class DiagnosisTest(unittest.TestCase):
                      .from_uvl(Resources.FM_10_2)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -1040,7 +1012,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_1)
                      .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
@@ -1075,7 +1046,6 @@ class DiagnosisTest(unittest.TestCase):
                      .from_uvl(Resources.FM_10_1)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
@@ -1107,7 +1077,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_10_1)
                      .with_positive_testcases(positive_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseQuickXplainBuilder.for_debugging()
@@ -1142,7 +1111,6 @@ class DiagnosisTest(unittest.TestCase):
                      .from_uvl(Resources.FM_10_1)
                      .with_positive_testcases(positive_testcases)
                      .with_negative_testcases(negative_testcases)
-                     .use_incremental(is_incremental)
                      )
 
             builder = None if use_sat4j else PySATTestcaseBuilder.for_debugging()
@@ -1205,7 +1173,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_REDUNDANT)
                      .for_redundancy(True)
-                     .use_incremental(is_incremental)
                      )
 
             # Verify negated constraint map is populated
@@ -1266,7 +1233,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_REDUNDANT)
                      .for_redundancy(True)
-                     .use_incremental(is_incremental)
                      )
 
             # Verify negated constraint map is populated
@@ -1333,7 +1299,6 @@ class DiagnosisTest(unittest.TestCase):
             model, prepared = build_prepared(DiagnosisModelBuilder
                      .from_uvl(Resources.FM_REDUNDANT)
                      .with_testcases(testsuite)
-                     .use_incremental(is_incremental)
                      )
 
             print(f"Test suite has {len(testsuite.testcases)} test cases")

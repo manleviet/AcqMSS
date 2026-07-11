@@ -338,12 +338,28 @@ consumes — the Task family and preparation helpers (`TaskInput`, `Task`,
 `prepare_testsuite_with_negation`, `prepare_variable_assignments`,
 `slice_assumptions`), test-suite data (`Assignment`, `TestCase`,
 `TestSuite`), the `encoding` free functions + `AssignmentAssumptionMap`,
-`KBProtocol`, consistency checking (`ConsistencyChecker`,
-`NonIncrementalPySATChecker`, `CheckerFactory`), clause utilities (`split`,
-`diff`, `negate_cnf_tseitin`, `QuickXPlain`), and the `FmToDiagPysat`
-transformation. It grows as later seams are formalized (SolverBackend port, the
-operation registry). It deliberately does NOT export the profiler (imported from
-`profiling` directly) and there is no `VariableCodec`.
+`KBProtocol`, the `AbstractModelBuilder` base, consistency checking
+(`ConsistencyChecker`, `NonIncrementalPySATChecker`, `CheckerFactory`), clause
+utilities (`split`, `diff`, `negate_cnf_tseitin`, `QuickXPlain`), and the
+`FmToDiagPysat` transformation. It grows as later seams are formalized
+(SolverBackend port, the operation registry). It deliberately does NOT export the
+profiler (imported from `profiling` directly) and there is no `VariableCodec`.
+
+**Model-builder hierarchy (two tiers).** `AbstractModelBuilder` (framework,
+`explanation/models/abstract_model_builder.py`) is the universal base: a pure
+`build()` template (`_validate()` → `_create_model()`, two abstract hooks) with
+zero knowledge of any concrete model or the app. `DiagnosisModelBuilder`
+inherits it directly. `OracleBiasModelBuilder`
+(`conacq/oracle_bias_model_builder.py`) inherits it **through `explanation.api`**
+and owns the shared bias-load → negation-via-oracle skeleton for the app builders;
+`ConGenModelBuilder` / `QuAcqModelBuilder` subclass it and supply two hooks
+(`_create_model_instance`, `_post_negation_build`). The oracle/bias builder lives
+in the app, not the framework, precisely because it imports `conacq.bias` and is
+typed against `FeatureModelOracle` — boundary rule 4 (explanation ⊥ conacq) would
+flag it in the framework. `DiagnosisModelBuilder` no longer exposes a
+`use_incremental()` setter: incremental vs not is chosen when the checker is
+created (`CheckerFactory.create_from_task(..., use_incremental=...)`), not on the
+builder or model.
 
 **Three-tier boundary contract.** The repo is a three-package stack with
 strictly one-directional dependencies; each tier reaches the tier below ONLY

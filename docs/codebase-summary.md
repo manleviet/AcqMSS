@@ -22,7 +22,7 @@ Primary constraint discovery algorithms:
 | `generate_ne.py` | 138 | GenerateNE: pure negated example generation (returns clauses, no mutation) |
 | `task_preparation.py` | 233 | Task hierarchy + ConGenTaskPreparation strategy (calls GenerateNE internally) |
 | `congen_model.py` | 257 | Immutable KB container; `prepare_task(task_input, oracle) → ConGenTask` |
-| `congen_model_builder.py` | 162 | Fluent builder (requires oracle for build-time negation computation) |
+| `congen_model_builder.py` | 112 | Fluent builder; subclasses `OracleBiasModelBuilder`, adds example handling + the two model hooks |
 | (Total: 1,331 LOC for main algorithms) |
 | (Subtotal: 1,439 LOC including both paradigm-specific builders) |
 
@@ -35,7 +35,7 @@ Primary constraint discovery algorithms:
 | `quacq.py` | 262 | QuAcq algorithm + QuAcqResult (DI pattern, mode dispatch, direct param learn()) |
 | `sat_utils.py` | 52 | Standalone SAT utilities for QuAcq: constraint filtering, scope matching, assumption conversion, consistency pruning |
 | `quacq_model.py` | 204 | QuAcqModel: dual to ConGenModel for interactive learning. Stores negated_constraint_map + next_available_id (computed at build time). |
-| `quacq_model_builder.py` | 85 | QuAcqModelBuilder: fluent builder, requires oracle. build() computes negation (idempotent), auto-prepares on build(). |
+| `quacq_model_builder.py` | 37 | QuAcqModelBuilder: subclasses `OracleBiasModelBuilder`; supplies `_create_model_instance`/`_post_negation_build` hooks (solver mode + BG assignment maps + auto-prepare). |
 | `task_preparation.py` | 103 | QuAcqTask + QuAcqTaskPreparation: pure data container + preparation |
 | `findc.py` | 138 | FindC (IJCAI13 Algorithm 3): oracle.is_valid() + DiscriminatingGenerator(C_L[Y]) |
 | `findscope.py` | 84 | FindScope (IJCAI13 Algorithm 2): oracle.is_valid() partial queries, no SAT |
@@ -212,12 +212,13 @@ SAT model representation and immutable task units:
 | `encoding.py` | 60 | Free-function encoders (config↔literals, config→assignment-assumptions, clause→names). No codec class; name↔id maps passed in. |
 | `assignment_assumption_map.py` | 20 | `AssignmentAssumptionMap` frozen holder of pos/neg assignment→assumption maps (prep-derived) |
 | `kb_protocol.py` | 25 | `KBProtocol` — read-only name↔id catalog contract (id_to_name/name_to_id + constraint maps) |
-| `diagnosis_model_builder.py` | 300 | Builder: `build()` → immutable KB model; `build_task_input()` → per-task `TaskInput` |
+| `abstract_model_builder.py` | 42 | `AbstractModelBuilder` universal base: pure `build()` template (`_validate`→`_create_model`, two abstract hooks); no conacq refs. Exported via api. |
+| `diagnosis_model_builder.py` | 381 | Builder (subclasses `AbstractModelBuilder`): `build()` → immutable KB model; `build_task_input()` → per-task `TaskInput`. No `use_incremental()` (checker concern). |
 | `pysat_diagnosis_model.py` | 110 | DiagnosisModel: immutable KB (no task/use_incremental state); `prepare_task(task_input)` → `PreparedTask`; exposes id_to_name/name_to_id |
 | `task_preparation.py` | — | Preparation strategies + `PreparedTask(task, describe, assignment_map)` result container (was `PreparationOutput`) |
 | `testsuite.py` | 75 | TestSuite: holds test cases + their configurations |
 
-**Single-source name↔id (T2):** the name↔id catalog lives on the KB, exposed read-only via `MappingProxyType` under KB Protocol names (`id_to_name`/`name_to_id`). `DiagnosisModel` aliases PySATModel `features`/`variables`. The conacq `KBModel` base (`conacq/kb_model.py`) is **domain-neutral**: its `__init__` owns the shared KB fields (`constraint_map`, `negated_constraint_map`, `next_available_id`, and the generic-named `_name_to_id`/`_id_to_name`) and exposes read-only views — no feature-model terms in the base. ConGen/QuAcq/FMOracle call `super().__init__()` then set only model-specific values; builders populate `_name_to_id`/`_id_to_name` at build; external callers read via the `name_to_id`/`id_to_name` properties (cannot mutate the catalog). The `encoding` free functions receive these maps as parameters — no `VariableCodec`, no per-model encoding duplication.
+**Single-source name↔id (T2):** the name↔id catalog lives on the KB, exposed read-only via `MappingProxyType` under KB Protocol names (`id_to_name`/`name_to_id`). `DiagnosisModel` aliases PySATModel `features`/`variables`. The conacq `KBModel` base (`conacq/kb_model.py`) is **domain-neutral**: its `__init__` owns the shared KB fields (`constraint_map`, `negated_constraint_map`, `next_available_id`, and the generic-named `_name_to_id`/`_id_to_name`) and exposes read-only views — no feature-model terms in the base. ConGen/QuAcq/FMOracle call `super().__init__()` then set only model-specific values; builders populate `_name_to_id`/`_id_to_name` at build; external callers read via the `name_to_id`/`id_to_name` properties (cannot mutate the catalog). The `encoding` free functions receive these maps as parameters — no `VariableCodec`, no per-model encoding duplication. A sibling conacq-root file, `conacq/oracle_bias_model_builder.py`, holds `OracleBiasModelBuilder` — the shared bias-load → negation-via-oracle builder base for ConGen/QuAcq (subclasses the framework `AbstractModelBuilder` via `explanation.api`); it lives in the app because it imports `conacq.bias` and types against `FeatureModelOracle`.
 
 #### explanation/operations/ — SAT Operations (Phase R, ~4,800 LOC, ~26 files)
 

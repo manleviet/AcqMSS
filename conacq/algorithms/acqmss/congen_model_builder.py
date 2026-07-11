@@ -1,17 +1,18 @@
 """Builder for creating configured ConGenModel instances.
 
-Handles bias loading, solver config, and optional auto-prepare.
+Handles bias loading, solver config, and optional auto-prepare. The bias-load →
+negation-via-oracle skeleton lives in OracleBiasModelBuilder; this builder adds
+example handling and supplies the two template hooks.
 """
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+
+from conacq.oracle_bias_model_builder import OracleBiasModelBuilder
 
 from .congen_model import ConGenModel
 
-if TYPE_CHECKING:
-    from conacq.oracle import FeatureModelOracle
 
-
-class ConGenModelBuilder:
+class ConGenModelBuilder(OracleBiasModelBuilder):
     """Fluent builder for ConGenModel.
 
     Examples:
@@ -39,30 +40,11 @@ class ConGenModelBuilder:
     """
 
     def __init__(self):
-        self._bias_path: Optional[str] = None
-
-        # Oracle (optional, enables auto-prepare)
-        self._oracle: Optional['FeatureModelOracle'] = None
-
+        super().__init__()
         # Examples (optional, for convenience)
         self._examples_path: Optional[str] = None
         self._positive_examples: Optional[List[Dict[str, bool]]] = None
         self._negative_examples: Optional[List[Dict[str, bool]]] = None
-
-        # Solver configuration
-        self._use_incremental: bool = True
-
-    @classmethod
-    def from_bias(cls, bias_path: str) -> 'ConGenModelBuilder':
-        """Create builder from bias JSON file."""
-        builder = cls()
-        builder._bias_path = bias_path
-        return builder
-
-    def with_oracle(self, oracle: 'FeatureModelOracle') -> 'ConGenModelBuilder':
-        """Set oracle for auto-prepare during build()."""
-        self._oracle = oracle
-        return self
 
     def with_examples(self, examples_path: str) -> 'ConGenModelBuilder':
         """Set examples file path (contains both E+ and E-).
@@ -88,41 +70,15 @@ class ConGenModelBuilder:
         self._examples_path = None
         return self
 
-    def use_incremental(self, enabled: bool = True) -> 'ConGenModelBuilder':
-        """Set incremental solver mode."""
-        self._use_incremental = enabled
-        return self
+    # === OracleBiasModelBuilder template hooks ===
 
-    def build(self) -> ConGenModel:
-        """Build and return configured ConGenModel.
+    def _create_model_instance(self) -> ConGenModel:
+        """Return a new, empty ConGenModel."""
+        return ConGenModel()
 
-        Computes negation at build time (requires oracle).
-        Auto-prepares if examples are also set.
-
-        Raises:
-            ValueError: If bias path or oracle missing
-        """
-        self._validate()
-
-        from conacq.bias import BiasIO
-        from explanation.api import negate_cnf_tseitin
-
-        bias = BiasIO.load_from_json(self._bias_path)
-
-        model = ConGenModel()
-        model.constraint_map = bias.to_constraint_map()
-        model._name_to_id = bias.feature_ids
-        model._id_to_name = {vid: name for name, vid in bias.feature_ids.items()}
+    def _post_negation_build(self, model: ConGenModel) -> None:
+        """Apply solver mode, then auto-prepare when examples were provided."""
         model._use_incremental = self._use_incremental
-
-        # Compute negation at build time (requires oracle for next_available_id)
-        next_tseitin_var = self._oracle.get_bg_data().next_available_id
-        for key, c in model.constraint_map.items():
-            neg_clauses, next_tseitin_var = negate_cnf_tseitin(c, next_tseitin_var)
-            model.negated_constraint_map[f"NOT({key})"] = neg_clauses
-        model.next_available_id = next_tseitin_var
-
-        # Auto-prepare when examples present
         if self._has_examples():
             pos, neg = self._resolve_examples()
             model.prepare(
@@ -131,7 +87,7 @@ class ConGenModelBuilder:
                 negative_examples=neg or []
             )
 
-        return model
+    # === Public / internal helpers ===
 
     def get_examples(self) -> Optional[Tuple[List[Dict[str, bool]], List[Dict[str, bool]]]]:
         """Get resolved examples if any were provided."""
@@ -143,13 +99,6 @@ class ConGenModelBuilder:
         """Check if examples were provided (file or data)."""
         return (self._examples_path is not None
                 or self._positive_examples is not None)
-
-    def _validate(self) -> None:
-        """Validate builder state."""
-        if self._bias_path is None:
-            raise ValueError("Bias path required (use from_bias())")
-        if self._oracle is None:
-            raise ValueError("Oracle required (use with_oracle())")
 
     def _resolve_examples(self) -> Tuple[List[Dict[str, bool]], List[Dict[str, bool]]]:
         """Load examples from path or return direct data."""

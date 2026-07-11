@@ -103,11 +103,19 @@ Main: **47 dòng** `from explanation.*` trong conacq (không qua api); stride r�
 
 ## T6 — Model builders 2 tầng
 
-1. `explanation/models/abstract_model_builder.py` (mới) — universal ABC (with_negation/build template, KHÔNG ref conacq); `DiagnosisModelBuilder` kế thừa.
-2. **`OracleBiasModelBuilder` → CONACQ** (file mới, đề xuất `conacq/oracle_bias_model_builder.py`) — *cố ý khác tip* (tip để ở explanation = leak framework→app). Inherit AbstractModelBuilder qua api.
-3. `ConGenModelBuilder/QuAcqModelBuilder(OracleBiasModelBuilder)`. **KHÔNG tạo `last_task`**.
+**DELTA-CHECK (2026-07-12, brief thắng):** so với bản Bước-0:
+- **+DELTA-A (item 5, sinh từ deviation T3):** dọn vestigial `DiagnosisModelBuilder.use_incremental()` + field `_use_incremental` (dead — không ai đọc; T3 rewire incremental sang `create_checker(...,is_incremental)` + `operation.with_incremental`). Xoá kèm **35** call-site chết trong `tests/test_diagnosis.py` (không phải ~12) + 3 docstring example. **GIỮ:** `PySATExplanationBuilder.with_incremental()` (operation — alive) + TOÀN BỘ conacq use_incremental (ConGen `_use_incremental`, QuAcq `use_incremental`, 2 runner, test_congen:60 — alive, đọc để dựng checker; đổi thành param operation = T11).
+- **+DELTA-B (interplay):** builder chỉ dựng KB (T3); T11.4 sẽ thay body hook `_post_negation_build` bằng fold `OracleData`. T6 TẠO hook `_post_negation_build` (chứa logic post-negation hiện tại: set use_incremental + auto-prepare/prepare), T11.4 repurpose.
+- **DELTA-C (filename, HOW tôi sở hữu):** đặt `OracleBiasModelBuilder` ở `conacq/oracle_bias_model_builder.py` (top-level conacq, tên khớp class; brief ghi `…/oracle_bias_builder.py`).
 
-**Green:** additive; `test_congen`/`test_quacq` + guard 2 chiều xanh.
+**Thiết kế (re-derive trên v2, KHÔNG copy tip — tip subclass body là T11-final):**
+1. `explanation/models/abstract_model_builder.py` (mới) — `AbstractModelBuilder(ABC)`: **PURE template `build()` = `_validate()` + `_create_model()`** (2 hook abstract), KHÔNG state, KHÔNG `with_negation`. KHÔNG ref conacq (guard rule 4). Export qua `explanation/models/__init__.py` + `explanation/api.py`. *(Cowork review 2026-07-12: brief gốc ghi base có `with_negation`; ĐÃ SỬA — bỏ, vì 0 call-site + `_create_negation` luôn False + no-op 2/3 subclass = "setter nói dối", trùng đúng thứ item 5 vừa xoá ở use_incremental. Có caller thật thì thêm lại — YAGNI.)*
+2. `DiagnosisModelBuilder(AbstractModelBuilder)` — bỏ `build()`-body (kế thừa template qua wrapper mỏng typed `-> DiagnosisModel`), `_validate`/`_create_model` sẵn có = hook impl; `super().__init__()`; `_create_model`: `needs_negation = self._for_redundancy` (≡ main). Xoá use_incremental + field + 3 docstring.
+3. `OracleBiasModelBuilder(AbstractModelBuilder)` → **CONACQ** `conacq/oracle_bias_model_builder.py` — inherit qua `explanation.api`. Owns `_bias_path`/`_oracle`/`_use_incremental` + `from_bias`/`with_oracle`/`use_incremental`/`_validate`; `_create_model` = load bias → `_create_model_instance()` → set constraint_map/`_name_to_id`/`_id_to_name` → negation loop (`from explanation.api import negate_cnf_tseitin`) → `_post_negation_build(model)`. 2 hook abstract: `_create_model_instance`, `_post_negation_build`.
+4. `ConGenModelBuilder(OracleBiasModelBuilder)` — giữ examples methods; hook `_create_model_instance→ConGenModel()`, `_post_negation_build`: `model._use_incremental=...` + auto-prepare-if-examples. `QuAcqModelBuilder(OracleBiasModelBuilder)` — hook: `_create_model_instance→QuAcqModel()`, `_post_negation_build`: `model.use_incremental=...` + pos/neg assignment maps + `model.prepare(oracle)`.
+5. **KHÔNG tạo `last_task`** (artifact tip; main không có).
+
+**Green:** additive; `test_congen`/`test_quacq`/`test_diagnosis` xanh; guard 5-rule (đặc biệt rule 4 explanation⊥conacq + rule 1 conacq→explanation qua api). Suite ≥384.
 
 ## T7 — SolverBackend port (formalize seam T3)
 
@@ -151,6 +159,15 @@ Main anchors: `base.py` Oracle ABC stub (get_variables:38, complete_configuratio
 - **11.5 [#10]:** `complete_configuration` giữ MỘT solver bền; per-call chỉ solve dưới assumptions. Safety-net 11.0 canh kết quả.
 
 **Green cuối:** 4 model cùng chữ ký `prepare_task(task_input) -> PreparedTask`; model pure; `base_set_c` = 0 hit; hành vi diagnoses/membership/completion Y HỆT baseline; guard 2 chiều xanh. Docs: system-architecture oracle section + congen.md/quacq.md nếu đụng.
+
+## T11b — Post-oracle cleanup block (làm SAU T11, một lượt sửa api/guard/docs)
+
+Gom các nợ đụng builder/prep-hierarchy + api T12 (đã đóng băng) → làm chung sau khi T11 tái cấu trúc prep arc:
+1. **Generic[TModel] cho builders** — `AbstractModelBuilder.build()`/`_create_model()` + `OracleBiasModelBuilder._create_model_instance()` đang gõ `Any` → mất type safety (T6 chấp nhận tạm). Dùng `Generic[TModel]` để `build()` trả đúng kiểu model. *(nợ sinh ở T6)*
+2. **Gộp twin ABC prep-strategy** — `DiagnosisTaskPreparationStrategy` + `TestCaseTaskPreparationStrategy` là bản sao thuần; gộp (cân nhắc `Generic[T]`), cập nhật export api `TestCaseTaskPreparationStrategy` + base conacq `ConGenTaskPreparation`. *(nợ hoãn từ T5)*
+3. **#8 AssumptionIdAllocator** — thay cấp-phát ID assumption thủ công. *(cùng vùng prep hierarchy)*
+
+**Green:** additive/refactor; suite ≥ hiện tại; guard 5-rule; api/docs sửa một lần.
 
 ## T13 — Labelers + split test_diagnosis
 

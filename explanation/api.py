@@ -38,6 +38,7 @@ from explanation.models.encoding import (
 )
 from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
 from explanation.models.kb_protocol import KBProtocol
+from explanation.models.abstract_model_builder import AbstractModelBuilder
 from explanation.operations.algorithms.checker import (
     ConsistencyChecker,
     NonIncrementalPySATChecker,
@@ -73,6 +74,8 @@ __all__ = [
     'AssignmentAssumptionMap',
     # KB structural contract
     'KBProtocol',
+    # Model-builder base (conacq's OracleBiasModelBuilder inherits this)
+    'AbstractModelBuilder',
     # Consistency checking
     'ConsistencyChecker',
     'NonIncrementalPySATChecker',
