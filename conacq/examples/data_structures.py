@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Set
 from enum import Enum
 
-from explanation.models.encoding import config_to_variable_literals
+from explanation.api import config_to_variable_literals
 
 
 class ExampleType(Enum):

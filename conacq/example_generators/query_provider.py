@@ -16,7 +16,7 @@ from profiling import (
 )
 
 if TYPE_CHECKING:
-    from explanation.operations.algorithms.checker import ConsistencyChecker
+    from explanation.api import ConsistencyChecker
     from conacq.algorithms.quacq.quacq_model import QuAcqModel, model_to_config
 
 

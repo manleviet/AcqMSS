@@ -13,10 +13,14 @@ from flamapy.metamodels.configuration_metamodel.models import Configuration
 
 from conacq.kb_model import KBModel
 from conacq.oracle.bg_data import BGData
-from explanation.models import DiagnosisTask, DescriptionProvider
-from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
-from explanation.models.encoding import config_to_assignment_assumptions
-from explanation.models.task_preparation import PreparedTask, prepare_kb, _ASSUMPTION_PAIR_STRIDE
+from explanation.api import (
+    DiagnosisTask,
+    DescriptionProvider,
+    AssignmentAssumptionMap,
+    config_to_assignment_assumptions,
+    PreparedTask,
+    prepare_kb,
+)
 
 
 class FMOracleModel(KBModel):
@@ -157,7 +161,7 @@ class FMOracleModel(KBModel):
     def build(self) -> 'FMOracleModel':
         """Convenience method for chaining: build and prepare."""
         from flamapy.metamodels.fm_metamodel.transformations import UVLReader
-        from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
+        from explanation.api import FmToDiagPysat
 
         fm = UVLReader(self._fm_path).transform()
         # FmToDiagPysat creates both constraint_map and negated_constraint_map for redundancy detection.
@@ -242,7 +246,7 @@ class FMOracleTaskPreparation:
 
         # Step 3: compute and cache base set_c (FM constraint assumptions only)
         model._base_set_c = [assumptions[i]
-                             for i in range(0, assignments_start_index, _ASSUMPTION_PAIR_STRIDE)]
+                             for i in range(0, assignments_start_index, 2)]
         set_c = list(model._base_set_c)
 
         # Step 3b: apply configuration if provided

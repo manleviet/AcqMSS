@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 
 from conacq.algorithms.acqmss import AcqMSS
 from .reduce import Reduce
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.api import ConsistencyChecker
 from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )

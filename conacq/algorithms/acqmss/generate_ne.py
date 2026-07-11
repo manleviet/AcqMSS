@@ -15,12 +15,12 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
-from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
-from explanation.operations.algorithms.quickxplain import QuickXPlain
+from explanation.api import NonIncrementalPySATChecker
+from explanation.api import QuickXPlain
 
 if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
-    from explanation.models.testsuite import TestCase, TestSuite
+    from explanation.api import TestCase, TestSuite
 
 
 @dataclass

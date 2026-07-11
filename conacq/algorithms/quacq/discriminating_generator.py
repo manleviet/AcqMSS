@@ -9,7 +9,7 @@ Uses ConsistencyChecker via DI pattern (like FindScope/FindC).
 
 from typing import Dict, List, Optional, Set
 
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.api import ConsistencyChecker
 from profiling import measure_time, count_calls
 
 

@@ -327,6 +327,72 @@ F1        = 2 * P * R / (P + R)
 
 **Purpose**: Provide diagnosis algorithms and solver abstractions for constraint acquisition.
 
+#### Public API & Boundary Contract
+
+`explanation/api.py` is the **single public façade** of the framework. The
+`conacq` application imports the framework ONLY through this module (plus the
+neutral top-level `profiling/` package). It re-exports exactly what the app
+consumes — the Task family and preparation helpers (`TaskInput`, `Task`,
+`DiagnosisTask`, `TestCaseTask`, `PreparedTask`, `DescriptionProvider`,
+`TestCaseTaskPreparationStrategy`, `cf`, `prepare_kb`,
+`prepare_testsuite_with_negation`), test-suite data (`Assignment`, `TestCase`,
+`TestSuite`), the `encoding` free functions + `AssignmentAssumptionMap`,
+`KBProtocol`, consistency checking (`ConsistencyChecker`,
+`NonIncrementalPySATChecker`, `CheckerFactory`), clause utilities (`split`,
+`diff`, `negate_cnf_tseitin`, `QuickXPlain`), and the `FmToDiagPysat`
+transformation. It grows as later seams are formalized (SolverBackend port, the
+operation registry). It deliberately does NOT export the profiler (imported from
+`profiling` directly) and there is no `VariableCodec`.
+
+**Three-tier boundary contract.** The repo is a three-package stack with
+strictly one-directional dependencies; each tier reaches the tier below ONLY
+through that tier's public façade:
+
+```
+conacq       (application)   ── may use ──▶ explanation.api, profiling
+  │
+  ▼
+explanation  (framework)     ── may use ──▶ profiling
+  │
+  ▼
+profiling    (neutral leaf)  ── uses nothing but stdlib + itself
+```
+
+`tests/test_boundary_guard.py` is an AST scan of every source file's imports
+enforcing **five rules**:
+
+1. **conacq → explanation** — only `explanation.api`; no deep submodule paths
+   (`explanation.models.*`, `explanation.operations.*`,
+   `explanation.transformations.*`) and no underscore-private names.
+2. **conacq → profiling** — only the `profiling` façade (`import profiling` /
+   `from profiling import …`); no deep paths (`profiling.core`, `profiling.protocol`…).
+3. **explanation → profiling** — same façade-only rule as (2).
+4. **explanation ⊥ conacq** — the framework never imports the app, keeping
+   `explanation` reusable in isolation and the dependency edge acyclic.
+5. **profiling is a leaf** — it imports neither `explanation` nor `conacq`, so it
+   stays an independent, cycle-free port (its internals use only relative `from .`
+   imports + stdlib).
+
+This keeps the name↔id catalog, assumption-stride constant, preparation
+internals, and profiler internals private to their tiers; each consumer depends
+on stable public symbols only.
+
+**Façade convention — one public door per package, realized per package size.**
+The two façades are *symmetric in rule* (exactly one entry module, deep-imports
+forbidden — the guard enforces both) but differ in *mechanism*:
+
+- `explanation` (framework, large — real internals to hide: `models/`,
+  `operations/`, `transformations/`, private constants): the door is the curated
+  `explanation/api.py` (a public subset), and `explanation/__init__.py` is kept
+  **empty** so `explanation.api` is the only entry. Consumers:
+  `from explanation.api import X`.
+- `profiling` (leaf, small — all five modules are public surface, nothing to
+  curate): the door is `profiling/__init__.py` itself (a façade re-export) —
+  idiomatic Python, no extra `api.py` layer. Consumers: `from profiling import X`.
+
+If `profiling` later grows internals worth hiding, split out a `profiling/api.py`
+at that point.
+
 #### explanation/models/ — Diagnosis Model Abstraction
 
 **Key Classes**:

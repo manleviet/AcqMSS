@@ -10,11 +10,11 @@ Mode-agnostic: all elements are assumption IDs (int), negation_map is Dict[int, 
 import logging
 from typing import List, Dict, Tuple
 
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.api import ConsistencyChecker
 from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
-from explanation.operations.algorithms.utils import diff
+from explanation.api import diff
 
 
 class Reduce:

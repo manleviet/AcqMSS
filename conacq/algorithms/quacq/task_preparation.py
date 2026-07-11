@@ -11,12 +11,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
-from explanation.models.task_preparation import (
+from explanation.api import (
     DescriptionProvider,
     DiagnosisTask,
     PreparedTask,
     prepare_kb,
-    _ASSUMPTION_PAIR_STRIDE,
 )
 if TYPE_CHECKING:
     from conacq.oracle import FeatureModelOracle
@@ -111,5 +110,5 @@ class QuAcqTaskPreparation:
     def _assign_sets(assumptions: List[int], bias_start_pos: int) -> Tuple[List[int], List[int]]:
         """Compute (set_b, set_c) from assumptions."""
         set_b = [assumptions[0]]
-        set_c = list(assumptions[bias_start_pos::_ASSUMPTION_PAIR_STRIDE])
+        set_c = list(assumptions[bias_start_pos::2])
         return set_b, set_c

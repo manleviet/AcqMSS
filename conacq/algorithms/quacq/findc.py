@@ -13,7 +13,7 @@ Complexity: O(|Gamma|) queries where Gamma = candidate constraints with scope.
 
 import logging
 
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.api import ConsistencyChecker
 from profiling import measure_time, count_calls
 
 

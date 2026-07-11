@@ -21,7 +21,7 @@ from .sat_utils import prune_rejecting
 from .findc import FindC
 from .discriminating_generator import DiscriminatingGenerator
 from conacq.algorithms.acqmss.reduce import Reduce
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.api import ConsistencyChecker
 from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )

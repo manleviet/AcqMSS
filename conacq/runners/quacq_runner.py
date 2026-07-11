@@ -15,7 +15,7 @@ from dataclasses import dataclass, field, replace
 from typing import List, Dict, Optional, Tuple
 
 from conacq.example_generators import QueryProvider
-from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.api import CheckerFactory
 from profiling import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
 from ..algorithms import QuAcq

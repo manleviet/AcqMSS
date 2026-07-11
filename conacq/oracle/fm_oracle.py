@@ -13,8 +13,8 @@ from conacq.oracle.base import Oracle
 from conacq.oracle.bg_data import BGData
 from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel
-from explanation.models.encoding import variable_literals_to_config
-from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.api import variable_literals_to_config
+from explanation.api import CheckerFactory
 from profiling import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
 

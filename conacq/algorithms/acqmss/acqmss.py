@@ -10,11 +10,11 @@ Pattern follows KBDiag._mssDirect() from the explanation package.
 import logging
 from typing import List
 
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.api import ConsistencyChecker
 from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
-from explanation.operations.algorithms.utils import split, diff
+from explanation.api import split, diff
 
 
 class AcqMSS:

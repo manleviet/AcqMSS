@@ -157,7 +157,7 @@ class Bias:
         Returns:
             Tuple of (constraint_map, negated_constraint_map, next_tseitin_var)
         """
-        from explanation.operations.algorithms.utils import negate_cnf_tseitin
+        from explanation.api import negate_cnf_tseitin
 
         constraint_map = {}
         negated_constraint_map = {}

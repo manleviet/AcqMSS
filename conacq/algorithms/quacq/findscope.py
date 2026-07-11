@@ -11,7 +11,7 @@ Complexity: O(|S| * log|X|) queries where S=scope size, X=total variables.
 import logging
 from typing import List
 
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.api import ConsistencyChecker
 from profiling import measure_time, count_calls
 from .sat_utils import prune_rejecting
 

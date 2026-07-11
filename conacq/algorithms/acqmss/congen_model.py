@@ -4,9 +4,9 @@ Model for ConGen algorithm.
 Pure data container for bias constraints and solver config.
 Oracle injected at prepare() time — model has no FM dependency.
 
-Uses existing classes from explanation module:
-- Assignment, TestCase, TestSuite from explanation.models.testsuite
-- TaskInput, DescriptionProvider from explanation.models.task_preparation
+Uses framework classes imported through the explanation.api façade:
+- Assignment, TestCase, TestSuite (test-suite data)
+- TaskInput, DescriptionProvider (task preparation)
 
 ConGenModel uses composition to delegate task preparation to ConGenTaskPreparation.
 Call prepare(oracle) before accessing task or description_provider.
@@ -17,8 +17,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from conacq.kb_model import KBModel
-from explanation.models.task_preparation import TaskInput, DescriptionProvider, TestCaseTask, cf
-from explanation.models.testsuite import Assignment, TestCase, TestSuite
+from explanation.api import TaskInput, DescriptionProvider, TestCaseTask, cf
+from explanation.api import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
 
 if TYPE_CHECKING:

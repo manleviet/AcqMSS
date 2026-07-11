@@ -105,7 +105,7 @@ class ConGenModelBuilder:
         self._validate()
 
         from conacq.bias import BiasIO
-        from explanation.operations.algorithms.utils import negate_cnf_tseitin
+        from explanation.api import negate_cnf_tseitin
 
         bias = BiasIO.load_from_json(self._bias_path)
 

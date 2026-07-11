@@ -10,9 +10,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from conacq.kb_model import KBModel
-from explanation.models import encoding
-from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
-from explanation.models.task_preparation import DescriptionProvider
+from explanation.api import (
+    AssignmentAssumptionMap,
+    DescriptionProvider,
+    config_to_assignment_assumptions,
+    get_constraint_vars,
+    variable_literals_to_config,
+)
 
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation
 
@@ -117,7 +121,7 @@ class QuAcqModel(KBModel):
         Returns:
             List of assumption IDs for the given feature assignments
         """
-        return encoding.config_to_assignment_assumptions(
+        return config_to_assignment_assumptions(
             config,
             AssignmentAssumptionMap(
                 self.pos_assignment_to_assumption,
@@ -126,7 +130,7 @@ class QuAcqModel(KBModel):
     def get_constraint_vars(self, assumption_id: int) -> Set[str]:
         """Get feature names for constraint by assumption ID."""
         clauses = self._require_task().constraint_clauses.get(assumption_id, [])
-        return encoding.get_constraint_vars(clauses, self.id_to_name)
+        return get_constraint_vars(clauses, self.id_to_name)
 
     def prepare(self, oracle: 'FeatureModelOracle') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.
@@ -166,7 +170,7 @@ class QuAcqModel(KBModel):
 
     def model_to_config(self, model):
         """Convert SAT model to configuration dictionary."""
-        return encoding.variable_literals_to_config(model, self.id_to_name)
+        return variable_literals_to_config(model, self.id_to_name)
 
     def get_constraints_with_scope(self,
                                    scope: set,

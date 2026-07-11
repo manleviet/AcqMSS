@@ -40,8 +40,8 @@ from .quacq import (
 )
 
 # Re-export explanation module classes for convenience
-from explanation.models.testsuite import Assignment, TestCase, TestSuite
-from explanation.models.task_preparation import TaskInput
+from explanation.api import Assignment, TestCase, TestSuite
+from explanation.api import TaskInput
 
 __all__ = [
     # ConGen (passive learning)
