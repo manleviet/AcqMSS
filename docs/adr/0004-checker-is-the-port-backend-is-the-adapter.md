@@ -28,10 +28,15 @@ There was a second symptom, which turned out to be a consequence: an **import cy
 
 **Name each module after the side of the dependency it serves.**
 
+Consistency checking gets **its own package**, `explanation/checker/` — it is not an algorithm, and it does not belong inside `operations/algorithms/` next to FastDiag and QuickXPlain. It is the thing those algorithms *consume*.
+
 | Module | Role | Contents |
 |---|---|---|
-| `explanation/operations/algorithms/checker.py` | **PORT** — what algorithms depend on. Imports *neither* `pysat` nor `subprocess`, and must stay that way | `ConsistencyChecker` (Protocol: `is_consistent` / `get_model` / `cleanup`) · `TestCaseChecker(ConsistencyChecker)` (adds `is_consistent_test_cases`) |
-| `explanation/operations/algorithms/solver_backend.py` | **ADAPTER** — what talks to solvers | `SolverCheckerBase` (shared impl base) · `IncrementalPySATChecker` · `NonIncrementalPySATChecker` · `SAT4JChecker` · `SolverBackend` (enum: which solver) · `build_checker(task, backend, …)` — the **single public door**; the primitive constructor is private and is the **single place a concrete class is chosen** |
+| `explanation/checker/protocols.py` | **PORT** — what algorithms depend on. Imports *neither* `pysat` nor `subprocess`, and must stay that way | `ConsistencyChecker` · `TestCaseChecker` · `CopyableChecker` (see below) |
+| `explanation/checker/backend.py` | **ADAPTER** — what talks to solvers | `CheckerBase` (shared impl base) · `IncrementalPySATChecker` · `NonIncrementalPySATChecker` · `SAT4JChecker` · `SolverBackend` (enum: which solver) · **`build_checker(task, backend, …)`** — **one function**: it is simultaneously the single public door and the single place a concrete class is chosen |
+| `explanation/checker/__init__.py` | internal facade | re-exports the protocols and `build_checker`. The *public* door of the framework remains `explanation/api.py` (ADR-0002) |
+
+**One construction function, not two.** An earlier version had a public task-based `build_checker` delegating to a private primitive `_build_checker(set_kb, assumptions, …)`. The primitive form existed only to serve a caller that turned out not to need it (`GenerateNE` builds a `DiagnosisTask` instead — see below), leaving a private helper with exactly one caller: indirection with no payoff. Collapsed. Now "the single decision point" is a statement about **one function**, not about which of two.
 
 ### Naming inside the adapter module
 
@@ -45,10 +50,18 @@ build_checker(task, SolverBackend.SAT4J)   # "build a checker, using the SAT4J b
 
 `CheckerConfig` was rejected for that enum: it reads as *configuration of a checker* (solver name? timeout?), which is not what it selects.
 
-The shared implementation base is `SolverCheckerBase`, **not** `AbstractConsistencyChecker`. The latter would sit next to the Protocol `ConsistencyChecker` — two near-identical names for two different roles (contract vs. implementation base), which is exactly the kind of collision this ADR exists to prevent. `Base` (not `Abstract`) signals impl-base rather than contract. It is deliberately **not** exported through `explanation.api`.
+The shared implementation base is `CheckerBase`, **not** `AbstractConsistencyChecker`. The latter would sit next to the Protocol `ConsistencyChecker` — two near-identical names for two different roles (contract vs. implementation base), which is exactly the kind of collision this ADR exists to prevent. `Base` (not `Abstract`) signals impl-base rather than contract. It is deliberately **not** exported through `explanation.api`.
 
 Supporting decisions:
-- **Narrow role protocols.** One fat interface was rejected. Algorithms use checkers in three distinguishable roles: consistency checking (`ConsistencyChecker`), test-case checking (`TestCaseChecker`), and *copyable/picklable* for the parallel FastDiagP. Only the first two are ports here; the third belongs to the executor concern and is deliberately **not** in either protocol.
+- **Narrow role protocols — three of them, not one fat interface.** Algorithms use checkers in three distinguishable roles, and each gets its own protocol in `protocols.py`:
+
+  | Protocol | Adds | Who needs it |
+  |---|---|---|
+  | `ConsistencyChecker` | `is_consistent` · `get_model` · `cleanup` | most algorithms and operations |
+  | `TestCaseChecker(ConsistencyChecker)` | `is_consistent_test_cases` | `QuickXPlainWithTestCases`, `KBDiag` |
+  | `CopyableChecker(ConsistencyChecker)` | `copy()` | **`FastDiagP` only** — it clones the checker per worker process |
+
+  Keeping them separate is not decoration. A code review demonstrated the cost of getting it wrong: with `FastDiagP` typed against the narrow `ConsistencyChecker`, an object satisfying that protocol **completely** still died at `fastdiagp.py:180` with `AttributeError: no attribute 'copy'`. A port that its own consumer cannot call is not a port. Widening `ConsistencyChecker` to include `copy()` would have been the easy fix and the wrong one — it would force *every* algorithm to depend on cloneability it never uses. The regression test pins the discrimination: a minimal three-method checker satisfies `ConsistencyChecker` and **fails** `isinstance(..., CopyableChecker)`; the three real backends satisfy both.
 - **`CheckerFactory` was dissolved** into module-level functions. A class holding only `@staticmethod`s is a namespace; Python modules already are namespaces.
 - **The public API exports no concrete adapter class.** `explanation.api` exposes `ConsistencyChecker`, `TestCaseChecker`, `SolverBackend`, `build_checker` — and nothing else from this area. Application code never names a solver class.
 - **Checkers are always built from a `Task`.** The one caller that needed a checker for an inline sub-problem (`GenerateNE`) constructs a `DiagnosisTask` for it rather than reaching for a primitive constructor.
@@ -57,15 +70,15 @@ Supporting decisions:
 
 A recurring suggestion is to fold the port into the adapter module — "it is one concept, why two files?". It cannot be done without giving up what the split buys:
 
-- Move `build_checker` into `checker.py` and that file must import the three adapters; the adapters import `ConsistencyChecker` for typing → **the cycle comes straight back**, and with it the lazy-import workaround.
+- Move `build_checker` into `protocols.py` and that file must import the three adapters; the adapters import `ConsistencyChecker` for typing → **the cycle comes straight back**, and with it the lazy-import workaround.
 - Merge everything into one file and the port is no longer clean: the **~24 algorithm/labeler/operation files that import `ConsistencyChecker` purely to annotate a parameter** would start pulling in `pysat`, `subprocess`, and a Java process spawner.
 
 The asymmetry is the whole point, and it is textbook Dependency Inversion:
 
 ```
-~24 algorithm files ──import type──►  checker.py  (no pysat, no subprocess)
+~24 algorithm files ──import type──►  protocols.py  (no pysat, no subprocess)
                                           ▲
- ~9 assembly points ──import build──► solver_backend.py  (pysat + subprocess + Java)
+ ~9 assembly points ──import build──►  backend.py   (pysat + subprocess + Java)
                                           │ imports the port for typing
                                           ▼ constructs
                                     3 concrete checkers
@@ -109,12 +122,13 @@ That is the generalisable lesson worth recording:
 
 **Easier**
 - An algorithm author depends on `ConsistencyChecker` and cannot accidentally acquire a dependency on PySAT, SAT4J, or pickling.
-- Adding a solver (Z3, MiniSat, …) means: one new `*Checker` class (subclassing `SolverCheckerBase`), one new `SolverBackend` enum member. There is exactly **one** place in the codebase where a concrete checker class is selected (`_build_checker`).
+- Adding a solver (Z3, MiniSat, …) means: one new `*Checker` class (subclassing `CheckerBase`), one new `SolverBackend` enum member. There is exactly **one** place in the codebase where a concrete checker class is selected — the body of `build_checker`.
 - No cycle, no lazy imports.
 
 **Harder**
-- Two files that sound similar (`checker.py`, `solver_backend.py`) must not be confused. The port file carries a docstring stating its own invariant — *"this module imports neither `pysat` nor `subprocess` and must stay that way"* — so the rule travels with the code.
+- The two files inside `explanation/checker/` must not be confused. The port file (`protocols.py`) carries a docstring stating its own invariant — *"this module imports neither `pysat` nor `subprocess` and must stay that way"* — so the rule travels with the code.
+- Consistency checking is no longer filed under `operations/algorithms/`. It never was an algorithm; it is what the algorithms consume. (That directory had become a junk drawer — it also still held an empty `profiler/` corpse left behind when profiling moved out, ADR-0003.)
 
 **To revisit**
 - The HSDAG labeler tree still types against the broad checker rather than the narrow role it uses (`kbdiag_labeler` needs `TestCaseChecker`; the others do not). Retyping that tree is scheduled with the labeler work.
-- The copyable/picklable role used by FastDiagP has no protocol yet. It belongs to the executor design, not here.
+- `CopyableChecker` exists because FastDiagP clones its checker per worker process. When the parallel executor is rewritten (`ConsistencyExecutor`), revisit whether cloning is still the right mechanism — if the executor owns process fan-out, the protocol may become unnecessary. Do **not** merge it into `ConsistencyChecker` in the meantime.
