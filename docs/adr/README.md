@@ -21,6 +21,7 @@ These decisions were made during the **ABC-v2 redesign** (July 2026), a rebuild 
 | [0005](0005-oracle-bias-builder-lives-in-conacq.md) | `OracleBiasModelBuilder` lives in `conacq`, not `explanation` | Accepted |
 | [0006](0006-evaluation-stays-inside-conacq.md) | `evaluation` stays inside `conacq` — it is *not* the next `profiling` | Accepted |
 | [0007](0007-no-runtime-read-only-views.md) | The name↔id catalog is a plain `dict` — no runtime read-only view | Accepted |
+| [0008](0008-run-result-and-result-data-stay-separate.md) | `ConGenRunResult` and `ConGenResultData` stay separate — write-product ≠ read-projection | Accepted |
 
 ## Writing a new one
 

@@ -163,7 +163,9 @@ Main/v2: `performance_metrics.py` 652 LOC (`PerformanceMetrics` ~29 field + `Agg
 
 **DELTA-CHECK 260712 (design thắng):** D1 thêm `metrics.py` (impl-plan cũ chỉ có unified_result). D2 bảng disjoint module-level (không "trên BaseRunner"). D3 thêm guard rule 6. D4 thêm config move. D5 dùng 5 test §4 (extraction-diff = nghiệm thu thật). **D6 BỎ [A4] dedup shuffle+profiling boilerplate** → nợ T17. D7 6 core subpackage thực = algorithms/bias/example_generators/examples/oracle/runners (design ghi 'models' — không có trong conacq); 5 app import config (không 6).
 
-**TRẠNG THÁI 260712:** BƯỚC 1–3 xong + XANH (suite 405, net 7 test, guard 6-rule). Bước 3–7 done TRỪ **item 7 (UnifiedConGenResult)** — HOÃN: là `[71c1511]` (gộp `ConGenRunResult`+`ConGenResultData`), KHÔNG thuộc quyết định ADR-0006 lõi, invasive 6+ touchpoint. Tách riêng để tránh nửa-vời ở đáy context. Cần làm SAU (turn mới / khi Cowork xác nhận).
+**TRẠNG THÁI 260712:** BƯỚC 1–3 xong + XANH (suite 407, net 7 test, guard 6-rule), **committed `20cfae8`**.
+
+**Item 7 (UnifiedConGenResult, `71c1511`) — ❌ BÁC BỎ (không hoãn).** Phân tích 260712 (đã verify trên code): `ConGenRunResult` = sản-phẩm-GHI (mang `metrics: RunMetrics` sống + `kb_clauses` CNF + `profiler_data`); `ConGenResultData` = phép-chiếu-ĐỌC (7 field JSON thuần) — không consumer nào (kb_comparator/progressive_evaluation/run_compare) cần phần ghi. 6-field-overlap = từ vựng domain, KHÔNG phải cùng-schema. Gộp = ghép read với write, phá đúng vách khiến T9 byte-identical miễn phí. Phương án mixin cũng loại (0 hành vi, chỉ thêm gián tiếp + ép đồng bộ hai bên đáng lẽ tự do lệch). **Chốt ở `docs/adr/0008-run-result-and-result-data-stay-separate.md`.** T9b XOÁ khỏi lộ trình.
 
 ## T10 — apps CLI harness + logging
 
