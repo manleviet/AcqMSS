@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import List, Any, Optional
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
-from ...checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from ...quickxplain_with_testcases import QuickXPlainWithTestCases
 
 

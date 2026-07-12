@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import List, Any
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
-from ...checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from ...fastdiag import FastDiag
 
 

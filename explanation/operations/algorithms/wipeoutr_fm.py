@@ -7,7 +7,7 @@ for detecting redundant constraints in feature models.
 import logging
 from typing import List, Dict, Tuple
 
-from .checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import diff
 

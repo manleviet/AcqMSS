@@ -10,7 +10,7 @@ This means t_γ is already covered by t_α and can be removed from the test suit
 import logging
 from typing import List, Dict, Tuple
 
-from .checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import diff
 

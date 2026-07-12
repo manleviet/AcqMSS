@@ -6,7 +6,7 @@ https://github.com/HiConfiT/hiconfit-core/blob/main/ca-cdr-package/src/main/java
 import logging
 from typing import List
 
-from .checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split
 

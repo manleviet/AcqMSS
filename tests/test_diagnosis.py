@@ -26,7 +26,7 @@ from parameterized import parameterized
 
 from explanation.models import DiagnosisModelBuilder
 from explanation.models.task_preparation import PreparedTask, cf
-from explanation.operations.algorithms.solver_backend import build_checker, SolverBackend
+from explanation.checker.backend import build_checker, SolverBackend
 from explanation.operations.algorithms.fastdiag import FastDiag
 from explanation.operations.algorithms.fastdiagp import FastDiagP
 from explanation.operations.algorithms.kbdiag import KBDiag

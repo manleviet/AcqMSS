@@ -60,7 +60,7 @@ from conacq.algorithms import ConGen, ConGenModelBuilder
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
 from conacq.oracle import FeatureModelOracle
 from conacq.example_generators import QueryProvider
-from explanation.operations.algorithms.solver_backend import build_checker, SolverBackend
+from explanation.api import build_checker, SolverBackend
 
 # Passive learning — Pattern 1: auto-prepare (oracle + examples at build time)
 oracle = FeatureModelOracle('data/fms/model.uvl')
@@ -91,7 +91,7 @@ for fold_pos, fold_neg in folds:
 # Interactive learning — QuAcq (DI pattern, commit 260228)
 from conacq.example_generators import QueryProvider
 from conacq.algorithms.quacq import DiscriminatingGenerator, QuAcq
-from explanation.operations.algorithms.solver_backend import build_checker, SolverBackend
+from explanation.api import build_checker, SolverBackend
 
 oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
@@ -472,33 +472,45 @@ class QuAcqTask(DiagnosisTask):
     negated_clauses: dict[int, list[list[int]]]  # constraint_id → negated clauses
 ```
 
-#### explanation/operations/ — Diagnosis Algorithms
+#### explanation/checker/ — Consistency-checker Port + Backend Adapters
 
-**Consistency-checker port + backend adapters.** The design separates *what an
-algorithm needs* (a port) from *how the answer is computed* (an adapter):
+**The design separates *what an algorithm needs* (a port) from *how the answer
+is computed* (an adapter).** These are not algorithms — they are what the
+algorithms *consume* — so they live in their own package (`explanation/checker/`),
+not inside `operations/algorithms/` beside `fastdiag.py`/`quickxplain.py`:
 
-- **Port** (`algorithms/checker.py`, imports neither `pysat` nor `subprocess`):
+- **Port** (`checker/protocols.py`, imports neither `pysat` nor `subprocess`):
   `ConsistencyChecker` (@runtime_checkable Protocol: `is_consistent` /
   `get_model` / `cleanup`) is what the diagnosis path (`PySATConflict` /
   `PySATDiagnosis` + their labelers) depends on; `TestCaseChecker(ConsistencyChecker)`
   adds `is_consistent_test_cases` for the test-case algorithms (`KBDiag`,
-  `QuickXPlainWithTestCases`). The ~70 algorithm sites annotate against the port,
-  never a concrete class.
-- **Adapters** (`algorithms/solver_backend.py`): `SolverCheckerBase` holds
-  the shared machinery (profiler, delta computation, the test-case loop,
-  copy/pickling, context-manager); `IncrementalPySATChecker` (persistent PySAT
-  solver, ~50× faster), `NonIncrementalPySATChecker` (fresh solver per check),
-  and `SAT4JChecker` (external SAT4J via subprocess) differ only in how they
-  reach a solver. Each satisfies the port structurally.
+  `QuickXPlainWithTestCases`); `CopyableChecker(ConsistencyChecker)` adds `copy()`
+  for parallel execution (FastDiagP). The ~24 algorithm sites annotate against a
+  port, never a concrete class.
+- **Adapters** (`checker/backend.py`): `CheckerBase` holds the shared machinery
+  (profiler, delta computation, the test-case loop, copy/pickling,
+  context-manager); `IncrementalPySATChecker` (persistent PySAT solver, ~50×
+  faster), `NonIncrementalPySATChecker` (fresh solver per check), and
+  `SAT4JChecker` (external SAT4J via subprocess) differ only in how they reach a
+  solver. Each satisfies the ports structurally. `backend.py` imports
+  `protocols` top-level (acyclic, no lazy-import).
+
+`checker/__init__.py` is an internal convenience facade; the framework's single
+public door remains `explanation/api.py`, which re-exports the three Protocols +
+`SolverBackend` + `build_checker`.
 
 **`build_checker(task, backend=…)` is the single public construction door** —
-every checker in the system is built from a Task through it. The `SolverBackend`
-enum tokenizes the choice; the private `_build_checker` maps token → class, the one
-place a concrete backend is selected. `SolverBackend.from_flags(use_incremental,
+every checker in the system is built from a Task through it, and it is *itself*
+the single class-selection site (the former private `_build_checker` helper was
+merged in: one function holds both the public door and the token→class if/else).
+The `SolverBackend` enum tokenizes the choice; `SolverBackend.from_flags(use_incremental,
 use_sat4j)` turns the operation flags into a token; operations' `_create_checker`,
 the conacq runners/oracle, and GenerateNE all call `build_checker`, so backend
 selection lives in exactly one place. (The parallel-execution role — `copy` /
-pickling, needed only by FastDiagP — is deliberately absent from the port.)
+pickling, needed only by FastDiagP — is `CopyableChecker`, deliberately separate
+from the narrow `ConsistencyChecker` port.)
+
+#### explanation/operations/ — Diagnosis Algorithms
 
 **Operations take a `PreparedTask`**: `op.execute(prepared)` reads `prepared.task` to solve and `prepared.describe` to format. `use_incremental`/`use_sat4j` are operation attributes (the standalone `PySAT*SAT4J` op classes were folded into `PySATConflict`/`PySATDiagnosis` via `use_sat4j`; `for_conflict_sat4j`/`for_diagnosis_sat4j` remain as builder entry points).
 

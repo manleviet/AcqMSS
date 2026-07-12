@@ -15,7 +15,7 @@ import multiprocessing as mp
 from typing import List
 
 from . import utils
-from .checker import CopyableChecker
+from explanation.checker.protocols import CopyableChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split, diff
 

@@ -218,28 +218,36 @@ SAT model representation and immutable task units:
 | `task_preparation.py` | — | Preparation strategies + `PreparedTask(task, describe, assignment_map)` result container (was `PreparationOutput`) |
 | `testsuite.py` | 75 | TestSuite: holds test cases + their configurations |
 
-**Single-source name↔id (T2):** the name↔id catalog lives on the KB, exposed read-only via `MappingProxyType` under KB Protocol names (`id_to_name`/`name_to_id`). `DiagnosisModel` aliases PySATModel `features`/`variables`. The conacq `KBModel` base (`conacq/kb_model.py`) is **domain-neutral**: its `__init__` owns the shared KB fields (`constraint_map`, `negated_constraint_map`, `next_available_id`, and the generic-named `_name_to_id`/`_id_to_name`) and exposes read-only views — no feature-model terms in the base. ConGen/QuAcq/FMOracle call `super().__init__()` then set only model-specific values; builders populate `_name_to_id`/`_id_to_name` at build; external callers read via the `name_to_id`/`id_to_name` properties (cannot mutate the catalog). The `encoding` free functions receive these maps as parameters — no `VariableCodec`, no per-model encoding duplication. A sibling conacq-root file, `conacq/oracle_bias_model_builder.py`, holds `OracleBiasModelBuilder` — the shared bias-load → negation-via-oracle builder base for ConGen/QuAcq (subclasses the framework `AbstractModelBuilder` via `explanation.api`); it lives in the app because it imports `conacq.bias` and types against `FeatureModelOracle`.
+**Single-source name↔id (T2, refined by ADR-0007):** the name↔id catalog lives on the KB under KB Protocol names (`id_to_name`/`name_to_id`). Read-only is enforced at the **type layer**, not at runtime: `KBProtocol` declares these as `Mapping` (so type-checkers reject `kb.name_to_id[x] = …`), while the concrete storage is a plain `dict` — no `MappingProxyType`, no per-access wrapping (ADR-0007 removed the runtime views: they existed only to pass their own test, cost ~25% on a hot path, and blocked `json.dumps`). The conacq `KBModel` base (`conacq/kb_model.py`) is **domain-neutral**: its `__init__` owns five plain fields (`constraint_map`, `negated_constraint_map`, `next_available_id`, and the public `name_to_id`/`id_to_name` dicts) — no feature-model terms in the base, no properties. ConGen/QuAcq/FMOracle call `super().__init__()` then set only model-specific values; builders assign the `name_to_id`/`id_to_name` dicts directly at build. `DiagnosisModel` is the exception — it keeps `name_to_id`/`id_to_name` as **properties** because it is a flamapy translation layer that maps onto PySATModel's `variables`/`features` (returned as-is, no proxy). The `encoding` free functions receive these maps as parameters — no `VariableCodec`, no per-model encoding duplication. A sibling conacq-root file, `conacq/oracle_bias_model_builder.py`, holds `OracleBiasModelBuilder` — the shared bias-load → negation-via-oracle builder base for ConGen/QuAcq (subclasses the framework `AbstractModelBuilder` via `explanation.api`); it lives in the app because it imports `conacq.bias` and types against `FeatureModelOracle`.
 
-#### explanation/operations/ — SAT Operations (Phase R, ~4,800 LOC, ~26 files)
+#### explanation/checker/ — Consistency-checker Port + Adapters (~380 LOC, 3 files)
 
-Diagnosis algorithm implementations and executor abstractions:
-
-**Core Algorithm Files**:
+The consistency-checker port and its solver-backed adapters. These are not
+algorithms — they are what the algorithms *consume* — so they live in their own
+package rather than beside `fastdiag.py`/`quickxplain.py` in `operations/algorithms/`.
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `checker.py` | 500 | ConsistencyChecker ABC + implementations (Phase R: serial ConsistencyExecutor); immutable, picklable |
-| `executor.py` | 300 | ProcessExecutor (shared pool), MemoizingExecutor (cache), ConsistencyCache (Phase R, NEW) |
-| `hsdag.py` | 350 | HSDAG tree search: optimization for multiple diagnoses/conflicts |
-| `pysat_explanation_builder.py` | 330 | Builder for diagnosis operations (FastDiag, QuickXPlain, KBDiag) |
-| `pysat_abstract_explanation.py` | 250 | Template method base for diagnosis operations |
+| `protocols.py` | 62 | Consistency-checker **PORT**: `ConsistencyChecker` + `TestCaseChecker` + `CopyableChecker` Protocols (@runtime_checkable); imports no pysat/subprocess. ~24 algorithm sites depend on a port. Re-exported via `explanation/api.py`. |
+| `backend.py` | 296 | Backend **ADAPTERS**: `CheckerBase` + `IncrementalPySATChecker`/`NonIncrementalPySATChecker`/`SAT4JChecker` + `SolverBackend` (enum: which solver) + `build_checker` (the single public task-based door **and** the single class-selection site — token→class if/else inlined; no private `_build_checker`). Imports `protocols` top-level (acyclic). |
+| `__init__.py` | 21 | Internal facade re-exporting the 3 Protocols + `SolverBackend` + `build_checker`. Not a public door — `explanation/api.py` is the single public surface. |
+
+#### explanation/operations/ — SAT Operations (Phase R, ~4,800 LOC, ~26 files)
+
+Diagnosis operation wrappers and their template base (the consistency-checker
+port + adapters they consume now live in `explanation/checker/`, above):
+
+**Core Operation Files** (operations/ top level):
+
+| File | LOC | Purpose |
+|------|-----|---------|
+| `pysat_explanation_builder.py` | 437 | Builder for diagnosis operations (FastDiag, QuickXPlain, KBDiag) |
+| `pysat_abstract_explanation.py` | 299 | Template method base for diagnosis operations |
 
 **Diagnosis Algorithm Implementations** (`algorithms/` subdirectory, ~2,200 LOC):
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `algorithms/checker.py` | 45 | Consistency-checker **PORT**: `ConsistencyChecker` + `TestCaseChecker` Protocols (@runtime_checkable); imports no pysat/subprocess. ~70 algorithm sites depend on it. Exported via api. |
-| `algorithms/solver_backend.py` | 298 | Backend **ADAPTERS**: `SolverCheckerBase` + `IncrementalPySATChecker`/`NonIncrementalPySATChecker`/`SAT4JChecker` + `SolverBackend` (enum: which solver) + `build_checker` (single public task-based door) + private `_build_checker` (single class-selection site). |
 | `algorithms/fastdiag.py` | 85 | FastDiag: breadth-first minimal diagnosis finding |
 | `algorithms/fastdiagp.py` | 160 | FastDiagP: parallel variant using executor.submit() (Phase R rewrite) |
 | `algorithms/quickxplain.py` | 80 | QuickXPlain: minimal conflict finding |
@@ -247,10 +255,11 @@ Diagnosis algorithm implementations and executor abstractions:
 | `algorithms/wipeoutr_fm.py` | 90 | WipeOutR_FM: feature model variant |
 | `algorithms/wipeoutr_t.py` | 110 | WipeOutR_T: test case variant |
 | `algorithms/utils.py` | 120 | split, diff, negate_cnf_tseitin utilities |
+| `algorithms/hsdag/hsdag.py` | 353 | HSDAG tree search: optimization for multiple diagnoses/conflicts (+ `hsdag/node.py`, `hsdag/labeler/` adapters) |
 
 **Operation Wrappers** (pysat_*.py files, 8 files):
 
-Each wraps diagnosis algorithms for specific use cases (conflict, diagnosis, testcase/KBDiag, redundancy). Operations take a `PreparedTask`: `op.execute(prepared)` reads `prepared.task` to solve and `prepared.describe` to format. Solver selection is operation-level: `use_incremental` and `use_sat4j` are op attributes; `CheckerFactory.create_from_task(task, solver_name, use_incremental, profiler)` builds the checker. The standalone `pysat_conflict_sat4j.py`/`pysat_diagnosis_sat4j.py` wrappers were folded into `PySATConflict`/`PySATDiagnosis` via `use_sat4j` (builder entry points `for_conflict_sat4j`/`for_diagnosis_sat4j` remain).
+Each wraps diagnosis algorithms for specific use cases (conflict, diagnosis, testcase/KBDiag, redundancy). Operations take a `PreparedTask`: `op.execute(prepared)` reads `prepared.task` to solve and `prepared.describe` to format. Solver selection is operation-level: `use_incremental` and `use_sat4j` are op attributes; `build_checker(task, SolverBackend.from_flags(use_incremental, use_sat4j), solver_name, profiler)` (from `explanation.checker.backend`) builds the checker. The standalone `pysat_conflict_sat4j.py`/`pysat_diagnosis_sat4j.py` wrappers were folded into `PySATConflict`/`PySATDiagnosis` via `use_sat4j` (builder entry points `for_conflict_sat4j`/`for_diagnosis_sat4j` remain).
 
 #### explanation/transformations/ — Model Converters (~292 LOC, 5 files)
 

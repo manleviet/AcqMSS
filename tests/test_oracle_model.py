@@ -3,7 +3,7 @@
 import pytest
 
 from conacq.oracle.fm_oracle_model import FMOracleModel
-from explanation.operations.algorithms.solver_backend import build_checker, SolverBackend
+from explanation.checker.backend import build_checker, SolverBackend
 
 
 def _make_oracle_model(constraint_map, variables, next_available_id):

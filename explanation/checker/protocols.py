@@ -3,16 +3,18 @@
 This is a *port*: the abstract interface an algorithm needs from "something that
 can answer consistency questions", with no knowledge of how the answer is
 computed. The concrete adapters that actually talk to a SAT solver (PySAT,
-SAT4J) live in ``solver_backend.py`` and satisfy these Protocols structurally;
-this module imports neither ``pysat`` nor ``subprocess`` and must stay that way.
+SAT4J) live in ``backend.py`` and satisfy these Protocols structurally; this
+module imports neither ``pysat`` nor ``subprocess`` and must stay that way.
 
 - ``ConsistencyChecker`` — ``is_consistent`` / ``get_model`` / ``cleanup``. What
   the diagnosis path (PySATConflict / PySATDiagnosis and their labelers) needs.
 - ``TestCaseChecker`` — a ``ConsistencyChecker`` that also offers
   ``is_consistent_test_cases``, needed by the test-case algorithms (KBDiag,
   QuickXPlainWithTestCases).
+- ``CopyableChecker`` — a ``ConsistencyChecker`` that can ``copy()`` itself for
+  parallel execution (FastDiagP).
 
-Build a checker with ``solver_backend.build_checker(task, backend=…)`` — the
+Build a checker with ``build_checker(task, backend=…)`` (``backend.py``) — the
 single construction door.
 """
 from typing import List, Optional, Protocol, runtime_checkable

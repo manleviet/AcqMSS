@@ -39,12 +39,10 @@ from explanation.models.encoding import (
 from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
 from explanation.models.kb_protocol import KBProtocol
 from explanation.models.abstract_model_builder import AbstractModelBuilder
-from explanation.operations.algorithms.checker import (
+from explanation.checker import (
     ConsistencyChecker,
     TestCaseChecker,
     CopyableChecker,
-)
-from explanation.operations.algorithms.solver_backend import (
     SolverBackend,
     build_checker,
 )

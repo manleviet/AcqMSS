@@ -15,7 +15,7 @@ from conacq.algorithms import (
 )
 from conacq.bias import BiasIO
 from conacq.oracle import FeatureModelOracle
-from explanation.operations.algorithms.solver_backend import (
+from explanation.checker.backend import (
     IncrementalPySATChecker,
     build_checker,
     SolverBackend,

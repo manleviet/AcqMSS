@@ -6,7 +6,7 @@ which works with positive and negative test cases.
 from typing import Tuple
 
 from explanation.models.task_preparation import PreparedTask, Task
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.quickxplain_with_testcases_labeler import \
     QuickXPlainWithTestCasesParameters, QuickXPlainWithTestCasesLabeler

@@ -6,8 +6,8 @@ from flamapy.core.operations import Operation
 from explanation.models.task_preparation import (
     PreparedTask, DescriptionProvider, DiagnosisFormatter, Task,
 )
-from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.solver_backend import SolverBackend, build_checker
+from explanation.checker.protocols import ConsistencyChecker
+from explanation.checker.backend import SolverBackend, build_checker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.labeler import IHSLabelable
 from profiling import AbstractProfiler, get_global_profiler

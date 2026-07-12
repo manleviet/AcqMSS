@@ -19,7 +19,7 @@ from conacq.algorithms.quacq.task_preparation import QuAcqTask
 from conacq.algorithms.quacq.quacq_model import QuAcqModel
 from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
 from conacq.example_generators import QueryProvider
-from explanation.operations.algorithms.solver_backend import (
+from explanation.checker.backend import (
     build_checker, SolverBackend, NonIncrementalPySATChecker,
 )
 from profiling import (

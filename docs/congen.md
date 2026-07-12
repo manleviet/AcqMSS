@@ -325,7 +325,8 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 |------|-----|---------|
 | `explanation/operations/algorithms/quickxplain.py` | 80 | QuickXPlain (used by GenerateNE) |
 | `explanation/operations/algorithms/kbdiag.py` | 100 | KBDiag (used by AcqMSS) |
-| `explanation/operations/algorithms/checker.py` | 450 | ConsistencyChecker ABC + implementations |
+| `explanation/checker/protocols.py` | 62 | Consistency-checker **port** (`ConsistencyChecker`/`TestCaseChecker`/`CopyableChecker` Protocols) |
+| `explanation/checker/backend.py` | 296 | Solver **adapters** (`CheckerBase` + PySAT/SAT4J checkers) + `build_checker` construction door |
 
 ## Implementation Details Beyond Paper
 

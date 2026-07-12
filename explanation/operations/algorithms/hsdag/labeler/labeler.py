@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Any
 
-from ...checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 
 
 class LabelerType(Enum):

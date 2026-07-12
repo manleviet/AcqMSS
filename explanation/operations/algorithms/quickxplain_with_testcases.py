@@ -32,7 +32,7 @@ Author: Viet-Man Le (Python port)
 import logging
 from typing import List, Dict, Any, Tuple, Optional
 
-from .checker import TestCaseChecker
+from explanation.checker.protocols import TestCaseChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split
 

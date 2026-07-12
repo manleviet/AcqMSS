@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
-from ...checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from ...kbdiag import KBDiag
 
 

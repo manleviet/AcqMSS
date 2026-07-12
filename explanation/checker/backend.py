@@ -2,7 +2,7 @@
 talking to a real SAT solver, plus the single factory that builds one.
 
 Each backend satisfies the ``ConsistencyChecker`` / ``TestCaseChecker`` port
-(``checker.py``) structurally. ``SolverCheckerBase`` holds the shared
+(``protocols.py``) structurally. ``CheckerBase`` holds the shared
 machinery (profiler, delta computation, the test-case loop, copy/pickling,
 context-manager); the three concrete backends differ only in how they reach a
 solver:
@@ -11,29 +11,31 @@ solver:
 - ``NonIncrementalPySATChecker`` — a fresh PySAT solver per check.
 - ``SAT4JChecker`` — the external SAT4J solver via subprocess.
 
-``build_checker(task, backend=…)`` is the ONE public construction door: it reads
-the task's KB + assumptions and returns a backend. ``SolverBackend`` tokenizes
-the choice; the private ``_build_checker`` maps token → class — the single place
-a concrete backend class is selected.
+``build_checker(task, backend=…)`` is the ONE public construction door AND the
+single place a concrete backend class is selected: it reads the task's KB +
+assumptions and maps the ``SolverBackend`` token to a concrete class.
 """
 import os
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pysat.formula import CNF
 from pysat.solvers import Solver
 
 from profiling import get_global_profiler, count_calls, AbstractProfiler
 
-from .checker import ConsistencyChecker
+from .protocols import ConsistencyChecker
+
+if TYPE_CHECKING:
+    from explanation.models.task_preparation import Task
 
 _DEFAULT_SAT4J_JAR = "solver_apps/org.sat4j.core.jar"
 
 
-class SolverCheckerBase(ABC):
+class CheckerBase(ABC):
     """Shared base for solver backends (structurally satisfies the checker port)."""
 
     def __init__(self, profiler_instance: AbstractProfiler = None):
@@ -102,7 +104,7 @@ class SolverCheckerBase(ABC):
         self.cleanup()
 
 
-class IncrementalPySATChecker(SolverCheckerBase):
+class IncrementalPySATChecker(CheckerBase):
     """Incremental backend using PySAT with a persistent solver and assumptions."""
 
     def __init__(self, set_kb: List[List[int]], assumptions: List[int],
@@ -154,7 +156,7 @@ class IncrementalPySATChecker(SolverCheckerBase):
             self.solver = Solver(self.solver_name, bootstrap_with=self.set_kb, use_timer=True)
 
 
-class NonIncrementalPySATChecker(SolverCheckerBase):
+class NonIncrementalPySATChecker(CheckerBase):
     """Non-incremental backend using PySAT — a fresh solver per check."""
 
     def __init__(self, set_kb: List[List[int]], assumptions: List[int],
@@ -190,7 +192,7 @@ class NonIncrementalPySATChecker(SolverCheckerBase):
         )
 
 
-class SAT4JChecker(SolverCheckerBase):
+class SAT4JChecker(CheckerBase):
     """Backend using the external SAT4J solver via subprocess. Assumptions encoded as unit clauses."""
 
     def __init__(self, set_kb: List[List[int]] = None,
@@ -273,31 +275,22 @@ class SolverBackend(Enum):
         return cls.PYSAT_INCREMENTAL if use_incremental else cls.PYSAT_NON_INCREMENTAL
 
 
-def _build_checker(backend: SolverBackend,
-                   set_kb: List[List[int]],
-                   assumptions: List[int],
-                   solver_name: str = 'glucose3',
-                   profiler: AbstractProfiler = None,
-                   sat4j_jar_path: str = _DEFAULT_SAT4J_JAR) -> ConsistencyChecker:
-    """Map a ``SolverBackend`` token to a concrete backend — the single selection site."""
+def build_checker(task: 'Task',
+                  backend: SolverBackend = SolverBackend.PYSAT_INCREMENTAL,
+                  solver_name: str = 'glucose3',
+                  profiler: AbstractProfiler = None,
+                  sat4j_jar_path: str = _DEFAULT_SAT4J_JAR) -> ConsistencyChecker:
+    """Build a checker for *task* — the single public door AND the single place a
+    concrete backend class is chosen.
+
+    Reads ``task.set_kb`` / ``task.assumptions`` and maps the ``SolverBackend``
+    token to a concrete class. Every checker in the system is built from a Task
+    through here, so the choice of concrete backend lives in exactly one place.
+    """
+    set_kb, assumptions = task.set_kb, task.assumptions
     if backend is SolverBackend.SAT4J:
         return SAT4JChecker(set_kb=set_kb, assumptions=assumptions,
                             jar_path=sat4j_jar_path, profiler_instance=profiler)
     if backend is SolverBackend.PYSAT_NON_INCREMENTAL:
         return NonIncrementalPySATChecker(set_kb, assumptions, solver_name, profiler)
     return IncrementalPySATChecker(set_kb, assumptions, solver_name, profiler)
-
-
-def build_checker(task,
-                  backend: SolverBackend = SolverBackend.PYSAT_INCREMENTAL,
-                  solver_name: str = 'glucose3',
-                  profiler: AbstractProfiler = None,
-                  sat4j_jar_path: str = _DEFAULT_SAT4J_JAR) -> ConsistencyChecker:
-    """Build a solver backend for *task* — the single public construction door.
-
-    Reads ``task.set_kb`` / ``task.assumptions`` and delegates class selection to
-    ``_build_checker``. Every checker in the system is built from a Task through
-    here, so the choice of concrete backend lives in exactly one place.
-    """
-    return _build_checker(backend, task.set_kb, task.assumptions,
-                          solver_name, profiler, sat4j_jar_path)
