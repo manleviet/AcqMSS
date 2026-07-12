@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from conacq.runners import QuAcqRunner, ConGenRunner
-from conacq.eval.config import load_pipeline_config, parse_models
+from conacq.config import load_pipeline_config, parse_models
 from conacq.eval.kb_comparator import KBComparator
 from conacq.eval.progressive_evaluation import ProgressiveEvaluator
 from conacq.oracle.ground_truth import GroundTruthData

@@ -20,12 +20,8 @@ import time
 from .metrics import EvaluationMetrics
 from .accuracy import AccuracyCalculator
 from .folds import FoldData, generate_folds, apply_folds
-from .performance_metrics import (
-    PerformanceMetrics,
-    AggregatedPerformanceMetrics,
-    aggregate_metrics
-)
 from conacq.runners.base_runner import BaseRunner, BaseRunResult
+from conacq.runners.metrics import RunMetrics, aggregate
 
 
 @dataclass
@@ -34,7 +30,7 @@ class CrossValidationFoldResult:
     fold_index: int
     accuracy: float
     metrics: EvaluationMetrics
-    performance: PerformanceMetrics
+    performance: RunMetrics
     # KB data
     kb_constraints: List[str]
     bg_clauses: List[List[int]]  # Background knowledge clauses (root constraint)
@@ -107,7 +103,7 @@ class CrossValidationResult:
     mean_accuracy: float
     std_accuracy: float
     fold_results: List[CrossValidationFoldResult]
-    performance: AggregatedPerformanceMetrics
+    performance: dict  # aggregate() output: {group: {stat: value}}
     # Intersected KB
     intersected_kb: List[str] = field(default_factory=list)
     # Background clauses (root constraint, same across all folds)
@@ -127,7 +123,7 @@ class CrossValidationResult:
             'n_intersected': len(self.intersected_kb),
             'total_runtime_ms': self.total_runtime_ms,
             'folds': [fr.to_dict() for fr in self.fold_results],
-            'performance': self.performance.to_dict(),
+            'performance': self.performance,
         }
 
 
@@ -179,7 +175,7 @@ def _run_cv_loop(
 
     fold_accuracies: List[float] = []
     fold_results: List[CrossValidationFoldResult] = []
-    performance_list: List[PerformanceMetrics] = []
+    performance_list: List[RunMetrics] = []
     fold_kbs: List[Set[str]] = []
 
     for fold_idx in range(n_folds):
@@ -210,7 +206,7 @@ def _run_cv_loop(
         fold_kbs.append(set(run_result.kb_constraints))
 
         # Collect performance metrics
-        perf = run_result.get_performance_metrics()
+        perf = run_result.metrics
         performance_list.append(perf)
 
         # Test: calculate accuracy on held-out fold (union BG for root constraint)
@@ -271,7 +267,7 @@ def _run_cv_loop(
                  len(intersected_kb), [len(kb) for kb in fold_kbs])
 
     # Aggregate performance metrics
-    agg_performance = aggregate_metrics(performance_list)
+    agg_performance = aggregate(performance_list)
 
     # Calculate total CV time
     cv_end_time = time.perf_counter()

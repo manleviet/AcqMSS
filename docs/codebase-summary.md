@@ -143,9 +143,10 @@ Pipeline runners with unified lifecycle (build-once/run-many/cleanup-once):
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `base_runner.py` | ~110 | BaseRunner ABC + BaseRunResult (9 shared fields for both runners) |
-| `congen_runner.py` | 235 | ConGenRunner: CONGEN pipeline with profiling + bias shuffle seed support |
-| `quacq_runner.py` | 197 | QuAcqRunner: QuAcq dual-mode (oracle + example modes) |
+| `base_runner.py` | ~95 | BaseRunner ABC + BaseRunResult (shared fields + `metrics: RunMetrics`) |
+| `congen_runner.py` | ~200 | ConGenRunner: CONGEN pipeline with profiling + bias shuffle seed support |
+| `quacq_runner.py` | ~350 | QuAcqRunner: QuAcq dual-mode (oracle + example modes) |
+| `metrics.py` | ~200 | **Metric declaration + reduction** (ADR-0006, moved out of `eval/`): `Kind`/`MetricSpec` + disjoint `CONGEN_METRICS`/`QUACQ_METRICS` tables + `RunMetrics` (dict-backed, `to_dict` derived from spec) + `collect(profiler, spec)` + generic `aggregate(runs)` reducer (~40 LOC replacing ~365 hand-written). A runner's output, not a run's evaluation — so it lives here, killing the old `runners→eval` cycle |
 | `__init__.py` | ~18 | Package exports |
 
 **BaseRunner Architecture** (NEW):
@@ -154,10 +155,10 @@ Pipeline runners with unified lifecycle (build-once/run-many/cleanup-once):
 - Enforces consistent initialization across ConGen and QuAcq runners
 - `cleanup()` method releases oracle resources
 
-**BaseRunResult** (NEW):
-- 9 shared fields: `kb_constraints`, `kb_clauses`, `bg_clauses`, `n_bias`, `n_kb`, `runtime_ms`, `consistency_checks`, `memory_peak_mb`, `profiler_data`
+**BaseRunResult**:
+- Shared fields: `kb_constraints`, `kb_clauses`, `bg_clauses`, `n_bias`, `n_kb`, `runtime_ms`, `consistency_checks`, `memory_peak_mb`, `profiler_data`, and `metrics` (a `RunMetrics` built via `collect(profiler, <ALGO>_METRICS)`)
 - Both `ConGenRunResult` and `QuAcqRunResult` inherit from BaseRunResult
-- Provides `get_performance_metrics()` (with `n_mss=None` default; override in ConGenRunResult for actual MSS count)
+- The per-run `performance` block is *derived* from `metrics` (no hand-listed extended fields); cross-validation reads `run_result.metrics` and feeds `aggregate()`
 
 **ConGenRunner** (inherits BaseRunner):
 - File-path-based constructor: `ConGenRunner(bias_path, fm_path, solver_name='glucose4')`
@@ -179,9 +180,9 @@ Pipeline runners with unified lifecycle (build-once/run-many/cleanup-once):
 - Shuffle seed controls bias iteration order after preparation (not before)
 - Enables reproducible CV experiments without model rebuild
 
-#### conacq/eval/ — Evaluation Framework (~2,760 LOC, 14 files)
+#### conacq/eval/ — Evaluation Framework (~2,500 LOC, 12 files)
 
-Cross-validation, accuracy metrics, unified CV output, and QuAcq->ConGen progressive evaluation:
+Cross-validation, accuracy metrics, unified CV output, and QuAcq->ConGen progressive evaluation. **`eval` is a layer of its own** (ADR-0006): the app core (`runners`/`algorithms`/`oracle`/`bias`/`examples`/`example_generators`) must not import it — boundary-guard rule 6 enforces this. Two former members left `eval/`: the metrics container → `conacq/runners/metrics.py` (a runner's output), and pipeline config → `conacq/config.py` (application config, imported by 5 `apps/` scripts).
 
 | File | LOC | Purpose |
 |------|-----|---------|
@@ -190,8 +191,6 @@ Cross-validation, accuracy metrics, unified CV output, and QuAcq->ConGen progres
 | `kb_comparator.py` | 267 | Compare learned KB vs GroundTruth FM. Strategies: description, clause, semantic (SAT-based equivalence) |
 | `report.py` | 281 | Generate CSV/JSON/LaTeX/Markdown reports; unified CV dict builder (`generate_unified_cv_dict`, `_enrich_constraints`) |
 | `accuracy.py` | 170 | Accuracy/precision/recall/F1 calculation |
-| `performance_metrics.py` | 140 | Runtime, SAT checks, memory metrics |
-| `config.py` | ~120 | Shared pipeline config utilities (ModelConfig, load_pipeline_config, parse_models, find_kb_files, find_cv_files) |
 | `folds.py` | 145 | Shared CV fold generation/save/load for fair comparison |
 | `result_loader.py` | 84 | Load evaluation results; added `ConGenResultData.from_dict()` classmethod |
 | `oracle_extractor.py` | 102 | Extract oracle data for interactive learning |

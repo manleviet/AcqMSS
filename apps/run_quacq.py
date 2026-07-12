@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 from conacq.runners import QuAcqRunner
-from conacq.eval.config import load_pipeline_config, parse_models
+from conacq.config import load_pipeline_config, parse_models
 from conacq.eval.report import save_kb_result
 
 

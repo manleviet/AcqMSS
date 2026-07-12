@@ -142,17 +142,28 @@ Main: **47 dòng** `from explanation.*` trong conacq (không qua api); stride r�
 
 **Nợ ghi (KHÔNG làm trong cụm):** A6 (`get_c()` nhiễm query cuối — có trên main) → **T11.2** + nghiệm thu tường minh · m7 (`solver_name` tham số chết trong ma trận test) → **T13** · **BỎ #9** (động cơ an toàn đã do read-only view T2 mua; động cơ perf là ảo — chi phí thật ở A1).
 
-## T9 — Runners + metrics (export ĐÔNG CỨNG)
+## T9 — Runners + metrics (export ĐÔNG CỨNG)  — SPEC: `Cowork/explanation/t9-design.md` (đã DELTA-CHECK 260712)
 
-Main: `base_runner.py` **đã tồn tại** (modify); `performance_metrics.py` 652 LOC / `_stat4` ×25; `result_loader` ở `conacq/eval/`.
+Main/v2: `performance_metrics.py` 652 LOC (`PerformanceMetrics` ~29 field + `AggregatedPerformanceMetrics` ~100 field + `aggregate_metrics` ~195 dòng + `_stat4`); container tiêu thụ CHỈ bởi `cross_validation.py:213` (`get_performance_metrics`) + `:274` (`aggregate_metrics`); runner ① hand-extract `congen_runner:196-209` / `quacq_runner:282-311`; deferred import `base_runner:60`; `quacq_runner:23` `from ..eval import` (relative); `congen_runner:20` absolute. Read-path KHÔNG chạm perf groups mở rộng: `extract_results.load_cv_result` đọc CHỈ 4 group (runtime/consistency_checks/memory/kb_size), `result_loader.from_json` KHÔNG đọc `performance`. ⇒ disjoint an toàn với byte-identical.
 
-1. **Snapshot export TRƯỚC:** chạy `apps/extract_results` trên `data/results/**` hiện có → lưu CSV/LaTeX vào scratchpad làm chuẩn byte-diff.
-2. **safety-net:** `tests/test_runmetrics_aggregation.py` pin số liệu aggregation hiện tại.
-3. [A4] `BaseRunner` sở hữu profiling + metric map khai báo; 2 runner bỏ lặp shuffle+profiling.
-4. [C2] Reducer metric tổng quát thay 25 khối `_stat4`.
-5. [71c1511] `conacq/runners/unified_result.py` (mới) `UnifiedConGenResult` + cập nhật `result_loader` (`from_json` đọc được JSON cũ trong `data/results/**`).
+**BƯỚC 1 — LƯỚI TRƯỚC (green trên code CŨ, chưa refactor 1 dòng):**
+1. Snapshot: `python -m apps.extract_results` trên `data/results/**` (code CŨ) → `paper/tables/*` (chuẩn byte-diff).
+2. `tests/test_t9_metrics_safety_net.py`: **test 1** extraction-diff (nghiệm thu thật, byte-identical), **test 2** schema-pin bằng LITERAL (ConGen: 13 group prefix từ file thật; QuAcq: group zeroed nhúng trong file congen), **test 3** from_json sweep mọi JSON `data/results/**`. XANH TRÊN CODE CŨ trước.
 
-**Green:** suite + diff CSV/LaTeX **rỗng** vs snapshot. KHÔNG regenerate `data/results/`. Docs: eval-pipeline.md.
+**BƯỚC 2 — REFACTOR:**
+3. **`conacq/runners/metrics.py` (MỚI)** — `Kind` enum (COUNTER/TIMER_SEC/GAUGE) + `MetricSpec(key/source/kind/group/unit/stats)` frozen + **hai bảng disjoint module-level** `CONGEN_METRICS`, `QUACQ_METRICS` (ba không-gian-tên khai báo tường minh: abbrev on-disk sống ở `group`) + `RunMetrics(spec,values)` dict-backed (`to_dict` DẪN XUẤT từ spec) + `collect(profiler,spec)` (thay ①) + `aggregate(runs)` generic ~40 LOC (thay ③④), áp quy tắc §3.2 (1 metric→`{stat}{unit}`; >1→`{key}_{stat}{unit}`).
+4. **Dời container** khỏi `eval/`: xoá `performance_metrics.py`; `base_runner`/`congen_runner`/`quacq_runner` import `.metrics` (bỏ 3 kiểu import eval); `cross_validation.py` import `aggregate` từ `conacq.runners.metrics` (eval→runners = chiều ĐÚNG); xoá deferred import `base_runner:60`; `eval/__init__` bỏ export container.
+5. **Guard rule 6** (`tests/test_boundary_guard.py`): `conacq.{runners,algorithms,models,oracle,bias,examples}` KHÔNG import `conacq.eval` — bắt CẢ absolute (`conacq.eval[.x]`) LẪN relative (`from ..eval import`). ADR-0006.
+6. **Dời `conacq/eval/config.py` → `conacq/config.py`** (app config, không phải eval); cập nhật 5 app (`run_evaluation/run_cv/run_congen/run_compare/run_quacq`) + `eval/__init__` bỏ export config.  *(D7: brief ghi "six apps" — thực 5, lệch cơ học → Cowork sync brief.)*
+7. [71c1511] `ConGenRunResult` + `result_loader.ConGenResultData` → `UnifiedConGenResult` (`conacq/runners/unified_result.py` mới); `from_json` vẫn đọc JSON cũ `data/results/**`; cập nhật `runners/__init__` + `kb_comparator`/`cross_validation` consumers.
+
+**BƯỚC 3 — LƯỚI SAU:** **test 4** metric-map completeness (mọi profiler-key runner emit ∈ table HOẶC IGNORED list); **test 5** disjointness (CONGEN_METRICS ∩ QUACQ_METRICS = ∅ ngoài core khai báo). Cập nhật `test_evaluation.py::TestPerformanceMetrics` sang API mới (giữ coverage, KHÔNG làm yếu).
+
+**Green:** suite ≥ 400 + test mới; diff `paper/tables/*` RỖNG; `data/results/**` from_json-readable; điểm khai báo metric = 1; guard 6-rule; `grep "from conacq.eval" conacq/runners/` = 0; `performance_metrics.py` 652→~190. Docs in-stage: eval-pipeline.md + codebase-summary.md + system-architecture.md.
+
+**DELTA-CHECK 260712 (design thắng):** D1 thêm `metrics.py` (impl-plan cũ chỉ có unified_result). D2 bảng disjoint module-level (không "trên BaseRunner"). D3 thêm guard rule 6. D4 thêm config move. D5 dùng 5 test §4 (extraction-diff = nghiệm thu thật). **D6 BỎ [A4] dedup shuffle+profiling boilerplate** → nợ T17. D7 6 core subpackage thực = algorithms/bias/example_generators/examples/oracle/runners (design ghi 'models' — không có trong conacq); 5 app import config (không 6).
+
+**TRẠNG THÁI 260712:** BƯỚC 1–3 xong + XANH (suite 405, net 7 test, guard 6-rule). Bước 3–7 done TRỪ **item 7 (UnifiedConGenResult)** — HOÃN: là `[71c1511]` (gộp `ConGenRunResult`+`ConGenResultData`), KHÔNG thuộc quyết định ADR-0006 lõi, invasive 6+ touchpoint. Tách riêng để tránh nửa-vời ở đáy context. Cần làm SAU (turn mới / khi Cowork xác nhận).
 
 ## T10 — apps CLI harness + logging
 
@@ -224,6 +235,7 @@ Main (đã verify — brief lệch cơ học): RNG global ở `base.py:71-74`, `
 1. Chuyển `tests/test_bias_module.py` + `test_bias_module_1.py` → `scripts/` (demo, đổi tên `*demo*`).
 2. Xoá comment cũ/field chết còn sót (ref fda29d7 + 67bfb20, **TRỪ** phần xoá dimacs).
 3. ⚠️ **GIỮ `explanation/transformations/dimacs_to_configuration.py`**.
+4. **[nợ T9, A4] Dedup runner-lifecycle boilerplate** — `collect(profiler, spec)` đã nuốt phần trùng nặng nhất (30 dòng get_metric ×2). Phần còn lại (profiler_session start/stop + tracemalloc + shuffle) vẫn lặp ở `congen_runner`/`quacq_runner`. Hoist lên `BaseRunner` nếu đáng. *(Cowork duyệt hoãn khỏi T9 — ngoài scope design metric-only.)*
 
 **Verify:** grep symbol đã xoá = 0; dimacs file còn.
 

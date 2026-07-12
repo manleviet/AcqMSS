@@ -23,7 +23,7 @@ from conacq.eval import (
     generate_unified_cv_dict,
     load_folds,
 )
-from conacq.eval.config import load_pipeline_config, parse_models
+from conacq.config import load_pipeline_config, parse_models
 from conacq.examples import ExampleIO
 from conacq.bias import BiasIO
 

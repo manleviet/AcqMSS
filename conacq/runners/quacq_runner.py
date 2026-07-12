@@ -18,9 +18,9 @@ from conacq.example_generators import QueryProvider
 from explanation.api import build_checker, SolverBackend
 from profiling import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
+from .metrics import QUACQ_METRICS, collect
 from ..algorithms import QuAcq
 from ..algorithms.quacq.discriminating_generator import DiscriminatingGenerator
-from ..eval import PerformanceMetrics
 
 
 @dataclass
@@ -34,29 +34,8 @@ class QuAcqRunResult(BaseRunResult):
     n_queries: int = 0
     convergence_reason: str = ''
 
-    # Extended profiler metrics
-    quacq_runtime_ms: float = 0.0
-    query_generation_runtime_ms: float = 0.0
-    findscope_runtime_ms: float = 0.0
-    findc_runtime_ms: float = 0.0
-    dis_gen_runtime_ms: float = 0.0
-    reduce_runtime_ms: float = 0.0
-    solver_time_ms: float = 0.0
-
-    is_consistent_calls: int = 0
-    is_consistent_test_cases_calls: int = 0
-    quacq_calls: int = 0
-    query_generation_calls: int = 0
-    query_generation_consistency_checks: int = 0
-    prune_calls: int = 0
-    prune_is_consistent_calls: int = 0
-    findscope_calls: int = 0
-    findc_calls: int = 0
-    findc_consistency_checks: int = 0
-    dis_gen_calls: int = 0
-    dis_gen_consistency_checks: int = 0
-    reduce_calls: int = 0
-    redundancy_consistency_checks: int = 0
+    # The extended profiler metrics live in the inherited ``metrics`` RunMetrics
+    # bundle (built via ``collect(profiler, QUACQ_METRICS)``), not hand-listed here.
 
     # Query history: (config, answer, source) tuples for progressive pipeline
     query_history: List[Tuple[Dict[str, bool], bool, str]] = field(default_factory=list)
@@ -66,64 +45,11 @@ class QuAcqRunResult(BaseRunResult):
         d = self._base_to_dict()
         d['n_queries'] = self.n_queries
         d['convergence_reason'] = self.convergence_reason
-        d['performance'].update({
-            'quacq_runtime_ms': self.quacq_runtime_ms,
-            'query_generation_runtime_ms': self.query_generation_runtime_ms,
-            'findscope_runtime_ms': self.findscope_runtime_ms,
-            'findc_runtime_ms': self.findc_runtime_ms,
-            'dis_gen_runtime_ms': self.dis_gen_runtime_ms,
-            'reduce_runtime_ms': self.reduce_runtime_ms,
-            'solver_time_ms': self.solver_time_ms,
-            'is_consistent_calls': self.is_consistent_calls,
-            'is_consistent_test_cases_calls': self.is_consistent_test_cases_calls,
-            'quacq_calls': self.quacq_calls,
-            'query_generation_calls': self.query_generation_calls,
-            'query_generation_consistency_checks': self.query_generation_consistency_checks,
-            'prune_calls': self.prune_calls,
-            'prune_is_consistent_calls': self.prune_is_consistent_calls,
-            'findscope_calls': self.findscope_calls,
-            'findc_calls': self.findc_calls,
-            'findc_consistency_checks': self.findc_consistency_checks,
-            'dis_gen_calls': self.dis_gen_calls,
-            'dis_gen_consistency_checks': self.dis_gen_consistency_checks,
-            'reduce_calls': self.reduce_calls,
-            'redundancy_consistency_checks': self.redundancy_consistency_checks,
-        })
         d['query_history'] = [
             {'config': config, 'answer': answer, 'source': source}
             for config, answer, source in self.query_history
         ]
         return d
-
-    def get_performance_metrics(self) -> PerformanceMetrics:
-        """Get performance metrics including QuAcq-specific metrics."""
-        return PerformanceMetrics(
-            runtime_ms=self.runtime_ms,
-            consistency_checks=self.consistency_checks,
-            memory_peak_mb=self.memory_peak_mb,
-            n_kb=self.n_kb,
-            quacq_runtime_ms=self.quacq_runtime_ms,
-            query_generation_runtime_ms=self.query_generation_runtime_ms,
-            findscope_runtime_ms=self.findscope_runtime_ms,
-            findc_runtime_ms=self.findc_runtime_ms,
-            dis_gen_runtime_ms=self.dis_gen_runtime_ms,
-            reduce_runtime_ms=self.reduce_runtime_ms,
-            solver_time_ms=self.solver_time_ms,
-            is_consistent_calls=self.is_consistent_calls,
-            is_consistent_test_cases_calls=self.is_consistent_test_cases_calls,
-            quacq_calls=self.quacq_calls,
-            query_generation_calls=self.query_generation_calls,
-            query_generation_consistency_checks=self.query_generation_consistency_checks,
-            prune_calls=self.prune_calls,
-            prune_is_consistent_calls=self.prune_is_consistent_calls,
-            findscope_calls=self.findscope_calls,
-            findc_calls=self.findc_calls,
-            findc_consistency_checks=self.findc_consistency_checks,
-            dis_gen_calls=self.dis_gen_calls,
-            dis_gen_consistency_checks=self.dis_gen_consistency_checks,
-            reduce_calls=self.reduce_calls,
-            redundancy_consistency_checks=self.redundancy_consistency_checks
-        )
 
 
 def _learn_params_from_task(task) -> dict:
@@ -274,35 +200,13 @@ class QuAcqRunner(BaseRunner):
                     if checker is not None:
                         checker.cleanup()
 
-            # Extract core metrics
-            timer_values = profiler.get_metric('quacq_total_time', [0])
-            runtime_ms = timer_values[0] * 1000 if timer_values else 0
+            # Collect metrics declaratively from the profiler + memory (tracemalloc).
             memory_peak_mb = peak / (1024 * 1024)
-            consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
-
-            # Extract extended profiler metrics (timers are lists, sum all calls)
-            quacq_runtime_ms = sum(profiler.get_metric('quacq_runtime', [0])) * 1000
-            query_generation_runtime_ms = sum(profiler.get_metric('query_generation_runtime', [0])) * 1000
-            findscope_runtime_ms = sum(profiler.get_metric('findscope_runtime', [0])) * 1000
-            findc_runtime_ms = sum(profiler.get_metric('findc_runtime', [0])) * 1000
-            dis_gen_runtime_ms = sum(profiler.get_metric('dis_gen_runtime', [0])) * 1000
-            reduce_runtime_ms = sum(profiler.get_metric('reduce_runtime', [0])) * 1000
-            solver_time_ms = sum(profiler.get_metric('solver_time', [0])) * 1000
-
-            is_consistent_calls = profiler.get_metric('is_consistent_calls', 0)
-            is_consistent_test_cases_calls = profiler.get_metric('is_consistent_test_cases_calls', 0)
-            quacq_calls = profiler.get_metric('quacq_calls', 0)
-            query_generation_calls = profiler.get_metric('query_generation_calls', 0)
-            query_generation_consistency_checks = profiler.get_metric('query_generation_consistency_checks', 0)
-            prune_calls = profiler.get_metric('prune_calls', 0)
-            prune_is_consistent_calls = profiler.get_metric('prune_is_consistent_calls', 0)
-            findscope_calls = profiler.get_metric('findscope_calls', 0)
-            findc_calls = profiler.get_metric('findc_calls', 0)
-            findc_consistency_checks = profiler.get_metric('findc_consistency_checks', 0)
-            dis_gen_calls = profiler.get_metric('dis_gen_calls', 0)
-            dis_gen_consistency_checks = profiler.get_metric('dis_gen_consistency_checks', 0)
-            reduce_calls = profiler.get_metric('reduce_calls', 0)
-            redundancy_consistency_checks = profiler.get_metric('redundancy_consistency_checks', 0)
+            run_metrics = collect(profiler, QUACQ_METRICS, extra={
+                'memory_peak_mb': memory_peak_mb,
+            })
+            runtime_ms = run_metrics.values['runtime_ms']
+            consistency_checks = run_metrics.values['consistency_checks']
 
             profiler_snapshot = profiler.to_dict()
 
@@ -321,27 +225,7 @@ class QuAcqRunner(BaseRunner):
                 runtime_ms=runtime_ms,
                 consistency_checks=consistency_checks,
                 memory_peak_mb=memory_peak_mb,
-                quacq_runtime_ms=quacq_runtime_ms,
-                query_generation_runtime_ms=query_generation_runtime_ms,
-                findscope_runtime_ms=findscope_runtime_ms,
-                findc_runtime_ms=findc_runtime_ms,
-                dis_gen_runtime_ms=dis_gen_runtime_ms,
-                reduce_runtime_ms=reduce_runtime_ms,
-                solver_time_ms=solver_time_ms,
-                is_consistent_calls=is_consistent_calls,
-                is_consistent_test_cases_calls=is_consistent_test_cases_calls,
-                quacq_calls=quacq_calls,
-                query_generation_calls=query_generation_calls,
-                query_generation_consistency_checks=query_generation_consistency_checks,
-                prune_calls=prune_calls,
-                prune_is_consistent_calls=prune_is_consistent_calls,
-                findscope_calls=findscope_calls,
-                findc_calls=findc_calls,
-                findc_consistency_checks=findc_consistency_checks,
-                dis_gen_calls=dis_gen_calls,
-                dis_gen_consistency_checks=dis_gen_consistency_checks,
-                reduce_calls=reduce_calls,
-                redundancy_consistency_checks=redundancy_consistency_checks,
+                metrics=run_metrics,
                 profiler_data=profiler_snapshot,
                 query_history=result.query_history
             )

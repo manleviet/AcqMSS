@@ -38,12 +38,8 @@ from conacq.oracle.ground_truth import GroundTruthData
 # Accuracy calculation
 from .accuracy import AccuracyCalculator, AccuracyResult
 
-# Performance metrics
-from .performance_metrics import (
-    PerformanceMetrics,
-    AggregatedPerformanceMetrics,
-    aggregate_metrics
-)
+# Performance metrics moved to conacq/runners/metrics.py (ADR-0006): a runner's
+# output, not the evaluation of a run. Import from conacq.runners.metrics.
 
 # Runners (re-exported from conacq.runners for backward compat)
 from conacq.runners import BaseRunner, BaseRunResult
@@ -70,8 +66,8 @@ from .progressive_evaluation import ProgressiveEvaluator, ProgressiveResult, Che
 # Main evaluator
 from .kb_comparator import KBComparator, ComparationStrategy, ComparationResult
 
-# Pipeline config
-from .config import ModelConfig, load_pipeline_config, parse_models, find_kb_files, find_cv_files
+# Pipeline config moved to conacq/config.py (ADR-0006): application configuration,
+# not evaluation. Import from conacq.config.
 
 # Report generation
 from .report import (
@@ -98,9 +94,6 @@ __all__ = [
     'AccuracyResult',
 
     # Performance
-    'PerformanceMetrics',
-    'AggregatedPerformanceMetrics',
-    'aggregate_metrics',
 
     # Base runner
     'BaseRunner',
@@ -140,12 +133,6 @@ __all__ = [
     'load_folds',
     'apply_folds',
 
-    # Pipeline config
-    'ModelConfig',
-    'load_pipeline_config',
-    'parse_models',
-    'find_kb_files',
-    'find_cv_files',
 
     # Reports
     'generate_evaluation_report',

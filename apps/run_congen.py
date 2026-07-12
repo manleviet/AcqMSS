@@ -18,7 +18,7 @@ from pathlib import Path
 from conacq.runners import ConGenRunner
 from conacq.examples import ExampleIO
 from conacq.eval.report import save_kb_result
-from conacq.eval.config import ModelConfig, load_pipeline_config, parse_models
+from conacq.config import ModelConfig, load_pipeline_config, parse_models
 
 
 def extract_sampling_type(examples_path: str) -> str:

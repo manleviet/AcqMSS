@@ -155,6 +155,23 @@ data/results/interactive/     ← algorithm = "interactive"
 └── REAL-FM-7_rs_1n_cv_non-incremental_example_only.json # CV summary (with query_mode suffix)
 ```
 
+**Performance-block schema (post-T9 — read this before diffing old vs new result files).**
+The CV summary's aggregated `"performance"` block is `{group: {stat: value}}`. As of
+the runners+metrics refactor (ADR-0006), each algorithm declares its own disjoint
+metric table (`conacq/runners/metrics.py`):
+
+- **New ConGen** CV files carry **13 groups** (runtime, consistency_checks, memory,
+  kb_size, congen_runtime, acqmss_runtime, acqmss_calls, reduce_runtime, solver_time,
+  is_consistent_calls, is_consistent_test_cases_calls, redundancy_consistency_checks —
+  plus `n_runs`). QuAcq gets its own disjoint table.
+- **Legacy** ConGen files (recorded before T9) carry **29 groups** — the extra 16 are
+  zeroed QuAcq groups the old single union-container emitted into every file. Those
+  files are **not** regenerated and stay byte-for-byte as recorded.
+- `apps.extract_results` reads **both** shapes: it consumes only the four ConGen-owned
+  groups (`runtime`/`consistency_checks`/`memory`/`kb_size`), so the paper tables are
+  identical from either. A diff of an old vs a new file will show the dropped zeroed
+  QuAcq groups — that is expected, not a regression.
+
 ### [6] run_compare.py — Optional KB Evaluation
 
 Compares learned KB(s) against ground truth feature model. Adds precision/recall/F1 using description and clause matching strategies.

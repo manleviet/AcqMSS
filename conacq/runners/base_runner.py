@@ -9,6 +9,8 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 
+from .metrics import RunMetrics
+
 
 @dataclass
 class BaseRunResult:
@@ -37,33 +39,28 @@ class BaseRunResult:
     consistency_checks: int
     memory_peak_mb: float
 
-    # kw_only default: allows child classes to add required positional fields
+    # kw_only defaults: allow child classes to add required positional fields.
     profiler_data: Dict[str, Any] = field(default_factory=dict, kw_only=True)
+    # The declarative metric bundle (RunMetrics) this run produced, built via
+    # metrics.collect(profiler, <ALGO>_METRICS). The per-run ``performance`` block
+    # is derived from it — see _base_to_dict.
+    metrics: Optional[RunMetrics] = field(default=None, kw_only=True)
 
     def _base_to_dict(self) -> dict:
         """Shared serialization for base fields."""
+        perf = dict(self.metrics.to_dict()) if self.metrics is not None else {
+            'runtime_ms': self.runtime_ms,
+            'consistency_checks': self.consistency_checks,
+            'memory_peak_mb': self.memory_peak_mb,
+        }
+        perf['profiler'] = self.profiler_data
         return {
             'kb_constraints': self.kb_constraints,
             'bg_clauses': self.bg_clauses,
             'n_bias': self.n_bias,
             'n_kb': self.n_kb,
-            'performance': {
-                'runtime_ms': self.runtime_ms,
-                'consistency_checks': self.consistency_checks,
-                'memory_peak_mb': self.memory_peak_mb,
-                'profiler': self.profiler_data,
-            }
+            'performance': perf,
         }
-
-    def get_performance_metrics(self):
-        """Base performance metrics (n_mss=None). Override for ConGen-specific."""
-        from conacq.eval.performance_metrics import PerformanceMetrics
-        return PerformanceMetrics(
-            runtime_ms=self.runtime_ms,
-            consistency_checks=self.consistency_checks,
-            memory_peak_mb=self.memory_peak_mb,
-            n_kb=self.n_kb
-        )
 
 
 class BaseRunner(ABC):

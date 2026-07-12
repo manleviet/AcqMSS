@@ -15,13 +15,17 @@ through submodule paths or underscore-private names. The leaf depends on
 neither tier above it, so it stays a reusable, cycle-free port.
 
 These tests parse every source file's imports with ``ast`` and pin the current,
-clean state, enforcing five rules:
+clean state, enforcing six rules:
 
   (1) conacq → explanation : only ``explanation.api`` (no deep paths, no privates)
   (2) conacq → profiling   : only the ``profiling`` façade (no deep paths)
   (3) explanation → profiling : only the ``profiling`` façade (no deep paths)
   (4) explanation ⊥ conacq : the framework never imports the app
   (5) profiling is a leaf  : it never imports explanation or conacq
+  (6) conacq core ⊥ conacq.eval : the app core (runners/algorithms/oracle/bias/
+      examples/example_generators) never imports the ``eval`` layer, so the
+      ``eval → core`` flow stays one-directional and the old runners↔eval cycle
+      cannot return (ADR-0006). Catches absolute *and* relative imports.
 
 A red test means a real breach (an import cycle or a leaked internal), not a
 false alarm — report it rather than loosening the rule.
@@ -141,3 +145,60 @@ def test_profiling_is_a_leaf():
         "profiling is not a leaf (must not import explanation/conacq):\n  "
         + "\n  ".join(breaches)
     )
+
+
+# The application core — everything under conacq except ``eval`` itself (and the
+# conacq root, which may wire eval up). ``eval`` is a layer *above* these.
+CONACQ_CORE_SUBPACKAGES = (
+    "algorithms", "bias", "example_generators", "examples", "oracle", "runners",
+)
+
+
+def _resolves_to_eval(importer_pkg, level: int, module: str) -> bool:
+    """Whether a (possibly relative) import from ``importer_pkg`` targets ``conacq.eval``.
+
+    ``level`` is the ImportFrom dot count (0 = absolute). A relative import climbs
+    ``level - 1`` packages up from the importing file's package before appending
+    ``module`` — the same resolution Python's import machinery performs.
+    """
+    if level == 0:
+        target = module
+    else:
+        up = level - 1
+        base = list(importer_pkg[:len(importer_pkg) - up]) if up <= len(importer_pkg) else []
+        target = ".".join(base + (module.split(".") if module else []))
+    return target == "conacq.eval" or target.startswith("conacq.eval.")
+
+
+def _eval_layer_breaches() -> list:
+    """Imports of ``conacq.eval`` from the application core (absolute or relative)."""
+    breaches = []
+    for sub in CONACQ_CORE_SUBPACKAGES:
+        root = CONACQ_DIR / sub
+        if not root.exists():
+            continue
+        for path in _iter_source_files(root):
+            rel = path.relative_to(REPO_ROOT)
+            importer_pkg = rel.parts[:-1]  # package path of the importing file
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if _resolves_to_eval(importer_pkg, 0, alias.name):
+                            breaches.append(f"{rel}:{node.lineno}: imports `{alias.name}`")
+                elif isinstance(node, ast.ImportFrom):
+                    if _resolves_to_eval(importer_pkg, node.level, node.module or ""):
+                        kind = "relative " if node.level else ""
+                        breaches.append(f"{rel}:{node.lineno}: {kind}imports the eval layer")
+    return breaches
+
+
+def test_conacq_core_does_not_import_eval():
+    """(6) The application core never imports ``conacq.eval`` (ADR-0006).
+
+    ``eval`` (cross-validation, comparators, reports) consumes runs; the core
+    produces them. Keeping the edge one-directional means the runners↔eval cycle
+    — once papered over with a deferred import — cannot come back.
+    """
+    breaches = _eval_layer_breaches()
+    assert not breaches, "conacq core → eval breaches (ADR-0006):\n  " + "\n  ".join(breaches)

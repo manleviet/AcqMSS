@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-from conacq.eval.config import (
+from conacq.config import (
     find_cv_files, find_kb_files, load_pipeline_config, parse_models,
 )
 from conacq.eval.kb_comparator import KBComparator, ComparationStrategy

@@ -15,12 +15,18 @@ from conacq.eval import (
     ConGenResultData,
     AccuracyCalculator,
     AccuracyResult,
-    PerformanceMetrics,
-    aggregate_metrics,
     KBComparator,
     ComparationStrategy,
     generate_evaluation_report,
     generate_accuracy_report,
+)
+# Metrics container moved to conacq/runners/metrics.py (ADR-0006).
+from conacq.runners.metrics import (
+    CONGEN_METRICS,
+    QUACQ_METRICS,
+    COMMON_KEYS,
+    RunMetrics,
+    aggregate,
 )
 
 
@@ -290,168 +296,100 @@ class TestAccuracyCalculator:
             assert result.metrics.false_positives == 1
 
 
+def _congen(**vals) -> RunMetrics:
+    """A ConGen RunMetrics with the named values; the rest zeroed."""
+    return RunMetrics(CONGEN_METRICS, {m.key: vals.get(m.key, 0.0) for m in CONGEN_METRICS})
+
+
+def _quacq(**vals) -> RunMetrics:
+    """A QuAcq RunMetrics with the named values; the rest zeroed."""
+    return RunMetrics(QUACQ_METRICS, {m.key: vals.get(m.key, 0.0) for m in QUACQ_METRICS})
+
+
 class TestPerformanceMetrics:
-    """Test performance metrics aggregation."""
+    """Test the declarative RunMetrics container + generic aggregate() reducer."""
 
     def test_aggregate_metrics(self):
-        """Test aggregating metrics from multiple runs."""
-        metrics_list = [
-            PerformanceMetrics(
-                runtime_ms=100,
-                consistency_checks=50,
-                memory_peak_mb=10,
-                n_mss=20,
-                n_kb=5
-            ),
-            PerformanceMetrics(
-                runtime_ms=200,
-                consistency_checks=70,
-                memory_peak_mb=15,
-                n_mss=25,
-                n_kb=7
-            ),
-        ]
-
-        agg = aggregate_metrics(metrics_list)
-
-        assert agg.n_runs == 2
-        assert agg.runtime_mean_ms == 150  # (100 + 200) / 2
-        assert agg.runtime_min_ms == 100
-        assert agg.runtime_max_ms == 200
-        assert agg.checks_mean == 60  # (50 + 70) / 2
-        assert agg.memory_max_mb == 15
+        """Aggregating core metrics from multiple runs (mean/min/max)."""
+        agg = aggregate([
+            _congen(runtime_ms=100, consistency_checks=50, memory_peak_mb=10, n_mss=20, n_kb=5),
+            _congen(runtime_ms=200, consistency_checks=70, memory_peak_mb=15, n_mss=25, n_kb=7),
+        ])
+        assert agg['n_runs'] == 2
+        assert agg['runtime']['mean_ms'] == 150  # (100 + 200) / 2
+        assert agg['runtime']['min_ms'] == 100
+        assert agg['runtime']['max_ms'] == 200
+        assert agg['consistency_checks']['mean'] == 60  # (50 + 70) / 2
+        assert agg['memory']['max_mb'] == 15
+        assert agg['kb_size']['n_mss_mean'] == 22.5  # (20 + 25) / 2
+        assert agg['kb_size']['n_kb_mean'] == 6  # (5 + 7) / 2
 
     def test_aggregate_single_run(self):
-        """Test aggregating a single run (std should be 0)."""
-        metrics_list = [
-            PerformanceMetrics(
-                runtime_ms=100,
-                consistency_checks=50,
-                memory_peak_mb=10,
-                n_mss=20,
-                n_kb=5
-            ),
-        ]
-
-        agg = aggregate_metrics(metrics_list)
-
-        assert agg.n_runs == 1
-        assert agg.runtime_std_ms == 0.0
+        """A single run has std == 0."""
+        agg = aggregate([_congen(runtime_ms=100, consistency_checks=50, memory_peak_mb=10, n_kb=5)])
+        assert agg['n_runs'] == 1
+        assert agg['runtime']['std_ms'] == 0.0
 
     def test_aggregate_extended_metrics(self):
-        """Test aggregating extended profiler metrics."""
-        metrics_list = [
-            PerformanceMetrics(
-                runtime_ms=100, consistency_checks=50,
-                memory_peak_mb=10, n_mss=20, n_kb=5,
-                congen_runtime_ms=90, acqmss_runtime_ms=60,
-                acqmss_calls=10, reduce_runtime_ms=20,
-                solver_time_ms=50, is_consistent_calls=30,
-                is_consistent_test_cases_calls=5,
-                redundancy_consistency_checks=15,
-            ),
-            PerformanceMetrics(
-                runtime_ms=200, consistency_checks=70,
-                memory_peak_mb=15, n_mss=25, n_kb=7,
-                congen_runtime_ms=180, acqmss_runtime_ms=120,
-                acqmss_calls=20, reduce_runtime_ms=40,
-                solver_time_ms=100, is_consistent_calls=50,
-                is_consistent_test_cases_calls=7,
-                redundancy_consistency_checks=25,
-            ),
-        ]
+        """Extended profiler metrics reduce correctly."""
+        agg = aggregate([
+            _congen(runtime_ms=100, congen_runtime_ms=90, acqmss_runtime_ms=60, acqmss_calls=10,
+                    reduce_runtime_ms=20, solver_time_ms=50, is_consistent_calls=30,
+                    is_consistent_test_cases_calls=5, redundancy_consistency_checks=15),
+            _congen(runtime_ms=200, congen_runtime_ms=180, acqmss_runtime_ms=120, acqmss_calls=20,
+                    reduce_runtime_ms=40, solver_time_ms=100, is_consistent_calls=50,
+                    is_consistent_test_cases_calls=7, redundancy_consistency_checks=25),
+        ])
+        assert agg['congen_runtime']['mean_ms'] == 135  # (90 + 180) / 2
+        assert agg['congen_runtime']['min_ms'] == 90
+        assert agg['congen_runtime']['max_ms'] == 180
+        assert agg['acqmss_runtime']['mean_ms'] == 90  # (60 + 120) / 2
+        assert agg['reduce_runtime']['mean_ms'] == 30  # (20 + 40) / 2
+        assert agg['solver_time']['mean_ms'] == 75  # (50 + 100) / 2
+        assert agg['acqmss_calls']['mean'] == 15  # (10 + 20) / 2
+        assert agg['acqmss_calls']['min'] == 10
+        assert agg['acqmss_calls']['max'] == 20
+        assert agg['is_consistent_calls']['mean'] == 40  # (30 + 50) / 2
+        assert agg['is_consistent_test_cases_calls']['mean'] == 6  # (5 + 7) / 2
+        assert agg['redundancy_consistency_checks']['mean'] == 20  # (15 + 25) / 2
 
-        agg = aggregate_metrics(metrics_list)
-
-        # Verify extended runtime metrics
-        assert agg.congen_runtime_mean_ms == 135  # (90 + 180) / 2
-        assert agg.congen_runtime_min_ms == 90
-        assert agg.congen_runtime_max_ms == 180
-        assert agg.acqmss_runtime_mean_ms == 90  # (60 + 120) / 2
-        assert agg.reduce_runtime_mean_ms == 30  # (20 + 40) / 2
-        assert agg.solver_time_mean_ms == 75  # (50 + 100) / 2
-
-        # Verify extended counter metrics
-        assert agg.acqmss_calls_mean == 15  # (10 + 20) / 2
-        assert agg.acqmss_calls_min == 10
-        assert agg.acqmss_calls_max == 20
-        assert agg.is_consistent_calls_mean == 40  # (30 + 50) / 2
-        assert agg.is_consistent_tc_calls_mean == 6  # (5 + 7) / 2
-        assert agg.redundancy_checks_mean == 20  # (15 + 25) / 2
-
-    def test_quacq_performance_metrics(self):
-        """Test PerformanceMetrics accepts QuAcq-specific fields."""
-        pm = PerformanceMetrics(
-            runtime_ms=500, consistency_checks=200,
-            memory_peak_mb=25, n_kb=10,
-            quacq_runtime_ms=450, query_generation_runtime_ms=100,
-            findscope_runtime_ms=80, findc_runtime_ms=120,
-            dis_gen_runtime_ms=50, reduce_runtime_ms=30,
-            quacq_calls=5, query_generation_calls=20,
-            query_generation_consistency_checks=40,
-            prune_calls=15, prune_is_consistent_calls=30,
-            findscope_calls=5, findc_calls=5,
-            findc_consistency_checks=25,
-            dis_gen_calls=3, dis_gen_consistency_checks=10,
-            reduce_calls=2, redundancy_consistency_checks=8,
-        )
-        assert pm.quacq_runtime_ms == 450
-        assert pm.findscope_calls == 5
-        assert pm.reduce_calls == 2
-
-    def test_quacq_to_dict(self):
-        """Test to_dict() includes QuAcq fields."""
-        pm = PerformanceMetrics(
-            runtime_ms=100, consistency_checks=50,
-            memory_peak_mb=10, n_kb=5,
-            quacq_runtime_ms=90, findc_calls=7,
-        )
-        d = pm.to_dict()
+    def test_run_metrics_to_dict_is_spec_ordered(self):
+        """RunMetrics.to_dict() is derived from the spec, so a metric cannot vanish."""
+        rm = _quacq(runtime_ms=100, quacq_runtime_ms=90, findc_calls=7)
+        d = rm.to_dict()
+        assert list(d.keys()) == [m.key for m in QUACQ_METRICS]
         assert d['quacq_runtime_ms'] == 90
         assert d['findc_calls'] == 7
         assert d['findscope_runtime_ms'] == 0.0
 
     def test_aggregate_quacq_metrics(self):
-        """Test aggregate_metrics() handles QuAcq-specific fields."""
-        metrics_list = [
-            PerformanceMetrics(
-                runtime_ms=100, consistency_checks=50,
-                memory_peak_mb=10, n_kb=5,
-                quacq_runtime_ms=80, findscope_calls=4,
-                findc_consistency_checks=20,
-            ),
-            PerformanceMetrics(
-                runtime_ms=200, consistency_checks=70,
-                memory_peak_mb=15, n_kb=7,
-                quacq_runtime_ms=160, findscope_calls=8,
-                findc_consistency_checks=40,
-            ),
-        ]
-        agg = aggregate_metrics(metrics_list)
-        assert agg.quacq_runtime_mean_ms == 120  # (80+160)/2
-        assert agg.quacq_runtime_min_ms == 80
-        assert agg.quacq_runtime_max_ms == 160
-        assert agg.findscope_calls_mean == 6  # (4+8)/2
-        assert agg.findc_checks_mean == 30  # (20+40)/2
+        """The QuAcq table aggregates its own metrics under the frozen group names."""
+        agg = aggregate([
+            _quacq(runtime_ms=100, quacq_runtime_ms=80, findscope_calls=4, findc_consistency_checks=20),
+            _quacq(runtime_ms=200, quacq_runtime_ms=160, findscope_calls=8, findc_consistency_checks=40),
+        ])
+        assert agg['quacq_runtime']['mean_ms'] == 120  # (80+160)/2
+        assert agg['quacq_runtime']['min_ms'] == 80
+        assert agg['quacq_runtime']['max_ms'] == 160
+        assert agg['findscope_calls']['mean'] == 6  # (4+8)/2
+        assert agg['findc_checks']['mean'] == 30  # (20+40)/2 — abbreviation lives in the group
 
-    def test_aggregate_mixed_defaults(self):
-        """Test ConGen metrics aggregate fine with QuAcq fields at zero defaults."""
-        metrics_list = [
-            PerformanceMetrics(
-                runtime_ms=100, consistency_checks=50,
-                memory_peak_mb=10, n_kb=5,
-                congen_runtime_ms=90,
-            ),
-        ]
-        agg = aggregate_metrics(metrics_list)
-        assert agg.congen_runtime_mean_ms == 90
-        assert agg.quacq_runtime_mean_ms == 0.0
-        assert agg.findscope_calls_mean == 0.0
+    def test_congen_and_quacq_tables_are_disjoint(self):
+        """ConGen's aggregate carries NO QuAcq groups, and vice versa (ADR-0006):
+        a third algorithm can no longer inject zeroed fields into everyone's file.
+        Any shared metric key is in the declared common core.
+        """
+        cg = aggregate([_congen(runtime_ms=1)])
+        qa = aggregate([_quacq(runtime_ms=1)])
+        assert 'quacq_runtime' not in cg and 'findscope_calls' not in cg
+        assert 'congen_runtime' not in qa and 'acqmss_calls' not in qa
+        shared = {m.key for m in CONGEN_METRICS} & {m.key for m in QUACQ_METRICS}
+        assert shared <= COMMON_KEYS
 
     def test_aggregate_empty_list(self):
-        """Test that empty list raises error."""
+        """An empty run list raises."""
         with pytest.raises(ValueError):
-            aggregate_metrics([])
+            aggregate([])
 
 
 class TestReportGeneration:

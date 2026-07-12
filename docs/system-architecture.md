@@ -270,12 +270,12 @@ finally:
 - `cleanup()` — Cleanup once: release oracle resources
 - `feature_ids` property — Get feature→SAT variable mapping
 
-**BaseRunResult** (9 shared fields):
+**BaseRunResult**:
 - KB output: `kb_constraints` (str names), `kb_clauses` (CNF), `bg_clauses` (root constraint)
 - Size metrics: `n_bias` (original), `n_kb` (learned)
 - Performance: `runtime_ms`, `consistency_checks` (SAT calls), `memory_peak_mb`
 - Profiling: `profiler_data` (full profiler snapshot)
-- Method: `get_performance_metrics()` returns PerformanceMetrics (with `n_mss=None` for interactive, actual value for ConGen)
+- Metrics: `metrics` — a `RunMetrics` built via `collect(profiler, <ALGO>_METRICS)` (`conacq/runners/metrics.py`); the per-run `performance` block and the CV-aggregated block are both *derived* from it, so a metric cannot silently vanish from the JSON
 
 **ConGenRunner** (inherits BaseRunner):
 - `__init__`: Builds ConGenModel via ConGenModelBuilder (requires oracle for negation at build time)
@@ -379,7 +379,7 @@ profiling    (neutral leaf)  ── uses nothing but stdlib + itself
 ```
 
 `tests/test_boundary_guard.py` is an AST scan of every source file's imports
-enforcing **five rules**:
+enforcing **six rules**:
 
 1. **conacq → explanation** — only `explanation.api`; no deep submodule paths
    (`explanation.models.*`, `explanation.operations.*`,
@@ -392,10 +392,18 @@ enforcing **five rules**:
 5. **profiling is a leaf** — it imports neither `explanation` nor `conacq`, so it
    stays an independent, cycle-free port (its internals use only relative `from .`
    imports + stdlib).
+6. **conacq core ⊥ conacq.eval** — the application core (`runners`, `algorithms`,
+   `oracle`, `bias`, `examples`, `example_generators`) never imports the `conacq.eval`
+   layer (ADR-0006). `eval` (cross-validation, comparators, reports) *consumes* runs;
+   the core *produces* them, so the edge is one-directional and the old
+   `runners ↔ eval` cycle — once papered over with a deferred import — cannot return.
+   The rule catches both absolute (`conacq.eval.*`) and relative (`from ..eval …`) forms.
 
 This keeps the name↔id catalog, assumption-stride constant, preparation
 internals, and profiler internals private to their tiers; each consumer depends
-on stable public symbols only.
+on stable public symbols only. The metrics container (`conacq/runners/metrics.py`)
+and pipeline config (`conacq/config.py`) live outside `eval` for the same reason —
+they are a runner's output and application configuration, not evaluation.
 
 **Façade convention — one public door per package, realized per package size.**
 The two façades are *symmetric in rule* (exactly one entry module, deep-imports
