@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -22,7 +23,7 @@ except ImportError:
     import tomli as tomllib
 
 from conacq.oracle import FeatureModelOracle
-from apps._harness import build_parser
+from apps._harness import build_parser, setup_logging
 from conacq.examples import (
     BalancedRandomSamplingGenerator,
     ControlledRandomSamplingGenerator,
@@ -31,6 +32,8 @@ from conacq.examples import (
     ExampleIO,
     ExampleSet,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
@@ -111,8 +114,7 @@ def process_model(
         model_config: Dict[str, Any],
         default_strategies: List[str],
         output_dir: Path,
-        seed: int,
-        verbose: bool
+        seed: int
 ) -> bool:
     """
     Process a single feature model.
@@ -122,7 +124,6 @@ def process_model(
         default_strategies: Default strategies to use
         output_dir: Output directory
         seed: Random seed
-        verbose: Verbose output
 
     Returns:
         True if successful
@@ -130,15 +131,14 @@ def process_model(
     fm_path = model_config['path']
 
     if not Path(fm_path).exists():
-        print(f"Error: Feature model not found: {fm_path}")
+        logger.error("Feature model not found: %s", fm_path)
         return False
 
     model_name = Path(fm_path).stem
 
     try:
         # Load feature model
-        if verbose:
-            print(f"\nLoading: {fm_path}")
+        logger.debug("Loading: %s", fm_path)
 
         oracle = FeatureModelOracle(fm_path)
         n_features = len(oracle.get_variables())
@@ -150,31 +150,28 @@ def process_model(
         # Determine strategies
         strategies = model_config.get('strategies') or default_strategies
 
-        if verbose:
-            print(f"  Features: {n_features}")
-            if valid_configs:
-                print(f"  Valid configs: {valid_configs}")
-            print(f"  Strategies: {strategies}")
+        logger.debug("  Features: %d", n_features)
+        if valid_configs:
+            logger.debug("  Valid configs: %s", valid_configs)
+        logger.debug("  Strategies: %s", strategies)
 
         # Compute m value (2-COV count) if rs_m strategy is used and not provided
         if 'rs_m' in strategies and m_value is None:
             gen = TwoCoverageGenerator(oracle)
             two_cov_examples = gen.generate(seed=seed)
             m_value = len(two_cov_examples)
-            if verbose:
-                print(f"  m value (2-COV count): {m_value} (computed)")
-        elif m_value is not None and verbose:
-            print(f"  m value (2-COV count): {m_value} (from config)")
+            logger.debug("  m value (2-COV count): %d (computed)", m_value)
+        elif m_value is not None:
+            logger.debug("  m value (2-COV count): %s (from config)", m_value)
 
         # Generate examples for each strategy
         for strategy in strategies:
             n_examples = get_example_count_for_strategy(strategy, n_features, m_value)
 
-            if verbose:
-                if n_examples is not None:
-                    print(f"  {strategy} (total={n_examples})...", end=" ")
-                else:
-                    print(f"  {strategy} (coverage-based)...", end=" ")
+            if n_examples is not None:
+                logger.debug("  %s (total=%s)...", strategy, n_examples)
+            else:
+                logger.debug("  %s (coverage-based)...", strategy)
 
             examples = generate_examples_for_strategy(
                 oracle=oracle,
@@ -194,16 +191,14 @@ def process_model(
             output_file = output_dir / f"{model_name}_{strategy}.json"
             ExampleIO.save_json(examples, output_file)
 
-            if verbose:
-                stats = examples.statistics()
-                print(f"E+={stats['n_positive']}, E-={stats['n_negative']} -> {output_file.name}")
+            stats = examples.statistics()
+            logger.debug("E+=%d, E-=%d -> %s",
+                         stats['n_positive'], stats['n_negative'], output_file.name)
 
         return True
 
-    except Exception as e:
-        print(f"Error processing {fm_path}: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        logger.exception("Error processing %s", fm_path)
         return False
 
 
@@ -236,36 +231,36 @@ Example:
 
     # Load configuration
     if not Path(args.config).exists():
-        print(f"Error: Configuration file not found: {args.config}")
+        logger.error("Configuration file not found: %s", args.config)
         sys.exit(1)
 
     config = load_config(args.config)
 
     # Parse general settings
     general = config.get('general', {})
+    setup_logging(verbose=args.verbose or general.get('verbose', False))
     seed = general.get('seed', 42)
     output_dir = Path(args.output_dir or general.get('output_dir', 'data/examples'))
-    verbose = args.verbose or general.get('verbose', False)
     default_strategies = general.get('strategies', ['rs_1n', 'rs_2n', 'rs_3n', 'ff'])
 
     # Parse models
     models = config.get('models', [])
 
     if not models:
-        print("Error: No models specified in configuration")
+        logger.error("No models specified in configuration")
         sys.exit(1)
 
     # Create output directory
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("=" * 60)
-    print("Example Generation (AcqMSS Paper Sampling)")
-    print("=" * 60)
-    print(f"Config: {args.config}")
-    print(f"Output: {output_dir}")
-    print(f"Seed: {seed}")
-    print(f"Strategies: {default_strategies}")
-    print(f"Models: {len(models)}")
+    logger.info("=" * 60)
+    logger.info("Example Generation (AcqMSS Paper Sampling)")
+    logger.info("=" * 60)
+    logger.info("Config: %s", args.config)
+    logger.info("Output: %s", output_dir)
+    logger.info("Seed: %s", seed)
+    logger.info("Strategies: %s", default_strategies)
+    logger.info("Models: %d", len(models))
 
     # Process each model
     success_count = 0
@@ -274,17 +269,15 @@ Example:
                 model_config=model,
                 default_strategies=default_strategies,
                 output_dir=output_dir,
-                seed=seed,
-                verbose=verbose
+                seed=seed
         ):
             success_count += 1
 
     # Summary
-    print()
-    print("=" * 60)
-    print(f"Completed: {success_count}/{len(models)} models")
-    print(f"Output directory: {output_dir}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Completed: %d/%d models", success_count, len(models))
+    logger.info("Output directory: %s", output_dir)
+    logger.info("=" * 60)
 
     if success_count < len(models):
         sys.exit(1)

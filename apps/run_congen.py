@@ -21,6 +21,8 @@ from conacq.eval.report import save_kb_result
 from conacq.config import ModelConfig, load_pipeline_config, parse_models
 from apps._harness import build_parser, setup_logging
 
+logger = logging.getLogger(__name__)
+
 
 def extract_sampling_type(examples_path: str) -> str:
     """Extract sampling type from examples file name.
@@ -44,14 +46,13 @@ def extract_sampling_type(examples_path: str) -> str:
 
 
 def process_model(model_config: ModelConfig, output_dir: Path,
-                  verbose: bool, use_incremental: bool = True,
+                  use_incremental: bool = True,
                   solver_name: str = 'glucose4') -> bool:
     """Process a single model with ConGen via ConGenRunner.
 
     Args:
         model_config: Model configuration
         output_dir: Directory to save results
-        verbose: Enable verbose output
         use_incremental: Use incremental solver mode
         solver_name: SAT solver name
 
@@ -63,12 +64,12 @@ def process_model(model_config: ModelConfig, output_dir: Path,
         model_name = model_config.name
         sampling_type = extract_sampling_type(model_config.examples)
 
-        if verbose:
-            print(f"\nProcessing: {model_name}")
-            print(f"  FM: {model_config.oracle}")
-            print(f"  Bias: {model_config.bias}")
-            print(f"  Examples: {model_config.examples}")
-            print(f"  Mode: {'incremental' if use_incremental else 'non-incremental'}")
+        logger.debug("Processing: %s", model_name)
+        logger.debug("  FM: %s", model_config.oracle)
+        logger.debug("  Bias: %s", model_config.bias)
+        logger.debug("  Examples: %s", model_config.examples)
+        logger.debug("  Mode: %s",
+                     'incremental' if use_incremental else 'non-incremental')
 
         # Load examples
         examples = ExampleIO.load_json(model_config.examples)
@@ -80,17 +81,16 @@ def process_model(model_config: ModelConfig, output_dir: Path,
                               solver_name, use_incremental)
         result = runner.run(pos, neg)
 
-        if verbose:
-            print(f"  Bias constraints: {result.n_bias}")
-            print(f"  E+: {len(pos)}, E-: {len(neg)}")
-            print(f"  MSS size: {result.n_mss}")
-            print(f"  Acquired KB: {result.n_kb} constraints")
-            if result.kb_constraints:
-                print(f"  Constraints:")
-                for c in result.kb_constraints[:10]:
-                    print(f"    - {c}")
-                if len(result.kb_constraints) > 10:
-                    print(f"    ... and {len(result.kb_constraints) - 10} more")
+        logger.debug("  Bias constraints: %d", result.n_bias)
+        logger.debug("  E+: %d, E-: %d", len(pos), len(neg))
+        logger.debug("  MSS size: %d", result.n_mss)
+        logger.debug("  Acquired KB: %d constraints", result.n_kb)
+        if result.kb_constraints:
+            logger.debug("  Constraints:")
+            for c in result.kb_constraints[:10]:
+                logger.debug("    - %s", c)
+            if len(result.kb_constraints) > 10:
+                logger.debug("    ... and %d more", len(result.kb_constraints) - 10)
 
         # Save result in standard format (compatible with ConGenResultData.from_json)
         output_file = output_dir / f"{model_name}_{sampling_type}_kb.json"
@@ -104,15 +104,12 @@ def process_model(model_config: ModelConfig, output_dir: Path,
             bg_clauses=result.bg_clauses,
         )
 
-        if verbose:
-            print(f"  Saved: {output_file}")
+        logger.debug("  Saved: %s", output_file)
 
         return True
 
-    except Exception as e:
-        print(f"Error processing {model_config.oracle}: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        logger.exception("Error processing %s", model_config.oracle)
         return False
 
     finally:
@@ -141,23 +138,22 @@ Example:
 
     args = parser.parse_args()
 
-    setup_logging(verbose=args.verbose, debug=args.debug)
-
     if not Path(args.config).exists():
-        print(f"Error: Config not found: {args.config}")
+        logger.error("Config not found: %s", args.config)
         sys.exit(1)
 
     config = load_pipeline_config(args.config)
 
     # Parse settings
     general = config.get('general', {})
+    setup_logging(verbose=args.verbose or general.get('verbose', False),
+                  debug=args.debug)
     output_dir = Path(args.output_dir or general.get('output_dir', 'data/results'))
-    verbose = args.verbose or general.get('verbose', False)
 
     models = parse_models(config)
 
     if not models:
-        print("Error: No models specified in configuration")
+        logger.error("No models specified in configuration")
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -165,25 +161,24 @@ Example:
     use_incremental = not args.non_incremental
     mode_str = "incremental" if use_incremental else "non-incremental"
 
-    print("=" * 60)
-    print("ConGen Constraint Acquisition")
-    print("=" * 60)
-    print(f"Config: {args.config}")
-    print(f"Output: {output_dir}")
-    print(f"Models: {len(models)}")
-    print(f"Mode: {mode_str}")
-    print(f"Solver: {args.solver}")
+    logger.info("=" * 60)
+    logger.info("ConGen Constraint Acquisition")
+    logger.info("=" * 60)
+    logger.info("Config: %s", args.config)
+    logger.info("Output: %s", output_dir)
+    logger.info("Models: %d", len(models))
+    logger.info("Mode: %s", mode_str)
+    logger.info("Solver: %s", args.solver)
 
     success_count = 0
     for model in models:
-        if process_model(model, output_dir, verbose,
+        if process_model(model, output_dir,
                          use_incremental=use_incremental, solver_name=args.solver):
             success_count += 1
 
-    print()
-    print("=" * 60)
-    print(f"Completed: {success_count}/{len(models)} models")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Completed: %d/%d models", success_count, len(models))
+    logger.info("=" * 60)
 
     if success_count < len(models):
         sys.exit(1)

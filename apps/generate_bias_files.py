@@ -22,6 +22,7 @@ Example TOML config:
 import os
 import sys
 import argparse
+import logging
 from pathlib import Path
 from typing import List, Dict, Any
 from dataclasses import dataclass
@@ -34,6 +35,9 @@ os.chdir(ROOT_PROJECT_FOLDER)
 sys.path.insert(0, str(ROOT_PROJECT_FOLDER))
 
 from conacq.bias import BiasConfigLoader, BiasGenerator, BiasIO
+from apps._harness import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -152,8 +156,7 @@ class BatchBiasGenerator:
 
         try:
             # 1. Load YAML config
-            if self.config.verbose:
-                print(f"  Loading config: {model_config.config_path}")
+            logger.debug("  Loading config: %s", model_config.config_path)
 
             yaml_config = BiasConfigLoader.load(model_config.config_path)
 
@@ -163,13 +166,11 @@ class BatchBiasGenerator:
                 result['error'] = f"Validation failed: {validation['errors']}"
                 return result
 
-            if validation['warnings'] and self.config.verbose:
-                for warning in validation['warnings']:
-                    print(f"    Warning: {warning}")
+            for warning in validation['warnings']:
+                logger.warning("%s", warning)
 
             # 3. Generate bias
-            if self.config.verbose:
-                print(f"  Generating bias...")
+            logger.debug("  Generating bias...")
 
             generator = BiasGenerator(yaml_config)
             bias = generator.generate_bias()
@@ -188,23 +189,20 @@ class BatchBiasGenerator:
                 json_path = self.output_dir / f"{base_name}-bias.json"
                 BiasIO.save_to_json(bias, str(json_path))
                 result['output_files'].append(str(json_path))
-                if self.config.verbose:
-                    print(f"  Saved: {json_path}")
+                logger.debug("  Saved: %s", json_path)
 
             if self.config.output_format in ['cnf', 'both']:
                 cnf_path = self.output_dir / f"{base_name}-bias.cnf"
                 BiasIO.save_to_cnf(bias, str(cnf_path))
                 result['output_files'].append(str(cnf_path))
-                if self.config.verbose:
-                    print(f"  Saved: {cnf_path}")
+                logger.debug("  Saved: %s", cnf_path)
 
             # 6. Save statistics file
             if self.config.save_statistics:
                 stats_path = self.output_dir / f"{base_name}-bias-stats.txt"
                 BiasIO.save_statistics(bias, str(stats_path))
                 result['output_files'].append(str(stats_path))
-                if self.config.verbose:
-                    print(f"  Saved: {stats_path}")
+                logger.debug("  Saved: %s", stats_path)
 
             result['success'] = True
 
@@ -224,64 +222,59 @@ class BatchBiasGenerator:
         """
         results = []
 
-        if self.config.verbose:
-            print(f"\n{'=' * 60}")
-            print(f"Batch Bias Generation")
-            print(f"{'=' * 60}")
-            print(f"Output directory: {self.output_dir}")
-            print(f"Output format: {self.config.output_format}")
-            print(f"Save statistics: {self.config.save_statistics}")
-            print(f"Total models: {len(self.config.models)}")
-            print()
+        logger.debug("=" * 60)
+        logger.debug("Batch Bias Generation")
+        logger.debug("=" * 60)
+        logger.debug("Output directory: %s", self.output_dir)
+        logger.debug("Output format: %s", self.config.output_format)
+        logger.debug("Save statistics: %s", self.config.save_statistics)
+        logger.debug("Total models: %d", len(self.config.models))
 
         for i, model_config in enumerate(self.config.models, 1):
-            if self.config.verbose:
-                print(f"[{i}/{len(self.config.models)}] Processing: {model_config.name}")
+            logger.debug("[%d/%d] Processing: %s",
+                         i, len(self.config.models), model_config.name)
 
             result = self.process_single(model_config)
             results.append(result)
 
-            if self.config.verbose:
-                if result['success']:
-                    stats = result['stats']
-                    print(f"  ✓ Success: {stats['num_constraints']} constraints, "
-                          f"{stats['num_features']} features")
-                else:
-                    print(f"  ✗ Failed: {result['error']}")
-                print()
+            if result['success']:
+                stats = result['stats']
+                logger.debug("  Success: %d constraints, %d features",
+                             stats['num_constraints'], stats['num_features'])
+            else:
+                logger.debug("  Failed: %s", result['error'])
 
-        # Print summary
-        if self.config.verbose:
-            self._print_summary(results)
+        # Log summary
+        self._print_summary(results)
 
         return results
 
     def _print_summary(self, results: List[Dict[str, Any]]):
-        """Print batch processing summary."""
+        """Log batch processing summary (debug level)."""
         successful = [r for r in results if r['success']]
         failed = [r for r in results if not r['success']]
 
-        print(f"{'=' * 60}")
-        print(f"Summary")
-        print(f"{'=' * 60}")
-        print(f"Successful: {len(successful)}/{len(results)}")
+        logger.debug("=" * 60)
+        logger.debug("Summary")
+        logger.debug("=" * 60)
+        logger.debug("Successful: %d/%d", len(successful), len(results))
 
         if successful:
-            print(f"\nGenerated files:")
+            logger.debug("Generated files:")
             for result in successful:
                 stats = result['stats']
-                print(f"  {result['name']}:")
-                print(f"    Features: {stats['num_features']}")
-                print(f"    Constraints: {stats['num_constraints']}")
-                print(f"    Clauses: {stats['num_clauses']}")
+                logger.debug("  %s:", result['name'])
+                logger.debug("    Features: %d", stats['num_features'])
+                logger.debug("    Constraints: %d", stats['num_constraints'])
+                logger.debug("    Clauses: %d", stats['num_clauses'])
                 for f in result['output_files']:
                     file_size = Path(f).stat().st_size
-                    print(f"    → {f} ({file_size:,} bytes)")
+                    logger.debug("    -> %s (%s bytes)", f, f"{file_size:,}")
 
         if failed:
-            print(f"\nFailed:")
+            logger.debug("Failed:")
             for result in failed:
-                print(f"  {result['name']}: {result['error']}")
+                logger.debug("  %s: %s", result['name'], result['error'])
 
 
 def parse_arguments():
@@ -333,8 +326,9 @@ def main():
 
     try:
         # Load TOML config
-        print(f"Loading configuration: {config_path}")
         batch_config = load_toml_config(config_path)
+        setup_logging(verbose=batch_config.verbose)
+        logger.info("Loading configuration: %s", config_path)
 
         # Create generator and process
         generator = BatchBiasGenerator(batch_config)
@@ -345,12 +339,10 @@ def main():
         sys.exit(failed_count)
 
     except FileNotFoundError as e:
-        print(f"Error: {e}")
+        logger.error("%s", e)
         sys.exit(1)
-    except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        logger.exception("Unexpected error")
         sys.exit(1)
 
 

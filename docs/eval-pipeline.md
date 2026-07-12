@@ -23,6 +23,20 @@ run_congen.py       → single ConGen run (debug/demo), 1 KB file per model
 run_quacq.py  → single QuAcq run (debug/demo), 1 KB file per model
 ```
 
+### CLI output convention (stdout vs stderr)
+
+Every app writes its **result to files** (KB JSON, CV JSON, `.md`/`.tex` tables) and
+routes **diagnostics** — banners, progress, warnings, errors — through Python
+`logging`, which goes to **stderr**. The only thing on **stdout** is an app's
+*product*: currently just `run_cv`'s printed CV report. So `run_cv … > report.txt`
+captures the clean report with no banner noise.
+
+Verbosity is a **log level**, unified from the `-v` flag **or** a config
+`[general] verbose = true` (whichever is set, applied after the config loads):
+default shows INFO progress; `-v`/config-verbose adds DEBUG detail. (Before, some
+progress went to stdout and a config `verbose` could be silently ignored — both
+fixed.)
+
 ---
 
 ## Phase 1: Data Preparation (run once)

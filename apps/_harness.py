@@ -45,9 +45,18 @@ def build_parser(description: str, *, config: str = "required",
 
 
 def setup_logging(verbose: bool = False, debug: bool = False) -> None:
-    """Configure root logging once: DEBUG if *debug*, INFO if *verbose*, else WARNING."""
-    level = logging.DEBUG if debug else (logging.INFO if verbose else logging.WARNING)
-    logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
+    """Configure root logging once (to stderr).
+
+    Diagnostics — banners, progress, warnings, errors — go to the logger (stderr);
+    an app's actual PRODUCT stays on stdout via ``print``. Level: **INFO** by
+    default so progress shows exactly as it did when it was ``print``; ``-v`` or a
+    config ``verbose=true`` raises it to **DEBUG** to reveal the detail lines that
+    used to sit behind ``if verbose:``.
+    """
+    level = logging.DEBUG if (verbose or debug) else logging.INFO
+    # force=True so a later call (e.g. after config load, with the OR'd verbose)
+    # actually re-applies the level — plain basicConfig is a no-op once handlers exist.
+    logging.basicConfig(level=level, format="%(levelname)s: %(message)s", force=True)
 
 
 def load_config(path: Union[str, Path]) -> Dict[str, Any]:

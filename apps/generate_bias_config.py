@@ -16,12 +16,13 @@ Example:
 import os
 import sys
 import argparse
+import logging
 from argparse import Namespace
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from conacq.atomic_io import write_text_atomic
-from apps._harness import load_config as _harness_load_config
+from apps._harness import load_config as _harness_load_config, setup_logging
 
 try:
     import tomllib  # Python 3.11+
@@ -34,6 +35,8 @@ from flamapy.metamodels.fm_metamodel.models import FeatureModel
 ROOT_PROJECT_FOLDER = Path(__file__).resolve().parent.parent
 os.chdir(ROOT_PROJECT_FOLDER)
 sys.path.insert(0, os.getcwd())
+
+logger = logging.getLogger(__name__)
 
 def load_config(config_path: str) -> Dict[str, Any]:
     """
@@ -366,8 +369,7 @@ def process_model(
         fm_path: str,
         output: str = None,
         output_dir: str = "data/bias-config",
-        cross_tree_mode: str = "extracted",
-        verbose: bool = False
+        cross_tree_mode: str = "extracted"
 ) -> bool:
     """
     Process a single feature model and generate bias config.
@@ -377,55 +379,47 @@ def process_model(
         output: Output YAML file path (optional, overrides output_dir)
         output_dir: Output directory for generated YAML files
         cross_tree_mode: Mode for cross-tree constraints ('all', 'leaf', or 'extracted')
-        verbose: Verbose output
 
     Returns:
         True if successful, False otherwise
     """
     # Load feature model
-    if verbose:
-        print(f"Loading feature model: {fm_path}")
+    logger.debug("Loading feature model: %s", fm_path)
 
     try:
         fm = load_feature_model(fm_path)
     except FileNotFoundError as e:
-        print(f"Error: {e}")
+        logger.error("%s", e)
         return False
     except Exception as e:
-        print(f"Error loading feature model: {e}")
+        logger.error("Error loading feature model: %s", e)
         return False
 
     # Extract model name from file
     model_name = Path(fm_path).stem
 
-    if verbose:
-        print(f"Model name: {model_name}")
-        print(f"Root feature: {fm.root.name}")
+    logger.debug("Model name: %s", model_name)
+    logger.debug("Root feature: %s", fm.root.name)
 
     # Extract features
     features = [item.name for item in fm.get_features()]
-    if verbose:
-        print(f"Features: {len(features)}")
+    logger.debug("Features: %d", len(features))
 
     # Extract leaf features
     leaf_features = extract_leaf_features(fm)
-    if verbose:
-        print(f"Leaf features: {len(leaf_features)}")
+    logger.debug("Leaf features: %d", len(leaf_features))
 
     # Extract hierarchical candidates
     hierarchical_candidates = extract_hierarchical_candidates(fm)
-    if verbose:
-        print(f"Hierarchical candidates: {len(hierarchical_candidates)}")
+    logger.debug("Hierarchical candidates: %d", len(hierarchical_candidates))
 
     # Extract cross-tree constraints
     cross_tree_constraints = extract_cross_tree_constraints(fm)
-    if verbose:
-        print(f"Cross-tree constraints: {len(cross_tree_constraints)}")
+    logger.debug("Cross-tree constraints: %d", len(cross_tree_constraints))
 
     # Extract features from cross-tree constraints (for extracted mode)
     ctc_features = extract_cross_tree_features(fm)
-    if verbose:
-        print(f"Features in cross-tree constraints: {len(ctc_features)}")
+    logger.debug("Features in cross-tree constraints: %d", len(ctc_features))
 
     # Generate YAML content
     yaml_content = generate_yaml_content(
@@ -447,13 +441,13 @@ def process_model(
     # Write YAML file atomically (a crash can't truncate an existing config)
     write_text_atomic(output_path, yaml_content)
 
-    print(f"Generated bias config: {output_path}")
-    print(f"  Features: {len(features)}")
-    print(f"  Leaf features: {len(leaf_features)}")
-    print(f"  Hierarchical candidates: {len(hierarchical_candidates)}")
-    print(f"  Cross-tree mode: {cross_tree_mode}")
+    logger.info("Generated bias config: %s", output_path)
+    logger.info("  Features: %d", len(features))
+    logger.info("  Leaf features: %d", len(leaf_features))
+    logger.info("  Hierarchical candidates: %d", len(hierarchical_candidates))
+    logger.info("  Cross-tree mode: %s", cross_tree_mode)
     if cross_tree_mode == "extracted":
-        print(f"  Cross-tree features (from CTCs): {len(ctc_features)}")
+        logger.info("  Cross-tree features (from CTCs): %d", len(ctc_features))
 
     return True
 
@@ -461,19 +455,20 @@ def process_model(
 def main():
     args = parse_argument()
 
+    setup_logging(verbose=args.verbose)
+
     # Batch mode: process multiple models
     if args.models:
-        print(f"Processing {len(args.models)} models...")
-        print()
+        logger.info("Processing %d models...", len(args.models))
 
         success_count = 0
         for i, model_config in enumerate(args.models, 1):
             fm_path = model_config.get('fm_path')
             if not fm_path:
-                print(f"[{i}] Error: 'fm_path' is required for each model")
+                logger.error("[%d] 'fm_path' is required for each model", i)
                 continue
 
-            print(f"[{i}/{len(args.models)}] Processing: {fm_path}")
+            logger.info("[%d/%d] Processing: %s", i, len(args.models), fm_path)
 
             # Model-specific settings override global settings
             output = model_config.get('output')
@@ -483,15 +478,14 @@ def main():
                 fm_path=fm_path,
                 output=output,
                 output_dir=args.output_dir,
-                cross_tree_mode=cross_tree_mode,
-                verbose=args.verbose
+                cross_tree_mode=cross_tree_mode
             )
 
             if success:
                 success_count += 1
-            print()
 
-        print(f"Completed: {success_count}/{len(args.models)} models processed successfully")
+        logger.info("Completed: %d/%d models processed successfully",
+                    success_count, len(args.models))
 
     # Single model mode
     else:
@@ -499,8 +493,7 @@ def main():
             fm_path=args.fm_path,
             output=args.output,
             output_dir=args.output_dir,
-            cross_tree_mode=args.cross_tree_mode,
-            verbose=args.verbose
+            cross_tree_mode=args.cross_tree_mode
         )
         if not success:
             sys.exit(1)
