@@ -22,6 +22,7 @@ except ImportError:
     import tomli as tomllib
 
 from conacq.oracle import FeatureModelOracle
+from apps._harness import build_parser
 from conacq.examples import (
     BalancedRandomSamplingGenerator,
     ControlledRandomSamplingGenerator,
@@ -207,9 +208,10 @@ def process_model(
 
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = build_parser(
         description="Generate test case examples from feature models (AcqMSS paper)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        verbose_help="Verbose output (overrides config)",
         epilog="""
 Sampling Strategies (from paper):
     rs_1n     - Random Sampling with n examples (n = #features)
@@ -225,15 +227,6 @@ Example:
         """
     )
 
-    parser.add_argument(
-        'config',
-        help='Path to TOML configuration file'
-    )
-    parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Verbose output (overrides config)'
-    )
     parser.add_argument(
         '-o', '--output-dir',
         help='Output directory (overrides config)'

@@ -17,6 +17,7 @@ from pathlib import Path
 
 from conacq.runners import QuAcqRunner
 from conacq.config import load_pipeline_config, parse_models
+from apps._harness import build_parser, setup_logging
 from conacq.eval.report import save_kb_result
 
 
@@ -111,8 +112,8 @@ def process_model(model_config, output_dir: Path, max_queries: int,
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run QuAcq constraint acquisition",
+    parser = build_parser(
+        "Run QuAcq constraint acquisition",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
@@ -122,8 +123,6 @@ Example:
 Modes: automated | interactive | example_only | example_first
         """
     )
-    parser.add_argument('config', help='Path to TOML configuration file')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
     parser.add_argument('-o', '--output-dir', help='Output directory (overrides config)')
     parser.add_argument('--interactive', action='store_true',
                         help='Use interactive mode (human expert answers)')
@@ -134,8 +133,7 @@ Modes: automated | interactive | example_only | example_first
 
     args = parser.parse_args()
 
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
+    setup_logging(verbose=args.verbose, debug=args.debug)
 
     if not Path(args.config).exists():
         print(f"Error: Config not found: {args.config}")

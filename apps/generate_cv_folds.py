@@ -17,13 +17,11 @@ except ImportError:
 
 from conacq.examples import ExampleIO
 from conacq.eval.folds import generate_folds, save_folds
+from apps._harness import build_parser, load_config
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate shared CV folds for evaluation"
-    )
-    parser.add_argument('config', help='Path to TOML configuration file')
+    parser = build_parser("Generate shared CV folds for evaluation", verbose=False)
 
     args = parser.parse_args()
 
@@ -31,8 +29,7 @@ def main():
         print(f"Error: Config not found: {args.config}")
         sys.exit(1)
 
-    with open(args.config, 'rb') as f:
-        config = tomllib.load(f)
+    config = load_config(args.config)
 
     folds_config = config.get('folds', {})
     seed = folds_config.get('seed', 42)

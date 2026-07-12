@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import List
 
 from conacq.atomic_io import write_json_atomic
+from apps._harness import build_parser, setup_logging
 
 from conacq.eval import (
     n_fold_cross_validation,
@@ -42,23 +43,20 @@ def get_solver_modes(mode_config: str) -> List[bool]:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Unified n-fold cross-validation",
+    parser = build_parser(
+        "Unified n-fold cross-validation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
     python -m apps.run_cv apps/conf/run_cv_config.toml -v
         """
     )
-    parser.add_argument('config', help='Path to TOML configuration file')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
     parser.add_argument('-o', '--output-dir', help='Output directory (overrides config)')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
 
     args = parser.parse_args()
 
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+    setup_logging(verbose=args.verbose, debug=args.debug)
 
     if not Path(args.config).exists():
         print(f"Error: Config not found: {args.config}")

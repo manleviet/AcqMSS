@@ -19,6 +19,7 @@ import tomllib
 from pathlib import Path
 
 from conacq.atomic_io import write_text_atomic
+from apps._harness import build_parser, load_config
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -655,12 +656,12 @@ def generate_single_strategy_table(
 # =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = build_parser(
         description='Extract evaluation results and generate tables',
+        config='optional',
+        verbose=False,
         epilog='Usage: PYTHONPATH=. python apps/extract_results.py apps/conf/extract_results_config.toml'
     )
-    parser.add_argument('config', nargs='?', default=None,
-                        help='Path to TOML configuration file')
     parser.add_argument('--results-dir', type=str, default=None,
                         help='Directory containing CV result JSON files')
     parser.add_argument('--output-dir', type=str, default=None,
@@ -672,8 +673,7 @@ def main():
     # Load defaults from TOML config if provided
     toml_config = {}
     if args.config and Path(args.config).exists():
-        with open(args.config, 'rb') as f:
-            toml_config = tomllib.load(f)
+        toml_config = load_config(args.config)
 
     general = toml_config.get('general', {})
     results_dir = Path(args.results_dir or general.get('results_dir', 'data/results'))

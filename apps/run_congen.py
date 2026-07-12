@@ -19,6 +19,7 @@ from conacq.runners import ConGenRunner
 from conacq.examples import ExampleIO
 from conacq.eval.report import save_kb_result
 from conacq.config import ModelConfig, load_pipeline_config, parse_models
+from apps._harness import build_parser, setup_logging
 
 
 def extract_sampling_type(examples_path: str) -> str:
@@ -120,18 +121,16 @@ def process_model(model_config: ModelConfig, output_dir: Path,
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run ConGen constraint acquisition",
+    parser = build_parser(
+        "Run ConGen constraint acquisition",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        verbose_help="Verbose output (overrides config)",
         epilog="""
 Example:
     python -m apps.run_congen apps/conf/run_congen_config.toml -v
     python -m apps.run_congen apps/conf/run_congen_config.toml -v --non-incremental
         """
     )
-    parser.add_argument('config', help='Path to TOML configuration file')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='Verbose output (overrides config)')
     parser.add_argument('-o', '--output-dir', help='Output directory (overrides config)')
     parser.add_argument('--non-incremental', action='store_true',
                         help='Use non-incremental solver mode')
@@ -142,8 +141,7 @@ Example:
 
     args = parser.parse_args()
 
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
+    setup_logging(verbose=args.verbose, debug=args.debug)
 
     if not Path(args.config).exists():
         print(f"Error: Config not found: {args.config}")

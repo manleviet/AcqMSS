@@ -17,6 +17,7 @@ import time
 from datetime import datetime
 
 from conacq.atomic_io import write_json_atomic
+from apps._harness import build_parser, setup_logging
 from pathlib import Path
 
 from conacq.runners import QuAcqRunner, ConGenRunner
@@ -192,14 +193,13 @@ def _print_checkpoint_table(prog_result):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run QuAcq -> ConGen evaluation pipeline",
+    parser = build_parser(
+        "Run QuAcq -> ConGen evaluation pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        verbose_help=None,
         epilog="Example:\n  python -m apps.run_evaluation "
                "apps/conf/run_evaluation_config.toml -v"
     )
-    parser.add_argument('config', help='Path to TOML configuration file')
-    parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-o', '--output-dir', help='Override output directory')
     parser.add_argument('--max-queries', type=int, help='Override max queries')
     parser.add_argument('--solver', default=None, help='Override SAT solver')
@@ -207,8 +207,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
+    setup_logging(verbose=args.verbose, debug=args.debug)
 
     if not Path(args.config).exists():
         print(f"Error: Config not found: {args.config}")

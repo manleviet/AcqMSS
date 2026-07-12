@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from conacq.atomic_io import write_text_atomic
+from apps._harness import load_config as _harness_load_config
 
 try:
     import tomllib  # Python 3.11+
@@ -48,8 +49,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
     if not config_file.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    with open(config_file, 'rb') as f:
-        return tomllib.load(f)
+    return _harness_load_config(config_path)
 
 
 def parse_argument() -> Namespace:
