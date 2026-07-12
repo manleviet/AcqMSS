@@ -155,12 +155,17 @@ def slice_assumptions(assumptions: List[int], start: int = 0,
 
 @dataclass(frozen=True)
 class Task(ABC):
-    """Immutable unit-of-work: intrinsic solve fields only.
+    """Unit-of-work: intrinsic solve fields only.
 
     Pure data — no methods, no codec, no describe. Derived quantities are free
     functions (e.g. ``cf(task)``); formatting context lives outside the task.
-    Frozen so a task built from one KB can be executed concurrently without
-    aliasing hazards.
+
+    **Shallow-frozen.** ``@dataclass(frozen=True)`` blocks *rebinding* a field
+    (``task.set_c = ...`` raises ``FrozenInstanceError``) but NOT *mutating* a
+    field's contents (``task.set_c.append(...)`` still works — the list objects
+    are shared, not copied). Callers must treat the list fields as read-only; the
+    frozen guarantee is against reassignment only. (Deep immutability via tuples
+    is deferred — see T11b.)
     """
     # set of constraints which could be faulty
     set_c: List[int] = field(default_factory=list)
@@ -264,7 +269,7 @@ class DescriptionProvider:
 
 # === PREPARED TASK (preparation result container) ===
 
-@dataclass
+@dataclass(frozen=True)
 class PreparedTask:
     """Preparation result: the pure Task plus its formatting/assignment context.
 
@@ -508,7 +513,7 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
 
         start_id_test_case = len(assumptions)
         if task_input.test_case is not None:
-            prepare_configuration(
+            id_assumption = prepare_configuration(
                 set_kb, assumptions, provider, model.variables,
                 task_input.test_case, id_assumption)
 

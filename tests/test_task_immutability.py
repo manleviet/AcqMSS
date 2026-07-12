@@ -23,13 +23,25 @@ from conacq.algorithms.acqmss.task_preparation import ConGenTask
 from conacq.algorithms.quacq.task_preparation import QuAcqTask
 
 
-# --- Frozen: attribute reassignment raises ---
+# --- Shallow-frozen contract: rebinding a field raises; mutating its contents
+#     does not. Both halves pinned so the docstring's claim stays honest. ---
 
 @pytest.mark.parametrize("task_cls", [DiagnosisTask, _TestCaseTask, ConGenTask, QuAcqTask])
-def test_task_is_frozen(task_cls):
+def test_task_rebind_raises(task_cls):
     task = task_cls()
     with pytest.raises(dataclasses.FrozenInstanceError):
         task.set_c = [1, 2, 3]
+
+
+@pytest.mark.parametrize("task_cls", [DiagnosisTask, _TestCaseTask, ConGenTask, QuAcqTask])
+def test_task_is_only_shallow_frozen(task_cls):
+    # The contract is shallow: the list fields are shared, not deep-frozen, so
+    # in-place mutation is NOT prevented (deep freeze via tuples → T11b). Callers
+    # must treat the lists as read-only; this test documents that they *can*
+    # mutate them, not that they *should*.
+    task = task_cls(set_c=[1])
+    task.set_c.append(999)
+    assert task.set_c == [1, 999]
 
 
 def test_task_input_is_frozen():

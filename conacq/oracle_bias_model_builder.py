@@ -70,8 +70,8 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
 
         model = self._create_model_instance()
         model.constraint_map = bias.to_constraint_map()
-        model._name_to_id = bias.feature_ids
-        model._id_to_name = {vid: name for name, vid in bias.feature_ids.items()}
+        model.name_to_id = bias.feature_ids
+        model.id_to_name = {vid: name for name, vid in bias.feature_ids.items()}
 
         # Compute negation at build time (oracle supplies the first free Tseitin id).
         next_tseitin_var = self._oracle.get_bg_data().next_available_id

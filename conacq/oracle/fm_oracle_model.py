@@ -28,7 +28,7 @@ from explanation.api import (
 class FMOracleModel(KBModel):
     """Model for Oracle FM validation via ConsistencyChecker.
 
-    Uses constraint_map + variables pattern (same as DiagnosisModel/ConGenModel).
+    Uses the constraint_map + name↔id catalog pattern (same as DiagnosisModel/ConGenModel).
     Exposes get_kb()/get_assumptions()/use_incremental + a prepared task after prepare().
 
     FM clauses go directly into set_kb (always active).
@@ -172,8 +172,8 @@ class FMOracleModel(KBModel):
         self.constraint_map = fm_model.constraint_map
         self.negated_constraint_map = fm_model.negated_constraint_map
 
-        self._name_to_id = fm_model.variables
-        self._id_to_name = fm_model.features
+        self.name_to_id = fm_model.variables
+        self.id_to_name = fm_model.features
         self.next_available_id = fm_model.next_available_id
 
         self.prepare(configuration=self.configuration)

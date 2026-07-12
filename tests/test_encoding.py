@@ -56,17 +56,17 @@ def test_assignment_assumption_map_frozen():
         amap.pos_assignment_to_assumption = {}
 
 
-def test_kbmodel_readonly_catalog_and_protocol():
+def test_kbmodel_catalog_and_protocol():
+    # The name↔id catalog is exposed as plain dicts (no runtime read-only view —
+    # ADR-0007); KBProtocol keeps the read-only guarantee at the type level.
     class _KB(KBModel):
         def __init__(self):
             super().__init__()
-            self._name_to_id = {"a": 1}
-            self._id_to_name = {1: "a"}
+            self.name_to_id = {"a": 1}
+            self.id_to_name = {1: "a"}
             self.next_available_id = 5
 
     kb = _KB()
     assert kb.name_to_id == {"a": 1}
     assert kb.id_to_name == {1: "a"}
-    with pytest.raises(TypeError):          # read-only view
-        kb.name_to_id["x"] = 9
-    assert isinstance(kb, KBProtocol)
+    assert isinstance(kb, KBProtocol)  # a plain-dict model still satisfies KBProtocol

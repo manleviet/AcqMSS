@@ -80,8 +80,10 @@ class FeatureModelOracle(Oracle):
         Returns:
             True if configuration is valid
         """
-        if any(name not in self._oracle_model.name_to_id for name in assignments):
-            raise KeyError(f"Unknown features in assignment: {set(assignments) - set(self._oracle_model.name_to_id)}")
+        # Read the catalog view once (not once per feature inside the generator).
+        name_to_id = self._oracle_model.name_to_id
+        if any(name not in name_to_id for name in assignments):
+            raise KeyError(f"Unknown features in assignment: {set(assignments) - set(name_to_id)}")
 
         set_c = self._oracle_model.with_configuration(assignments).get_c()
 

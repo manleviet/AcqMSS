@@ -140,7 +140,7 @@ def _synthetic_oracle_model():
     model.negated_constraint_map = {
         "NOT(root)": [[-1]], "NOT(c2)": [[1], [-2]], "NOT(c3)": [[1], [-3]],
     }
-    model._name_to_id = {"f1": 1, "f2": 2, "f3": 3}
+    model.name_to_id = {"f1": 1, "f2": 2, "f3": 3}
     model.next_available_id = 4
     return model
 

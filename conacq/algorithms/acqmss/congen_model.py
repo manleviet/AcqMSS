@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 class ConGenModel(KBModel):
     """Pure data container for ConGen algorithm.
 
-    Holds bias constraints, variables, and solver config.
+    Holds bias constraints, the name↔id catalog, and solver config.
     Oracle injected at prepare() time — no FM dependency.
 
     Call prepare(oracle) before accessing task or description_provider.

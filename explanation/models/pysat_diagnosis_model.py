@@ -7,7 +7,6 @@ task state: callers derive a fresh PreparedTask per invocation via
 tasks, and ``use_incremental`` is an operation/checker concern (not a model one).
 """
 
-from types import MappingProxyType
 from typing import Dict, List, Mapping, Optional
 
 from flamapy.metamodels.pysat_metamodel.models import PySATModel
@@ -53,16 +52,20 @@ class DiagnosisModel(PySATModel):
         # Used as starting ID for assumption literals to avoid conflicts.
         self.next_available_id: int = 1000
 
-    # KB Protocol: read-only name↔id catalog (aliases PySATModel.features/variables)
+    # KB Protocol: name↔id catalog. flamapy's PySATModel owns the storage and
+    # names it features/variables; these properties are the translation layer to
+    # the KBProtocol names. They return the dicts directly — no runtime read-only
+    # view (see ADR-0007); KBProtocol types them as Mapping, so read-only lives
+    # at the type level for free.
     @property
     def id_to_name(self) -> Mapping[int, str]:
-        """SAT variable id → feature name (read-only view)."""
-        return MappingProxyType(self.features)
+        """SAT variable id → feature name."""
+        return self.features
 
     @property
     def name_to_id(self) -> Mapping[str, int]:
-        """Feature name → SAT variable id (read-only view)."""
-        return MappingProxyType(self.variables)
+        """Feature name → SAT variable id."""
+        return self.variables
 
     def add_clause_to_map(self, description: str, clauses: List[List]) -> None:
         """Add clauses with description to constraint map."""

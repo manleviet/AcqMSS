@@ -619,14 +619,14 @@ class TestSatUtils:
 
     def test_get_constraint_vars(self):
         model = QuAcqModel()
-        model._id_to_name = {1: 'a', 2: 'b', 3: 'c'}
+        model.id_to_name = {1: 'a', 2: 'b', 3: 'c'}
         model._task = QuAcqTask(constraint_clauses={10: [[1, -2], [3]]})
         result = model.get_constraint_vars(10)
         assert result == {'a', 'b', 'c'}
 
     def test_get_constraint_vars_missing(self):
         model = QuAcqModel()
-        model._id_to_name = {}
+        model.id_to_name = {}
         model._task = QuAcqTask(constraint_clauses={})
         result = model.get_constraint_vars(99)
         assert result == set()
@@ -637,7 +637,7 @@ class TestSatUtils:
         scope = {'a', 'b'}
         # Build minimal model with synthetic task
         model = QuAcqModel()
-        model._id_to_name = id_to_feature
+        model.id_to_name = id_to_feature
         model._task = QuAcqTask(constraint_clauses=constraint_clauses)
         result = model.get_constraints_with_scope(scope, {10, 12})
         assert result == [10]  # exact match
@@ -648,7 +648,7 @@ class TestSatUtils:
         scope = {'a', 'b'}
         # Build minimal model with synthetic task
         model = QuAcqModel()
-        model._id_to_name = id_to_feature
+        model.id_to_name = id_to_feature
         model._task = QuAcqTask(constraint_clauses=constraint_clauses)
         result = model.get_constraints_with_scope(scope, {10, 12})
         # No exact match, both are subsets

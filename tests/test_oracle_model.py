@@ -10,7 +10,7 @@ def _make_oracle_model(constraint_map, variables, next_available_id):
     """Test helper: create FMOracleModel from raw data and prepare."""
     model = FMOracleModel()
     model.constraint_map = constraint_map
-    model._name_to_id = variables
+    model.name_to_id = variables
     model.next_available_id = next_available_id
     model.prepare()
     return model

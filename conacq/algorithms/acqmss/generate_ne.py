@@ -116,9 +116,10 @@ class GenerateNE:
         # checker is built through the port like everywhere else.
         task = DiagnosisTask(set_c=set_tv, set_b=set_bg,
                              set_kb=set_kb, assumptions=assumptions)
-        checker = build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL)
-        quickxplain = QuickXPlain(checker)
-        minimal_conflict = quickxplain.find_conflict(task.set_c, task.set_b)
+        # One checker per testcase — release its solver before the next iteration.
+        with build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL) as checker:
+            quickxplain = QuickXPlain(checker)
+            minimal_conflict = quickxplain.find_conflict(task.set_c, task.set_b)
         if len(minimal_conflict) > 0:
             set_tv = minimal_conflict
 

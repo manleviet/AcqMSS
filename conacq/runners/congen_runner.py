@@ -119,7 +119,7 @@ class ConGenRunner(BaseRunner):
 
     @property
     def feature_ids(self) -> Dict[str, int]:
-        """Feature name -> SAT variable ID mapping."""
+        """Feature name -> SAT variable ID mapping (a plain dict — see ADR-0007)."""
         return self.model.name_to_id
 
     def run(
@@ -165,9 +165,10 @@ class ConGenRunner(BaseRunner):
                         task = replace(task, set_c=shuffled_set_c)
                         logging.debug('Shuffled set_c with seed=%d', shuffle_seed)
 
-                    # Build the checker from the task
+                    # Build the checker from the running task (which may have
+                    # been shuffled — model.task holds the un-shuffled order).
                     checker = build_checker(
-                        self.model.task,
+                        task,
                         SolverBackend.from_flags(use_incremental=self.model.use_incremental),
                         self.solver_name, profiler
                     )
