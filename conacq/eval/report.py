@@ -10,6 +10,7 @@ from typing import List, Optional
 import json
 
 from conacq.bias import Bias
+from conacq.atomic_io import write_json_atomic
 from .kb_comparator import ComparationResult
 from .accuracy import AccuracyResult
 from .cross_validation import CrossValidationResult
@@ -273,8 +274,5 @@ def _format_list(items: list, max_items: int = 10) -> str:
 
 
 def _save_json(data: dict, path: Path) -> None:
-    """Save data to JSON file."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
+    """Save data to JSON file (atomically — a crash can't truncate a good file)."""
+    write_json_atomic(path, data)

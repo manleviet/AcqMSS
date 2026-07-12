@@ -22,6 +22,8 @@ import sys
 from pathlib import Path
 from typing import List
 
+from conacq.atomic_io import write_json_atomic
+
 from conacq.config import (
     find_cv_files, find_kb_files, load_pipeline_config, parse_models,
 )
@@ -148,8 +150,7 @@ def compare_model_unified(model, strategies, verbose):
                       f"F1={f1['mean']:.4f}+/-{f1['std']:.4f}")
 
         # Write back (idempotent)
-        with open(cv_file, 'w') as f:
-            json.dump(data, f, indent=2)
+        write_json_atomic(cv_file, data)
         count += 1
 
     return count
@@ -207,9 +208,7 @@ def compare_kb(kb_path: Path, comparator: KBComparator,
         'n_kb': result_data.n_kb,
         'evaluation': eval_result,
     }
-    output_dir.mkdir(parents=True, exist_ok=True)
-    with open(eval_file, 'w') as f:
-        json.dump(eval_data, f, indent=2)
+    write_json_atomic(eval_file, eval_data)
 
     return eval_result
 

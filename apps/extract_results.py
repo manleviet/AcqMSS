@@ -17,6 +17,8 @@ import re
 import statistics
 import tomllib
 from pathlib import Path
+
+from conacq.atomic_io import write_text_atomic
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -751,13 +753,11 @@ def main():
         latex_content.append("\n" + generate_incremental_comparison(results, 'latex'))
 
     md_file = output_dir / "results_tables.md"
-    with open(md_file, 'w') as f:
-        f.write("\n".join(md_content))
+    write_text_atomic(md_file, "\n".join(md_content))
     print(f"  Markdown tables: {md_file}")
 
     latex_file = output_dir / "results_tables.tex"
-    with open(latex_file, 'w') as f:
-        f.write("\n".join(latex_content))
+    write_text_atomic(latex_file, "\n".join(latex_content))
     print(f"  LaTeX tables: {latex_file}")
 
     print("\nDone!")

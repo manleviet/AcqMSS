@@ -167,15 +167,21 @@ Main/v2: `performance_metrics.py` 652 LOC (`PerformanceMetrics` ~29 field + `Agg
 
 **Item 7 (UnifiedConGenResult, `71c1511`) — ❌ BÁC BỎ (không hoãn).** Phân tích 260712 (đã verify trên code): `ConGenRunResult` = sản-phẩm-GHI (mang `metrics: RunMetrics` sống + `kb_clauses` CNF + `profiler_data`); `ConGenResultData` = phép-chiếu-ĐỌC (7 field JSON thuần) — không consumer nào (kb_comparator/progressive_evaluation/run_compare) cần phần ghi. 6-field-overlap = từ vựng domain, KHÔNG phải cùng-schema. Gộp = ghép read với write, phá đúng vách khiến T9 byte-identical miễn phí. Phương án mixin cũng loại (0 hành vi, chỉ thêm gián tiếp + ép đồng bộ hai bên đáng lẽ tự do lệch). **Chốt ở `docs/adr/0008-run-result-and-result-data-stay-separate.md`.** T9b XOÁ khỏi lộ trình.
 
-## T10 — apps CLI harness + logging
+## T10 — apps CLI harness + logging + atomic writes  (DELTA-CHECK 260712)
 
-Main: print apps=254, conacq=20, explanation=31 (thô, gồm docstring).
+Neo (Cowork đo): print apps=254 · conacq=20 · explanation=9 · profiling=22. 5 app run_* ≈ 1180 LOC lặp argparse+config+error. **3 COMMIT tách bạch; A trước (an toàn dữ liệu).**
 
-1. `apps/_harness.py` (mới): parse config TOML + verbose + logging setup dùng chung; migrate `apps/*.py`.
-2. **CV-JSON atomic:** tìm site ghi (`grep -rn "json.dump" conacq/eval/ apps/`) → temp file + `os.replace`.
-3. `print()` → logger (chain/document exception); GIỮ `user_prompt` + output-method có chủ đích.
+**Commit A — fix: atomic writes (LÀM TRƯỚC).** Mọi writer là `open(path,'w')` → cắt cụt tức thì; crash giữa chừng (SAT4J timeout giờ RAISE ở chỗ trước im lặng — commit d72cc86) ⇒ file kết quả cũ mất sạch.
+- `conacq/atomic_io.py` (mới): `write_text_atomic(path, text)` + `write_json_atomic(path, data, indent=2)` — temp CÙNG thư mục (os.replace chỉ atomic trong 1 filesystem) → `flush()`+`os.fsync()` → `os.replace()`. **Chọn `conacq/` root** (KHÔNG `apps/_io.py`): writer sống ở CẢ `conacq/eval` LẪN `apps`; đặt ở apps → eval phải import apps = ngược tầng. Tên `atomic_io` (né shadow stdlib `io`). Chỉ import stdlib → 0 cycle, ngoài guard rule 6.
+- **10 writer / 6 file** (đã grep — 2 ngoài list Cowork: `run_compare:211` eval_file, `folds.py:94` fold data): json ×7 (`eval/report:279`, `eval/folds:94`, `run_cv:192`, `run_evaluation:152`, `run_compare:151,211`) + text ×3 (`extract_results:754` md, `:759` tex, `generate_bias_config:449` yaml).
+- Format KHÔNG đổi: `json.dumps(indent=2)` ≡ `json.dump(indent=2)` byte-identical; text ghi nguyên chuỗi. ⇒ lưới T9 (extraction diff) vẫn xanh.
+- **Test bắt buộc** `tests/test_atomic_io.py`: ghi đè file có sẵn, raise giữa chừng (monkeypatch `os.replace`) → file cũ NGUYÊN VẸN + 0 temp rác; serialize lỗi → cũ nguyên; byte-identical vs `json.dump`.
 
-**Green:** suite xanh; `print()` sống = 0 (trừ ngoại lệ trên); export on-disk giữ nguyên. Docs: README workflow nếu CLI flags đổi.
+**Commit B — refactor(apps): `apps/_harness.py`** — argparse skeleton (config path, -v/--verbose) + setup logging + load TOML + bọc lỗi; 10 app dùng chung. Nghiệm thu: `python -m apps.<app> --help` chạy; flag KHÔNG đổi tên/nghĩa.
+
+**Commit C — refactor: print() → logging.** 254+20+9 print → `logging.getLogger(__name__)`; chain `raise ... from e`. **Allowlist GIỮ:** `user_prompt` (I/O tương tác oracle-người) + `profiling` `print_summary()` (output-method có chủ đích — kiểm từng cái; leaf KHÔNG import logging-config app). **⚠️ PRE-CHECK:** có script/Makefile/notebook parse stdout app (`| grep`, `> file`) không → nếu có DỪNG hỏi Cowork (print→log đẩy sang stderr, vỡ im lặng).
+
+**Green mỗi commit:** suite ≥ 407; guard 6-rule; lưới T9 xanh; A: crash-test; B: `--help` ×10; C: `print(` sống = 0 ngoài allowlist. Docs in-stage (eval-pipeline/README nếu đổi).
 
 ## T11 ⚠️ — Oracle arc (rủi ro cao nhất, green-gate từng sub-step)
 

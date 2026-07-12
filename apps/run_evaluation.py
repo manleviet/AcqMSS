@@ -15,6 +15,8 @@ import logging
 import sys
 import time
 from datetime import datetime
+
+from conacq.atomic_io import write_json_atomic
 from pathlib import Path
 
 from conacq.runners import QuAcqRunner, ConGenRunner
@@ -149,8 +151,7 @@ def process_model(model_config, eval_config, quacq_config, congen_config,
         }
 
         output_file = output_dir / f"{model_name}_evaluation.json"
-        with open(output_file, 'w') as f:
-            json.dump(output, f, indent=2)
+        write_json_atomic(output_file, output)
 
         if verbose:
             print(f"\n  Saved: {output_file}")

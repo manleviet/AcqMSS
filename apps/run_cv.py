@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 from typing import List
 
+from conacq.atomic_io import write_json_atomic
+
 from conacq.eval import (
     n_fold_cross_validation,
     n_fold_cross_validation_interactive,
@@ -188,9 +190,7 @@ Example:
                     cv_file = output_dir / f"{model_config.name}_cv_{mode_name}_{query_mode}.json"
                 else:
                     cv_file = output_dir / f"{model_config.name}_cv_{mode_name}.json"
-                cv_file.parent.mkdir(parents=True, exist_ok=True)
-                with open(cv_file, 'w') as f:
-                    json.dump(unified, f, indent=2)
+                write_json_atomic(cv_file, unified)
                 print(f"  Unified CV: {cv_file}")
                 print(f"  Intersected KB: {len(cv_result.intersected_kb)} constraints")
 

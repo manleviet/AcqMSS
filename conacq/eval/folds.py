@@ -9,6 +9,8 @@ import json
 import random
 import logging
 from dataclasses import dataclass, field
+
+from conacq.atomic_io import write_json_atomic
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
@@ -91,8 +93,7 @@ def save_folds(fold_data: FoldData, filepath: str) -> None:
         'metadata': fold_data.metadata
     }
 
-    with open(filepath, 'w') as f:
-        json.dump(data, f, indent=2)
+    write_json_atomic(filepath, data)
 
     logging.info('Saved %d folds to %s', fold_data.n_folds, filepath)
 

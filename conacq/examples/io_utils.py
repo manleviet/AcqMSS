@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from typing import Union
 
+from conacq.atomic_io import write_json_atomic
 from .data_structures import Example, ExampleSet, ExampleType
 
 
@@ -57,11 +58,7 @@ class ExampleIO:
             ]
         }
 
-        filepath = Path(filepath)
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(filepath, 'w') as f:
-            json.dump(data, f, indent=2)
+        write_json_atomic(filepath, data)
 
     @staticmethod
     def load_json(filepath: Union[str, Path]) -> ExampleSet:

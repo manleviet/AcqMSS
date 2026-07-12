@@ -20,6 +20,8 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+from conacq.atomic_io import write_text_atomic
+
 try:
     import tomllib  # Python 3.11+
 except ImportError:
@@ -442,12 +444,8 @@ def process_model(
     else:
         output_path = Path(output_dir) / f"{model_name}.yaml"
 
-    # Create output directory if needed
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Write YAML file
-    with open(output_path, 'w') as f:
-        f.write(yaml_content)
+    # Write YAML file atomically (a crash can't truncate an existing config)
+    write_text_atomic(output_path, yaml_content)
 
     print(f"Generated bias config: {output_path}")
     print(f"  Features: {len(features)}")
