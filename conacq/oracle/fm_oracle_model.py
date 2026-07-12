@@ -3,7 +3,7 @@ Oracle models for ConsistencyChecker integration.
 
 FMOracleModel: Assumption-guarded FM validation (incremental checker).
 Exposes get_kb()/get_assumptions()/use_incremental + a prepared task for use
-with CheckerFactory.create_from_task().
+with build_checker().
 """
 
 from dataclasses import replace
@@ -43,7 +43,7 @@ class FMOracleModel(KBModel):
 
         self.configuration: Optional[Configuration] = None
 
-        # Solver selection consumed by CheckerFactory.create_from_task()
+        # Solver selection consumed by build_checker()
         self._use_incremental: bool = True
 
         # Populated after prepare()

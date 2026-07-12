@@ -19,8 +19,8 @@ from conacq.algorithms.quacq.task_preparation import QuAcqTask
 from conacq.algorithms.quacq.quacq_model import QuAcqModel
 from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
 from conacq.example_generators import QueryProvider
-from explanation.operations.algorithms.checker import (
-    CheckerFactory, NonIncrementalPySATChecker,
+from explanation.operations.algorithms.solver_backend import (
+    build_checker, SolverBackend, NonIncrementalPySATChecker,
 )
 from profiling import (
     get_global_profiler,
@@ -81,8 +81,9 @@ def prepared_model(interactive_model):
 @pytest.fixture
 def checker(prepared_model):
     """Create checker from prepared QuAcqModel."""
-    return CheckerFactory.create_from_task(
-        prepared_model.task, use_incremental=prepared_model.use_incremental)
+    return build_checker(
+        prepared_model.task,
+        SolverBackend.from_flags(use_incremental=prepared_model.use_incremental))
 
 
 def _minimal_checker():
@@ -270,8 +271,8 @@ class TestIntegration:
             task = model.task
             task_data = _learn_params_from_model(model)
 
-            checker = CheckerFactory.create_from_task(
-                model.task, use_incremental=model.use_incremental)
+            checker = build_checker(
+                model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))
             query_provider = QueryProvider(checker=checker, model=model)
             discrim_gen = DiscriminatingGenerator(
                 checker=checker, model=model,

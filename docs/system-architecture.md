@@ -60,7 +60,7 @@ from conacq.algorithms import ConGen, ConGenModelBuilder
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
 from conacq.oracle import FeatureModelOracle
 from conacq.example_generators import QueryProvider
-from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.solver_backend import build_checker, SolverBackend
 
 # Passive learning — Pattern 1: auto-prepare (oracle + examples at build time)
 oracle = FeatureModelOracle('data/fms/model.uvl')
@@ -71,7 +71,7 @@ model = (ConGenModelBuilder.from_bias('data/bias/model.json')
 model = ConGenModelBuilder.from_bias('data/bias/model.json').build()  # unprepared
 model.prepare(oracle, positive_examples=pos, negative_examples=neg)  # Calls GenerateNE internally
 
-checker = CheckerFactory.create_from_task(model.task, use_incremental=model.use_incremental, profiler_instance=profiler)
+checker = build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental), profiler=profiler)
 congen = ConGen(checker, profiler)
 result = congen.acquire(
     set_b=model.task.set_c,
@@ -91,7 +91,7 @@ for fold_pos, fold_neg in folds:
 # Interactive learning — QuAcq (DI pattern, commit 260228)
 from conacq.example_generators import QueryProvider
 from conacq.algorithms.quacq import DiscriminatingGenerator, QuAcq
-from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.solver_backend import build_checker, SolverBackend
 
 oracle = FeatureModelOracle('data/fms/model.uvl')
 model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
@@ -99,7 +99,7 @@ model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
          .build())  # Returns prepared model, task ready
 
 # Build checker (injected dependency) — NEW pattern
-checker = CheckerFactory.create_from_task(model.task, use_incremental=model.use_incremental)
+checker = build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))
 
 # QueryProvider with injected checker + model — NEW: no solver_name parameter
 query_prov = QueryProvider(
@@ -216,7 +216,7 @@ config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_m
 
 4. **FMOracleModel** (`fm_oracle_model.py`): SAT representation of FM for consistency checking
    - FM clauses in `set_kb`; feature assignments guarded by assumption literals
-   - Exposes `task`/`get_kb()`/`get_assumptions()`/`use_incremental` for `CheckerFactory.create_from_task`
+   - Exposes `task`/`get_kb()`/`get_assumptions()`/`use_incremental` for `build_checker`
    - Prepared via `OracleTaskPreparation`; exposes `bg_data` property for root constraint extraction
 
 5. **UserPromptOracle** (`user_prompt.py`): Interactive human-in-the-loop oracle
@@ -338,12 +338,14 @@ consumes — the Task family and preparation helpers (`TaskInput`, `Task`,
 `prepare_testsuite_with_negation`, `prepare_variable_assignments`,
 `slice_assumptions`), test-suite data (`Assignment`, `TestCase`,
 `TestSuite`), the `encoding` free functions + `AssignmentAssumptionMap`,
-`KBProtocol`, the `AbstractModelBuilder` base, consistency checking
-(`ConsistencyChecker`, `NonIncrementalPySATChecker`, `CheckerFactory`), clause
+`KBProtocol`, the `AbstractModelBuilder` base, consistency checking (the
+`ConsistencyChecker` / `TestCaseChecker` port protocols plus `SolverBackend` and
+the `build_checker` factory), clause
 utilities (`split`, `diff`, `negate_cnf_tseitin`, `QuickXPlain`), and the
-`FmToDiagPysat` transformation. It grows as later seams are formalized
-(SolverBackend port, the operation registry). It deliberately does NOT export the
-profiler (imported from `profiling` directly) and there is no `VariableCodec`.
+`FmToDiagPysat` transformation. It grows as later seams are formalized (e.g. the
+operation registry). It deliberately does NOT export the profiler (imported from
+`profiling` directly), the concrete `*Backend` adapter classes, or
+`VariableCodec`.
 
 **Model-builder hierarchy (two tiers).** `AbstractModelBuilder` (framework,
 `explanation/models/abstract_model_builder.py`) is the universal base: a pure
@@ -358,7 +360,7 @@ in the app, not the framework, precisely because it imports `conacq.bias` and is
 typed against `FeatureModelOracle` — boundary rule 4 (explanation ⊥ conacq) would
 flag it in the framework. `DiagnosisModelBuilder` no longer exposes a
 `use_incremental()` setter: incremental vs not is chosen when the checker is
-created (`CheckerFactory.create_from_task(..., use_incremental=...)`), not on the
+created (`build_checker(..., SolverBackend.from_flags(use_incremental=...))`), not on the
 builder or model.
 
 **Three-tier boundary contract.** The repo is a three-package stack with
@@ -472,19 +474,31 @@ class QuAcqTask(DiagnosisTask):
 
 #### explanation/operations/ — Diagnosis Algorithms
 
-**Solver Abstraction Layer** (commit 260228):
-- `ConsistencyChecker(ABC)` — Abstract interface with two key methods:
-  - `is_consistent(set_c: List[int]) -> bool` — Check CNF formula satisfiability
-  - `get_model() -> Optional[List[int]]` — Extract SAT assignment after satisfiable check
-  - Both implementations use assumption-based data (set_c as enabled assumptions)
-- `IncrementalPySATChecker` — Persistent solver (~50x faster, ideal for ConGen)
-  - Computes delta: disabled assumptions = all_assumptions \ set_c
-  - Calls solver with negated disabled assumptions
-  - `get_model()` returns solver's current model
-- `NonIncrementalPySATChecker` — Fresh solver per call (baseline for comparison)
-  - Builds CNF from set_kb and set_c clauses each time
-  - `get_model()` returns None (no persistent state)
-- `CheckerFactory.create_from_task(task, solver_name, use_incremental, profiler_instance)` — Build a checker from a task's `set_kb`/`assumptions`; `use_incremental` is an operation-level param (not stored on the KB). `create_from_model`/`CheckerModel` were removed.
+**Consistency-checker port + backend adapters.** The design separates *what an
+algorithm needs* (a port) from *how the answer is computed* (an adapter):
+
+- **Port** (`algorithms/checker.py`, imports neither `pysat` nor `subprocess`):
+  `ConsistencyChecker` (@runtime_checkable Protocol: `is_consistent` /
+  `get_model` / `cleanup`) is what the diagnosis path (`PySATConflict` /
+  `PySATDiagnosis` + their labelers) depends on; `TestCaseChecker(ConsistencyChecker)`
+  adds `is_consistent_test_cases` for the test-case algorithms (`KBDiag`,
+  `QuickXPlainWithTestCases`). The ~70 algorithm sites annotate against the port,
+  never a concrete class.
+- **Adapters** (`algorithms/solver_backend.py`): `SolverCheckerBase` holds
+  the shared machinery (profiler, delta computation, the test-case loop,
+  copy/pickling, context-manager); `IncrementalPySATChecker` (persistent PySAT
+  solver, ~50× faster), `NonIncrementalPySATChecker` (fresh solver per check),
+  and `SAT4JChecker` (external SAT4J via subprocess) differ only in how they
+  reach a solver. Each satisfies the port structurally.
+
+**`build_checker(task, backend=…)` is the single public construction door** —
+every checker in the system is built from a Task through it. The `SolverBackend`
+enum tokenizes the choice; the private `_build_checker` maps token → class, the one
+place a concrete backend is selected. `SolverBackend.from_flags(use_incremental,
+use_sat4j)` turns the operation flags into a token; operations' `_create_checker`,
+the conacq runners/oracle, and GenerateNE all call `build_checker`, so backend
+selection lives in exactly one place. (The parallel-execution role — `copy` /
+pickling, needed only by FastDiagP — is deliberately absent from the port.)
 
 **Operations take a `PreparedTask`**: `op.execute(prepared)` reads `prepared.task` to solve and `prepared.describe` to format. `use_incremental`/`use_sat4j` are operation attributes (the standalone `PySAT*SAT4J` op classes were folded into `PySATConflict`/`PySATDiagnosis` via `use_sat4j`; `for_conflict_sat4j`/`for_diagnosis_sat4j` remain as builder entry points).
 
@@ -678,7 +692,7 @@ python -m apps.run_evaluation apps/conf/run_evaluation_config.toml -v
 - **ConGenModel**: Pure data container (bias + solver config). Oracle injected at `prepare()` time.
 - **Preparation**: `model.prepare(oracle, positive_examples, negative_examples)` generates NE and populates `ConGenTask` (assumption-based).
 - **Reusable**: Build once, prepare multiple times per fold for cross-validation without rebuilding.
-- ConGenModel exposes `task`/`get_kb()`/`get_assumptions()`/`use_incremental` for `CheckerFactory.create_from_task`
+- ConGenModel exposes `task`/`get_kb()`/`get_assumptions()`/`use_incremental` for `build_checker`
 - **Task Representation**: `ConGenTask` with assumption IDs (set_c, set_tc, set_neg_tv, negation_map)
 - Complexity: O(|B| * SAT checks)
 
@@ -731,7 +745,7 @@ Bias (JSON) + Feature Model (UVL) + Examples
     ├─→ [run] Shuffle bias iteration order (if shuffle_seed provided)
     │   └─ random.Random(seed).shuffle(task.set_c)
     │
-    ├─→ [run] CheckerFactory.create_from_task(model.task, use_incremental=model.use_incremental)
+    ├─→ [run] build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))
     │   └─ Returns Incremental or NonIncremental checker
     │
     └─→ [run] ConGen Algorithm (mode-agnostic)

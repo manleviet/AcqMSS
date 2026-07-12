@@ -15,7 +15,7 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
-from explanation.api import NonIncrementalPySATChecker
+from explanation.api import build_checker, SolverBackend, DiagnosisTask
 from explanation.api import QuickXPlain
 
 if TYPE_CHECKING:
@@ -111,10 +111,14 @@ class GenerateNE:
             assumption_to_desc[id_assumption] = desc
             id_assumption += 1
 
-        # QuickXPlain for minimal conflict
-        checker = NonIncrementalPySATChecker(set_kb, assumptions)
+        # QuickXPlain for minimal conflict. The per-testcase subproblem is itself
+        # a Task (set_c = test-value assumptions, set_b = background), so the
+        # checker is built through the port like everywhere else.
+        task = DiagnosisTask(set_c=set_tv, set_b=set_bg,
+                             set_kb=set_kb, assumptions=assumptions)
+        checker = build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL)
         quickxplain = QuickXPlain(checker)
-        minimal_conflict = quickxplain.find_conflict(set_tv, set_bg)
+        minimal_conflict = quickxplain.find_conflict(task.set_c, task.set_b)
         if len(minimal_conflict) > 0:
             set_tv = minimal_conflict
 

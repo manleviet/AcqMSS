@@ -117,13 +117,30 @@ Main: **47 dòng** `from explanation.*` trong conacq (không qua api); stride r�
 
 **Green:** additive; `test_congen`/`test_quacq`/`test_diagnosis` xanh; guard 5-rule (đặc biệt rule 4 explanation⊥conacq + rule 1 conacq→explanation qua api). Suite ≥384.
 
-## T7 — SolverBackend port (formalize seam T3)
+## T7 — Consistency-checker port + backend adapters (formalize seam T3)
 
-1. `explanation/operations/algorithms/solver_backend.py`: `SolverBackend` Protocol @runtime_checkable (`is_consistent/get_model/cleanup` — 3 checker thoả) + `_BackendConfig` enum + `build_solver_backend(config,…)` (1 nơi map token→checker).
-2. Ops gõ theo Protocol; export `SolverBackend` qua api.
-3. `tests/test_solver_backend_port.py`.
+**Cowork review 2026-07-12 (đã sửa trọn):** phiên đầu ĐẢO NGƯỢC tên port/adapter. Bằng chứng: `checker.py` import `pysat.solvers.Solver`+`subprocess`+`jar_path` = ADAPTER nói-với-solver; còn `ConsistencyChecker` 73 lần/24 file chỉ 3 chỗ subclass → ~70 chỗ dùng như PORT. Sửa: **PORT giữ tên `ConsistencyChecker`** (chỉ đổi *là gì* ABC→Protocol, *ở đâu* = ở checker.py sạch pysat/subprocess), **ADAPTER = `*Backend`** ở solver_backend.py. Bán kính rẻ: ~70 site annotation KHÔNG đổi chữ.
 
+**Thiết kế (đã impl + xanh):**
+- `explanation/operations/algorithms/checker.py` = **PORT** (0 import pysat/subprocess): `ConsistencyChecker` (Protocol @runtime_checkable: is_consistent/get_model/cleanup) + `TestCaseChecker(ConsistencyChecker)` (+is_consistent_test_cases). *~70 consumer giữ `ConsistencyChecker`.*
+- `explanation/operations/algorithms/solver_backend.py` = **ADAPTER + dựng**: `AbstractSolverBackend(ABC)` (profiler/_compute_delta/is_consistent_test_cases loop/copy/pickling/ctx-mgr) + `IncrementalPySATBackend`/`NonIncrementalPySATBackend`/`SAT4JBackend` + `BackendConfig` (public enum) + `BackendConfig.from_flags(use_incremental,use_sat4j)` + **`build_checker(task, config, solver_name, profiler)` = CỬA CÔNG KHAI DUY NHẤT (task-based)** + `_build_backend(config, set_kb, assumptions, …)` PRIVATE = **điểm chọn-class DUY NHẤT** (token→class). Import port TOP-LEVEL → **acyclic, KHÔNG lazy-import** (cycle phiên đầu là do đảo tên/vị trí — đã tan).
+- `CheckerFactory` **HOÀ TAN** (class 2 @staticmethod = Java-ism). 4 conacq + ~7 test call-site `create_from_task`/`create_sat4jchecker` → `build_checker(task, BackendConfig.from_flags(...))`. Ma trận test_diagnosis (use_sat4j×is_incremental) giữ độ phủ (1 helper `build_checker(task, from_flags(...))`).
+- **Điểm quyết định thứ 2 (phiên đầu SAI claim=1):** `generate_ne.py:115` hardcode `NonIncrementalPySATChecker(set_kb,assumptions)` (không if → grep miss). SỬA: dựng `DiagnosisTask(set_c=set_tv, set_b=set_bg, set_kb, assumptions)` → `build_checker(task, BackendConfig.PYSAT_NON_INCREMENTAL)` → `find_conflict(task.set_c, task.set_b)`. Bất biến T3 "checker luôn từ Task" giữ → cửa public chỉ cần task-based.
+- Retype: diagnosis path (pysat_abstract_explanation/conflict/diagnosis) → `ConsistencyChecker`; 2 algo standalone (quickxplain_with_testcases/kbdiag) → `TestCaseChecker`.
+- `api.py`: BỎ mọi tên class adapter + CheckerFactory; chỉ export `ConsistencyChecker`, `TestCaseChecker`, `BackendConfig`, `build_checker`. Test import sâu solver_backend (được phép).
+
+**Nghiệm thu (verified):** `*Backend(` chỉ solver_backend.py (_build_backend=1 + 3 copy self-clone); checker.py 0 pysat/subprocess; 0 lazy-import; suite 395 passed 0 failed; guard 5-rule; byte-identical.
 **Green:** additive. *(A3 sat4j đã xử ở T3.)*
+
+### Cụm commit T7 (Cowork chốt 2026-07-12 — mỗi commit xanh+guard+DỪNG-duyệt)
+
+- **commit 0 — docs: ADR-0001..0006** ✅ (dc217c6). ADR do Cowork sở hữu; CC không sửa, thấy sai thì báo.
+- **commit 1 — T7** (rename port/adapter + **A2** `CopyableChecker(ConsistencyChecker)` cho `copy()` [fastdiagp gõ theo, export api→5 symbol] + **m1** SAT4J except thu hẹp+`from e` + **m2** `CheckerBase.__init__` khai `assumptions`). GREEN 396. `implements ADR-0004`.
+- **commit 2 — T7b (code-review remediation):** **A1** perf −25% `is_valid` (cache MappingProxyType 1 lần trong `KBModel.__init__` + hoist khỏi generator ở `fm_oracle.py:83-84`; comment BẮT BUỘC "Built once… Do not inline"; benchmark busybox 300-call ≈ main) · **A3** `feature_ids` → `dict(name_to_id)` (mappingproxy nổ json.dumps; congen_runner:120-123, quacq_runner:183-186) · **A5** frozen-contract THẬT (docstring: shallow-frozen, caller không mutate list; test: rebind→FrozenInstanceError, in-place cho phép có chú thích; KHÔNG Tuple→**T11b**) · **m3** docstring "variables" (fm_oracle_model:31, congen_model:32) · **m4** 2 runner `build_checker(task,…)` không phải `self.model.task` (sau shuffle lệch) · **m5** generate_ne `with build_checker(...) as checker:` · **m6** `PreparedTask` `@dataclass(frozen=True)` · **m8** `id_assumption = prepare_configuration(...)`.
+- **commit 3 — refactor: chuyển port+adapter RA KHỎI operations/algorithms/** (chèn Cowork 2026-07-12; checker/solver_backend là *thứ thuật toán tiêu thụ*, không phải thuật toán → ngăn kéo tạp). NEW package `explanation/checker/`: `protocols.py` (PORT 3 protocol, 0 pysat/subprocess) + `backend.py` (ADAPTER: **`CheckerBase`** [đổi từ SolverCheckerBase, bỏ "Solver" thừa] + 3 `*Checker` + `SolverBackend` enum + `build_checker`) + `__init__.py` (facade NỘI BỘ, KHÔNG phải cửa thứ 2; api.py vẫn cửa DUY NHẤT). **GỘP `_build_checker`→`build_checker`** (1 hàm chứa if/else; helper 1-caller = indirection thừa vì deviation-1 đã bị bác); annotate `task: Task`; test đi qua cửa công khai (dựng DiagnosisTask). Rewrite ~24 import site. **Xoá xác** `explanation/operations/algorithms/profiler/` (rỗng, 0 git-track, xác T8). Docs cây+inventory. Nghiệm thu: `ls operations/algorithms/` hết checker.py/solver_backend.py/profiler/; `grep _build_checker`=0; điểm chọn class=1 (thân build_checker); api 5 symbol; guard 5-rule; byte-identical.
+- **commit 4 — fix: SAT4J timeout** → `raise SolverTimeoutError` (thay `output="TIMEOUT"`→UNSAT-im-lặng). **ĐỔI HÀNH VI** (phạm "y hệt main") → commit riêng; message cảnh báo: nếu timeout từng xảy ra trong lần chạy paper thì kết quả có thể sai (rủi ro thấp — PySAT chính, SAT4J chỉ cross-validate).
+
+**Nợ ghi (KHÔNG làm trong cụm):** A6 (`get_c()` nhiễm query cuối — có trên main) → **T11.2** + nghiệm thu tường minh · m7 (`solver_name` tham số chết trong ma trận test) → **T13** · **BỎ #9** (động cơ an toàn đã do read-only view T2 mua; động cơ perf là ảo — chi phí thật ở A1).
 
 ## T9 — Runners + metrics (export ĐÔNG CỨNG)
 
@@ -156,6 +173,7 @@ Main anchors: `base.py` Oracle ABC stub (get_variables:38, complete_configuratio
 - **11.2 [#4]:** FMOracle purity — KHÔNG khai `base_set_c`; `prepare` set `result.set_c` (FM-only); `is_valid`/`get_c` đọc `task.set_c` cục bộ (`task.set_c + config_to_assignment_assumptions(...)` — không mutate); **xoá `with_configuration`+`dataclasses.replace` tạm của T1**; bỏ plumbing `_FMPrepResult`/`PreparationOutput`; sửa `test_oracle_model.py` (4 chỗ) + Site 5. `GenerateNE` KHÔNG sửa.
 - **11.3:** oracle dùng `prepare_variable_assignments` chung (từ T5).
 - **11.4:** `conacq/oracle/oracle_data.py` (mới) — **`OracleData`** frozen snapshot (tên mới, KHÔNG phải OracleTaskData) fold lên model lúc `build()`, implement `BGProvider`; `ConGenModel.prepare_task` bỏ tham số oracle; `QuAcqModel.prepare_task(task_input=None)` từ chối non-empty; [#3] `FMOracleModel.prepare_task` fail-fast `assert task_input is None`; [#1] `bg_data` **eager trong `build()`**, prepare_task pure (bỏ cache + RuntimeError thứ-tự-gọi).
+- **[nợ T7] Dời `GenerateNE`** — hiện xếp nhầm ở `conacq/algorithms/` (export trong `algorithms/__init__.__all__`, đọc oracle SỐNG, caller duy nhất = `ConGenTaskPreparation` task_preparation.py:162, KHÔNG trong vòng lặp giải). Dời vào `task_preparation` + BỎ export `__all__`. Làm CÙNG fold OracleData (11.4) vì cùng vùng prepare/oracle.
 - **11.5 [#10]:** `complete_configuration` giữ MỘT solver bền; per-call chỉ solve dưới assumptions. Safety-net 11.0 canh kết quả.
 
 **Green cuối:** 4 model cùng chữ ký `prepare_task(task_input) -> PreparedTask`; model pure; `base_set_c` = 0 hit; hành vi diagnoses/membership/completion Y HỆT baseline; guard 2 chiều xanh. Docs: system-architecture oracle section + congen.md/quacq.md nếu đụng.
@@ -175,6 +193,7 @@ Main: 5 file labeler (`hsdag/labeler/`); `test_diagnosis.py` 1328 LOC unittest+p
 
 1. Template base cho labeler (gom khung lặp 4 concrete).
 2. Migrate `test_diagnosis` → pytest; **tách 5 file theo thuật toán** + `tests/diagnosis_support.py`; doc twin-algorithms (cố ý tách rời).
+3. **[nợ T7] Retype cây labeler theo role** — `IHSLabelable.get_instance(checker: …)` đang gõ `ConsistencyChecker` (port hẹp) nhưng `kbdiag_labeler` gọi `is_consistent_test_cases` → static-variance. Sửa: kbdiag_labeler → `TestCaseChecker`; cân nhắc `Generic[TChecker]` cho cây (T13 sở hữu cây labeler). Runtime hiện an toàn (no mypy-gate).
 
 **Green:** tổng số test không đổi (đếm trước/sau).
 

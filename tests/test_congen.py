@@ -15,9 +15,10 @@ from conacq.algorithms import (
 )
 from conacq.bias import BiasIO
 from conacq.oracle import FeatureModelOracle
-from explanation.operations.algorithms.checker import (
+from explanation.operations.algorithms.solver_backend import (
     IncrementalPySATChecker,
-    CheckerFactory
+    build_checker,
+    SolverBackend,
 )
 from profiling import get_global_profiler
 
@@ -69,8 +70,9 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     # model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
 
     task = model.task
-    checker = CheckerFactory.create_from_task(
-        model.task, 'glucose4', model.use_incremental, profiler)
+    checker = build_checker(
+        model.task, SolverBackend.from_flags(use_incremental=model.use_incremental),
+        'glucose4', profiler)
 
     return checker, task, profiler, model.description_provider
 

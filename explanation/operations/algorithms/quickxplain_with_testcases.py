@@ -32,7 +32,7 @@ Author: Viet-Man Le (Python port)
 import logging
 from typing import List, Dict, Any, Tuple, Optional
 
-from .checker import ConsistencyChecker
+from .checker import TestCaseChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split
 
@@ -45,12 +45,12 @@ class QuickXPlainWithTestCases:
     cause inconsistency with respect to one or more test cases (examples).
     """
 
-    def __init__(self, checker: ConsistencyChecker, profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, checker: TestCaseChecker, profiler_instance: AbstractProfiler = None) -> None:
         """
         Initialize QuickXPlainWithTestCases algorithm.
 
         Args:
-            checker: ConsistencyChecker instance for checking consistency
+            checker: TestCaseChecker for checking consistency against test cases
             profiler_instance: Optional profiler instance. If None, uses global default profiler.
                               Pass NullProfiler() to disable profiling.
         """

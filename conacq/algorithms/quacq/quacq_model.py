@@ -42,7 +42,7 @@ class QuAcqModel(KBModel):
     def __init__(self) -> None:
         super().__init__()
 
-        # Solver selection consumed by CheckerFactory.create_from_task()
+        # Solver selection consumed by build_checker()
         self.use_incremental: bool = True
 
         # Populated after prepare()

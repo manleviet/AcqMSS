@@ -1,7 +1,7 @@
 import logging
 from typing import List, Tuple
 
-from .checker import ConsistencyChecker
+from .checker import TestCaseChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split, diff
 
@@ -11,7 +11,7 @@ class KBDiag:
     The algorithm determines a maximal satisfiable subset MSS (Γ) of C U B U -TV U TC.
     """
 
-    def __init__(self, checker: ConsistencyChecker, m: int = 1, profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, checker: TestCaseChecker, m: int = 1, profiler_instance: AbstractProfiler = None) -> None:
         self.checker = checker
         self.m = m
         self.profiler = profiler_instance if profiler_instance is not None else get_global_profiler()

@@ -15,7 +15,7 @@ import multiprocessing as mp
 from typing import List
 
 from . import utils
-from .checker import ConsistencyChecker
+from .checker import CopyableChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split, diff
 
@@ -28,11 +28,12 @@ class FastDiagP:
     In Proceedings of the AAAI Conference on Artificial Intelligence (Vol. 37, No. 5, pp. 6442-6449).
     """
 
-    def __init__(self, checker: ConsistencyChecker, profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, checker: CopyableChecker, profiler_instance: AbstractProfiler = None) -> None:
         """
         Initialize FastDiagP algorithm.
 
-        :param checker: ConsistencyChecker instance
+        :param checker: CopyableChecker — FastDiagP clones it (``checker.copy()``)
+            to fan consistency checks out across parallel workers.
         :param profiler_instance: Optional profiler for metrics tracking
         """
         self.checker = checker

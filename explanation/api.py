@@ -11,9 +11,9 @@ enforces both directions of that contract:
 * framework never imports the app (keeps ``explanation`` reusable in isolation).
 
 The surface is intentionally minimal — it re-exports exactly what the app
-consumes today. It grows as later work formalizes further seams (the
-SolverBackend port, the operation registry). Nothing here is re-exported "just
-in case": add a symbol only when a consumer needs it.
+consumes today. It grows as later work formalizes further seams (e.g. the
+operation registry). Nothing here is re-exported "just in case": add a symbol
+only when a consumer needs it.
 """
 from explanation.models.task_preparation import (
     Task,
@@ -41,8 +41,12 @@ from explanation.models.kb_protocol import KBProtocol
 from explanation.models.abstract_model_builder import AbstractModelBuilder
 from explanation.operations.algorithms.checker import (
     ConsistencyChecker,
-    NonIncrementalPySATChecker,
-    CheckerFactory,
+    TestCaseChecker,
+    CopyableChecker,
+)
+from explanation.operations.algorithms.solver_backend import (
+    SolverBackend,
+    build_checker,
 )
 from explanation.operations.algorithms.utils import split, diff, negate_cnf_tseitin
 from explanation.operations.algorithms.quickxplain import QuickXPlain
@@ -76,10 +80,12 @@ __all__ = [
     'KBProtocol',
     # Model-builder base (conacq's OracleBiasModelBuilder inherits this)
     'AbstractModelBuilder',
-    # Consistency checking
+    # Consistency-checker port (Protocols) + the single construction door
     'ConsistencyChecker',
-    'NonIncrementalPySATChecker',
-    'CheckerFactory',
+    'TestCaseChecker',
+    'CopyableChecker',
+    'SolverBackend',
+    'build_checker',
     # Clause utilities
     'split',
     'diff',

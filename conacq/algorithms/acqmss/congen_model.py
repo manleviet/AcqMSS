@@ -38,7 +38,7 @@ class ConGenModel(KBModel):
     def __init__(self) -> None:
         super().__init__()
 
-        # Solver selection consumed by CheckerFactory.create_from_task()
+        # Solver selection consumed by build_checker()
         self._use_incremental: bool = True
 
         # Background knowledge (e.g., root feature IDs) to include in set_b

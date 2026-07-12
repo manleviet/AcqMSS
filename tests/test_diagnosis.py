@@ -26,7 +26,7 @@ from parameterized import parameterized
 
 from explanation.models import DiagnosisModelBuilder
 from explanation.models.task_preparation import PreparedTask, cf
-from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.solver_backend import build_checker, SolverBackend
 from explanation.operations.algorithms.fastdiag import FastDiag
 from explanation.operations.algorithms.fastdiagp import FastDiagP
 from explanation.operations.algorithms.kbdiag import KBDiag
@@ -212,10 +212,8 @@ def build_prepared(model_builder: DiagnosisModelBuilder):
 def create_checker(use_sat4j: bool, prepared: PreparedTask, is_incremental: bool):
     """Create appropriate checker based on configuration."""
     task = prepared.task
-    if use_sat4j:
-        return CheckerFactory.create_sat4jchecker(
-            set_kb=task.set_kb, assumptions=task.assumptions)
-    return CheckerFactory.create_from_task(task, use_incremental=is_incremental)
+    config = SolverBackend.from_flags(use_incremental=is_incremental, use_sat4j=use_sat4j)
+    return build_checker(task, config)
 
 def _skip_disabled(test_name: str):
     """Create unittest.skipIf decorator for disabled tests."""

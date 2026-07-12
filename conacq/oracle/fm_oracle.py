@@ -14,7 +14,7 @@ from conacq.oracle.bg_data import BGData
 from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel
 from explanation.api import variable_literals_to_config
-from explanation.api import CheckerFactory
+from explanation.api import build_checker, SolverBackend
 from profiling import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
 
@@ -50,9 +50,10 @@ class FeatureModelOracle(Oracle):
 
         # Prepares the model and checker
         self._oracle_model = FMOracleModel.from_fm(fm_path).set_incremental(use_incremental).build()
-        self._checker = CheckerFactory.create_from_task(
-            self._oracle_model.task, solver_name,
-            self._oracle_model.use_incremental, self.profiler)
+        self._checker = build_checker(
+            self._oracle_model.task,
+            SolverBackend.from_flags(use_incremental=self._oracle_model.use_incremental),
+            solver_name, self.profiler)
 
         # Lazy-loaded for description extraction (most callers never need this)
         self._fm = None

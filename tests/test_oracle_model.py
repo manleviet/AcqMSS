@@ -3,7 +3,7 @@
 import pytest
 
 from conacq.oracle.fm_oracle_model import FMOracleModel
-from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.operations.algorithms.solver_backend import build_checker, SolverBackend
 
 
 def _make_oracle_model(constraint_map, variables, next_available_id):
@@ -60,9 +60,9 @@ class TestOracleModel:
             assert a >= 3
 
     def test_checker_integration_sat(self):
-        """CheckerFactory creates valid checker; SAT case."""
+        """build_checker creates valid checker; SAT case."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        checker = CheckerFactory.create_from_task(model.task, 'glucose4', model.use_incremental)
+        checker = build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental), 'glucose4')
 
         # f1=True, f2=True → SAT
         model.with_configuration({"f1": True, "f2": True})
@@ -70,9 +70,9 @@ class TestOracleModel:
         checker.cleanup()
 
     def test_checker_integration_unsat(self):
-        """CheckerFactory creates valid checker; UNSAT case."""
+        """build_checker creates valid checker; UNSAT case."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        checker = CheckerFactory.create_from_task(model.task, 'glucose4', model.use_incremental)
+        checker = build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental), 'glucose4')
 
         # f1=False, f2=False → UNSAT (neither true violates f1 OR f2)
         model.with_configuration({"f1": False, "f2": False})

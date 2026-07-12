@@ -14,7 +14,7 @@ import logging
 
 from conacq.algorithms.acqmss.congen import ConGen
 from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
-from explanation.api import CheckerFactory
+from explanation.api import build_checker, SolverBackend
 from profiling import profiler_session, ProfilerPreset
 
 from conacq.eval.performance_metrics import PerformanceMetrics
@@ -165,10 +165,11 @@ class ConGenRunner(BaseRunner):
                         task = replace(task, set_c=shuffled_set_c)
                         logging.debug('Shuffled set_c with seed=%d', shuffle_seed)
 
-                    # Create checker via factory
-                    checker = CheckerFactory.create_from_task(
-                        self.model.task, self.solver_name,
-                        self.model.use_incremental, profiler
+                    # Build the checker from the task
+                    checker = build_checker(
+                        self.model.task,
+                        SolverBackend.from_flags(use_incremental=self.model.use_incremental),
+                        self.solver_name, profiler
                     )
 
                     # Run ConGen

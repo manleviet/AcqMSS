@@ -238,7 +238,8 @@ Diagnosis algorithm implementations and executor abstractions:
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `algorithms/checker.py` | 120 | CheckerFactory: creates ConsistencyChecker from Task (Phase R) |
+| `algorithms/checker.py` | 45 | Consistency-checker **PORT**: `ConsistencyChecker` + `TestCaseChecker` Protocols (@runtime_checkable); imports no pysat/subprocess. ~70 algorithm sites depend on it. Exported via api. |
+| `algorithms/solver_backend.py` | 298 | Backend **ADAPTERS**: `SolverCheckerBase` + `IncrementalPySATChecker`/`NonIncrementalPySATChecker`/`SAT4JChecker` + `SolverBackend` (enum: which solver) + `build_checker` (single public task-based door) + private `_build_checker` (single class-selection site). |
 | `algorithms/fastdiag.py` | 85 | FastDiag: breadth-first minimal diagnosis finding |
 | `algorithms/fastdiagp.py` | 160 | FastDiagP: parallel variant using executor.submit() (Phase R rewrite) |
 | `algorithms/quickxplain.py` | 80 | QuickXPlain: minimal conflict finding |

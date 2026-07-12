@@ -6,7 +6,8 @@ from flamapy.core.operations import Operation
 from explanation.models.task_preparation import (
     PreparedTask, DescriptionProvider, DiagnosisFormatter, Task,
 )
-from explanation.operations.algorithms.checker import ConsistencyChecker, CheckerFactory
+from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.operations.algorithms.solver_backend import SolverBackend, build_checker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.labeler import IHSLabelable
 from profiling import AbstractProfiler, get_global_profiler
@@ -177,23 +178,21 @@ class PySATAbstractExplanation(Operation):
         return self.hsdag.get_conflicts() if self.hsdag else []
 
     def _create_checker(self, task: Task) -> ConsistencyChecker:
-        """Create a consistency checker for *task* using the configured backend.
+        """Build the solver backend for *task* using the configured selection.
 
-        Picks the SAT4J checker when ``use_sat4j`` is set; otherwise builds a
-        PySAT checker whose incremental/non-incremental flavour follows
-        ``use_incremental``. Both read the task's KB + assumptions.
+        The ``use_sat4j`` / ``use_incremental`` flags are folded into a single
+        backend token and the concrete backend is chosen by ``build_checker``
+        (the one construction door). Reads the task's KB + assumptions.
 
         Args:
             task: Task carrying set_kb and assumptions.
 
         Returns:
-            Configured consistency checker instance
+            A checker (concrete solver backend satisfying the ConsistencyChecker port).
         """
-        if self.use_sat4j:
-            return CheckerFactory.create_sat4jchecker(
-                self.profiler, set_kb=task.set_kb, assumptions=task.assumptions)
-        return CheckerFactory.create_from_task(
-            task, self.solver_name, self.use_incremental, self.profiler)
+        config = SolverBackend.from_flags(
+            use_incremental=self.use_incremental, use_sat4j=self.use_sat4j)
+        return build_checker(task, config, self.solver_name, self.profiler)
 
     @abstractmethod
     def _create_labeler(self, checker: ConsistencyChecker, task: Task) -> IHSLabelable:
