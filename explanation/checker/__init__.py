@@ -10,7 +10,7 @@ consumer does not pull the solver adapters — and pysat/subprocess — through 
 facade.
 """
 from .protocols import ConsistencyChecker, TestCaseChecker, CopyableChecker
-from .backend import SolverBackend, build_checker
+from .backend import SolverBackend, build_checker, SolverTimeoutError
 
 __all__ = [
     'ConsistencyChecker',
@@ -18,4 +18,5 @@ __all__ = [
     'CopyableChecker',
     'SolverBackend',
     'build_checker',
+    'SolverTimeoutError',
 ]

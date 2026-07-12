@@ -35,6 +35,15 @@ if TYPE_CHECKING:
 _DEFAULT_SAT4J_JAR = "solver_apps/org.sat4j.core.jar"
 
 
+class SolverTimeoutError(Exception):
+    """Raised when a solver backend exceeds its wall-clock timeout.
+
+    Surfaced (not swallowed) so a timeout can never be mistaken for a real UNSAT
+    answer. A caller that hits it must either raise the limit
+    (``build_checker(sat4j_timeout=…)``) or switch to a PySAT backend.
+    """
+
+
 class CheckerBase(ABC):
     """Shared base for solver backends (structurally satisfies the checker port)."""
 
@@ -232,8 +241,17 @@ class SAT4JChecker(CheckerBase):
                         check=False
                     )
                     output = result.stdout
-                except subprocess.TimeoutExpired:
-                    output = "TIMEOUT"
+                except subprocess.TimeoutExpired as e:
+                    # Never coerce a timeout into a silent UNSAT: doing so recorded
+                    # wrong (in)consistency answers with no signal. Surface it so the
+                    # caller raises the limit or switches backend.
+                    num_clauses = len(self.set_kb) + len(assumption_clauses)
+                    raise SolverTimeoutError(
+                        f"SAT4J exceeded its {self.timeout}s timeout on a "
+                        f"{num_clauses}-clause formula. Raise the limit via "
+                        f"build_checker(sat4j_timeout=…) or use a PySAT backend "
+                        f"(SolverBackend.PYSAT_INCREMENTAL)."
+                    ) from e
                 except (OSError, subprocess.SubprocessError) as e:
                     raise RuntimeError(f"Failed to run SAT4J: {e}") from e
 
@@ -279,18 +297,24 @@ def build_checker(task: 'Task',
                   backend: SolverBackend = SolverBackend.PYSAT_INCREMENTAL,
                   solver_name: str = 'glucose3',
                   profiler: AbstractProfiler = None,
-                  sat4j_jar_path: str = _DEFAULT_SAT4J_JAR) -> ConsistencyChecker:
+                  sat4j_jar_path: str = _DEFAULT_SAT4J_JAR,
+                  sat4j_timeout: int = 300) -> ConsistencyChecker:
     """Build a checker for *task* — the single public door AND the single place a
     concrete backend class is chosen.
 
     Reads ``task.set_kb`` / ``task.assumptions`` and maps the ``SolverBackend``
     token to a concrete class. Every checker in the system is built from a Task
     through here, so the choice of concrete backend lives in exactly one place.
+
+    ``sat4j_timeout`` (seconds) bounds each SAT4J subprocess call; exceeding it
+    raises ``SolverTimeoutError`` rather than returning a silent UNSAT. Ignored
+    by the PySAT backends. The default preserves prior behavior.
     """
     set_kb, assumptions = task.set_kb, task.assumptions
     if backend is SolverBackend.SAT4J:
         return SAT4JChecker(set_kb=set_kb, assumptions=assumptions,
-                            jar_path=sat4j_jar_path, profiler_instance=profiler)
+                            jar_path=sat4j_jar_path, profiler_instance=profiler,
+                            timeout=sat4j_timeout)
     if backend is SolverBackend.PYSAT_NON_INCREMENTAL:
         return NonIncrementalPySATChecker(set_kb, assumptions, solver_name, profiler)
     return IncrementalPySATChecker(set_kb, assumptions, solver_name, profiler)

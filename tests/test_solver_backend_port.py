@@ -9,6 +9,7 @@ Pins two things T7 establishes:
    class; ``from_flags`` maps the operation flags to the right token.
 """
 import os
+import subprocess
 
 import pytest
 
@@ -25,6 +26,7 @@ from explanation.checker.backend import (
     NonIncrementalPySATChecker,
     SAT4JChecker,
     SolverBackend,
+    SolverTimeoutError,
     _DEFAULT_SAT4J_JAR,
     build_checker,
 )
@@ -108,3 +110,28 @@ def test_build_checker_maps_tokens_to_classes():
 def test_build_checker_maps_sat4j_token_to_class():
     checker = build_checker(_task(), SolverBackend.SAT4J)
     assert isinstance(checker, SAT4JChecker)
+
+
+def test_sat4j_timeout_raises_instead_of_silent_unsat(monkeypatch):
+    """A SAT4J timeout must raise SolverTimeoutError — never a silent UNSAT.
+
+    The old code set ``output = "TIMEOUT"`` on ``subprocess.TimeoutExpired`` so
+    ``is_consistent`` returned ``False``: a timeout was indistinguishable from a
+    real UNSAT and corrupted results with no signal. This pins the fixed
+    contract. Deterministic and jar-independent — java is never launched:
+    ``os.path.exists`` is stubbed for construction and ``subprocess.run`` is
+    stubbed to raise the timeout.
+    """
+    import explanation.checker.backend as backend_mod
+    monkeypatch.setattr(backend_mod.os.path, "exists", lambda _p: True)
+
+    checker = build_checker(_task(), SolverBackend.SAT4J, sat4j_timeout=42)
+    assert checker.timeout == 42  # build_checker forwards the timeout knob
+
+    def _raise_timeout(*_args, **_kwargs):
+        raise subprocess.TimeoutExpired(cmd=["java"], timeout=42)
+    monkeypatch.setattr(backend_mod.subprocess, "run", _raise_timeout)
+
+    # pytest.raises fails with "DID NOT RAISE" if it silently returned False.
+    with pytest.raises(SolverTimeoutError):
+        checker.is_consistent([])

@@ -45,6 +45,7 @@ from explanation.checker import (
     CopyableChecker,
     SolverBackend,
     build_checker,
+    SolverTimeoutError,
 )
 from explanation.operations.algorithms.utils import split, diff, negate_cnf_tseitin
 from explanation.operations.algorithms.quickxplain import QuickXPlain
@@ -84,6 +85,7 @@ __all__ = [
     'CopyableChecker',
     'SolverBackend',
     'build_checker',
+    'SolverTimeoutError',
     # Clause utilities
     'split',
     'diff',

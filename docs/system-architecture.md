@@ -339,8 +339,9 @@ consumes — the Task family and preparation helpers (`TaskInput`, `Task`,
 `slice_assumptions`), test-suite data (`Assignment`, `TestCase`,
 `TestSuite`), the `encoding` free functions + `AssignmentAssumptionMap`,
 `KBProtocol`, the `AbstractModelBuilder` base, consistency checking (the
-`ConsistencyChecker` / `TestCaseChecker` port protocols plus `SolverBackend` and
-the `build_checker` factory), clause
+`ConsistencyChecker` / `TestCaseChecker` / `CopyableChecker` port protocols plus
+`SolverBackend`, the `build_checker` factory, and the `SolverTimeoutError` a
+SAT4J timeout raises), clause
 utilities (`split`, `diff`, `negate_cnf_tseitin`, `QuickXPlain`), and the
 `FmToDiagPysat` transformation. It grows as later seams are formalized (e.g. the
 operation registry). It deliberately does NOT export the profiler (imported from
@@ -509,6 +510,13 @@ the conacq runners/oracle, and GenerateNE all call `build_checker`, so backend
 selection lives in exactly one place. (The parallel-execution role — `copy` /
 pickling, needed only by FastDiagP — is `CopyableChecker`, deliberately separate
 from the narrow `ConsistencyChecker` port.)
+
+**SAT4J timeouts surface, never silently UNSAT.** The `SAT4JChecker` subprocess
+call is bounded by `build_checker(..., sat4j_timeout=…)` seconds (default 300).
+Exceeding it raises `SolverTimeoutError` (exported via `api`) instead of the old
+behavior — coercing the timeout to `output="TIMEOUT"`, which parsed as `is_sat=False`
+and recorded a *silent* (in)consistency answer indistinguishable from a real UNSAT.
+The PySAT backends ignore the knob.
 
 #### explanation/operations/ — Diagnosis Algorithms
 

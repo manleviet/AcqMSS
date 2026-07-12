@@ -220,7 +220,7 @@ SAT model representation and immutable task units:
 
 **Single-source name↔id (T2, refined by ADR-0007):** the name↔id catalog lives on the KB under KB Protocol names (`id_to_name`/`name_to_id`). Read-only is enforced at the **type layer**, not at runtime: `KBProtocol` declares these as `Mapping` (so type-checkers reject `kb.name_to_id[x] = …`), while the concrete storage is a plain `dict` — no `MappingProxyType`, no per-access wrapping (ADR-0007 removed the runtime views: they existed only to pass their own test, cost ~25% on a hot path, and blocked `json.dumps`). The conacq `KBModel` base (`conacq/kb_model.py`) is **domain-neutral**: its `__init__` owns five plain fields (`constraint_map`, `negated_constraint_map`, `next_available_id`, and the public `name_to_id`/`id_to_name` dicts) — no feature-model terms in the base, no properties. ConGen/QuAcq/FMOracle call `super().__init__()` then set only model-specific values; builders assign the `name_to_id`/`id_to_name` dicts directly at build. `DiagnosisModel` is the exception — it keeps `name_to_id`/`id_to_name` as **properties** because it is a flamapy translation layer that maps onto PySATModel's `variables`/`features` (returned as-is, no proxy). The `encoding` free functions receive these maps as parameters — no `VariableCodec`, no per-model encoding duplication. A sibling conacq-root file, `conacq/oracle_bias_model_builder.py`, holds `OracleBiasModelBuilder` — the shared bias-load → negation-via-oracle builder base for ConGen/QuAcq (subclasses the framework `AbstractModelBuilder` via `explanation.api`); it lives in the app because it imports `conacq.bias` and types against `FeatureModelOracle`.
 
-#### explanation/checker/ — Consistency-checker Port + Adapters (~380 LOC, 3 files)
+#### explanation/checker/ — Consistency-checker Port + Adapters (~404 LOC, 3 files)
 
 The consistency-checker port and its solver-backed adapters. These are not
 algorithms — they are what the algorithms *consume* — so they live in their own
@@ -229,8 +229,8 @@ package rather than beside `fastdiag.py`/`quickxplain.py` in `operations/algorit
 | File | LOC | Purpose |
 |------|-----|---------|
 | `protocols.py` | 62 | Consistency-checker **PORT**: `ConsistencyChecker` + `TestCaseChecker` + `CopyableChecker` Protocols (@runtime_checkable); imports no pysat/subprocess. ~24 algorithm sites depend on a port. Re-exported via `explanation/api.py`. |
-| `backend.py` | 296 | Backend **ADAPTERS**: `CheckerBase` + `IncrementalPySATChecker`/`NonIncrementalPySATChecker`/`SAT4JChecker` + `SolverBackend` (enum: which solver) + `build_checker` (the single public task-based door **and** the single class-selection site — token→class if/else inlined; no private `_build_checker`). Imports `protocols` top-level (acyclic). |
-| `__init__.py` | 21 | Internal facade re-exporting the 3 Protocols + `SolverBackend` + `build_checker`. Not a public door — `explanation/api.py` is the single public surface. |
+| `backend.py` | 320 | Backend **ADAPTERS**: `CheckerBase` + `IncrementalPySATChecker`/`NonIncrementalPySATChecker`/`SAT4JChecker` + `SolverBackend` (enum: which solver) + `SolverTimeoutError` + `build_checker` (single public task-based door **and** single class-selection site — token→class if/else inlined; no private `_build_checker`; `sat4j_timeout` knob, default 300). A SAT4J timeout raises `SolverTimeoutError` (not a silent UNSAT). Imports `protocols` top-level (acyclic). |
+| `__init__.py` | 22 | Internal facade re-exporting the 3 Protocols + `SolverBackend` + `build_checker` + `SolverTimeoutError`. Not a public door — `explanation/api.py` is the single public surface. |
 
 #### explanation/operations/ — SAT Operations (Phase R, ~4,800 LOC, ~26 files)
 
