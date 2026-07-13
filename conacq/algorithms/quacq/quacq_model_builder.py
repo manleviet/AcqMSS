@@ -6,6 +6,8 @@ this builder supplies the two template hooks.
 
 from __future__ import annotations
 
+from explanation.api import AssignmentAssumptionMap
+
 from conacq.oracle_bias_model_builder import OracleBiasModelBuilder
 
 from .quacq_model import QuAcqModel
@@ -32,6 +34,9 @@ class QuAcqModelBuilder(OracleBiasModelBuilder):
         """Apply solver mode, copy BG assignment maps, then auto-prepare."""
         model.use_incremental = self._use_incremental
         bg_data = self._oracle.get_bg_data()
-        model.pos_assignment_to_assumption = dict(bg_data.pos_assignment_to_assumption)
-        model.neg_assignment_to_assumption = dict(bg_data.neg_assignment_to_assumption)
+        # Build the feature-assignment map once here (not per query): the QuAcq
+        # inner loop hits config_to_assumptions on every discriminating example.
+        model.assignment_map = AssignmentAssumptionMap(
+            dict(bg_data.pos_assignment_to_assumption),
+            dict(bg_data.neg_assignment_to_assumption))
         model.prepare(self._oracle)

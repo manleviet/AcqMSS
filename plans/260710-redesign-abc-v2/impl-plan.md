@@ -223,6 +223,11 @@ Main anchors: `base.py` Oracle ABC stub (get_variables:38, complete_configuratio
 - **Gate:** suite **459 + 5 xfailed** · 13 characterization XANH (byte-identical; L1 pin get_c sạch TRƯỚC query vẫn khớp) · grep `_base_set_c|with_configuration` conacq/oracle/ = 0 · `git diff tests/fixtures/` RỖNG · guard 6-rule xanh.
 - **Gia cố (cùng commit, quy-ước → bất-biến):** ① XOÁ tham số `configuration` khỏi cả 2 `prepare()` (mìn cùng họ A6 — nếu ai truyền prep-config thì is_valid cộng đúp, sai im lặng). ② XOÁ `config_set_c` + `_config_to_assumptions`; `is_valid` ghép 1 dòng bằng free function `config_to_assignment_assumptions` (T2). ③ Model dựng `AssignmentAssumptionMap` MỘT LẦN lúc prep, phơi `model.assignment_map` (bỏ dựng-mỗi-query trên hot-path — cùng khuyết tật ADR-0007); bỏ `_pos/_neg` dict (map là nguồn duy nhất). Grep `config_set_c|_config_to_assumptions` = 0; `def prepare` không còn tham số configuration.
 
+**✅ 11.3 thực thi (dọn dẹp — KHÔNG purity):**
+- **① T5-primitives ĐÃ ĐẠT (xác nhận trên code):** cả 3 prep dùng primitive chung, 0 chỗ viết lại logic prep — `FMOracleTaskPreparation`(`prepare_kb`+`prepare_variable_assignments`+`slice_assumptions`), `ConGenTaskPreparation`(`prepare_kb`+`prepare_testsuite_with_negation`+`_assign_sets`→`slice_assumptions`), `QuAcqTaskPreparation`(`prepare_kb`+`_assign_sets`→`slice_assumptions`). (7 dòng `set_kb.append` ở ConGen = đấu dây NE-clause đặc thù, không phải primitive chung → giữ.) T5 làm, T11.2 dọn nốt.
+- **② ⑤ done (bản sao ADR-0007 cuối):** `QuAcqModel` dựng `AssignmentAssumptionMap` mỗi call (`config_to_assumptions`, hot-path qua FindC/prune) → dựng MỘT LẦN ở builder `_post_negation_build` (`model.assignment_map`), bỏ `pos/neg` dict thô. `config_to_assumptions` **GIỮ** (2 caller: `findc:75`, `sat_utils:29`) → 1 dòng `config_to_assignment_assumptions(config, self.assignment_map)`.
+- **Gate:** suite **459 + 5 xfailed** (0 XPASS, 0 lật) · 13 characterization + quacq E2E XANH (byte-identical) · `git diff tests/fixtures/` RỖNG · `AssignmentAssumptionMap(` chỉ còn ở 2 site prep · guard 6-rule xanh.
+
 ## T11b — Post-oracle cleanup block (làm SAU T11, một lượt sửa api/guard/docs)
 
 Gom các nợ đụng builder/prep-hierarchy + api T12 (đã đóng băng) → làm chung sau khi T11 tái cấu trúc prep arc:

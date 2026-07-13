@@ -49,8 +49,10 @@ class QuAcqModel(KBModel):
         self._task: Optional[QuAcqTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
 
-        self.pos_assignment_to_assumption: Dict[str, int] = {}
-        self.neg_assignment_to_assumption: Dict[str, int] = {}
+        # Built once at prep (by the builder, from BG data). The query helpers
+        # reuse it instead of rebuilding this immutable map on every call — they
+        # run on QuAcq's inner loop (FindC, prune).
+        self.assignment_map: Optional[AssignmentAssumptionMap] = None
 
     @property
     def task(self) -> Optional[QuAcqTask]:
@@ -121,11 +123,7 @@ class QuAcqModel(KBModel):
         Returns:
             List of assumption IDs for the given feature assignments
         """
-        return config_to_assignment_assumptions(
-            config,
-            AssignmentAssumptionMap(
-                self.pos_assignment_to_assumption,
-                self.neg_assignment_to_assumption))
+        return config_to_assignment_assumptions(config, self.assignment_map)
 
     def get_constraint_vars(self, assumption_id: int) -> Set[str]:
         """Get feature names for constraint by assumption ID."""
