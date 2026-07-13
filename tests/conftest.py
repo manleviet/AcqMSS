@@ -11,7 +11,7 @@ these shared ones incrementally as each subsystem is refactored.
 import pytest
 
 from conacq.bias import BiasIO
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 from tests.resource_paths import FM_PATH, BIAS_PATH
 
 
@@ -28,4 +28,4 @@ def oracle():
     """REAL-FM-7 feature-model oracle (shared)."""
     if not FM_PATH.exists():
         pytest.skip(f"Feature model not found: {FM_PATH}")
-    return FeatureModelOracle(str(FM_PATH))
+    return FMOracle(str(FM_PATH))

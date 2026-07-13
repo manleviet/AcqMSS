@@ -7,28 +7,27 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict
 
 from conacq.examples.data_structures import Example, ExampleSet, ExampleType
-from conacq.oracle import Oracle
-from conacq.oracle.fm_oracle import FeatureModelOracle
+from conacq.oracle import GeneratorOracle
 
 
 class ExampleGenerator(ABC):
     """
     Abstract base class for example example_generators.
 
-    Generators use a FeatureModelOracle to classify generated configurations
+    Generators use an oracle to classify generated configurations
     as positive or negative examples.
 
     Attributes:
-        oracle: FeatureModelOracle for classifying and completing examples
+        oracle: GeneratorOracle for classifying and completing examples
         features: Set of all feature names
     """
 
-    def __init__(self, oracle: Oracle):
+    def __init__(self, oracle: GeneratorOracle):
         """
-        Initialize generator with a FeatureModelOracle.
+        Initialize generator with an oracle.
 
         Args:
-            oracle: FeatureModelOracle for classifying examples
+            oracle: GeneratorOracle for classifying examples
         """
         self.oracle = oracle
         self.features = oracle.get_variables()

@@ -17,7 +17,7 @@ class ConGenModelBuilder(OracleBiasModelBuilder):
 
     Examples:
         # Pattern 1: Auto-prepare from file
-        oracle = FeatureModelOracle('data/fms/model.uvl')
+        oracle = FMOracle('data/fms/model.uvl')
         model = (ConGenModelBuilder
                  .from_bias('data/bias/model.json')
                  .with_oracle(oracle)

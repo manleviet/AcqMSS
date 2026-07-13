@@ -20,7 +20,7 @@ class NWiseCoverageGenerator(ExampleGenerator):
     For 2-COV (pairwise): each combination of 2 features appears at least once.
 
     Example:
-        >>> oracle = FeatureModelOracle('model.uvl')
+        >>> oracle = FMOracle('model.uvl')
         >>> gen = NWiseCoverageGenerator(oracle, n=2)
         >>> examples = gen.generate(seed=42)
     """

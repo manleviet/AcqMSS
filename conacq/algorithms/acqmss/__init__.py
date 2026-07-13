@@ -32,7 +32,7 @@ from ..quacq import (
     QuAcqModelBuilder,
     QuAcqTask,
     QuAcqResult,
-    FeatureModelOracle,
+    FMOracle,
     UserPromptOracle,
     CachedOracle,
 )
@@ -59,7 +59,7 @@ __all__ = [
     'QuAcqModelBuilder',
     'QuAcqTask',
     'QuAcqResult',
-    'FeatureModelOracle',
+    'FMOracle',
     'UserPromptOracle',
     'CachedOracle',
     # Re-exports from explanation module

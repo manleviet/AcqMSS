@@ -14,7 +14,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Literal
 
-from conacq.oracle import Oracle
+from conacq.oracle import MembershipOracle
 from conacq.example_generators import QueryProvider
 from .findscope import FindScope
 from .sat_utils import prune_rejecting
@@ -57,7 +57,7 @@ class QuAcq:
     """
 
     def __init__(self, checker: ConsistencyChecker,
-                 oracle: Oracle,
+                 oracle: MembershipOracle,
                  model: Optional[QuAcqModel] = None,
                  query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
@@ -73,7 +73,7 @@ class QuAcq:
 
     @classmethod
     def for_oracle(cls, checker: ConsistencyChecker,
-                   oracle: Oracle,
+                   oracle: MembershipOracle,
                    query_provider: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
                    model: QuAcqModel = None,
@@ -86,7 +86,7 @@ class QuAcq:
 
     @classmethod
     def for_examples(cls, checker: ConsistencyChecker,
-                     oracle: Oracle,
+                     oracle: MembershipOracle,
                      query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
                      model: QuAcqModel = None,

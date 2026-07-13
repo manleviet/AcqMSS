@@ -14,6 +14,7 @@ Complexity: O(|Gamma|) queries where Gamma = candidate constraints with scope.
 import logging
 
 from explanation.api import ConsistencyChecker
+from conacq.oracle import MembershipOracle
 from profiling import measure_time, count_calls
 
 
@@ -24,7 +25,7 @@ class FindC:
     root_assumption, generator) injected at construction; per-call data passed to run().
     """
 
-    def __init__(self, oracle, checker: ConsistencyChecker, model, profiler,
+    def __init__(self, oracle: MembershipOracle, checker: ConsistencyChecker, model, profiler,
                  record_query, root_assumption: int, generator=None):
         self.oracle = oracle
         self.checker = checker

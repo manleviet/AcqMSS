@@ -16,7 +16,7 @@ defeat the golden. Pass ``--include-slow`` to also record the large busybox FM.
 """
 import sys
 
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 from tests.t11_oracle_net_helpers import (
     FIXTURES_DIR,
     FM_SPECS,
@@ -31,7 +31,7 @@ from tests.t11_e2e_harness import record_layer2_layer3
 
 
 def record_one(name, path, n_membership, m_completion):
-    oracle = FeatureModelOracle(str(path))
+    oracle = FMOracle(str(path))
     # Frozen inputs derived from the feature catalog, then committed to disk.
     queries = build_frozen_queries(oracle, n_membership, m_completion)
     # Snapshot BEFORE any query (get_c must be pre-pollution), then answer.

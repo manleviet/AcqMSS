@@ -22,7 +22,7 @@ try:
 except ImportError:
     import tomli as tomllib
 
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 from apps._harness import build_parser, setup_logging
 from conacq.examples import (
     BalancedRandomSamplingGenerator,
@@ -67,7 +67,7 @@ def get_example_count_for_strategy(strategy: str, n_features: int, m_value: Opti
 
 
 def generate_examples_for_strategy(
-        oracle: FeatureModelOracle,
+        oracle: FMOracle,
         strategy: str,
         n_examples: Optional[int],
         n_features: int,
@@ -140,7 +140,7 @@ def process_model(
         # Load feature model
         logger.debug("Loading: %s", fm_path)
 
-        oracle = FeatureModelOracle(fm_path)
+        oracle = FMOracle(fm_path)
         n_features = len(oracle.get_variables())
 
         # Use pre-computed values from config if available

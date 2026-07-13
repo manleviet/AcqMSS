@@ -1,7 +1,7 @@
 """Free-function encoders between feature configs, SAT literals, and assumptions.
 
 Single source of truth for the config↔literal and clause→name translations that
-were previously duplicated across QuAcqModel, FMOracleModel, FeatureModelOracle
+were previously duplicated across QuAcqModel, FMOracleModel, FMOracle
 and Example. Pure functions: the name↔id catalog and the assignment-assumption
 layer are passed in (owned by the KB / AssignmentAssumptionMap), never held here.
 """

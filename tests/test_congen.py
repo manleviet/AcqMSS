@@ -14,7 +14,7 @@ from conacq.algorithms import (
     ConGenModelBuilder
 )
 from conacq.bias import BiasIO
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 from explanation.checker.backend import (
     IncrementalPySATChecker,
     build_checker,
@@ -53,7 +53,7 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     profiler = get_global_profiler()
 
     # Create oracle
-    oracle = FeatureModelOracle(fm_path, use_incremental=False)
+    oracle = FMOracle(fm_path, use_incremental=False)
 
     # Build and prepare model
     model = (ConGenModelBuilder
@@ -274,7 +274,7 @@ class TestGenerateNE:
         from conacq.algorithms.acqmss.generate_ne import GenerateNE
         from explanation.models.testsuite import TestSuite
 
-        oracle = FeatureModelOracle(str(FM_PATH))
+        oracle = FMOracle(str(FM_PATH))
         generate_ne = GenerateNE(oracle)
         empty_ts = TestSuite(testcases=[])
         results, next_id = generate_ne.generate(empty_ts, {}, [], [], start_id=1000)
@@ -292,7 +292,7 @@ class TestConGenModelBuilder:
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
-        oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
                  .with_oracle(oracle)
@@ -311,7 +311,7 @@ class TestConGenModelBuilder:
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]
 
-        oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
                  .with_oracle(oracle)
@@ -334,7 +334,7 @@ class TestConGenModelBuilder:
 
         from conacq.examples import ExampleIO
 
-        oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
                  .with_oracle(oracle)
@@ -363,7 +363,7 @@ class TestConGenModelBuilder:
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]
 
-        oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
                  .with_oracle(oracle)
@@ -391,11 +391,11 @@ class TestOracleFeatureIds:
         if not Path(fm_path).exists():
             pytest.skip(f"FM not found: {fm_path}")
 
-        oracle = FeatureModelOracle(fm_path)
+        oracle = FMOracle(fm_path)
         fm = UVLReader(fm_path).transform()
         sat = FmToPysat(fm).transform()
 
-        assert oracle.get_feature_ids() == dict(sat.variables), \
+        assert oracle.get_variable_ids() == dict(sat.variables), \
             f"{name}: Oracle IDs don't match flamapy"
         del oracle
 
@@ -405,11 +405,11 @@ class TestOracleFeatureIds:
         if not Path(fm_path).exists() or not Path(bias_path).exists():
             pytest.skip(f"Files not found: {fm_path} or {bias_path}")
 
-        oracle = FeatureModelOracle(fm_path)
+        oracle = FMOracle(fm_path)
         bias = BiasIO.load_from_json(bias_path)
         bias_ids = bias.feature_ids
 
-        assert oracle.get_feature_ids() == bias_ids, \
+        assert oracle.get_variable_ids() == bias_ids, \
             f"{name}: Oracle IDs don't match bias"
         del oracle
 

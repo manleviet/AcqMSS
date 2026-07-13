@@ -79,14 +79,14 @@ def generate_ne_subproblem():
     (Layer 3) stays identical.
     """
     from conacq.algorithms.acqmss import GenerateNE
-    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle import FMOracle
 
-    oracle = FeatureModelOracle(str(FM_PATH))
+    oracle = FMOracle(str(FM_PATH))
     testsuite = _frozen_negative_testsuite()
     result_set_kb, result_assumptions = [], []
     results, next_id = GenerateNE(oracle).generate(
         testsuite,
-        oracle.get_feature_ids(),
+        oracle.get_variable_ids(),
         result_set_kb,
         result_assumptions,
         oracle.get_next_available_id(),
@@ -127,12 +127,12 @@ def diagnosis_factory_ids():
 def _congen_setup(examples_path):
     """Build the ConGen checker + prepared task (mirrors tests/test_congen.py)."""
     from conacq.algorithms import ConGenModelBuilder
-    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle import FMOracle
     from explanation.checker.backend import build_checker, SolverBackend
     from profiling import get_global_profiler
 
     profiler = get_global_profiler()
-    oracle = FeatureModelOracle(str(FM_PATH), use_incremental=False)
+    oracle = FMOracle(str(FM_PATH), use_incremental=False)
     model = (ConGenModelBuilder
              .from_bias(str(BIAS_PATH))
              .use_incremental(True)
@@ -180,11 +180,11 @@ def run_congen(examples_path):
 
 def _quacq_setup():
     """Build the QuAcq model/checker (mirrors tests/test_quacq.py fixtures)."""
-    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle import FMOracle
     from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
     from explanation.checker.backend import build_checker, SolverBackend
 
-    oracle = FeatureModelOracle(str(FM_PATH))
+    oracle = FMOracle(str(FM_PATH))
     model = QuAcqModelBuilder.from_bias(str(BIAS_PATH)).with_oracle(oracle).build()
     checker = build_checker(
         model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))

@@ -80,9 +80,12 @@ def canonical_snapshot(oracle):
     golden never encodes the A6 last-query pollution of get_c (that behaviour
     is pinned separately, as an xfail, in the guard suite).
     """
+    # NOTE: the dict keys below are LABELS of a frozen recording, not API names.
+    # They do not move when a method is renamed — the golden JSON was recorded
+    # under these labels, so keeping them keeps `git diff tests/fixtures/` empty.
     return {
         "get_variables": sorted(oracle.get_variables()),
-        "get_feature_ids": _canon(oracle.get_feature_ids()),
+        "get_feature_ids": _canon(oracle.get_variable_ids()),
         "get_root_feature": oracle.get_root_feature(),
         "get_root_clauses": _canon(oracle.get_root_clauses()),
         "get_cnf_clauses": _canon(oracle.get_cnf_clauses()),

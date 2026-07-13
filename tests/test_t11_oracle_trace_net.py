@@ -16,7 +16,7 @@ that intended change is pinned separately (as an xfail) in the guard suite.
 """
 import pytest
 
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 from tests.t11_oracle_net_helpers import (
     FM_SPECS,
     canonical_snapshot,
@@ -48,7 +48,7 @@ def test_oracle_trace_replays_exactly(name, path):
     queries = load_json(q_path)
     golden = load_json(t_path)
 
-    oracle = FeatureModelOracle(str(path))
+    oracle = FMOracle(str(path))
 
     # (1) Every observable getter, snapshotted before any query, must match.
     assert canonical_snapshot(oracle) == golden["snapshot"]

@@ -22,7 +22,7 @@ from explanation.api import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
 
 if TYPE_CHECKING:
-    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle import PreparationOracle
     from .congen import ConGenResult
 
 
@@ -198,7 +198,7 @@ class ConGenModel(KBModel):
 
     def prepare(
             self,
-            oracle: FeatureModelOracle,
+            oracle: PreparationOracle,
             positive_examples: Optional[List[Dict[str, bool]]] = None,
             negative_examples: Optional[List[Dict[str, bool]]] = None
     ) -> ConGenTask:

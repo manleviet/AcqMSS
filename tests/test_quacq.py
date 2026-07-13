@@ -8,7 +8,7 @@ Tests core components: QueryProvider, QuAcq, QuAcqTask, QuAcqModel.
 import pytest
 from pathlib import Path
 
-from conacq.oracle import FeatureModelOracle, Oracle, CachedOracle
+from conacq.oracle import FMOracle, Oracle, CachedOracle
 from conacq.bias import BiasIO
 from conacq.algorithms.quacq import (
     QuAcqResult,
@@ -50,7 +50,7 @@ def oracle():
     """Load REAL-FM-7 feature model oracle."""
     if not FM_PATH.exists():
         pytest.skip(f"Feature model not found: {FM_PATH}")
-    return FeatureModelOracle(str(FM_PATH))
+    return FMOracle(str(FM_PATH))
 
 
 @pytest.fixture
@@ -124,8 +124,8 @@ class TestQuAcqResult:
         assert 'n_queries=5' in repr(result)
 
 
-class TestFeatureModelOracle:
-    """Tests for FeatureModelOracle."""
+class TestFMOracle:
+    """Tests for FMOracle."""
 
     def test_oracle_creation(self, oracle):
         """Test oracle can be created."""
@@ -262,7 +262,7 @@ class TestIntegration:
         profiler.start()
 
         try:
-            oracle = FeatureModelOracle(str(FM_PATH))
+            oracle = FMOracle(str(FM_PATH))
             model = (QuAcqModelBuilder
                      .from_bias(str(BIAS_PATH))
                      .with_oracle(oracle)

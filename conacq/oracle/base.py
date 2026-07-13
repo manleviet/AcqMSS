@@ -16,7 +16,7 @@ class Oracle(ABC):
     All oracle implementations must inherit from this class.
 
     Only requires is_valid() — FM metadata and SAT capabilities
-    live on concrete implementations (e.g. FeatureModelOracle).
+    live on concrete implementations (e.g. FMOracle).
     """
 
     @abstractmethod

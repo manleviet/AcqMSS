@@ -23,7 +23,7 @@ class RandomSamplingGenerator(ExampleGenerator):
     depends on the feature model structure.
 
     Example:
-        >>> oracle = FeatureModelOracle('model.uvl')
+        >>> oracle = FMOracle('model.uvl')
         >>> gen = RandomSamplingGenerator(oracle)
         >>> examples = gen.generate(n=100, seed=42)
         >>> print(examples)
@@ -73,7 +73,7 @@ class BalancedRandomSamplingGenerator(ExampleGenerator):
     Uses SAT solver to generate valid configurations for E⁺.
 
     Example:
-        >>> oracle = FeatureModelOracle('model.uvl')
+        >>> oracle = FMOracle('model.uvl')
         >>> gen = BalancedRandomSamplingGenerator(oracle)
         >>> examples = gen.generate(n_positive=50, n_negative=50)
         >>> print(examples)
@@ -170,7 +170,7 @@ class ControlledRandomSamplingGenerator(ExampleGenerator):
     Ensures no duplicate examples.
 
     Example:
-        >>> oracle = FeatureModelOracle('model.uvl')
+        >>> oracle = FMOracle('model.uvl')
         >>> gen = ControlledRandomSamplingGenerator(oracle)
         >>> examples = gen.generate(total=100, valid_configs=80, seed=42)
         >>> print(examples)

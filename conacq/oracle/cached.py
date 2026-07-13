@@ -16,7 +16,7 @@ class CachedOracle(Oracle):
     Useful when the same configuration might be queried multiple times.
 
     Example:
-        >>> base_oracle = FeatureModelOracle('model.uvl')
+        >>> base_oracle = FMOracle('model.uvl')
         >>> oracle = CachedOracle(base_oracle)
         >>> oracle.ask({'A': True})  # Asks base oracle
         >>> oracle.ask({'A': True})  # Returns cached answer

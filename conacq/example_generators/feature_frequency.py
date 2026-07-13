@@ -24,7 +24,7 @@ class FeatureFrequencyGenerator(ExampleGenerator):
     This ensures 4-way coverage for each feature.
 
     Example:
-        >>> oracle = FeatureModelOracle('model.uvl')
+        >>> oracle = FMOracle('model.uvl')
         >>> gen = FeatureFrequencyGenerator(oracle)
         >>> examples = gen.generate(max_examples=500)
     """

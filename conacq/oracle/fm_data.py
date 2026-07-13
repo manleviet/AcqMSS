@@ -1,7 +1,7 @@
 """
 Feature model metadata dataclass.
 
-Immutable container for FM metadata extracted from FeatureModelOracle.
+Immutable container for FM metadata extracted from FMOracle.
 Created once, passed around explicitly to decouple callers from Oracle.
 """
 
@@ -11,7 +11,7 @@ from typing import Dict, Set
 
 @dataclass(frozen=True)
 class FMData:
-    """Immutable FM metadata extracted from FeatureModelOracle.
+    """Immutable FM metadata extracted from FMOracle.
 
     Attributes:
         features: Set of all feature names

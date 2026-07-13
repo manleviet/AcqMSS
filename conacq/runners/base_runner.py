@@ -77,8 +77,8 @@ class BaseRunner(ABC):
         self.solver_name = solver_name
 
         # Create oracle once (reused across runs)
-        from conacq.oracle import FeatureModelOracle
-        self.oracle = FeatureModelOracle(
+        from conacq.oracle import FMOracle
+        self.oracle = FMOracle(
             fm_path, solver_name=solver_name, use_incremental=use_incremental)
 
     @abstractmethod

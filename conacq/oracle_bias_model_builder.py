@@ -6,7 +6,7 @@ concrete builder only two hooks: which model class to instantiate, and what to d
 once negation is computed (apply solver mode, assignment maps, auto-prepare).
 
 This lives in ``conacq`` (the application), NOT ``explanation`` (the framework):
-it imports ``conacq.bias`` and is typed against the conacq ``FeatureModelOracle``,
+it imports ``conacq.bias`` and is typed against the conacq ``FMOracle``,
 so placing it in the framework would leak app knowledge into it — the boundary
 guard forbids that (explanation must not import conacq). It inherits the framework
 base ``AbstractModelBuilder`` through the single public door, ``explanation.api``.
@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from explanation.api import AbstractModelBuilder
 
 if TYPE_CHECKING:
-    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle import PreparationOracle
 
 
 class OracleBiasModelBuilder(AbstractModelBuilder):
@@ -34,7 +34,7 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
     def __init__(self) -> None:
         super().__init__()
         self._bias_path: Optional[str] = None
-        self._oracle: Optional['FeatureModelOracle'] = None
+        self._oracle: Optional['PreparationOracle'] = None
         self._use_incremental: bool = True
 
     @classmethod
@@ -44,7 +44,7 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         builder._bias_path = bias_path
         return builder
 
-    def with_oracle(self, oracle: 'FeatureModelOracle') -> 'OracleBiasModelBuilder':
+    def with_oracle(self, oracle: 'PreparationOracle') -> 'OracleBiasModelBuilder':
         """Set the oracle (required — supplies BG data + next_available_id)."""
         self._oracle = oracle
         return self

@@ -12,7 +12,7 @@ Main Components:
 - QuAcqResult: Learning result data structure (co-located in quacq.py)
 
 Oracle Implementations:
-- FeatureModelOracle: FM-based oracle for automated experiments
+- FMOracle: FM-based oracle for automated experiments
 - UserPromptOracle: Prompts human expert for interactive mode
 - CachedOracle: Wrapper that caches oracle answers
 
@@ -41,7 +41,7 @@ from .quacq_model import QuAcqModel
 from .quacq_model_builder import QuAcqModelBuilder
 from conacq.oracle import (
     Oracle,
-    FeatureModelOracle,
+    FMOracle,
     UserPromptOracle,
     CachedOracle,
 )
@@ -63,7 +63,7 @@ __all__ = [
     'QuAcqTaskPreparation',
     # Oracle implementations
     'Oracle',
-    'FeatureModelOracle',
+    'FMOracle',
     'UserPromptOracle',
     'CachedOracle',
     # FindScope/FindC

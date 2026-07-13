@@ -15,7 +15,7 @@ class QuAcqModelBuilder(OracleBiasModelBuilder):
     """Fluent builder for QuAcqModel.
 
     Examples:
-        oracle = FeatureModelOracle('data/fms/model.uvl')
+        oracle = FMOracle('data/fms/model.uvl')
         model = (QuAcqModelBuilder
                  .from_bias('data/bias/model.json')
                  .with_oracle(oracle)

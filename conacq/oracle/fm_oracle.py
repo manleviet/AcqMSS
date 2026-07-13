@@ -18,7 +18,7 @@ from explanation.api import build_checker, SolverBackend
 from profiling import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
 
-class FeatureModelOracle(Oracle):
+class FMOracle(Oracle):
     """Oracle using feature model as ground truth.
 
     Loads a feature model, converts it to CNF, and uses a SAT solver
@@ -28,7 +28,7 @@ class FeatureModelOracle(Oracle):
     get_fm_data(), complete_configuration(), get_features(), etc.
 
     Example:
-        >>> oracle = FeatureModelOracle('data/fms/model.uvl')
+        >>> oracle = FMOracle('data/fms/model.uvl')
         >>> oracle.is_valid({'root': True, 'child': True})
         True
     """
@@ -100,7 +100,7 @@ class FeatureModelOracle(Oracle):
         """
         return FMData(
             features=self.get_variables(),
-            feature_ids=self.get_feature_ids(),
+            feature_ids=self.get_variable_ids(),
             root_feature=self.get_root_feature(),
             num_constraints=self.get_num_constraints(),
             next_available_id=self.get_next_available_id(),
@@ -111,13 +111,12 @@ class FeatureModelOracle(Oracle):
         return self._oracle_model.bg_data
 
     def get_variables(self) -> Set[str]:
-        """Get all feature names."""
-        return set(self._oracle_model.name_to_id.keys())
+        """Get all feature names (delegated to the catalog owner)."""
+        return self._oracle_model.get_variables()
 
-    # TODO: need check
-    def get_feature_ids(self) -> Dict[str, int]:
-        """Get feature name to SAT variable ID mapping."""
-        return dict(self._oracle_model.name_to_id)
+    def get_variable_ids(self) -> Dict[str, int]:
+        """Get feature name to SAT variable ID mapping (delegated to the model)."""
+        return self._oracle_model.get_variable_ids()
 
     def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
         """Complete a partial configuration to a full valid one via SAT solving.
@@ -193,7 +192,7 @@ class FeatureModelOracle(Oracle):
         return self._oracle_model.next_available_id
 
     def __repr__(self):
-        return f"FeatureModelOracle(features={len(self._oracle_model.name_to_id)})"
+        return f"FMOracle(features={len(self._oracle_model.name_to_id)})"
 
     # TODO: need update
     def cleanup(self):

@@ -108,6 +108,14 @@ class FMOracleModel(KBModel):
         return [clause for clauses in self.constraint_map.values()
                 for clause in clauses]
 
+    def get_variables(self) -> set:
+        """All feature names. The model owns the catalog; the oracle delegates."""
+        return set(self.name_to_id.keys())
+
+    def get_variable_ids(self) -> Dict[str, int]:
+        """Feature name -> SAT variable id. The model owns the catalog."""
+        return dict(self.name_to_id)
+
     def _config_to_assumptions(self, configuration) -> list:
         """Convert feature config to assignment assumption IDs.
 

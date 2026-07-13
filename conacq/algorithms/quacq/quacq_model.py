@@ -21,7 +21,7 @@ from explanation.api import (
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation
 
 if TYPE_CHECKING:
-    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle import BGProvider
 
 
 class QuAcqModel(KBModel):
@@ -31,7 +31,7 @@ class QuAcqModel(KBModel):
     Oracle injected at prepare() time — model has no FM dependency.
 
     Usage:
-        oracle = FeatureModelOracle('data/fms/model.uvl')
+        oracle = FMOracle('data/fms/model.uvl')
         model = (QuAcqModelBuilder
                  .from_bias('data/bias/model.json')
                  .with_oracle(oracle)
@@ -132,11 +132,11 @@ class QuAcqModel(KBModel):
         clauses = self._require_task().constraint_clauses.get(assumption_id, [])
         return get_constraint_vars(clauses, self.id_to_name)
 
-    def prepare(self, oracle: 'FeatureModelOracle') -> QuAcqTask:
+    def prepare(self, oracle: 'BGProvider') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.
 
         Args:
-            oracle: FeatureModelOracle for BG data and feature IDs
+            oracle: BGProvider supplying BG data and feature IDs
 
         Returns:
             Prepared QuAcqTask with assumption IDs assigned

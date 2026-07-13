@@ -19,7 +19,7 @@ from explanation.api import build_checker, SolverBackend, DiagnosisTask
 from explanation.api import QuickXPlain
 
 if TYPE_CHECKING:
-    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle import KBProvider
     from explanation.api import TestCase, TestSuite
 
 
@@ -39,7 +39,7 @@ class GenerateNE:
     result KB so subsequent testcases see previous NEs.
     """
 
-    def __init__(self, oracle: FeatureModelOracle) -> None:
+    def __init__(self, oracle: KBProvider) -> None:
         self.oracle = oracle
 
     def generate(
