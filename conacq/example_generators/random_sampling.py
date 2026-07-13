@@ -41,8 +41,7 @@ class RandomSamplingGenerator(ExampleGenerator):
         Returns:
             ExampleSet with classified examples
         """
-        if seed is not None:
-            random.seed(seed)
+        self._rng = random.Random(seed)
 
         example_set = ExampleSet(metadata={
             'method': 'RS',
@@ -54,7 +53,7 @@ class RandomSamplingGenerator(ExampleGenerator):
 
         for i in range(n):
             # Random complete assignment
-            assignments = {f: random.choice([True, False]) for f in features_list}
+            assignments = {f: self._rng.choice([True, False]) for f in features_list}
 
             example = Example(
                 id=f"rs_{i + 1}",
@@ -98,8 +97,7 @@ class BalancedRandomSamplingGenerator(ExampleGenerator):
         Returns:
             ExampleSet with balanced examples
         """
-        if seed is not None:
-            random.seed(seed)
+        self._rng = random.Random(seed)
 
         example_set = ExampleSet(metadata={
             'method': 'BalancedRS',
@@ -137,7 +135,7 @@ class BalancedRandomSamplingGenerator(ExampleGenerator):
 
         while len(example_set.negative) < n_negative and neg_attempts < max_neg_attempts:
             # Random configuration
-            config = {f: random.choice([True, False]) for f in features_list}
+            config = {f: self._rng.choice([True, False]) for f in features_list}
 
             # Check if invalid (negative)
             if not self.oracle.is_valid(config):
@@ -220,8 +218,7 @@ class ControlledRandomSamplingGenerator(ExampleGenerator):
         Returns:
             ExampleSet with controlled E⁺/E⁻ distribution
         """
-        if seed is not None:
-            random.seed(seed)
+        self._rng = random.Random(seed)
 
         n_positive, n_negative = self.calculate_distribution(total, valid_configs)
 
@@ -263,7 +260,7 @@ class ControlledRandomSamplingGenerator(ExampleGenerator):
 
         while len(example_set.negative) < n_negative and neg_attempts < max_neg_attempts:
             # Random configuration
-            config = {f: random.choice([True, False]) for f in features_list}
+            config = {f: self._rng.choice([True, False]) for f in features_list}
 
             # Check if invalid (negative)
             if not self.oracle.is_valid(config):

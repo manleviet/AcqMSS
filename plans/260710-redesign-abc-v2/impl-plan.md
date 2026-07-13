@@ -238,6 +238,13 @@ Main (đã verify — brief lệch cơ học): RNG global ở `base.py:71-74`, `
 1. **safety-net:** `tests/test_generator_characterization.py` pin sequence seeded hiện tại (`random.seed(s)` global ≡ `random.Random(s)` cùng MT sequence → hành vi giữ).
 2. `random.Random(seed)` instance per-generator, không đụng global, ở 4 file trên.
 
+**✅ Thực thi (staged, chưa commit):**
+- 4 file refactor: `base.py` (`self._rng` default `__init__` + `_generate_valid_config`), `random_sampling.py` (3× `generate`), `feature_frequency.py` (`generate` + 2 helper), `query_provider.py` (gộp nhánh `seed=None` → `random.Random(seed).shuffle`).
+- safety-net `tests/test_generator_characterization.py` (14 test): 4 test isolation ĐỎ trên code cũ (chứng minh refutable) → XANH sau refactor; 10 test reproducibility XANH cả hai chiều.
+- **Đã verify oracle/SAT path KHÔNG dùng `random.*` toàn cục** ⇒ sequence seeded GIỮ NGUYÊN vs main; **0 golden đỏ** (suite 431 pass).
+- **Delta resolved:** `query_provider.py:56` XÁC NHẬN là file thứ 4 (handoff cũ ghi "không dùng random" là drift — code thực có `random.shuffle(self._pool)` ở nhánh `seed=None`). `nwise_coverage.py` không dùng random.
+- Gate: suite **431** (≥417) · guard 6-rule xanh · T9 extraction-diff xanh · grep 0 `random.*` toàn cục trong `example_generators/`.
+
 ## T17 — Dead-code cleanup
 
 1. Chuyển `tests/test_bias_module.py` + `test_bias_module_1.py` → `scripts/` (demo, đổi tên `*demo*`).

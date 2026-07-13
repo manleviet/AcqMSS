@@ -32,6 +32,11 @@ class ExampleGenerator(ABC):
         """
         self.oracle = oracle
         self.features = oracle.get_variables()
+        # Per-instance RNG so generation never touches the process-global
+        # ``random`` stream. Each ``generate`` call reseeds it via
+        # ``self._rng = random.Random(seed)``; this default keeps the attribute
+        # present for any helper reached before ``generate`` sets a seed.
+        self._rng = random.Random()
 
     @abstractmethod
     def generate(self, **kwargs) -> ExampleSet:
@@ -68,9 +73,9 @@ class ExampleGenerator(ABC):
             Valid configuration dict, or None if failed
         """
         shuffled = list(features_list)
-        random.shuffle(shuffled)
+        self._rng.shuffle(shuffled)
 
-        n_fixed = random.randint(0, len(shuffled) // 2)
-        partial = {f: random.choice([True, False]) for f in shuffled[:n_fixed]}
+        n_fixed = self._rng.randint(0, len(shuffled) // 2)
+        partial = {f: self._rng.choice([True, False]) for f in shuffled[:n_fixed]}
 
         return self.oracle.complete_configuration(partial)

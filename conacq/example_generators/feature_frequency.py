@@ -45,8 +45,7 @@ class FeatureFrequencyGenerator(ExampleGenerator):
         Returns:
             ExampleSet with FF coverage
         """
-        if seed is not None:
-            random.seed(seed)
+        self._rng = random.Random(seed)
 
         example_set = ExampleSet(metadata={
             'method': 'FF',
@@ -183,16 +182,16 @@ class FeatureFrequencyGenerator(ExampleGenerator):
         Returns:
             Valid configuration dict, or None if failed
         """
-        random.shuffle(uncovered)
+        self._rng.shuffle(uncovered)
         target_feature, target_value = uncovered[0]
 
         # Build partial with target + random extras for diversity
         partial = {target_feature: target_value}
         other_features = [f for f in features_list if f != target_feature]
-        random.shuffle(other_features)
+        self._rng.shuffle(other_features)
         n_extra = min(len(other_features) // 3, 5)
         for f in other_features[:n_extra]:
-            partial[f] = random.choice([True, False])
+            partial[f] = self._rng.choice([True, False])
 
         # Try full partial, then target-only fallback
         config = self.oracle.complete_configuration(partial)
@@ -216,10 +215,10 @@ class FeatureFrequencyGenerator(ExampleGenerator):
             Configuration dict (may be valid or invalid)
         """
         # Start with random
-        config = {f: random.choice([True, False]) for f in features_list}
+        config = {f: self._rng.choice([True, False]) for f in features_list}
 
         # Bias toward uncovered requirements
-        random.shuffle(uncovered)
+        self._rng.shuffle(uncovered)
         for f, val in uncovered[:5]:  # Try to satisfy up to 5 uncovered
             config[f] = val
 

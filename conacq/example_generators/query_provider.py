@@ -50,10 +50,10 @@ class QueryProvider:
         # Initializes pool state with optional seeded shuffling
         if pool is not None:
             self._pool = list(pool)
-            if seed is not None:
-                random.Random(seed).shuffle(self._pool)
-            else:
-                random.shuffle(self._pool)
+            # Per-call RNG instance keeps the shuffle off the process-global
+            # ``random`` stream. seed=None still isolates: Random(None) seeds
+            # from OS entropy without touching the shared generator.
+            random.Random(seed).shuffle(self._pool)
 
     @property
     def pool_exhausted(self) -> bool:
