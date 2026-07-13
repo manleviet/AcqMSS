@@ -1,0 +1,145 @@
+"""Layer 4 + A6 of the T11 oracle safety net — purity/structure guards.
+
+Each guard pins a STATED goal of the oracle arc so it cannot be quietly dropped,
+and each is written as ``xfail(strict=True)`` because the property does not hold
+on today's code. The day a guard goes green is the day its sub-change landed;
+``strict=True`` means an accidental green (xpass) fails loudly instead of slipping
+by unnoticed. The single intended behaviour change (A6 — get_c invariance) lives
+here too, deliberately separate from the "must not change" characterization
+layers so fixing the bug never requires breaking a green test.
+
+Reasons describe the invariant that flips the guard, not a plan label (plan
+headers get renumbered; the behavioural target is stable).
+"""
+import inspect
+from pathlib import Path
+import random
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+CONACQ_DIR = REPO_ROOT / "conacq"
+EXPLANATION_DIR = REPO_ROOT / "explanation"
+
+
+def _grep_source(needle, roots=(CONACQ_DIR, EXPLANATION_DIR)):
+    """Every `path:line` under roots (excluding bytecode) whose line contains needle."""
+    hits = []
+    for root in roots:
+        for path in sorted(root.rglob("*.py")):
+            if "__pycache__" in path.parts:
+                continue
+            for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if needle in line:
+                    hits.append(f"{path.relative_to(REPO_ROOT)}:{lineno}")
+    return hits
+
+
+# ---------------------------------------------------------------------------
+# A6 — the one intended behaviour change: get_c() must stop tracking the last query
+# ---------------------------------------------------------------------------
+@pytest.mark.xfail(
+    strict=True,
+    reason="get_c() is rebound by each is_valid() (with_configuration); it must "
+           "become invariant once the model reads set_c from its frozen task",
+)
+def test_get_c_is_invariant_across_queries(oracle):
+    before = list(oracle.get_c())
+    feats = sorted(oracle.get_variables())
+    rng = random.Random(1)
+    for _ in range(50):
+        oracle.is_valid({f: rng.choice([True, False]) for f in feats})
+    assert oracle.get_c() == before
+
+
+# ---------------------------------------------------------------------------
+# Layer 4 — purity & structure
+# ---------------------------------------------------------------------------
+@pytest.mark.xfail(
+    strict=True,
+    reason="the oracle model still exposes the with_configuration mutator; a pure "
+           "model has no post-build mutating method",
+)
+def test_oracle_model_has_no_configuration_mutator():
+    from conacq.oracle.fm_oracle_model import FMOracleModel
+    assert not hasattr(FMOracleModel, "with_configuration")
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="the four models still have divergent prepare signatures; they must "
+           "unify on prepare_task(self, task_input) -> PreparedTask",
+)
+def test_prepare_task_is_unified_across_models():
+    from explanation.models.pysat_diagnosis_model import DiagnosisModel
+    from conacq.algorithms.acqmss.congen_model import ConGenModel
+    from conacq.algorithms.quacq.quacq_model import QuAcqModel
+    from conacq.oracle.fm_oracle_model import FMOracleModel
+
+    for model in (DiagnosisModel, ConGenModel, QuAcqModel, FMOracleModel):
+        assert hasattr(model, "prepare_task"), f"{model.__name__} lacks prepare_task"
+        params = list(inspect.signature(model.prepare_task).parameters)
+        assert params == ["self", "task_input"], f"{model.__name__}: {params}"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="no frozen OracleData snapshot exists yet; prepare_task still needs a "
+           "live oracle threaded through the caller",
+)
+def test_oracle_data_snapshot_is_frozen():
+    from conacq.oracle import OracleData  # noqa: F401 — absent today
+    assert OracleData.__dataclass_params__.frozen
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="the cached _base_set_c bridge is still in the oracle model source; it "
+           "must be gone once set_c is read directly from the frozen task",
+)
+def test_base_set_c_is_gone_from_source():
+    hits = _grep_source("base_set_c")
+    assert hits == [], "base_set_c still present:\n  " + "\n  ".join(hits)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="models still raise a call-ordering RuntimeError; a pure model built "
+           "eagerly has no 'call prepare() first' gate",
+)
+def test_no_call_prepare_first_runtime_error_in_source():
+    hits = _grep_source("Call prepare() first")
+    assert hits == [], "call-ordering RuntimeError still present:\n  " + "\n  ".join(hits)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="GenerateNE is still exported from conacq.algorithms; it belongs behind "
+           "the acquisition workflow, not the package facade",
+)
+def test_generate_ne_not_exported_from_algorithms():
+    import conacq.algorithms as algorithms
+    assert "GenerateNE" not in getattr(algorithms, "__all__", [])
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="complete_configuration rebuilds its SAT solver on every call; it must "
+           "reuse a single solver across calls",
+)
+def test_complete_configuration_builds_solver_once(oracle, monkeypatch):
+    import conacq.oracle.fm_oracle as fm_oracle_module
+
+    constructions = {"n": 0}
+    real_solver = fm_oracle_module.Solver
+
+    def counting_solver(*args, **kwargs):
+        constructions["n"] += 1
+        return real_solver(*args, **kwargs)
+
+    monkeypatch.setattr(fm_oracle_module, "Solver", counting_solver)
+
+    partial = {sorted(oracle.get_variables())[0]: True}
+    oracle.complete_configuration(partial)
+    oracle.complete_configuration(partial)
+    assert constructions["n"] == 1

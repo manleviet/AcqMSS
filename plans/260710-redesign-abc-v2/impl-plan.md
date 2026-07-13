@@ -197,6 +197,14 @@ Main anchors: `base.py` Oracle ABC stub (get_variables:38, complete_configuratio
 
 **Green cuối:** 4 model cùng chữ ký `prepare_task(task_input) -> PreparedTask`; model pure; `base_set_c` = 0 hit; hành vi diagnoses/membership/completion Y HỆT baseline; guard 2 chiều xanh. Docs: system-architecture oracle section + congen.md/quacq.md nếu đụng.
 
+**✅ 11.0 thực thi (NET-ONLY, staged — theo `t11-safety-net.md` 4 lớp, thay thiết kế 2-file ở dòng 190):**
+- **Rule #1:** `git diff --stat` trên `conacq/oracle` · `conacq/algorithms` · `explanation/models` = RỖNG. Chỉ file test/fixture/script MỚI.
+- **L1 trace** (`test_t11_oracle_trace_net.py`): record&replay 14 getter + is_valid×220 + completion trên REAL-FM-7·arcade·busybox(slow). Golden JSON đóng băng (recorder `scripts/build_t11_oracle_net_fixtures.py`), snapshot get_c TRƯỚC query ⇒ không mã hoá A6. Fixture thiếu ⇒ **FAIL**, không skip.
+- **L2 ID golden** (`test_t11_prepared_task_ids.py`): 7 factory DiagnosisModel + ConGen/QuAcq prep + **GenerateNE per-testcase** (ne_id/ne_clause/set_kb growth — seam A6-nhiễm + T11.4 relocate).
+- **L3 E2E** (`test_t11_e2e_learned_kb.py`): ConGen RS(kb=17,n_mss=78)·FF(kb=18,n_mss=102); QuAcq học KB RỖNG tới 500 query ⇒ pin **query_history** (15-query trajectory) + convergence. *(diagnoses không phải attr; pin kb_assumption_ids/n_mss/n_kb.)*
+- **L4+A6 guard** (`test_t11_purity_guards.py`): **8 `xfail(strict)`** (A6 get_c-invariant · with_configuration · prepare_task-unified · OracleData-frozen[import `conacq.oracle`] · base_set_c=0 · no RuntimeError · GenerateNE off `__all__` · complete_config-1-solver). Tất cả ĐỎ đúng lý do, 0 XPASS. Cờ cứng: 8 guard đỏ hôm nay (spec ghi 4).
+- **Gate:** suite **445 + 8 xfailed** · guard 6-rule xanh · lưới T9 xanh. **Bug thấy-KHÔNG-sửa:** A6 pollution (đã pin A6 xfail). *(QuAcq KB rỗng trong test-setup này = artifact bias/example, KHÔNG phải lỗi — recall thật ghi trên REAL-FM-7 ~1–3%, n_kb 1–6/~100: yếu nhưng khác 0, đúng hành vi. Trajectory-pin vẫn đủ: T11 chỉ đụng oracle, L1 pin mọi câu-trả-lời + trajectory pin mọi câu-hỏi ⇒ cùng thứ học được theo cấu trúc.)*
+
 ## T11b — Post-oracle cleanup block (làm SAU T11, một lượt sửa api/guard/docs)
 
 Gom các nợ đụng builder/prep-hierarchy + api T12 (đã đóng băng) → làm chung sau khi T11 tái cấu trúc prep arc:
