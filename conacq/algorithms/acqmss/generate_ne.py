@@ -19,7 +19,7 @@ from explanation.api import build_checker, SolverBackend, DiagnosisTask
 from explanation.api import QuickXPlain
 
 if TYPE_CHECKING:
-    from conacq.oracle import KBProvider
+    from conacq.oracle import OracleData
     from explanation.api import TestCase, TestSuite
 
 
@@ -39,7 +39,9 @@ class GenerateNE:
     result KB so subsequent testcases see previous NEs.
     """
 
-    def __init__(self, oracle: KBProvider) -> None:
+    def __init__(self, oracle: "OracleData") -> None:
+        # Frozen provisioning snapshot (ADR-0009), not the live oracle: the KB and
+        # background this reads cannot shift under it between test cases.
         self.oracle = oracle
 
     def generate(

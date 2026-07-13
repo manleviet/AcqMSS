@@ -81,20 +81,24 @@ def canonical_snapshot(oracle):
     is pinned separately, as an xfail, in the guard suite).
     """
     # NOTE: the dict keys below are LABELS of a frozen recording, not API names.
-    # They do not move when a method is renamed — the golden JSON was recorded
+    # They do not move when a method is relocated — the golden JSON was recorded
     # under these labels, so keeping them keeps `git diff tests/fixtures/` empty.
+    # Job ② (kb/assumptions/c/bg_data/root_clauses) moved off the live oracle onto
+    # the frozen OracleData snapshot (ADR-0009); the values are byte-identical, so
+    # the labels stay and the reads follow the data to its new home.
+    data = oracle.oracle_data
     return {
         "get_variables": sorted(oracle.get_variables()),
         "get_feature_ids": _canon(oracle.get_variable_ids()),
         "get_root_feature": oracle.get_root_feature(),
-        "get_root_clauses": _canon(oracle.get_root_clauses()),
+        "get_root_clauses": _canon(data.get_root_clauses()),
         "get_cnf_clauses": _canon(oracle.get_cnf_clauses()),
         "get_num_constraints": oracle.get_num_constraints(),
         "get_next_available_id": oracle.get_next_available_id(),
-        "get_c": _canon(oracle.get_c()),
-        "get_kb": _canon(oracle.get_kb()),
-        "get_assumptions": _canon(oracle.get_assumptions()),
-        "get_bg_data": _canon_bgdata(oracle.get_bg_data()),
+        "get_c": _canon(data.get_c()),
+        "get_kb": _canon(data.get_kb()),
+        "get_assumptions": _canon(data.get_assumptions()),
+        "get_bg_data": _canon_bgdata(data.get_bg_data()),
         "get_fm_data": _canon_fmdata(oracle.get_fm_data()),
     }
 

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from explanation.api import AbstractModelBuilder
 
 if TYPE_CHECKING:
-    from conacq.oracle import PreparationOracle
+    from conacq.oracle import OracleData
 
 
 class OracleBiasModelBuilder(AbstractModelBuilder):
@@ -34,7 +34,7 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
     def __init__(self) -> None:
         super().__init__()
         self._bias_path: Optional[str] = None
-        self._oracle: Optional['PreparationOracle'] = None
+        self._oracle: Optional['OracleData'] = None
         self._use_incremental: bool = True
 
     @classmethod
@@ -44,8 +44,12 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         builder._bias_path = bias_path
         return builder
 
-    def with_oracle(self, oracle: 'PreparationOracle') -> 'OracleBiasModelBuilder':
-        """Set the oracle (required — supplies BG data + next_available_id)."""
+    def with_oracle(self, oracle: 'OracleData') -> 'OracleBiasModelBuilder':
+        """Set the provisioning snapshot (required — supplies BG data + next_available_id).
+
+        Takes the frozen OracleData, not the live oracle: the builder provisions
+        the model (job ②) and must not read a live actor's state (ADR-0009).
+        """
         self._oracle = oracle
         return self
 

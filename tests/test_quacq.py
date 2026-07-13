@@ -68,7 +68,7 @@ def interactive_model(oracle):
         pytest.skip(f"Bias file not found: {BIAS_PATH}")
     return (QuAcqModelBuilder
             .from_bias(str(BIAS_PATH))
-            .with_oracle(oracle)
+            .with_oracle(oracle.oracle_data)
             .build())
 
 
@@ -265,7 +265,7 @@ class TestIntegration:
             oracle = FMOracle(str(FM_PATH))
             model = (QuAcqModelBuilder
                      .from_bias(str(BIAS_PATH))
-                     .with_oracle(oracle)
+                     .with_oracle(oracle.oracle_data)
                      .build())
 
             task = model.task
@@ -665,7 +665,7 @@ class TestBGDataPart4:
 
     def test_bgdata_part4_populated(self, oracle):
         """BGData Part 4 fields populated after oracle prepare."""
-        bg_data = oracle.get_bg_data()
+        bg_data = oracle.oracle_data.get_bg_data()
         assert len(bg_data.assignment_clauses) > 0
         assert len(bg_data.assignment_assumptions) > 0
         assert len(bg_data.pos_assignment_to_assumption) > 0

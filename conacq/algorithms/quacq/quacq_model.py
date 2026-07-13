@@ -21,7 +21,7 @@ from explanation.api import (
 from .task_preparation import QuAcqTask, QuAcqTaskPreparation
 
 if TYPE_CHECKING:
-    from conacq.oracle import BGProvider
+    from conacq.oracle import OracleData
 
 
 class QuAcqModel(KBModel):
@@ -130,11 +130,15 @@ class QuAcqModel(KBModel):
         clauses = self._require_task().constraint_clauses.get(assumption_id, [])
         return get_constraint_vars(clauses, self.id_to_name)
 
-    def prepare(self, oracle: 'BGProvider') -> QuAcqTask:
+    def prepare(self, oracle: 'OracleData') -> QuAcqTask:
         """Assign assumption IDs and build QuAcqTask.
 
+        Task preparation consumes the frozen OracleData snapshot, never the live
+        oracle — provisioning (job ②) reads a value, not a live actor's state
+        (ADR-0009). This was the second place a live oracle reached into prep.
+
         Args:
-            oracle: BGProvider supplying BG data and feature IDs
+            oracle: OracleData supplying BG data and feature IDs
 
         Returns:
             Prepared QuAcqTask with assumption IDs assigned

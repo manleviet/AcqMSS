@@ -19,7 +19,7 @@ from explanation.api import (
     slice_assumptions,
 )
 if TYPE_CHECKING:
-    from conacq.oracle import BGProvider
+    from conacq.oracle import OracleData
     from .quacq_model import QuAcqModel
 
 
@@ -54,14 +54,14 @@ class QuAcqTaskPreparation:
     """
 
     def prepare(self, model: QuAcqModel,
-                oracle: BGProvider) -> PreparedTask:
-        """Prepare QuAcqTask from model and oracle.
+                oracle: "OracleData") -> PreparedTask:
+        """Prepare QuAcqTask from model and the frozen OracleData snapshot.
 
         Build-then-freeze: accumulate into locals, construct frozen QuAcqTask once.
 
         Args:
             model: QuAcqModel with bias constraint_map
-            oracle: BGProvider supplying BG data and feature IDs
+            oracle: OracleData supplying BG data and feature IDs
 
         Returns:
             PreparedTask with QuAcqTask and DescriptionProvider

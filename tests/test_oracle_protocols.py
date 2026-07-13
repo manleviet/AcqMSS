@@ -1,8 +1,14 @@
 """The narrow oracle protocols are real contracts, and they distinguish.
 
-FMOracle must satisfy every role protocol (it is the full oracle), and
-FMOracleModel must satisfy CatalogProvider (it owns the catalog now). Crucially,
-the protocols must DISCRIMINATE: an object with only is_valid is a MembershipOracle
+The oracle does two jobs, and ADR-0009 split them across two objects:
+- **FMOracle answers questions (job ①)** — it satisfies the *answer* protocols
+  (MembershipOracle, CompletableOracle, CatalogProvider, GeneratorOracle) and
+  deliberately does NOT satisfy the *provision* protocols.
+- **OracleData provisions the algorithm (job ②)** — the frozen snapshot satisfies
+  BGProvider + KBProvider (and thus the PreparationOracle composite).
+
+FMOracleModel satisfies CatalogProvider (it owns the catalog). Crucially, the
+protocols must DISCRIMINATE: an object with only is_valid is a MembershipOracle
 but not a KBProvider, and vice versa. A protocol that everything satisfies is a
 decorative protocol — this test is what keeps these honest.
 """
@@ -20,10 +26,12 @@ from conacq.oracle import (
 )
 from tests.resource_paths import FM_PATH
 
-_ALL_PROTOCOLS = [
-    MembershipOracle, CompletableOracle, CatalogProvider,
-    BGProvider, KBProvider, GeneratorOracle, PreparationOracle,
+# Job ① — what the oracle answers.
+_ANSWER_PROTOCOLS = [
+    MembershipOracle, CompletableOracle, CatalogProvider, GeneratorOracle,
 ]
+# Job ② — what the frozen OracleData snapshot provisions (never the live oracle).
+_PROVISION_PROTOCOLS = [BGProvider, KBProvider, PreparationOracle]
 
 
 @pytest.fixture(scope="module")
@@ -33,9 +41,24 @@ def fm_oracle():
     return FMOracle(str(FM_PATH))
 
 
-@pytest.mark.parametrize("protocol", _ALL_PROTOCOLS, ids=lambda p: p.__name__)
-def test_feature_model_oracle_satisfies_every_protocol(fm_oracle, protocol):
+@pytest.mark.parametrize("protocol", _ANSWER_PROTOCOLS, ids=lambda p: p.__name__)
+def test_fm_oracle_satisfies_answer_protocols(fm_oracle, protocol):
+    """The oracle answers questions (job ①): membership, completion, catalog."""
     assert isinstance(fm_oracle, protocol)
+
+
+@pytest.mark.parametrize("protocol", _PROVISION_PROTOCOLS, ids=lambda p: p.__name__)
+def test_fm_oracle_does_not_satisfy_provision_protocols(fm_oracle, protocol):
+    """The oracle does NOT provision (job ②) — that surface moved to the frozen
+    OracleData snapshot (ADR-0009). The structural expression of A6's cure."""
+    assert not isinstance(fm_oracle, protocol)
+
+
+@pytest.mark.parametrize("protocol", _PROVISION_PROTOCOLS, ids=lambda p: p.__name__)
+def test_oracle_data_satisfies_provision_protocols(fm_oracle, protocol):
+    """OracleData is the provisioning surface: BGProvider + KBProvider, hence the
+    PreparationOracle composite."""
+    assert isinstance(fm_oracle.oracle_data, protocol)
 
 
 def test_fm_oracle_model_owns_the_catalog(fm_oracle):

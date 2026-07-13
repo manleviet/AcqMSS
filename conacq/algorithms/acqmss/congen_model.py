@@ -22,7 +22,7 @@ from explanation.api import Assignment, TestCase, TestSuite
 from .task_preparation import ConGenTask
 
 if TYPE_CHECKING:
-    from conacq.oracle import PreparationOracle
+    from conacq.oracle import OracleData
     from .congen import ConGenResult
 
 
@@ -198,17 +198,17 @@ class ConGenModel(KBModel):
 
     def prepare(
             self,
-            oracle: PreparationOracle,
+            oracle: "OracleData",
             positive_examples: Optional[List[Dict[str, bool]]] = None,
             negative_examples: Optional[List[Dict[str, bool]]] = None
     ) -> ConGenTask:
         """Prepare ConGen task including GenerateNE.
 
-        Oracle injected here — model stays FM-agnostic.
-        Can be called multiple times (e.g., for CV folds).
+        Provisioning data injected here as a frozen OracleData snapshot — model
+        stays FM-agnostic. Can be called multiple times (e.g., for CV folds).
 
         Args:
-            oracle: Feature model oracle for NE generation and FM metadata
+            oracle: Frozen OracleData snapshot for NE generation and root BG/KB
             positive_examples: Optional new E+ (for fold reuse)
             negative_examples: Optional new E- (for fold reuse)
 

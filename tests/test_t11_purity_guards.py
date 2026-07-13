@@ -4,10 +4,20 @@ Each guard pins a STATED goal of the oracle arc so it cannot be quietly dropped.
 A guard is written as ``xfail(strict=True)`` while its property does not yet hold;
 ``strict=True`` means the day it flips green (an xpass) the suite fails loudly, so
 the flip is never missed. When a sub-change lands, its guard is turned into a
-plain assertion — a permanent regression guard. The get_c-invariance guard (the
-one intended behaviour change) and the two that come with it — no post-build
-mutator, no cached base-set_c bridge — have landed and are permanent; the
-remaining five stay xfail until their sub-changes arrive.
+plain assertion — a permanent regression guard. Job ② leaving the oracle facade
+(``test_oracle_does_not_provision``), the frozen ``OracleData`` snapshot, and the
+two guards that came with the A6 symptom fix — no post-build mutator, no cached
+base-set_c bridge — have landed and are permanent. The behavioural A6 guard is
+NOT retired: it is moved onto the new surface
+(``test_oracle_background_is_invariant_across_queries`` reads ``oracle_data.c``),
+because ``frozen=True`` blocks rebinding that field, not mutating its contents in
+place — so the invariant still needs a live guard (the A5 lesson).
+
+Five stay xfail until their sub-changes arrive — including the new
+``test_oracle_holds_no_provisioning_object``: the facade guard proves the oracle's
+own surface is clean, but the oracle still *holds* a live provisioning object
+(``_oracle_model``) one attribute away. That flips at T11.4b, when the T3 recipe
+strips the model's getters.
 
 Reasons describe the invariant that flips the guard, not a plan label (plan
 headers get renumbered; the behavioural target is stable).
@@ -37,18 +47,60 @@ def _grep_source(needle, roots=(CONACQ_DIR, EXPLANATION_DIR)):
 
 
 # ---------------------------------------------------------------------------
-# A6 — the one intended behaviour change: get_c() must stop tracking the last query
+# A6 — the class-level cure: the oracle answers, it does not provision
 # ---------------------------------------------------------------------------
-def test_get_c_is_invariant_across_queries(oracle):
-    """get_c() stays constant across membership queries — a query must never leak
-    into the background the oracle hands downstream. Now enforced (the oracle
-    computes each query's set_c locally); permanent regression guard."""
-    before = list(oracle.get_c())
+def test_oracle_does_not_provision(oracle):
+    """The oracle FACADE answers questions; it does not provision the algorithm.
+
+    Job ② (kb/assumptions/c/bg_data/root_clauses) lives on the frozen
+    ``OracleData`` snapshot, never on the oracle's own surface — so consumers that
+    depend on a provisioning protocol cannot bind to the live oracle. The day the
+    oracle satisfies either provisioning protocol again, job ② has leaked back
+    onto the actor and the door to the next A6 is open (ADR-0009).
+
+    This checks the facade only. That the oracle does not *hold* a live
+    provisioning object is a stronger property, guarded separately by
+    ``test_oracle_holds_no_provisioning_object`` (flips at T11.4b)."""
+    from conacq.oracle import BGProvider, KBProvider
+    assert not isinstance(oracle, KBProvider)
+    assert not isinstance(oracle, BGProvider)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="the oracle still holds a live provisioning object (_oracle_model "
+           "satisfies KBProvider); job ② is one attribute-access away until the "
+           "T3 recipe strips the model's getters (T11.4b)",
+)
+def test_oracle_holds_no_provisioning_object(oracle):
+    """The arrangement, not just the facade: the oracle must hold NO live object
+    that can provision. A clean facade with ``oracle._oracle_model`` still a
+    KBProvider leaves job ② one attribute-access away — exactly the arrangement
+    ADR-0009 removes. ``oracle_data`` is the frozen snapshot and is meant to be
+    held, so it is exempt."""
+    from conacq.oracle import BGProvider, KBProvider
+    for name, val in vars(oracle).items():
+        if name == "oracle_data":  # the frozen provisioning snapshot — by design
+            continue
+        assert not isinstance(val, (KBProvider, BGProvider)), (
+            f"oracle holds a live provisioning object at .{name}"
+        )
+
+
+def test_oracle_background_is_invariant_across_queries(oracle):
+    """The background the checker sees (``oracle_data.c``) must not shift across
+    membership queries — a query must never leak into the facts the acquisition
+    algorithm treats as true. ``frozen=True`` blocks REBINDING ``oracle_data.c``,
+    not MUTATING its contents in place (``.c.append(...)`` would still run), so a
+    future ``is_valid`` that did ``self._data.c.extend(...)`` instead of
+    ``self._data.c + ...`` would poison the background exactly like A6, silently.
+    Permanent guard for that invariant — moved onto the new surface, not retired."""
+    before = list(oracle.oracle_data.c)
     feats = sorted(oracle.get_variables())
     rng = random.Random(1)
     for _ in range(50):
         oracle.is_valid({f: rng.choice([True, False]) for f in feats})
-    assert oracle.get_c() == before
+    assert oracle.oracle_data.c == before
 
 
 # ---------------------------------------------------------------------------
@@ -79,13 +131,11 @@ def test_prepare_task_is_unified_across_models():
         assert params == ["self", "task_input"], f"{model.__name__}: {params}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="no frozen OracleData snapshot exists yet; prepare_task still needs a "
-           "live oracle threaded through the caller",
-)
 def test_oracle_data_snapshot_is_frozen():
-    from conacq.oracle import OracleData  # noqa: F401 — absent today
+    """Job ② is an immutable value: OracleData is a frozen dataclass, so nothing
+    a query does can rebind what the provisioning consumers read. Permanent
+    guard (landed with the role split)."""
+    from conacq.oracle import OracleData
     assert OracleData.__dataclass_params__.frozen
 
 

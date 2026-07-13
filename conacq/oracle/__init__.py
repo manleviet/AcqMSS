@@ -12,6 +12,7 @@ Provides ground truth interfaces for classifying configurations:
 
 from .base import Oracle
 from .bg_data import BGData
+from .oracle_data import OracleData
 from .fm_data import FMData
 from .protocols import (
     MembershipOracle,
@@ -32,6 +33,7 @@ from .constraint_description import extract_constraint_descriptions
 __all__ = [
     'Oracle',
     'BGData',
+    'OracleData',
     'FMData',
     # Narrow role protocols (contracts consumers depend on)
     'MembershipOracle',

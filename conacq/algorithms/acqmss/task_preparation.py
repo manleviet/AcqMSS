@@ -23,7 +23,7 @@ from .generate_ne import GenerateNE
 if TYPE_CHECKING:
     from explanation.api import TestSuite
     from .congen_model import ConGenModel
-    from conacq.oracle import PreparationOracle
+    from conacq.oracle import OracleData
 
 
 @dataclass(frozen=True)
@@ -67,8 +67,8 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel, oracle: PreparationOracle) -> PreparedTask:
-        """Prepare ConGen task from model. BG from Oracle, oracle for GenerateNE.
+    def prepare(self, model: ConGenModel, oracle: "OracleData") -> PreparedTask:
+        """Prepare ConGen task from model. BG + KB from the frozen OracleData snapshot.
 
         Shared Assumption ID Layout (ConGen owns Parts 5-8):
           Parts 1-4: Owned by Oracle (see OracleTaskPreparation)
@@ -150,7 +150,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             set_neg_tv: List[int],
             provider: DescriptionProvider,
             model: ConGenModel,
-            oracle: PreparationOracle,
+            oracle: "OracleData",
             testsuite: TestSuite,
             id_assumption: int
     ) -> int:

@@ -10,8 +10,8 @@ from typing import Dict, Optional, Set, List
 from pysat.solvers import Solver
 
 from conacq.oracle.base import Oracle
-from conacq.oracle.bg_data import BGData
 from conacq.oracle.fm_data import FMData
+from conacq.oracle.oracle_data import OracleData
 from conacq.oracle.fm_oracle_model import FMOracleModel
 from explanation.api import variable_literals_to_config, config_to_assignment_assumptions
 from explanation.api import build_checker, SolverBackend
@@ -58,6 +58,27 @@ class FMOracle(Oracle):
         # Lazy-loaded for description extraction (most callers never need this)
         self._fm = None
 
+        # Job ② (ADR-0009): freeze the provisioning surface once, at build time.
+        # The oracle answers queries; this snapshot provisions the algorithm.
+        # Being immutable, nothing a membership query does can reach it.
+        self.oracle_data = self._build_oracle_data()
+
+    def _build_oracle_data(self) -> OracleData:
+        """Snapshot the oracle model's provisioning surface into a frozen value."""
+        model = self._oracle_model
+        # Raw root-constraint clauses, keyed by the root feature name (unchanged
+        # from the former get_root_clauses computation).
+        root_clauses = list(model.constraint_map[self.get_root_feature()])
+        return OracleData(
+            kb=model.get_kb(),
+            assumptions=model.get_assumptions(),
+            c=model.get_c(),
+            bg_data=model.bg_data,
+            root_clauses=root_clauses,
+            assignment_map=model.assignment_map,
+            next_available_id=model.next_available_id,
+        )
+
     # TODO: need check
     @property
     def fm(self):
@@ -85,11 +106,12 @@ class FMOracle(Oracle):
         if any(name not in name_to_id for name in assignments):
             raise KeyError(f"Unknown features in assignment: {set(assignments) - set(name_to_id)}")
 
-        # FM-constraint assumptions (the task's set_c, always active) plus this
-        # query's feature-assignment assumptions. Computed locally: the model is
-        # never mutated, so get_c() never carries a query's leftovers.
-        set_c = self._oracle_model.get_c() + config_to_assignment_assumptions(
-            assignments, self._oracle_model.assignment_map)
+        # FM-constraint assumptions (the frozen snapshot's set_c, always active)
+        # plus this query's feature-assignment assumptions. Both come from the
+        # immutable OracleData: a query reads a frozen value, never a live actor's
+        # shiftable state, so the background it hands the checker cannot drift.
+        set_c = self.oracle_data.c + config_to_assignment_assumptions(
+            assignments, self.oracle_data.assignment_map)
 
         return self._checker.is_consistent(set_c)
 
@@ -109,10 +131,6 @@ class FMOracle(Oracle):
             num_constraints=self.get_num_constraints(),
             next_available_id=self.get_next_available_id(),
         )
-
-    def get_bg_data(self) -> BGData:
-        """Return root BG assumption data for ConGen."""
-        return self._oracle_model.bg_data
 
     def get_variables(self) -> Set[str]:
         """Get all feature names (delegated to the catalog owner)."""
@@ -159,28 +177,10 @@ class FMOracle(Oracle):
         """Convert SAT model to feature config dict."""
         return variable_literals_to_config(model, self._oracle_model.id_to_name)
 
-    # Convenience getters (delegate to model)
-    def get_kb(self) -> List[List[int]]:
-        """Get the full knowledge base with assumptions."""
-        return self._oracle_model.task.set_kb
-
-    def get_assumptions(self) -> List[int]:
-        """Get the list of assumption literals."""
-        return self._oracle_model.task.assumptions
-
-    def get_c(self) -> List[int]:
-        """Get the set of constraint assumptions (FM constraints only, excluding feature assignments)."""
-        return self._oracle_model.get_c()
-
     # TODO: need check
     def get_root_feature(self) -> str:
         """Get root feature name."""
         return self.fm.root.name
-
-    def get_root_clauses(self) -> List[List[int]]:
-        """Get raw background knowledge clauses (root constraint)."""
-        root = self.get_root_feature()
-        return list(self._oracle_model.constraint_map[root])
 
     # TODO: need check
     def get_cnf_clauses(self) -> List[List[int]]:

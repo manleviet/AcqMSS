@@ -100,7 +100,7 @@ class QuAcqRunner(BaseRunner):
         from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
         self.model = (QuAcqModelBuilder
                       .from_bias(bias_path)
-                      .with_oracle(self.oracle)
+                      .with_oracle(self.oracle.oracle_data)
                       .use_incremental(use_incremental)
                       .build())
         self.max_queries = max_queries
@@ -161,8 +161,9 @@ class QuAcqRunner(BaseRunner):
             with profiler.timer("quacq_total_time"):
                 checker = None
                 try:
-                    # Re-prepare model for this run (fresh task, reuses negation)
-                    self.model.prepare(self.oracle)
+                    # Re-prepare model for this run (fresh task, reuses negation).
+                    # Prep consumes the frozen snapshot, not the live oracle (ADR-0009).
+                    self.model.prepare(self.oracle.oracle_data)
                     task = self.model.task
 
                     # Task is frozen: shuffle a copy and rebind, never mutate in place.
@@ -212,7 +213,7 @@ class QuAcqRunner(BaseRunner):
 
             # Resolve KB names and clauses, get BG clauses
             kb_names, kb_clauses = self.model.resolve_kb(result.kb_assumption_ids)
-            bg_clauses = self.oracle.get_root_clauses()
+            bg_clauses = self.oracle.oracle_data.get_root_clauses()
 
             run_result = QuAcqRunResult(
                 kb_constraints=kb_names,

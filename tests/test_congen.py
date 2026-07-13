@@ -59,7 +59,7 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     model = (ConGenModelBuilder
              .from_bias(bias_path)
              .use_incremental(is_incremental)
-             .with_oracle(oracle)
+             .with_oracle(oracle.oracle_data)
              .with_examples(examples_path)
              .build())
 
@@ -275,7 +275,7 @@ class TestGenerateNE:
         from explanation.models.testsuite import TestSuite
 
         oracle = FMOracle(str(FM_PATH))
-        generate_ne = GenerateNE(oracle)
+        generate_ne = GenerateNE(oracle.oracle_data)
         empty_ts = TestSuite(testcases=[])
         results, next_id = generate_ne.generate(empty_ts, {}, [], [], start_id=1000)
 
@@ -295,7 +295,7 @@ class TestConGenModelBuilder:
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle)
+                 .with_oracle(oracle.oracle_data)
                  .with_examples(str(EXAMPLES_FF_PATH))
                  .build())
         assert model.task is not None
@@ -314,7 +314,7 @@ class TestConGenModelBuilder:
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle)
+                 .with_oracle(oracle.oracle_data)
                  .with_examples_data(positive_examples=pos, negative_examples=neg)
                  .build())
         assert model.task is not None
@@ -337,18 +337,18 @@ class TestConGenModelBuilder:
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle)
+                 .with_oracle(oracle.oracle_data)
                  .build())
         examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
         pos = [e.assignments for e in examples.positive]
         neg = [e.assignments for e in examples.negative]
 
         # First prepare
-        model.prepare(oracle, positive_examples=pos, negative_examples=neg)
+        model.prepare(oracle.oracle_data, positive_examples=pos, negative_examples=neg)
         task1_kb = list(model.get_kb())
 
         # Re-prepare (idempotent)
-        model.prepare(oracle, positive_examples=pos, negative_examples=neg)
+        model.prepare(oracle.oracle_data, positive_examples=pos, negative_examples=neg)
         task2_kb = list(model.get_kb())
 
         assert task1_kb == task2_kb
@@ -366,7 +366,7 @@ class TestConGenModelBuilder:
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle)
+                 .with_oracle(oracle.oracle_data)
                  .with_examples('nonexistent.json')  # Would fail if used
                  .with_examples_data(positive_examples=pos, negative_examples=neg)
                  .build())

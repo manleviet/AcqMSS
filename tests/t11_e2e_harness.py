@@ -73,10 +73,10 @@ def generate_ne_subproblem():
     """Layer 2 (③): the GenerateNE per-testcase sub-problem ID layout.
 
     Pins each NE-clause id + clause literals + the set_kb growth for a fixed
-    negative TestSuite and start id. GenerateNE reads oracle.get_c() as QuickXPlain
-    background (the A6-affected getter) and is relocated by the model-purity work,
-    so this is exactly the seam where NE ids could drift while the learned bias KB
-    (Layer 3) stays identical.
+    negative TestSuite and start id. GenerateNE reads oracle_data.get_c() as
+    QuickXPlain background (the once-A6-affected getter, now a frozen snapshot) and
+    is relocated by the model-purity work, so this is exactly the seam where NE ids
+    could drift while the learned bias KB (Layer 3) stays identical.
     """
     from conacq.algorithms.acqmss import GenerateNE
     from conacq.oracle import FMOracle
@@ -84,7 +84,7 @@ def generate_ne_subproblem():
     oracle = FMOracle(str(FM_PATH))
     testsuite = _frozen_negative_testsuite()
     result_set_kb, result_assumptions = [], []
-    results, next_id = GenerateNE(oracle).generate(
+    results, next_id = GenerateNE(oracle.oracle_data).generate(
         testsuite,
         oracle.get_variable_ids(),
         result_set_kb,
@@ -136,7 +136,7 @@ def _congen_setup(examples_path):
     model = (ConGenModelBuilder
              .from_bias(str(BIAS_PATH))
              .use_incremental(True)
-             .with_oracle(oracle)
+             .with_oracle(oracle.oracle_data)
              .with_examples(str(examples_path))
              .build())
     task = model.task
@@ -185,7 +185,7 @@ def _quacq_setup():
     from explanation.checker.backend import build_checker, SolverBackend
 
     oracle = FMOracle(str(FM_PATH))
-    model = QuAcqModelBuilder.from_bias(str(BIAS_PATH)).with_oracle(oracle).build()
+    model = QuAcqModelBuilder.from_bias(str(BIAS_PATH)).with_oracle(oracle.oracle_data).build()
     checker = build_checker(
         model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))
     return oracle, model, checker
