@@ -1,12 +1,13 @@
 """Layer 4 + A6 of the T11 oracle safety net — purity/structure guards.
 
-Each guard pins a STATED goal of the oracle arc so it cannot be quietly dropped,
-and each is written as ``xfail(strict=True)`` because the property does not hold
-on today's code. The day a guard goes green is the day its sub-change landed;
-``strict=True`` means an accidental green (xpass) fails loudly instead of slipping
-by unnoticed. The single intended behaviour change (A6 — get_c invariance) lives
-here too, deliberately separate from the "must not change" characterization
-layers so fixing the bug never requires breaking a green test.
+Each guard pins a STATED goal of the oracle arc so it cannot be quietly dropped.
+A guard is written as ``xfail(strict=True)`` while its property does not yet hold;
+``strict=True`` means the day it flips green (an xpass) the suite fails loudly, so
+the flip is never missed. When a sub-change lands, its guard is turned into a
+plain assertion — a permanent regression guard. The get_c-invariance guard (the
+one intended behaviour change) and the two that come with it — no post-build
+mutator, no cached base-set_c bridge — have landed and are permanent; the
+remaining five stay xfail until their sub-changes arrive.
 
 Reasons describe the invariant that flips the guard, not a plan label (plan
 headers get renumbered; the behavioural target is stable).
@@ -38,12 +39,10 @@ def _grep_source(needle, roots=(CONACQ_DIR, EXPLANATION_DIR)):
 # ---------------------------------------------------------------------------
 # A6 — the one intended behaviour change: get_c() must stop tracking the last query
 # ---------------------------------------------------------------------------
-@pytest.mark.xfail(
-    strict=True,
-    reason="get_c() is rebound by each is_valid() (with_configuration); it must "
-           "become invariant once the model reads set_c from its frozen task",
-)
 def test_get_c_is_invariant_across_queries(oracle):
+    """get_c() stays constant across membership queries — a query must never leak
+    into the background the oracle hands downstream. Now enforced (the oracle
+    computes each query's set_c locally); permanent regression guard."""
     before = list(oracle.get_c())
     feats = sorted(oracle.get_variables())
     rng = random.Random(1)
@@ -55,12 +54,10 @@ def test_get_c_is_invariant_across_queries(oracle):
 # ---------------------------------------------------------------------------
 # Layer 4 — purity & structure
 # ---------------------------------------------------------------------------
-@pytest.mark.xfail(
-    strict=True,
-    reason="the oracle model still exposes the with_configuration mutator; a pure "
-           "model has no post-build mutating method",
-)
 def test_oracle_model_has_no_configuration_mutator():
+    """The oracle model exposes no post-build mutator: nothing rebinds its task,
+    so no query can shift the state a later reader sees. Permanent guard against
+    reopening that seam."""
     from conacq.oracle.fm_oracle_model import FMOracleModel
     assert not hasattr(FMOracleModel, "with_configuration")
 
@@ -92,12 +89,9 @@ def test_oracle_data_snapshot_is_frozen():
     assert OracleData.__dataclass_params__.frozen
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="the cached _base_set_c bridge is still in the oracle model source; it "
-           "must be gone once set_c is read directly from the frozen task",
-)
 def test_base_set_c_is_gone_from_source():
+    """The cached base-set_c bridge is gone from the oracle source; set_c is read
+    from the frozen task. Permanent guard."""
     hits = _grep_source("base_set_c")
     assert hits == [], "base_set_c still present:\n  " + "\n  ".join(hits)
 

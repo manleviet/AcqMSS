@@ -13,7 +13,7 @@ from conacq.oracle.base import Oracle
 from conacq.oracle.bg_data import BGData
 from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel
-from explanation.api import variable_literals_to_config
+from explanation.api import variable_literals_to_config, config_to_assignment_assumptions
 from explanation.api import build_checker, SolverBackend
 from profiling import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
@@ -85,7 +85,11 @@ class FMOracle(Oracle):
         if any(name not in name_to_id for name in assignments):
             raise KeyError(f"Unknown features in assignment: {set(assignments) - set(name_to_id)}")
 
-        set_c = self._oracle_model.with_configuration(assignments).get_c()
+        # FM-constraint assumptions (the task's set_c, always active) plus this
+        # query's feature-assignment assumptions. Computed locally: the model is
+        # never mutated, so get_c() never carries a query's leftovers.
+        set_c = self._oracle_model.get_c() + config_to_assignment_assumptions(
+            assignments, self._oracle_model.assignment_map)
 
         return self._checker.is_consistent(set_c)
 

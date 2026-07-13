@@ -6,10 +6,7 @@ Exposes get_kb()/get_assumptions()/use_incremental + a prepared task for use
 with build_checker().
 """
 
-from dataclasses import replace
 from typing import Dict, List, Optional
-
-from flamapy.metamodels.configuration_metamodel.models import Configuration
 
 from conacq.kb_model import KBModel
 from conacq.oracle.bg_data import BGData
@@ -17,7 +14,6 @@ from explanation.api import (
     DiagnosisTask,
     DescriptionProvider,
     AssignmentAssumptionMap,
-    config_to_assignment_assumptions,
     PreparedTask,
     prepare_kb,
     prepare_variable_assignments,
@@ -41,16 +37,13 @@ class FMOracleModel(KBModel):
         super().__init__()
         self._fm_path: str = ""
 
-        self.configuration: Optional[Configuration] = None
-
         # Solver selection consumed by build_checker()
         self._use_incremental: bool = True
 
         # Populated after prepare()
-        self._base_set_c: List = []
-        self._pos_assignment_to_assumption: Dict[str, int] = {}
-        self._neg_assignment_to_assumption: Dict[str, int] = {}
-        # Populated after prepare()
+        # Built once, so membership queries reuse it instead of rebuilding this
+        # immutable map on every call (is_valid is a hot path).
+        self.assignment_map: Optional[AssignmentAssumptionMap] = None
         self._bg_data: Optional[BGData] = None
         self._task: Optional[DiagnosisTask] = None
         self._description_provider: Optional[DescriptionProvider] = None
@@ -116,45 +109,9 @@ class FMOracleModel(KBModel):
         """Feature name -> SAT variable id. The model owns the catalog."""
         return dict(self.name_to_id)
 
-    def _config_to_assumptions(self, configuration) -> list:
-        """Convert feature config to assignment assumption IDs.
-
-        Args:
-            configuration: Dict[str, bool] or Configuration object
-
-        Returns:
-            List of assumption IDs for the given feature assignments
-        """
-        return config_to_assignment_assumptions(
-            configuration,
-            AssignmentAssumptionMap(
-                self._pos_assignment_to_assumption,
-                self._neg_assignment_to_assumption))
-
-    def with_configuration(self, configuration) -> 'FMOracleModel':
-        """Apply feature config: updates set_c with base + assignment assumptions.
-
-        Args:
-            configuration: Dict[str, bool] or Configuration object
-
-        Returns:
-            self (for fluent chaining)
-        """
-        # Task is frozen: rebuild it with the new set_c rather than mutating.
-        # (Temporary bridge — removed when oracle purity lands and set_c is read
-        # directly from task.set_c.)
-        self._task = replace(
-            self.task,
-            set_c=self._base_set_c + self._config_to_assumptions(configuration))
-        return self
-
-    def prepare(self, configuration=None) -> DiagnosisTask:
-        """Build set_kb + assumptions from constraint_map and variables.
-
-        Args:
-            configuration: Optional Dict[str, bool] or Configuration to apply immediately
-        """
-        output = FMOracleTaskPreparation.prepare(self, configuration)
+    def prepare(self) -> DiagnosisTask:
+        """Build set_kb + assumptions from constraint_map and variables."""
+        output = FMOracleTaskPreparation.prepare(self)
 
         self._task = output.task
         self._description_provider = output.describe
@@ -184,7 +141,7 @@ class FMOracleModel(KBModel):
         self.id_to_name = fm_model.features
         self.next_available_id = fm_model.next_available_id
 
-        self.prepare(configuration=self.configuration)
+        self.prepare()
 
         return self
 
@@ -205,7 +162,7 @@ class FMOracleTaskPreparation:
     """
 
     @staticmethod
-    def prepare(model: 'FMOracleModel', configuration=None) -> PreparedTask:
+    def prepare(model: 'FMOracleModel') -> PreparedTask:
         provider = DescriptionProvider()
 
         # Use next_available_id to avoid conflicts with Tseitin variables
@@ -231,17 +188,15 @@ class FMOracleTaskPreparation:
             prepare_variable_assignments(
                 set_kb, assumptions, provider, model.name_to_id, id_assumption))
 
-        model._pos_assignment_to_assumption = pos_assignment_to_assumption
-        model._neg_assignment_to_assumption = neg_assignment_to_assumption
+        # The feature-assignment map, built once here — membership queries reuse
+        # it (is_valid appends this query's assumptions to task.set_c locally).
+        model.assignment_map = AssignmentAssumptionMap(
+            pos_assignment_to_assumption, neg_assignment_to_assumption)
 
-        # Step 3: compute and cache base set_c (FM constraint assumptions only —
-        # originals of the paired Part-3 layout, stride 2)
-        model._base_set_c = slice_assumptions(assumptions, 0, assignments_start_index, 2)
-        set_c = list(model._base_set_c)
-
-        # Step 3b: apply configuration if provided
-        if configuration is not None:
-            set_c = model._base_set_c + model._config_to_assumptions(configuration)
+        # Step 3: FM constraint assumptions only (originals of the paired Part-3
+        # layout, stride 2). Stored on the frozen task as set_c; is_valid reads it
+        # directly and never rebinds it.
+        set_c = slice_assumptions(assumptions, 0, assignments_start_index, 2)
 
         # Extract Part 4 data (assignment clauses added after Part 3)
         assignment_clauses = set_kb[assignment_kb_start:]

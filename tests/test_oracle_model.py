@@ -3,6 +3,7 @@
 import pytest
 
 from conacq.oracle.fm_oracle_model import FMOracleModel
+from explanation.api import config_to_assignment_assumptions
 from explanation.checker.backend import build_checker, SolverBackend
 
 
@@ -14,6 +15,13 @@ def _make_oracle_model(constraint_map, variables, next_available_id):
     model.next_available_id = next_available_id
     model.prepare()
     return model
+
+
+def _query_set_c(model, config):
+    """The set_c a membership query builds (mirrors FMOracle.is_valid): the task's
+    FM constraints plus this query's assignment assumptions, via the model's
+    one-off assignment_map. Pure — never touches the model."""
+    return model.get_c() + config_to_assignment_assumptions(config, model.assignment_map)
 
 
 class TestOracleModel:
@@ -42,15 +50,21 @@ class TestOracleModel:
         assert model.constraint_map == constraint_map
         assert model.name_to_id == variables
 
-    def test_config_to_active_assumptions(self):
-        """Config dict correctly maps to assumption IDs."""
+    def test_query_set_c_maps_query_without_mutating(self):
+        """A membership query's set_c contains that query's assignment assumptions
+        (mapped via the model's one-off assignment_map) and leaves the model
+        untouched — no query leaks into get_c()."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
 
-        model.with_configuration({"f1": True, "f2": False})
-        active = model.get_c()
-        # set_c includes FM constraint assumptions + feature assignment assumptions
-        assert model._pos_assignment_to_assumption["f1"] in active
-        assert model._neg_assignment_to_assumption["f2"] in active
+        before = model.get_c()
+        active = _query_set_c(model, {"f1": True, "f2": False})
+
+        # The query's assignment assumptions are present in the returned set_c...
+        assert model.assignment_map.pos_assignment_to_assumption["f1"] in active
+        assert model.assignment_map.neg_assignment_to_assumption["f2"] in active
+        # ...but the model's own state (get_c) is unchanged — no query leaks in.
+        assert model.get_c() == before
+        assert active != before
 
     def test_assumption_ids_start_after_tseitin(self):
         """Assumption IDs don't collide with FM variables."""
@@ -65,8 +79,7 @@ class TestOracleModel:
         checker = build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental), 'glucose4')
 
         # f1=True, f2=True → SAT
-        model.with_configuration({"f1": True, "f2": True})
-        assert checker.is_consistent(model.get_c()) is True
+        assert checker.is_consistent(_query_set_c(model, {"f1": True, "f2": True})) is True
         checker.cleanup()
 
     def test_checker_integration_unsat(self):
@@ -75,8 +88,7 @@ class TestOracleModel:
         checker = build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental), 'glucose4')
 
         # f1=False, f2=False → UNSAT (neither true violates f1 OR f2)
-        model.with_configuration({"f1": False, "f2": False})
-        assert checker.is_consistent(model.get_c()) is False
+        assert checker.is_consistent(_query_set_c(model, {"f1": False, "f2": False})) is False
         checker.cleanup()
 
 
