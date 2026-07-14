@@ -61,13 +61,15 @@ def test_oracle_data_satisfies_provision_protocols(fm_oracle, protocol):
     assert isinstance(fm_oracle.oracle_data, protocol)
 
 
-def test_fm_oracle_model_owns_the_catalog(fm_oracle):
-    """The catalog lives on FMOracleModel; the oracle only delegates."""
+def test_fm_oracle_exposes_the_model_catalog(fm_oracle):
+    """The catalog DATA lives on FMOracleModel (name_to_id/id_to_name); the oracle
+    is the CatalogProvider and derives its answer from that data. The model no
+    longer carries get_variables/get_variable_ids accessors (a pure KB, like
+    DiagnosisModel) — two accessors for one truth is the pattern T3 removes."""
     model = fm_oracle._oracle_model
-    assert isinstance(model, CatalogProvider)
-    # Delegation is byte-identical.
-    assert fm_oracle.get_variables() == model.get_variables()
-    assert fm_oracle.get_variable_ids() == model.get_variable_ids()
+    assert isinstance(fm_oracle, CatalogProvider)
+    assert fm_oracle.get_variable_ids() == dict(model.name_to_id)
+    assert fm_oracle.get_variables() == set(model.name_to_id.keys())
 
 
 # --- discrimination: the roles must be distinguishable, not decorative ---

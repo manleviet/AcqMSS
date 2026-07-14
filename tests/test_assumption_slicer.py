@@ -148,17 +148,17 @@ def _synthetic_oracle_model():
 def test_site5_fm_only_slice_layout():
     model = _synthetic_oracle_model()
     first_id = model.next_available_id
-    model.prepare()
+    prepared = model.prepare_task()
 
     # With no prep-time configuration, task.set_c IS the FM-only slice.
-    fm_only = model.get_c()
+    fm_only = prepared.task.set_c
     assert fm_only == [4, 6, 8]          # originals of the three FM-constraint pairs
     assert fm_only[0] == first_id
     assert _strided(fm_only)             # stride 2
 
     assignment_assumptions = (
-        list(model.assignment_map.pos_assignment_to_assumption.values())
-        + list(model.assignment_map.neg_assignment_to_assumption.values())
+        list(prepared.assignment_map.pos_assignment_to_assumption.values())
+        + list(prepared.assignment_map.neg_assignment_to_assumption.values())
     )
     # FM-only slice must contain NO variable-assignment assumption.
     assert set(fm_only).isdisjoint(assignment_assumptions)

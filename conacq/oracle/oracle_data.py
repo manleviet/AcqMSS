@@ -20,44 +20,45 @@ from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from conacq.oracle.bg_data import BGData
-    from explanation.api import AssignmentAssumptionMap
+    from explanation.api import AssignmentAssumptionMap, DiagnosisTask
 
 
 @dataclass(frozen=True)
 class OracleData:
     """Immutable snapshot of the oracle's provisioning surface (job ②).
 
+    Holds the prepared ``task`` as the SINGLE source of the KB/assumptions/set_c —
+    ``get_kb``/``get_assumptions``/``get_c`` derive from it, so there is no second
+    copy to drift (and the oracle builds its checker from the same real task, not a
+    fabricated one). The task carries the real ``set_c`` a future delta/optimising
+    checker may read; a stripped copy would break it silently.
+
     Fields:
-        kb: Full knowledge base with assumption guards (oracle task's set_kb).
-        assumptions: All assumption literals (oracle task's assumptions).
-        c: FM constraint assumptions (oracle task's set_c) — the background the
-           acquisition algorithm treats as always-true facts.
+        task: The prepared oracle task — the one source for kb/assumptions/c.
         bg_data: Root BG constraint pair + Part-4 assignment data for ConGen/QuAcq.
         root_clauses: Raw root-constraint CNF clauses (without assumption guards).
         assignment_map: Feature-assignment → assumption-id map (for query encoding).
         next_available_id: First free assumption id after the oracle's Parts 1-4.
     """
 
-    kb: List[List[int]]
-    assumptions: List[int]
-    c: List[int]
+    task: "DiagnosisTask"
     bg_data: "BGData"
     root_clauses: List[List[int]]
     assignment_map: "AssignmentAssumptionMap"
     next_available_id: int
 
-    # --- KBProvider surface ---
+    # --- KBProvider surface (derived from the task — one source of truth) ---
     def get_kb(self) -> List[List[int]]:
         """Get the full knowledge base with assumptions."""
-        return self.kb
+        return self.task.set_kb
 
     def get_assumptions(self) -> List[int]:
         """Get the list of assumption literals."""
-        return self.assumptions
+        return self.task.assumptions
 
     def get_c(self) -> List[int]:
         """Get the FM constraint assumptions (background knowledge)."""
-        return self.c
+        return self.task.set_c
 
     # --- BGProvider surface ---
     def get_bg_data(self) -> "BGData":

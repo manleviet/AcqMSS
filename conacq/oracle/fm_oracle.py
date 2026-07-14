@@ -11,8 +11,7 @@ from pysat.solvers import Solver
 
 from conacq.oracle.base import Oracle
 from conacq.oracle.fm_data import FMData
-from conacq.oracle.oracle_data import OracleData
-from conacq.oracle.fm_oracle_model import FMOracleModel
+from conacq.oracle.fm_oracle_model import FMOracleModel, FMOracleTaskPreparation
 from explanation.api import variable_literals_to_config, config_to_assignment_assumptions
 from explanation.api import build_checker, SolverBackend
 from profiling import get_global_profiler, AbstractProfiler, measure_time, count_calls
@@ -48,36 +47,22 @@ class FMOracle(Oracle):
         self.solver_name = solver_name
         self.profiler = profiler if profiler is not None else get_global_profiler()
 
-        # Prepares the model and checker
-        self._oracle_model = FMOracleModel.from_fm(fm_path).set_incremental(use_incremental).build()
+        # Build the immutable FM KB, then RECEIVE the frozen provisioning snapshot
+        # (job ②, ADR-0009) — the preparation assembles OracleData; the oracle does
+        # not build what it provides, it only holds it.
+        self._oracle_model = FMOracleModel.from_fm(fm_path).build()
+        self.oracle_data = FMOracleTaskPreparation.prepare(self._oracle_model)
+
+        # The oracle builds its own membership checker (job ①) from the REAL task in
+        # the snapshot (one source — no fabricated task). The oracle owns its solver
+        # mode (use_incremental).
         self._checker = build_checker(
-            self._oracle_model.task,
-            SolverBackend.from_flags(use_incremental=self._oracle_model.use_incremental),
+            self.oracle_data.task,
+            SolverBackend.from_flags(use_incremental=use_incremental),
             solver_name, self.profiler)
 
         # Lazy-loaded for description extraction (most callers never need this)
         self._fm = None
-
-        # Job ② (ADR-0009): freeze the provisioning surface once, at build time.
-        # The oracle answers queries; this snapshot provisions the algorithm.
-        # Being immutable, nothing a membership query does can reach it.
-        self.oracle_data = self._build_oracle_data()
-
-    def _build_oracle_data(self) -> OracleData:
-        """Snapshot the oracle model's provisioning surface into a frozen value."""
-        model = self._oracle_model
-        # Raw root-constraint clauses, keyed by the root feature name (unchanged
-        # from the former get_root_clauses computation).
-        root_clauses = list(model.constraint_map[self.get_root_feature()])
-        return OracleData(
-            kb=model.get_kb(),
-            assumptions=model.get_assumptions(),
-            c=model.get_c(),
-            bg_data=model.bg_data,
-            root_clauses=root_clauses,
-            assignment_map=model.assignment_map,
-            next_available_id=model.next_available_id,
-        )
 
     # TODO: need check
     @property
@@ -106,11 +91,11 @@ class FMOracle(Oracle):
         if any(name not in name_to_id for name in assignments):
             raise KeyError(f"Unknown features in assignment: {set(assignments) - set(name_to_id)}")
 
-        # FM-constraint assumptions (the frozen snapshot's set_c, always active)
-        # plus this query's feature-assignment assumptions. Both come from the
-        # immutable OracleData: a query reads a frozen value, never a live actor's
-        # shiftable state, so the background it hands the checker cannot drift.
-        set_c = self.oracle_data.c + config_to_assignment_assumptions(
+        # FM-constraint assumptions (the frozen task's set_c, always active) plus
+        # this query's feature-assignment assumptions. Both come from the immutable
+        # OracleData: a query reads a frozen value, never a live actor's shiftable
+        # state, so the background it hands the checker cannot drift.
+        set_c = self.oracle_data.task.set_c + config_to_assignment_assumptions(
             assignments, self.oracle_data.assignment_map)
 
         return self._checker.is_consistent(set_c)
@@ -133,12 +118,24 @@ class FMOracle(Oracle):
         )
 
     def get_variables(self) -> Set[str]:
-        """Get all feature names (delegated to the catalog owner)."""
-        return self._oracle_model.get_variables()
+        """Get all feature names. The oracle exposes the catalog (CatalogProvider);
+        the model owns the raw name↔id data."""
+        return set(self._oracle_model.name_to_id.keys())
 
     def get_variable_ids(self) -> Dict[str, int]:
-        """Get feature name to SAT variable ID mapping (delegated to the model)."""
-        return self._oracle_model.get_variable_ids()
+        """Get feature name → SAT variable ID mapping, derived from the model's
+        name↔id catalog."""
+        return dict(self._oracle_model.name_to_id)
+
+    def _fm_clauses(self) -> List[List[int]]:
+        """Raw FM CNF clauses (no assumption guards), derived from the KB's
+        constraint_map.
+
+        NOTE: rebuilt on every call. ``complete_configuration`` is a hot path, so a
+        persistent completion solver (issue #10) belongs here — deferred to T11.5;
+        do NOT optimize it in this arc (behaviour must stay identical)."""
+        return [clause for clauses in self._oracle_model.constraint_map.values()
+                for clause in clauses]
 
     def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
         """Complete a partial configuration to a full valid one via SAT solving.
@@ -159,7 +156,7 @@ class FMOracle(Oracle):
             assumptions.append(fid if value else -fid)
 
         solver = Solver(name=self.solver_name)
-        for clause in self._oracle_model.get_fm_clauses():
+        for clause in self._fm_clauses():
             solver.add_clause(clause)
 
         try:
@@ -185,7 +182,7 @@ class FMOracle(Oracle):
     # TODO: need check
     def get_cnf_clauses(self) -> List[List[int]]:
         """Get the raw ground truth CNF clauses (without assumption guards)."""
-        return self._oracle_model.get_fm_clauses()
+        return self._fm_clauses()
 
     def get_num_constraints(self) -> int:
         """Get number of FM constraints in ground truth."""
