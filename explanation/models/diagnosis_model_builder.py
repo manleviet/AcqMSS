@@ -14,7 +14,7 @@ from .task_preparation import TaskInput
 from .testsuite import TestSuite
 
 
-class DiagnosisModelBuilder(AbstractModelBuilder):
+class DiagnosisModelBuilder(AbstractModelBuilder[DiagnosisModel]):
     """Unified builder for creating DiagnosisModel instances.
 
     Supports all use cases through a fluent interface:

@@ -15,18 +15,22 @@ Two builders inherit it:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Generic, TypeVar
+
+TModel = TypeVar("TModel")
 
 
-class AbstractModelBuilder(ABC):
+class AbstractModelBuilder(ABC, Generic[TModel]):
     """Fluent-builder base: a ``build()`` template over two hooks.
 
     ``build()`` is a template method — validate the builder state, then construct
     the model. Subclasses supply the two hooks (``_validate`` and
-    ``_create_model``); they never override ``build()`` itself.
+    ``_create_model``); they never override ``build()`` itself. ``TModel`` is the
+    concrete model each builder produces (a subclass parametrises it, e.g.
+    ``AbstractModelBuilder[DiagnosisModel]``), so ``build`` is typed, not ``Any``.
     """
 
-    def build(self) -> Any:
+    def build(self) -> TModel:
         """Validate the builder state, then construct and return the model."""
         self._validate()
         return self._create_model()
@@ -37,6 +41,6 @@ class AbstractModelBuilder(ABC):
         ...
 
     @abstractmethod
-    def _create_model(self) -> Any:
+    def _create_model(self) -> TModel:
         """Construct and return the model from the validated builder state."""
         ...

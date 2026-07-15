@@ -14,21 +14,24 @@ base ``AbstractModelBuilder`` through the single public door, ``explanation.api`
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional, TypeVar
 
 from explanation.api import AbstractModelBuilder
 
 if TYPE_CHECKING:
     from conacq.oracle import OracleData
 
+TModel = TypeVar("TModel")
 
-class OracleBiasModelBuilder(AbstractModelBuilder):
+
+class OracleBiasModelBuilder(AbstractModelBuilder[TModel]):
     """Fluent base for bias+oracle models (ConGen, QuAcq).
 
     ``build()`` (inherited template) runs ``_validate`` then ``_create_model``.
     ``_create_model`` here is the shared bias-load + negation-via-oracle flow; the
-    model-specific parts are delegated to ``_create_model_instance()`` and
-    ``_post_negation_build(model)``.
+    concrete model class is delegated to ``_create_model_instance()``. Generic in
+    ``TModel`` — a subclass fixes it (``OracleBiasModelBuilder[ConGenModel]``), so
+    ``build`` returns the concrete model, not ``Any``.
     """
 
     def __init__(self) -> None:
@@ -57,8 +60,8 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         if self._oracle_data is None:
             raise ValueError("OracleData required (use with_oracle_data())")
 
-    def _create_model(self) -> Any:
-        """Load bias, instantiate the model, compute negation, run the post hook."""
+    def _create_model(self) -> TModel:
+        """Load bias, instantiate the model, compute negation, return it."""
         from conacq.bias import BiasIO
         from explanation.api import negate_cnf_tseitin
 
@@ -76,18 +79,9 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
             model.negated_constraint_map[f"NOT({key})"] = neg_clauses
         model.next_available_id = next_tseitin_var
 
-        self._post_negation_build(model)
         return model
 
     @abstractmethod
-    def _create_model_instance(self) -> Any:
+    def _create_model_instance(self) -> TModel:
         """Return a new, empty model object (ConGenModel / QuAcqModel)."""
         ...
-
-    def _post_negation_build(self, model: Any) -> None:
-        """Hook run after negation. No-op by default.
-
-        No subclass overrides it today — both models are left as pure KBs (task and
-        solver mode are the caller's). Kept as the extension point reserved for
-        folding a frozen OracleData snapshot onto the model at build time.
-        """

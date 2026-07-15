@@ -157,6 +157,34 @@ def test_fm_oracle_has_no_dead_metadata_getters():
         assert not hasattr(FMOracle, name), f"FMOracle still exposes dead getter {name}"
 
 
+def test_one_task_preparation_strategy_and_no_dead_mode_name():
+    """The twin prep-strategy ABCs collapse to one ``TaskPreparationStrategy``, and
+    the dead ``mode_name`` is gone from all three concrete strategies. ``mode_name``
+    had 0 call sites — the ABC forced every implementer to supply something nobody
+    read (the inverse of ADR-0010, where the fat ABC carried real enforcement).
+    Checked at the DOOR (attribute) AND the LABEL (__all__), per the 4c2 lesson."""
+    import explanation.api as api
+    from explanation.models.task_preparation import (
+        DiagnosisTaskPreparation, TestCaseTaskPreparation)
+    from conacq.algorithms.acqmss.task_preparation import ConGenTaskPreparation
+
+    for name in ("TestCaseTaskPreparationStrategy", "DiagnosisTaskPreparationStrategy"):
+        assert not hasattr(api, name), f"{name} still exported (door)"
+        assert name not in getattr(api, "__all__", []), f"{name} still in api.__all__ (label)"
+    assert hasattr(api, "TaskPreparationStrategy"), "the merged ABC is not exported"
+    for cls in (DiagnosisTaskPreparation, TestCaseTaskPreparation, ConGenTaskPreparation):
+        assert not hasattr(cls, "mode_name"), f"{cls.__name__} still carries the dead mode_name"
+
+
+def test_no_post_negation_build_hook():
+    """The 0-override ``_post_negation_build`` hook is gone. Its docstring reserved it
+    for folding a frozen OracleData snapshot at build time — 4c shipped and never
+    used it; the reservation expired. T6: a 0-override hook that survives one more
+    task starts to grow roots. Permanent guard."""
+    from conacq.oracle_bias_model_builder import OracleBiasModelBuilder
+    assert not hasattr(OracleBiasModelBuilder, "_post_negation_build")
+
+
 def test_declaring_a_role_without_implementing_it_fails_at_construction():
     """The good half of the deleted fat ABC, restored via ``@abstractmethod`` on the
     narrow protocol members (ADR-0010): a class that DECLARES a role by inheriting

@@ -2,11 +2,10 @@
 
 This module provides strategy pattern implementations for preparing diagnosis tasks.
 
-Strategy hierarchy:
-- DiagnosisTaskPreparationStrategy: For diagnosis/conflict operations
-  - DiagnosisTaskPreparation (single impl, mode via constructor)
-- TestCaseTaskPreparationStrategy: For operations with test cases (KBDiag, WipeOutR_T)
-  - TestCaseTaskPreparation (single impl, mode via constructor)
+Strategy hierarchy — one ABC, ``TaskPreparationStrategy``, with concrete impls:
+- DiagnosisTaskPreparation: diagnosis / conflict operations
+- TestCaseTaskPreparation: operations with test cases (KBDiag, WipeOutR_T)
+- ConGenTaskPreparation (in conacq): ConGen acquisition
 
 Task hierarchy (immutable, pure data — no methods/codec/describe):
 - Task (ABC): intrinsic solve fields only
@@ -291,52 +290,22 @@ class PreparedTask:
 
 # === STRATEGY INTERFACES ===
 
-class DiagnosisTaskPreparationStrategy(ABC):
-    """Abstract strategy for preparing diagnosis tasks.
+class TaskPreparationStrategy(ABC):
+    """Abstract strategy for preparing a task from a model + task input.
 
-    Used for:
-    - Configuration diagnosis
-    - Feature model diagnosis
-    - Configuration + feature model diagnosis
-    - Error diagnosis with test case
-    - Redundancy detection (with negated_constraint_map)
+    One strategy per task shape — diagnosis, test-case (KBDiag / WipeOutR_T), ConGen.
+    The model is duck-typed: any object with constraint_map / negated_constraint_map /
+    variables / next_available_id.
 
-    The model parameter accepts any object with: constraint_map, negated_constraint_map,
-    variables, next_available_id, background_knowledge (duck-typed).
+    Was two structurally-identical strategy ABCs (one for diagnosis, one for
+    test-case tasks), each also declaring a logging-mode accessor that had zero call
+    sites — collapsed to one, and that dead accessor removed.
     """
 
     @abstractmethod
     def prepare(self, model: Any, task_input: TaskInput) -> PreparedTask:
-        """Prepare diagnosis task and return result with description provider."""
-        pass
-
-    @property
-    @abstractmethod
-    def mode_name(self) -> str:
-        """Return mode name for logging."""
-        pass
-
-
-class TestCaseTaskPreparationStrategy(ABC):
-    """Abstract strategy for preparing tasks with test cases.
-
-    Used for KBDiag algorithm with positive/negative test cases,
-    WipeOutR_T for test case redundancy detection, and ConGen.
-
-    The model parameter accepts any object with: constraint_map, negated_constraint_map,
-    variables, next_available_id, background_knowledge (duck-typed).
-    """
-
-    @abstractmethod
-    def prepare(self, model: Any, task_input: TaskInput) -> PreparedTask:
-        """Prepare test case task and return result with description provider."""
-        pass
-
-    @property
-    @abstractmethod
-    def mode_name(self) -> str:
-        """Return mode name for logging."""
-        pass
+        """Prepare the task and return it with its description provider."""
+        ...
 
 
 # === SHARED KB PREPARATION FUNCTIONS ===
@@ -477,7 +446,7 @@ def prepare_variable_assignments(set_kb: List[List[int]], assumptions: List[int]
 
 # === DIAGNOSIS STRATEGY ===
 
-class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
+class DiagnosisTaskPreparation(TaskPreparationStrategy):
     """Prepare diagnosis task using assumptions.
 
     Supported task types:
@@ -492,13 +461,6 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
     5. Redundancy Detection Task (need negative constraints)
         C = CF (i.e., = PySATModel + {f0 = true}), B = {}
     """
-
-    def __init__(self, mode_name: str = "diagnosis"):
-        self._mode_name = mode_name
-
-    @property
-    def mode_name(self) -> str:
-        return self._mode_name
 
     def prepare(self, model: 'DiagnosisModel', task_input: TaskInput) -> PreparedTask:
         provider = DescriptionProvider()
@@ -633,7 +595,7 @@ def prepare_testsuite_with_negation(set_kb: List[List[int]],
     return original_ids, negated_ids
 
 
-class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
+class TestCaseTaskPreparation(TaskPreparationStrategy):
     """Prepare test case task using assumptions.
 
     Prepares model for KBDiag algorithm with positive/negative test cases.
@@ -646,13 +608,6 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
     2. WipeOutR_T - Redundancy detection for test cases
         TC = positive test cases
     """
-
-    def __init__(self, mode_name: str = "testcase"):
-        self._mode_name = mode_name
-
-    @property
-    def mode_name(self) -> str:
-        return self._mode_name
 
     def prepare(self, model: 'DiagnosisModel', task_input: TaskInput) -> PreparedTask:
         provider = DescriptionProvider()
@@ -747,14 +702,14 @@ class TaskPreparationFactory:
     _testcase: TestCaseTaskPreparation = None
 
     @classmethod
-    def create_diagnosis(cls) -> DiagnosisTaskPreparationStrategy:
+    def create_diagnosis(cls) -> TaskPreparationStrategy:
         """Create diagnosis task preparation strategy (incremental-agnostic)."""
         if cls._diagnosis is None:
             cls._diagnosis = DiagnosisTaskPreparation()
         return cls._diagnosis
 
     @classmethod
-    def create_testcase(cls) -> TestCaseTaskPreparationStrategy:
+    def create_testcase(cls) -> TaskPreparationStrategy:
         """Create test case task preparation strategy (incremental-agnostic)."""
         if cls._testcase is None:
             cls._testcase = TestCaseTaskPreparation()

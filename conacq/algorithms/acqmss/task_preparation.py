@@ -14,8 +14,8 @@ from explanation.api import (
     Assignment,
     AssumptionIdAllocator,
     TestCase,
+    TaskPreparationStrategy,
     TestCaseTask,
-    TestCaseTaskPreparationStrategy,
     TestSuite,
     DescriptionProvider,
     PreparedTask, prepare_testsuite_with_negation,
@@ -95,7 +95,7 @@ class ConGenTask(TestCaseTask):
     pass  # No additional fields needed
 
 
-class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
+class ConGenTaskPreparation(TaskPreparationStrategy):
     """Prepare ConGen task using assumptions.
 
     Data mapping:
@@ -106,13 +106,6 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     - set_neg_tv: Negated negative examples (NE)
     - negation_map: Negation map for REDUCE
     """
-
-    def __init__(self, mode_name: str = "congen"):
-        self._mode_name = mode_name
-
-    @property
-    def mode_name(self) -> str:
-        return self._mode_name
 
     def prepare(self, model: ConGenModel, task_input: "ConGenTaskInput") -> PreparedTask:
         """Prepare ConGen task from model + task input.

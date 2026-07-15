@@ -15,7 +15,7 @@ from explanation.api import AbstractModelBuilder
 from conacq.oracle.fm.model import FMOracleModel
 
 
-class FMOracleModelBuilder(AbstractModelBuilder):
+class FMOracleModelBuilder(AbstractModelBuilder[FMOracleModel]):
     """Fluent builder: load an FM (.uvl) file into an FMOracleModel KB.
 
     ``build()`` (inherited template) runs ``_validate`` then ``_create_model``.

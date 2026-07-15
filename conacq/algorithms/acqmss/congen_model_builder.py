@@ -14,7 +14,7 @@ from conacq.oracle_bias_model_builder import OracleBiasModelBuilder
 from .congen_model import ConGenModel
 
 
-class ConGenModelBuilder(OracleBiasModelBuilder):
+class ConGenModelBuilder(OracleBiasModelBuilder[ConGenModel]):
     """Fluent builder for ConGenModel.
 
     Examples:
@@ -30,6 +30,3 @@ class ConGenModelBuilder(OracleBiasModelBuilder):
     def _create_model_instance(self) -> ConGenModel:
         """Return a new, empty ConGenModel (bias KB filled by the base template)."""
         return ConGenModel()
-
-    # No _post_negation_build override: the model is left as a pure KB. Solver mode
-    # is the caller's, and the task (with E+/E-) is built per run via prepare_task.

@@ -13,7 +13,7 @@ from conacq.oracle_bias_model_builder import OracleBiasModelBuilder
 from .quacq_model import QuAcqModel
 
 
-class QuAcqModelBuilder(OracleBiasModelBuilder):
+class QuAcqModelBuilder(OracleBiasModelBuilder[QuAcqModel]):
     """Fluent builder for QuAcqModel.
 
     Examples:
@@ -29,6 +29,3 @@ class QuAcqModelBuilder(OracleBiasModelBuilder):
     def _create_model_instance(self) -> QuAcqModel:
         """Return a new, empty QuAcqModel (bias KB filled by the base template)."""
         return QuAcqModel()
-
-    # No _post_negation_build override: the model is left as a pure KB. Solver mode
-    # is the caller's, and the assignment map is built inside prepare_task, not here.
