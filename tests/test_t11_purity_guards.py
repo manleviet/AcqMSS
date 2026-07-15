@@ -226,3 +226,40 @@ def test_generate_ne_not_exported_from_algorithms():
         assert not hasattr(pkg, "GenerateNE"), f"GenerateNE bound on {pkg.__name__} (door)"
 
 
+# ---------------------------------------------------------------------------
+# T11b.0 — the deferred deep-immutable-Task ratchet (flips at T13)
+# ---------------------------------------------------------------------------
+@pytest.mark.xfail(
+    strict=True,
+    reason="Task is shallow-frozen; deep-freeze lands with T13 (its blast radius is "
+           "the labeler tree T13 restructures — 13 .copy() sites, 10 in hsdag/labeler/)",
+)
+def test_task_is_deeply_frozen():
+    """The Task family must become deeply immutable: the list-valued solve fields
+    become tuples that reject in-place mutation, so a task cannot be poisoned after
+    construction — the same silent-drift class the oracle arc kept killing. RED today
+    (Task is only shallow-frozen: ``set_c.append`` succeeds — pinned as the current
+    contract by ``test_task_is_only_shallow_frozen``).
+
+    Written NOW, at the moment of deferral, not at T13 when the work is done: a
+    deferral without a ratchet is a wish, and the brief that holds the promise is
+    deleted at project close, so a promise living only there evaporates by
+    construction (T11b design §1). T13 flips this (removes the marker) and deletes
+    ``test_task_is_only_shallow_frozen`` in the same change.
+
+    Safe to write despite the T11.5 lesson — a red xfail can still be *wrong* (that
+    one demanded solver reuse, which silently changed 18/20 witnesses). The
+    difference, measured before authorising this ratchet: a missed deep-freeze site
+    calls ``tuple.append``/``tuple.copy`` and raises AttributeError AT THE CALL — a
+    loud failure, not a silently-different result. (``negation_map`` stays a dict:
+    MappingProxyType does not pickle, which would break FastDiagP's multiprocessing.)"""
+    from explanation.models.task_preparation import DiagnosisTask, TestCaseTask
+    from conacq.algorithms.acqmss.task_preparation import ConGenTask
+    from conacq.algorithms.quacq.task_preparation import QuAcqTask
+
+    for task_cls in (DiagnosisTask, TestCaseTask, ConGenTask, QuAcqTask):
+        task = task_cls(set_c=[1])
+        with pytest.raises((TypeError, AttributeError)):
+            task.set_c.append(999)  # a tuple rejects this; a list (today) does not
+
+
