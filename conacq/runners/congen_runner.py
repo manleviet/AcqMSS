@@ -14,6 +14,7 @@ import logging
 
 from conacq.algorithms.acqmss.congen import ConGen
 from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
+from conacq.algorithms.acqmss.task_preparation import ConGenTaskInput
 from explanation.api import build_checker, SolverBackend
 from profiling import profiler_session, ProfilerPreset
 
@@ -74,11 +75,10 @@ class ConGenRunner(BaseRunner):
         """
         super().__init__(bias_path, fm_path, solver_name, use_incremental=use_incremental)
 
-        # Build model (bias + negation, no examples yet)
+        # Build model (pure bias KB; solver mode is the runner's, examples per run)
         self.model = (ConGenModelBuilder
                       .from_bias(bias_path)
                       .with_oracle_data(self.oracle.oracle_data)
-                      .use_incremental(use_incremental)
                       .build())
 
     @property
@@ -113,13 +113,17 @@ class ConGenRunner(BaseRunner):
             with profiler.timer("congen_total_time"):
                 checker = None
                 try:
-                    # Prepare for this fold's examples (runs GenerateNE)
-                    self.model.prepare(
-                        oracle_data=self.oracle.oracle_data,
-                        positive_examples=positive_examples,
-                        negative_examples=negative_examples
+                    # Prepare this fold's task (pure — runs GenerateNE). The model
+                    # keeps no task; the prepared task + describe live here locally.
+                    prepared = self.model.prepare_task(
+                        ConGenTaskInput.from_examples(
+                            self.oracle.oracle_data,
+                            positive_examples,
+                            negative_examples,
+                        )
                     )
-                    task = self.model.task
+                    task = prepared.task
+                    describe = prepared.describe
 
                     # Shuffle bias iteration order if seed provided.
                     # Task is frozen: shuffle a copy and rebind, never mutate in place.
@@ -129,11 +133,12 @@ class ConGenRunner(BaseRunner):
                         task = replace(task, set_c=shuffled_set_c)
                         logging.debug('Shuffled set_c with seed=%d', shuffle_seed)
 
-                    # Build the checker from the running task (which may have
-                    # been shuffled — model.task holds the un-shuffled order).
+                    # Build the checker from the running task (possibly shuffled).
+                    # The un-shuffled order is not retained — a fresh prepare_task
+                    # rebuilds it deterministically when needed.
                     checker = build_checker(
                         task,
-                        SolverBackend.from_flags(use_incremental=self.model.use_incremental),
+                        SolverBackend.from_flags(use_incremental=self.use_incremental),
                         self.solver_name, profiler
                     )
 
@@ -169,9 +174,12 @@ class ConGenRunner(BaseRunner):
 
             profiler_snapshot = profiler.to_dict()
 
-            # Resolve assumption IDs -> clauses/names via model
+            # Resolve assumption IDs -> clauses/names via the KB (stateless): the
+            # describe provider comes from the prepared task, the root BG clauses
+            # from the frozen OracleData snapshot.
             bg_clauses, kb_clauses, kb_names, redundant_names = \
-                self.model.resolve_result(result)
+                self.model.resolve_result(
+                    result, describe, self.oracle.oracle_data.get_root_clauses())
 
             run_result = ConGenRunResult(
                 kb_constraints=kb_names,

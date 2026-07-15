@@ -16,10 +16,12 @@ lesson).
 
 ``test_oracle_holds_no_provisioning_object`` (the arrangement guard, stronger than
 the facade one) landed once ``FMOracleModel`` became a pure KB and stopped being a
-KBProvider. The remaining xfails belong to the rest of the model-purity work:
-``test_prepare_task_is_unified_across_models`` and
-``test_no_call_prepare_first_runtime_error_in_source`` flip once all three conacq
-models carry the pure ``prepare_task``; the last two flip at their own sub-changes.
+KBProvider. ``test_prepare_task_is_unified_across_models`` and
+``test_no_call_prepare_first_runtime_error_in_source`` landed once all three conacq
+models (FMOracle · QuAcq · ConGen) carry the pure ``prepare_task`` and shed the
+call-ordering RuntimeError — now permanent regression guards. The remaining two
+xfails flip at their own sub-changes: GenerateNE's relocation and
+``complete_configuration``'s single-solver reuse.
 
 Reasons describe the invariant that flips the guard, not a plan label (plan
 headers get renumbered; the behavioural target is stable).
@@ -111,11 +113,6 @@ def test_oracle_model_has_no_configuration_mutator():
     assert not hasattr(FMOracleModel, "with_configuration")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="the four models still have divergent prepare signatures; they must "
-           "unify on prepare_task(self, task_input) -> PreparedTask",
-)
 def test_prepare_task_is_unified_across_models():
     from explanation.models.pysat_diagnosis_model import DiagnosisModel
     from conacq.algorithms.acqmss.congen_model import ConGenModel
@@ -143,11 +140,6 @@ def test_base_set_c_is_gone_from_source():
     assert hits == [], "base_set_c still present:\n  " + "\n  ".join(hits)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="models still raise a call-ordering RuntimeError; a pure model built "
-           "eagerly has no 'call prepare() first' gate",
-)
 def test_no_call_prepare_first_runtime_error_in_source():
     hits = _grep_source("Call prepare() first")
     assert hits == [], "call-ordering RuntimeError still present:\n  " + "\n  ".join(hits)

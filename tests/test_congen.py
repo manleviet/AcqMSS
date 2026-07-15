@@ -11,7 +11,7 @@ import pytest
 
 from conacq.algorithms import (
     ConGen, AcqMSS, Reduce,
-    ConGenModelBuilder
+    ConGenModelBuilder, ConGenTaskInput
 )
 from conacq.bias import BiasIO
 from conacq.oracle import FMOracle
@@ -48,33 +48,33 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
         is_incremental: Use incremental mode
 
     Returns:
-        Tuple of (checker, task, profiler)
+        Tuple of (checker, task, profiler, describe)
     """
+    from conacq.examples import ExampleIO
+
     profiler = get_global_profiler()
 
     # Create oracle
     oracle = FMOracle(fm_path, use_incremental=False)
 
-    # Build and prepare model
+    # Build the pure-KB model, then prepare this example set's task explicitly.
     model = (ConGenModelBuilder
              .from_bias(bias_path)
-             .use_incremental(is_incremental)
              .with_oracle_data(oracle.oracle_data)
-             .with_examples(examples_path)
              .build())
 
-    # Load examples and prepare with oracle
-    # examples = ExampleIO.load_json(examples_path)
-    # pos = [e.assignments for e in examples.positive]
-    # neg = [e.assignments for e in examples.negative]
-    # model.prepare(oracle_data=oracle.oracle_data, positive_examples=pos, negative_examples=neg)
+    examples = ExampleIO.load_json(examples_path)
+    pos = [e.assignments for e in examples.positive]
+    neg = [e.assignments for e in examples.negative]
+    prepared = model.prepare_task(
+        ConGenTaskInput.from_examples(oracle.oracle_data, pos, neg))
+    task = prepared.task
 
-    task = model.task
     checker = build_checker(
-        model.task, SolverBackend.from_flags(use_incremental=model.use_incremental),
+        task, SolverBackend.from_flags(use_incremental=is_incremental),
         'glucose4', profiler)
 
-    return checker, task, profiler, model.description_provider
+    return checker, task, profiler, prepared.describe
 
 
 class TestCONGEN:
@@ -284,11 +284,20 @@ class TestGenerateNE:
         del oracle
 
 
+def _load_ff_examples():
+    """Load REAL-FM-7 FF examples as (pos, neg) dict lists."""
+    from conacq.examples import ExampleIO
+    examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
+    pos = [e.assignments for e in examples.positive]
+    neg = [e.assignments for e in examples.negative]
+    return pos, neg
+
+
 class TestConGenModelBuilder:
-    """Tests for ConGenModelBuilder auto-prepare patterns."""
+    """Tests for ConGenModelBuilder (pure KB) + prepare_task patterns."""
 
-    def test_auto_prepare_from_file(self):
-        """Pattern 1: with_oracle_data + with_examples → build returns prepared model."""
+    def test_prepare_task_from_file(self):
+        """Build a pure-KB model, then prepare a task from file-loaded examples."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
@@ -296,28 +305,27 @@ class TestConGenModelBuilder:
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
                  .with_oracle_data(oracle.oracle_data)
-                 .with_examples(str(EXAMPLES_FF_PATH))
                  .build())
-        assert model.task is not None
-        assert len(model.get_kb()) > 0
+        pos, neg = _load_ff_examples()
+        prepared = model.prepare_task(
+            ConGenTaskInput.from_examples(oracle.oracle_data, pos, neg))
+        assert prepared.task is not None
+        assert len(prepared.task.set_kb) > 0
 
-    def test_auto_prepare_from_data(self):
-        """Pattern 2: with_oracle_data + with_examples_data → build returns prepared model."""
+    def test_prepare_task_from_data(self):
+        """prepare_task consumes raw example dicts directly (no builder plumbing)."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
-        from conacq.examples import ExampleIO
-        examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
-        pos = [e.assignments for e in examples.positive]
-        neg = [e.assignments for e in examples.negative]
-
+        pos, neg = _load_ff_examples()
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
                  .with_oracle_data(oracle.oracle_data)
-                 .with_examples_data(positive_examples=pos, negative_examples=neg)
                  .build())
-        assert model.task is not None
+        prepared = model.prepare_task(
+            ConGenTaskInput.from_examples(oracle.oracle_data, pos, neg))
+        assert prepared.task is not None
 
     def test_build_without_oracle_raises(self):
         """build() without oracle → ValueError."""
@@ -327,50 +335,24 @@ class TestConGenModelBuilder:
         with pytest.raises(ValueError, match="OracleData required"):
             ConGenModelBuilder.from_bias(str(BIAS_PATH)).build()
 
-    def test_cv_re_prepare(self):
-        """Pattern 3: build once with oracle, prepare per fold."""
+    def test_prepare_task_is_pure_and_repeatable(self):
+        """Build once, prepare_task per fold: same input → same task, fresh object."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
-
-        from conacq.examples import ExampleIO
 
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
                  .with_oracle_data(oracle.oracle_data)
                  .build())
-        examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
-        pos = [e.assignments for e in examples.positive]
-        neg = [e.assignments for e in examples.negative]
+        pos, neg = _load_ff_examples()
+        task_input = ConGenTaskInput.from_examples(oracle.oracle_data, pos, neg)
 
-        # First prepare
-        model.prepare(oracle.oracle_data, positive_examples=pos, negative_examples=neg)
-        task1_kb = list(model.get_kb())
+        p1 = model.prepare_task(task_input)
+        p2 = model.prepare_task(task_input)
 
-        # Re-prepare (idempotent)
-        model.prepare(oracle.oracle_data, positive_examples=pos, negative_examples=neg)
-        task2_kb = list(model.get_kb())
-
-        assert task1_kb == task2_kb
-
-    def test_last_call_wins(self):
-        """with_examples then with_examples_data → raw data used."""
-        if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
-            pytest.skip("Test data files not found")
-
-        from conacq.examples import ExampleIO
-        examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
-        pos = [e.assignments for e in examples.positive]
-        neg = [e.assignments for e in examples.negative]
-
-        oracle = FMOracle(str(FM_PATH), use_incremental=False)
-        model = (ConGenModelBuilder
-                 .from_bias(str(BIAS_PATH))
-                 .with_oracle_data(oracle.oracle_data)
-                 .with_examples('nonexistent.json')  # Would fail if used
-                 .with_examples_data(positive_examples=pos, negative_examples=neg)
-                 .build())
-        assert model.task is not None  # Used raw data, not file
+        assert p1.task.set_kb == p2.task.set_kb
+        assert p1.task is not p2.task
 
 
 class TestOracleFeatureIds:

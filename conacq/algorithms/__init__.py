@@ -25,6 +25,7 @@ from .acqmss import (
     ConGenResult,
     ConGenModel,
     ConGenModelBuilder,
+    ConGenTaskInput,
 )
 
 # Interactive learning (QuAcq)
@@ -52,6 +53,7 @@ __all__ = [
     'ConGenResult',
     'ConGenModel',
     'ConGenModelBuilder',
+    'ConGenTaskInput',
     # Interactive learning (QuAcq)
     'QuAcq',
     'QuAcqModel',

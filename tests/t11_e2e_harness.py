@@ -125,8 +125,15 @@ def diagnosis_factory_ids():
 
 
 def _congen_setup(examples_path):
-    """Build the ConGen checker + prepared task (mirrors tests/test_congen.py)."""
+    """Build the ConGen checker + prepared task (mirrors tests/test_congen.py).
+
+    The model is a pure KB: examples are loaded here and passed through
+    ``prepare_task`` (was the builder's auto-prepare + ``model.task``). Same model,
+    oracle snapshot, and examples as before, so the prepared task is unchanged.
+    """
     from conacq.algorithms import ConGenModelBuilder
+    from conacq.algorithms.acqmss.task_preparation import ConGenTaskInput
+    from conacq.examples import ExampleIO
     from conacq.oracle import FMOracle
     from explanation.checker.backend import build_checker, SolverBackend
     from profiling import get_global_profiler
@@ -135,14 +142,16 @@ def _congen_setup(examples_path):
     oracle = FMOracle(str(FM_PATH), use_incremental=False)
     model = (ConGenModelBuilder
              .from_bias(str(BIAS_PATH))
-             .use_incremental(True)
              .with_oracle_data(oracle.oracle_data)
-             .with_examples(str(examples_path))
              .build())
-    task = model.task
+    examples = ExampleIO.load_json(str(examples_path))
+    pos = [e.assignments for e in examples.positive]
+    neg = [e.assignments for e in examples.negative]
+    prepared = model.prepare_task(
+        ConGenTaskInput.from_examples(oracle.oracle_data, pos, neg))
+    task = prepared.task
     checker = build_checker(
-        model.task, SolverBackend.from_flags(use_incremental=model.use_incremental),
-        "glucose4", profiler)
+        task, SolverBackend.from_flags(use_incremental=True), "glucose4", profiler)
     return checker, task, profiler
 
 

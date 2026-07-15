@@ -35,7 +35,6 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         super().__init__()
         self._bias_path: Optional[str] = None
         self._oracle_data: Optional['OracleData'] = None
-        self._use_incremental: bool = True
 
     @classmethod
     def from_bias(cls, bias_path: str) -> 'OracleBiasModelBuilder':
@@ -49,11 +48,6 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         next_available_id). The builder provisions the model (job ②) from a value,
         never a live actor (ADR-0009)."""
         self._oracle_data = oracle_data
-        return self
-
-    def use_incremental(self, enabled: bool = True) -> 'OracleBiasModelBuilder':
-        """Set incremental solver mode (the subclass hook applies it to the model)."""
-        self._use_incremental = enabled
         return self
 
     def _validate(self) -> None:
@@ -91,8 +85,9 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         ...
 
     def _post_negation_build(self, model: Any) -> None:
-        """Hook run after negation: apply solver mode, assignment maps, auto-prepare.
+        """Hook run after negation. No-op by default.
 
-        Default is a no-op; each subclass overrides it. (T11.4 will fold a frozen
-        OracleData snapshot here so prepare_task needs no live oracle parameter.)
+        No subclass overrides it today — both models are left as pure KBs (task and
+        solver mode are the caller's). Kept as the extension point reserved for
+        folding a frozen OracleData snapshot onto the model at build time.
         """

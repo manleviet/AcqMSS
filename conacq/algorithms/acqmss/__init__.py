@@ -21,6 +21,7 @@ from .reduce import Reduce
 from .generate_ne import GenerateNE, NEPerTestcase
 from .congen import ConGen, ConGenResult
 from .task_preparation import ConGenTask
+from .task_preparation import ConGenTaskInput
 from .task_preparation import ConGenTaskPreparation
 from .congen_model import ConGenModel
 from .congen_model_builder import ConGenModelBuilder
@@ -50,6 +51,7 @@ __all__ = [
     'ConGen',
     'ConGenResult',
     'ConGenTask',
+    'ConGenTaskInput',
     'ConGenTaskPreparation',
     'ConGenModel',
     'ConGenModelBuilder',

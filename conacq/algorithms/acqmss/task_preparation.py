@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from explanation.api import (
+    Assignment,
+    TestCase,
     TestCaseTask,
     TestCaseTaskPreparationStrategy,
+    TestSuite,
     DescriptionProvider,
     PreparedTask, prepare_testsuite_with_negation,
     prepare_kb,
@@ -21,9 +24,53 @@ from explanation.api import (
 from .generate_ne import GenerateNE
 
 if TYPE_CHECKING:
-    from explanation.api import TestSuite
     from .congen_model import ConGenModel
     from conacq.oracle import OracleData
+
+
+@dataclass(frozen=True)
+class ConGenTaskInput:
+    """Per-preparation input for ConGenModel.prepare_task: the oracle's frozen
+    provisioning snapshot plus this fold's examples. ConGen's own input type — the
+    prepare_task signature is unified across models, the input TYPE is not (a shared
+    union would be the fat-container anti-pattern removed at T9, ADR-0006).
+
+    ``negative_test_cases`` is an empty TestSuite (not None) when there is no E-, so
+    the prep's ``is not None`` set-assignment behaves exactly as the old mailbox did.
+    """
+    oracle_data: "OracleData"
+    positive_test_cases: TestSuite
+    negative_test_cases: Optional[TestSuite] = None
+
+    @classmethod
+    def from_examples(
+            cls,
+            oracle_data: "OracleData",
+            positive_examples: Optional[List[Dict[str, bool]]],
+            negative_examples: Optional[List[Dict[str, bool]]],
+    ) -> "ConGenTaskInput":
+        """Build a ConGenTaskInput from raw example dicts ({feature: bool}).
+
+        Missing E+/E- become empty TestSuites — the same normalisation the model's
+        prepare() used to do internally before the mailbox was cut.
+        """
+        return cls(
+            oracle_data,
+            _examples_to_testsuite(positive_examples or []),
+            _examples_to_testsuite(negative_examples or []),
+        )
+
+
+def _examples_to_testsuite(examples: List[Dict[str, bool]]) -> TestSuite:
+    """Convert a list of example dicts ({feature: bool}) to a TestSuite."""
+    testcases = []
+    for example in examples:
+        assignments = [
+            Assignment(feature=name, value=value)
+            for name, value in example.items()
+        ]
+        testcases.append(TestCase(assignments=assignments))
+    return TestSuite(testcases=testcases)
 
 
 @dataclass(frozen=True)
@@ -67,8 +114,12 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel, oracle_data: "OracleData") -> PreparedTask:
-        """Prepare ConGen task from model. BG + KB from the frozen OracleData snapshot.
+    def prepare(self, model: ConGenModel, task_input: "ConGenTaskInput") -> PreparedTask:
+        """Prepare ConGen task from model + task input.
+
+        BG + KB come from the frozen OracleData snapshot carried on the task input;
+        E+/E- come from the same input. The model is a pure KB — it no longer holds
+        the task input, so it is passed in explicitly (was ``model.task_input``).
 
         Shared Assumption ID Layout (ConGen owns Parts 5-8):
           Parts 1-4: Owned by Oracle (see OracleTaskPreparation)
@@ -84,7 +135,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         ConGenTask is constructed once at the end.
         """
         provider = DescriptionProvider()
-        task_input = model.task_input
+        oracle_data = task_input.oracle_data
 
         # Local accumulation
         set_kb: List[List[int]] = []
