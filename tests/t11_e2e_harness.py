@@ -78,7 +78,7 @@ def generate_ne_subproblem():
     is relocated by the model-purity work, so this is exactly the seam where NE ids
     could drift while the learned bias KB (Layer 3) stays identical.
     """
-    from conacq.algorithms.acqmss import GenerateNE
+    from conacq.algorithms.acqmss.generate_ne import GenerateNE
     from conacq.oracle import FMOracle
 
     oracle = FMOracle(str(FM_PATH))

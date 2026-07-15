@@ -179,14 +179,24 @@ def test_no_call_prepare_first_runtime_error_in_source():
     assert hits == [], "call-ordering RuntimeError still present:\n  " + "\n  ".join(hits)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="GenerateNE is still exported from conacq.algorithms; it belongs behind "
-           "the acquisition workflow, not the package facade",
-)
 def test_generate_ne_not_exported_from_algorithms():
+    """GenerateNE is a task-preparation internal — its only production caller is
+    ConGenTaskPreparation and it is not in the solve loop — not an algorithm. It must
+    be absent from BOTH algorithm facades (top-level ``conacq.algorithms`` and the
+    ``conacq.algorithms.acqmss`` subpackage), checked at BOTH levels:
+
+    - the LABEL — ``__all__``, which only governs ``import *``; and
+    - the DOOR — the bound attribute. ``from pkg import GenerateNE`` works off the
+      module's ``from .generate_ne import GenerateNE`` statement, NOT ``__all__``, so
+      a re-added import binding that never touches ``__all__`` would leave the label
+      clean while the door swings open. Checking only the label is the same
+      one-symbol-watched / wrong-symbol-lives-on hole; this mirrors the fat-ABC guard,
+      which pins ``not hasattr(...)`` and ``not in __all__`` both."""
     import conacq.algorithms as algorithms
-    assert "GenerateNE" not in getattr(algorithms, "__all__", [])
+    import conacq.algorithms.acqmss as acqmss
+    for pkg in (algorithms, acqmss):
+        assert "GenerateNE" not in getattr(pkg, "__all__", []), f"GenerateNE in {pkg.__name__}.__all__ (label)"
+        assert not hasattr(pkg, "GenerateNE"), f"GenerateNE bound on {pkg.__name__} (door)"
 
 
 @pytest.mark.xfail(

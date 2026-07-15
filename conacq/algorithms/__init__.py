@@ -6,8 +6,8 @@ This package provides implementations of constraint acquisition algorithms:
 ConGen (Passive/Batch Learning):
 - AcqMSS: Divide-and-conquer algorithm for finding MSS of bias
 - REDUCE: Redundancy elimination from acquired KB
-- GenerateNE: Negated negative examples generation using QuickXPlain
 - ConGen: Main constraint acquisition algorithm
+  (GenerateNE is a task-preparation internal, not exported here)
 
 Interactive Learning (QuAcq):
 - QuAcq: Interactive constraint acquisition via membership queries
@@ -20,7 +20,6 @@ Task classes shared across incremental and non-incremental modes.
 from .acqmss import (
     AcqMSS,
     Reduce,
-    GenerateNE,
     ConGen,
     ConGenResult,
     ConGenModel,
@@ -48,7 +47,6 @@ __all__ = [
     # ConGen (passive learning)
     'AcqMSS',
     'Reduce',
-    'GenerateNE',
     'ConGen',
     'ConGenResult',
     'ConGenModel',
