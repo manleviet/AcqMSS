@@ -25,11 +25,19 @@ from explanation.models.task_preparation import (
     TestCaseTaskPreparation as _TestCaseTaskPreparation,
     TaskInput,
 )
+import pytest
+
 from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
-from conacq.algorithms.acqmss.task_preparation import ConGenTaskPreparation
-from conacq.algorithms.quacq.task_preparation import QuAcqTaskPreparation
+from conacq.oracle import FMOracle
+from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
+from conacq.algorithms.acqmss.task_preparation import ConGenTaskInput
+from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
+from conacq.algorithms.quacq.task_preparation import QuAcqTaskInput
 from conacq.oracle.fm.model import FMOracleModel
 from tests.resource_paths import DATA_DIR
+
+FM_PATH = DATA_DIR / "fms" / "REAL-FM-7.uvl"
+BIAS_PATH = DATA_DIR / "bias" / "REAL-FM-7-bias.json"
 
 
 def _strided(seq):
@@ -108,25 +116,49 @@ def test_site2_testcase_without_negatives():
 
 
 # ---------------------------------------------------------------------------
-# Site 3 — ConGenTaskPreparation._assign_sets (conacq, stride 2)
+# Site 3 — ConGenTaskPreparation.prepare() set layout (conacq)
+# The bias-originals + E+-originals now come straight off the allocator (set_c =
+# prepare_kb(...)), not a stride slice. Pinned on the OUTPUT of the real prepare(),
+# with literals RECORDED FROM THE PRE-ALLOCATOR CODE (git-stash), so this is not a
+# tautology with the rewire. set_tv == [] is ConGen's real behaviour: E- becomes NE
+# in set_neg_tv, never set_tv — the non-empty set_tv carve lives on the surviving
+# TestCaseTaskPreparation._assign_sets and is pinned by site 2.
 # ---------------------------------------------------------------------------
-def test_site3_congen_assign_sets():
-    congen = ConGenTaskPreparation()
-    set_b, set_c, set_tc, set_tv = congen._assign_sets(list(range(300, 320)), 2, 8, 12, True)
-    assert set_b == [300]
-    assert set_c == [302, 304, 306]      # bias originals [bias_start:tc:2]
-    assert set_tc == [308, 310]
-    assert set_tv == [312, 314, 316, 318]
+def test_site3_congen_prepared_set_layout():
+    if not FM_PATH.exists() or not BIAS_PATH.exists():
+        pytest.skip("REAL-FM-7 fixtures not found")
+    oracle = FMOracle(str(FM_PATH), use_incremental=False)
+    model = (ConGenModelBuilder.from_bias(str(BIAS_PATH))
+             .with_oracle_data(oracle.oracle_data).build())
+    # 1 positive example, no negatives → set_tc non-empty, set_tv empty.
+    task = model.prepare_task(
+        ConGenTaskInput.from_examples(oracle.oracle_data, [{"java": True}], [])).task
+    assert task.set_b == [28]
+    assert task.set_c[:4] == [116, 118, 120, 122]   # bias originals, stride 2
+    assert len(task.set_c) == 295
+    assert _strided(task.set_c)
+    assert task.set_tc == [706]                     # the E+ testcase original
+    assert task.set_tv == []                        # E- → NE (set_neg_tv), not set_tv
+    oracle.cleanup()
 
 
 # ---------------------------------------------------------------------------
-# Site 4 — QuAcqTaskPreparation._assign_sets (conacq static, stride 2)
+# Site 4 — QuAcqTaskPreparation.prepare() set layout (conacq)
+# set_c = bias originals off the allocator; set_b = the BG root. Literals recorded
+# from the pre-allocator code (git-stash).
 # ---------------------------------------------------------------------------
-def test_site4_quacq_assign_sets():
-    set_b, set_c = QuAcqTaskPreparation._assign_sets(list(range(400, 410)), 2)
-    assert set_b == [400]
-    assert set_c == [402, 404, 406, 408]  # bias originals [bias_start::2]
-    assert _strided(set_c)
+def test_site4_quacq_prepared_set_layout():
+    if not FM_PATH.exists() or not BIAS_PATH.exists():
+        pytest.skip("REAL-FM-7 fixtures not found")
+    oracle = FMOracle(str(FM_PATH))
+    model = (QuAcqModelBuilder.from_bias(str(BIAS_PATH))
+             .with_oracle_data(oracle.oracle_data).build())
+    task = model.prepare_task(QuAcqTaskInput(oracle.oracle_data)).task
+    assert task.set_b == [28]
+    assert task.set_c[:4] == [116, 118, 120, 122]   # bias originals, stride 2
+    assert len(task.set_c) == 295
+    assert _strided(task.set_c)
+    oracle.cleanup()
 
 
 # ---------------------------------------------------------------------------

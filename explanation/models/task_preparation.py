@@ -26,6 +26,7 @@ from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models.feature_model import Feature
 
 from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
+from explanation.models.assumption_id_allocator import AssumptionIdAllocator
 from explanation.models.testsuite import TestSuite
 from explanation.operations.algorithms.utils import get_hashcode
 
@@ -347,19 +348,35 @@ def prepare_kb(set_kb: List[List[int]],
                negation_map: Dict[int, int],
                provider: DescriptionProvider,
                constraint_map: Dict[str, List[List]],
-               id_assumption: int,
-               negated_constraint_map: Optional[Dict[str, List[List]]]) -> int:
+               alloc: 'AssumptionIdAllocator',
+               negated_constraint_map: Optional[Dict[str, List[List]]]) -> List[int]:
     """Populate KB with assumptions and optionally negated forms.
 
     Appends guarded clauses to ``set_kb``, assumption IDs to ``assumptions`` and
-    original→negated pairs to ``negation_map``.
+    original→negated pairs to ``negation_map``. Ids come from ``alloc``.
+
+    Pairing is decided per key: ``allocate_pair`` when this constraint has a negated
+    form, ``allocate`` when it does not — so the returned originals are exactly the
+    ids emitted as originals, not a stride over the flat list. A constraint_map that
+    mixes negated and non-negated keys would break ``assumptions[start::2]`` but not
+    this.
 
     Returns:
-        Next available assumption ID
+        The original (un-negated) assumption ids, in constraint_map order — the
+        caller's ``set_c`` for a bias/FM constraint block.
     """
+    originals: List[int] = []
     for key, clauses in constraint_map.items():
+        has_negated = (negated_constraint_map is not None
+                       and f"NOT({key})" in negated_constraint_map)
+
+        if has_negated:
+            original_id, negated_id = alloc.allocate_pair()
+        else:
+            original_id = alloc.allocate()
+        originals.append(original_id)
+
         # --- Original constraint with assumption ---
-        original_id = id_assumption
         for clause in clauses:
             # assumption => clause (i.e., -assumption v clause)
             new_clause = clause.copy()
@@ -368,24 +385,20 @@ def prepare_kb(set_kb: List[List[int]],
 
         assumptions.append(original_id)
         provider.add_constraint_description(original_id, key)
-        id_assumption += 1
 
         # --- Negated constraint (if provided) ---
-        if negated_constraint_map is not None:
+        if has_negated:
             negated_key = f"NOT({key})"
-            if negated_key in negated_constraint_map:
-                negated_id = id_assumption
-                for neg_clause in negated_constraint_map[negated_key]:
-                    new_neg_clause = neg_clause.copy()
-                    new_neg_clause.append(-negated_id)
-                    set_kb.append(new_neg_clause)
+            for neg_clause in negated_constraint_map[negated_key]:
+                new_neg_clause = neg_clause.copy()
+                new_neg_clause.append(-negated_id)
+                set_kb.append(new_neg_clause)
 
-                assumptions.append(negated_id)
-                negation_map[original_id] = negated_id
-                provider.add_constraint_description(negated_id, negated_key)
-                id_assumption += 1
+            assumptions.append(negated_id)
+            negation_map[original_id] = negated_id
+            provider.add_constraint_description(negated_id, negated_key)
 
-    return id_assumption
+    return originals
 
 
 def prepare_configuration(set_kb: List[List[int]],
@@ -393,37 +406,38 @@ def prepare_configuration(set_kb: List[List[int]],
                           provider: DescriptionProvider,
                           variables: Dict[str, int],
                           configuration: Configuration,
-                          id_assumption: int) -> int:
+                          alloc: 'AssumptionIdAllocator') -> List[int]:
     """Populate configuration assumptions.
 
     Appends guarded unit clauses to ``set_kb`` and assumption IDs to ``assumptions``.
 
     Returns:
-        Next available assumption ID
+        The configuration assumption ids, in configuration order.
     """
     configuration = convert_keys_to_features(configuration)
     for feat in configuration.elements:
         if feat.name not in variables:
             raise KeyError(f'Feature {feat.name} is not in the model.')
 
+    config_ids: List[int] = []
     for feat, value in configuration.elements.items():
+        aid = alloc.allocate()
+        config_ids.append(aid)
         desc = f'{feat.name} = {"true" if value else "false"}'
         var = variables[feat.name] if value else -1 * variables[feat.name]
-        clause = [var, -1 * id_assumption]
+        clause = [var, -1 * aid]
 
-        assumptions.append(id_assumption)
+        assumptions.append(aid)
         set_kb.append(clause)
-        provider.add_configuration_description(id_assumption, desc)
+        provider.add_configuration_description(aid, desc)
 
-        id_assumption += 1
-
-    return id_assumption
+    return config_ids
 
 
 def _add_assignment_assumption(set_kb: List[List[int]], assumptions: List[int],
                                provider: DescriptionProvider, assumption_id: int,
-                               feature_id: int, description: str, *, value: bool) -> int:
-    """Add one assumption-guarded feature-assignment clause; return the next id.
+                               feature_id: int, description: str, *, value: bool) -> None:
+    """Add one assumption-guarded feature-assignment clause.
 
     ``value=True``  → clause ``[-a, feature_id]``  (assumption active ⇒ feature true)
     ``value=False`` → clause ``[-a, -feature_id]`` (assumption active ⇒ feature false)
@@ -432,33 +446,33 @@ def _add_assignment_assumption(set_kb: List[List[int]], assumptions: List[int],
     set_kb.append([-assumption_id, literal])
     assumptions.append(assumption_id)
     provider.add_configuration_description(assumption_id, description)
-    return assumption_id + 1
 
 
 def prepare_variable_assignments(set_kb: List[List[int]], assumptions: List[int],
                                  provider: DescriptionProvider,
                                  name_to_id: Dict[str, int],
-                                 id_assumption: int):
+                                 alloc: 'AssumptionIdAllocator'):
     """Append paired (feature=true, feature=false) assignment assumptions.
 
     Builds the variable-assignment block of the oracle assumption layout: for
     each feature, two assumption-guarded clauses forcing it true / false when
     the corresponding assumption is active. Mutates ``set_kb`` / ``assumptions``
-    (build-then-freeze).
+    (build-then-freeze). The pos/neg ids are one ``allocate_pair`` per feature.
 
     Returns:
-        (next_id, pos_map, neg_map) where the maps are feature name → assumption id.
+        (pos_map, neg_map) where the maps are feature name → assumption id.
     """
     pos_assignment_to_assumption: Dict[str, int] = {}
     neg_assignment_to_assumption: Dict[str, int] = {}
     for name, fid in name_to_id.items():
-        pos_assignment_to_assumption[name] = id_assumption
-        id_assumption = _add_assignment_assumption(
-            set_kb, assumptions, provider, id_assumption, fid, f'{name}=true', value=True)
-        neg_assignment_to_assumption[name] = id_assumption
-        id_assumption = _add_assignment_assumption(
-            set_kb, assumptions, provider, id_assumption, fid, f'{name}=false', value=False)
-    return id_assumption, pos_assignment_to_assumption, neg_assignment_to_assumption
+        pos_id, neg_id = alloc.allocate_pair()
+        pos_assignment_to_assumption[name] = pos_id
+        _add_assignment_assumption(
+            set_kb, assumptions, provider, pos_id, fid, f'{name}=true', value=True)
+        neg_assignment_to_assumption[name] = neg_id
+        _add_assignment_assumption(
+            set_kb, assumptions, provider, neg_id, fid, f'{name}=false', value=False)
+    return pos_assignment_to_assumption, neg_assignment_to_assumption
 
 
 # === DIAGNOSIS STRATEGY ===
@@ -492,30 +506,29 @@ class DiagnosisTaskPreparation(DiagnosisTaskPreparationStrategy):
         # Determine if negated forms should be used
         negated_constraint_map = model.negated_constraint_map if task_input.for_redundancy else None
 
-        # Use next_available_id to avoid conflicts with Tseitin variables
-        id_assumption = model.next_available_id
+        # Seed the allocator after the Tseitin variables (avoid id conflicts).
+        alloc = AssumptionIdAllocator(model.next_available_id)
 
         # Local accumulation (build-then-freeze)
         set_kb: List[List[int]] = []
         assumptions: List[int] = []
         negation_map: Dict[int, int] = {}
 
-        # Prepare KB with assumptions and optionally negated forms
-        id_assumption = prepare_kb(
-            set_kb, assumptions, negation_map, provider,
-            model.constraint_map, id_assumption, negated_constraint_map)
+        # Prepare KB with assumptions and optionally negated forms. This strategy
+        # carves its sets by position in _assign_sets (config/test-case blocks
+        # interleave), so it reads the flat list, not the primitives' returns.
+        prepare_kb(set_kb, assumptions, negation_map, provider,
+                   model.constraint_map, alloc, negated_constraint_map)
 
         start_id_config = len(assumptions)
         if task_input.configuration is not None:
-            id_assumption = prepare_configuration(
-                set_kb, assumptions, provider, model.variables,
-                task_input.configuration, id_assumption)
+            prepare_configuration(set_kb, assumptions, provider, model.variables,
+                                  task_input.configuration, alloc)
 
         start_id_test_case = len(assumptions)
         if task_input.test_case is not None:
-            id_assumption = prepare_configuration(
-                set_kb, assumptions, provider, model.variables,
-                task_input.test_case, id_assumption)
+            prepare_configuration(set_kb, assumptions, provider, model.variables,
+                                  task_input.test_case, alloc)
 
         # Assign set_c and set_b
         has_negated_forms = negated_constraint_map is not None
@@ -573,24 +586,25 @@ def prepare_testsuite_with_negation(set_kb: List[List[int]],
                                     provider: DescriptionProvider,
                                     variables: Dict[str, int],
                                     testsuite: TestSuite,
-                                    id_assumption: int) -> Tuple[int, List[int]]:
+                                    alloc: 'AssumptionIdAllocator') -> Tuple[List[int], List[int]]:
     """Populate test cases with assumptions and their negated forms.
 
-    Each test case gets two assumption IDs: original and negated. The negated
+    Each test case gets one ``allocate_pair`` — (original, negated). The negated
     form is a single clause with all literals negated. Appends to ``set_kb``,
-    ``assumptions`` and ``negation_map``; returns the negated assumption IDs
-    (in test-case order) so the caller can route them to set_neg_tv/set_neg_tc.
+    ``assumptions`` and ``negation_map``.
 
     Returns:
-        (next available assumption ID, negated assumption IDs)
+        (original ids, negated ids) — both in test-case order. The originals are the
+        caller's set_tc/set_tv; the negated ids route to set_neg_tv/set_neg_tc.
     """
+    original_ids: List[int] = []
     negated_ids: List[int] = []
     for testcase in testsuite.testcases:
+        original_id, negated_id = alloc.allocate_pair()
+
         # --- Original form ---
-        original_id = id_assumption
         desc_parts = []
         literals = []
-
         for assignment in testcase.assignments:
             if assignment.feature not in variables:
                 raise KeyError(f'Feature {assignment.feature} is not in the model.')
@@ -603,10 +617,9 @@ def prepare_testsuite_with_negation(set_kb: List[List[int]],
         assumptions.append(original_id)
         desc = ' & '.join(desc_parts)
         provider.add_test_case_description(original_id, desc)
-        id_assumption += 1
+        original_ids.append(original_id)
 
         # --- Negated form ---
-        negated_id = id_assumption
         negated_clause = [-lit for lit in literals]
         negated_clause.append(-negated_id)
         set_kb.append(negated_clause)
@@ -616,9 +629,8 @@ def prepare_testsuite_with_negation(set_kb: List[List[int]],
         negated_ids.append(negated_id)
 
         negation_map[original_id] = negated_id
-        id_assumption += 1
 
-    return id_assumption, negated_ids
+    return original_ids, negated_ids
 
 
 class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
@@ -645,8 +657,8 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
     def prepare(self, model: 'DiagnosisModel', task_input: TaskInput) -> PreparedTask:
         provider = DescriptionProvider()
 
-        # Start assumption IDs after Tseitin variables
-        id_assumption = model.next_available_id
+        # Seed the allocator after the Tseitin variables.
+        alloc = AssumptionIdAllocator(model.next_available_id)
 
         # Local accumulation (build-then-freeze)
         set_kb: List[List[int]] = []
@@ -655,24 +667,24 @@ class TestCaseTaskPreparation(TestCaseTaskPreparationStrategy):
         set_neg_tv: List[int] = []
         set_neg_tc: List[int] = []
 
-        # Prepare KB (no negated forms needed for TestCaseTask)
-        id_assumption = prepare_kb(
-            set_kb, assumptions, negation_map, provider,
-            model.constraint_map, id_assumption, negated_constraint_map=None)
+        # Prepare KB (no negated forms needed for TestCaseTask). This strategy
+        # carves its sets by position in _assign_sets, so it reads the flat list.
+        prepare_kb(set_kb, assumptions, negation_map, provider,
+                   model.constraint_map, alloc, negated_constraint_map=None)
 
         # Prepare positive test cases with negated forms
         start_id_tc = len(assumptions)
-        id_assumption, pos_negated_ids = prepare_testsuite_with_negation(
+        _, pos_negated_ids = prepare_testsuite_with_negation(
             set_kb, assumptions, negation_map, provider, model.variables,
-            task_input.positive_test_cases, id_assumption)
+            task_input.positive_test_cases, alloc)
         set_neg_tc.extend(pos_negated_ids)
 
         # Prepare negative test cases with negated forms if provided
         start_id_tv = len(assumptions)
         if task_input.negative_test_cases is not None:
-            id_assumption, neg_negated_ids = prepare_testsuite_with_negation(
+            _, neg_negated_ids = prepare_testsuite_with_negation(
                 set_kb, assumptions, negation_map, provider, model.variables,
-                task_input.negative_test_cases, id_assumption)
+                task_input.negative_test_cases, alloc)
             set_neg_tv.extend(neg_negated_ids)
 
         set_b, set_c, set_tc, set_tv = self._assign_sets(

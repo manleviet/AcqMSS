@@ -80,19 +80,22 @@ def generate_ne_subproblem():
     """
     from conacq.algorithms.acqmss.generate_ne import GenerateNE
     from conacq.oracle import FMOracle
+    from explanation.api import AssumptionIdAllocator
 
     oracle = FMOracle(str(FM_PATH))
     testsuite = _frozen_negative_testsuite()
     result_set_kb, result_assumptions = [], []
-    results, next_id = GenerateNE(oracle.oracle_data).generate(
+    # The frozen snapshot's next_available_id (model.next_available_id) seeds the
+    # allocator; next_id is read back off it after generation.
+    alloc = AssumptionIdAllocator(oracle.oracle_data.next_available_id)
+    results = GenerateNE(oracle.oracle_data).generate(
         testsuite,
         oracle.get_variable_ids(),
         result_set_kb,
         result_assumptions,
-        # was oracle.get_next_available_id() (deleted in the T11.4c API diet); the
-        # frozen snapshot carries the identical value (model.next_available_id).
-        oracle.oracle_data.next_available_id,
+        alloc,
     )
+    next_id = alloc.next_id
     return {
         "per_testcase": [
             {"ne_id": r.ne_id, "ne_clause": _canon(r.ne_clause), "desc": r.desc}

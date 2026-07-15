@@ -29,6 +29,7 @@ from explanation.models.task_preparation import (
     prepare_variable_assignments,
     slice_assumptions,
 )
+from explanation.models.assumption_id_allocator import AssumptionIdAllocator
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
 from explanation.models.encoding import (
     config_to_variable_literals,
@@ -61,6 +62,7 @@ __all__ = [
     'DescriptionProvider',
     'TestCaseTaskPreparationStrategy',
     'cf',
+    'AssumptionIdAllocator',
     'prepare_kb',
     'prepare_testsuite_with_negation',
     'prepare_variable_assignments',

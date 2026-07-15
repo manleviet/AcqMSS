@@ -272,15 +272,17 @@ class TestGenerateNE:
             pytest.skip("FM file not found")
 
         from conacq.algorithms.acqmss.generate_ne import GenerateNE
+        from explanation.api import AssumptionIdAllocator
         from explanation.models.testsuite import TestSuite
 
         oracle = FMOracle(str(FM_PATH))
         generate_ne = GenerateNE(oracle.oracle_data)
         empty_ts = TestSuite(testcases=[])
-        results, next_id = generate_ne.generate(empty_ts, {}, [], [], start_id=1000)
+        alloc = AssumptionIdAllocator(1000)
+        results = generate_ne.generate(empty_ts, {}, [], [], alloc)
 
         assert results == []
-        assert next_id == 1000
+        assert alloc.next_id == 1000
         del oracle
 
 

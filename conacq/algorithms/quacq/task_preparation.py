@@ -13,11 +13,11 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from explanation.api import (
     AssignmentAssumptionMap,
+    AssumptionIdAllocator,
     DescriptionProvider,
     DiagnosisTask,
     PreparedTask,
     prepare_kb,
-    slice_assumptions,
 )
 if TYPE_CHECKING:
     from conacq.oracle import OracleData
@@ -103,14 +103,13 @@ class QuAcqTaskPreparation:
             dict(bg_data.pos_assignment_to_assumption),
             dict(bg_data.neg_assignment_to_assumption))
 
-        # Step 1: Assign assumption IDs (negated forms from builder)
-        id_assumption = model.next_available_id
-        bias_start_pos = len(assumptions)
-        id_assumption = prepare_kb(
+        # Step 1: Assign assumption IDs (negated forms from builder). set_c is the
+        # bias originals prepare_kb emitted; set_b is the BG root (first assumption).
+        alloc = AssumptionIdAllocator(model.next_available_id)
+        set_c = prepare_kb(
             set_kb, assumptions, negation_map, provider,
-            model.constraint_map, id_assumption, model.negated_constraint_map)
-        # Assign set_b and set_c from assumptions
-        set_b, set_c = self._assign_sets(assumptions, bias_start_pos)
+            model.constraint_map, alloc, model.negated_constraint_map)
+        set_b = [assumptions[0]]
 
         # Step 2: Build constraint_clauses mapping
         constraint_clauses: Dict[int, List[List[int]]] = {}
@@ -124,10 +123,3 @@ class QuAcqTaskPreparation:
             negation_map=negation_map, assumptions=assumptions,
             constraint_clauses=constraint_clauses)
         return PreparedTask(task, provider, assignment_map)
-
-    @staticmethod
-    def _assign_sets(assumptions: List[int], bias_start_pos: int) -> Tuple[List[int], List[int]]:
-        """Compute (set_b, set_c) from assumptions."""
-        set_b = [assumptions[0]]
-        set_c = slice_assumptions(assumptions, bias_start_pos, None, 2)
-        return set_b, set_c

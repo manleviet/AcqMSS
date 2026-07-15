@@ -12,13 +12,13 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 from conacq.oracle.bg_data import BGData
 from conacq.oracle.oracle_data import OracleData
 from explanation.api import (
+    AssumptionIdAllocator,
     DiagnosisTask,
     DescriptionProvider,
     AssignmentAssumptionMap,
     PreparedTask,
     prepare_kb,
     prepare_variable_assignments,
-    slice_assumptions,
 )
 
 if TYPE_CHECKING:
@@ -52,8 +52,8 @@ class FMOracleTaskPreparation:
         feature-assignment map, the root BGData, and the raw root clauses."""
         provider = DescriptionProvider()
 
-        # Use next_available_id to avoid conflicts with Tseitin variables
-        id_assumption = model.next_available_id
+        # Seed the allocator after the Tseitin variables (avoid id conflicts).
+        alloc = AssumptionIdAllocator(model.next_available_id)
         negated_constraint_map = model.negated_constraint_map
 
         # Local accumulation (build-then-freeze)
@@ -61,17 +61,17 @@ class FMOracleTaskPreparation:
         assumptions: List[int] = []
         negation_map: Dict[int, int] = {}
 
-        # Step 1: FM constraints from constraint_map → set_kb with assumptions
-        id_assumption = prepare_kb(
+        # Step 1: FM constraints → set_kb with assumptions. set_c is exactly the
+        # originals prepare_kb emitted (returned directly, never sliced back out).
+        set_c = prepare_kb(
             set_kb, assumptions, negation_map, provider,
-            model.constraint_map, id_assumption, negated_constraint_map)
+            model.constraint_map, alloc, negated_constraint_map)
 
         # Step 2: Feature assignments → assumption-guarded (paired true/false)
-        assignments_start_index = len(assumptions)
         assignment_kb_start = len(set_kb)
-        id_assumption, pos_assignment_to_assumption, neg_assignment_to_assumption = (
+        pos_assignment_to_assumption, neg_assignment_to_assumption = (
             prepare_variable_assignments(
-                set_kb, assumptions, provider, model.name_to_id, id_assumption))
+                set_kb, assumptions, provider, model.name_to_id, alloc))
 
         # The feature-assignment map, returned on the PreparedTask / OracleData;
         # membership queries reuse it locally (is_valid appends this query's
@@ -79,13 +79,14 @@ class FMOracleTaskPreparation:
         assignment_map = AssignmentAssumptionMap(
             pos_assignment_to_assumption, neg_assignment_to_assumption)
 
-        # Step 3: FM constraint assumptions only (originals of the paired Part-3
-        # layout, stride 2). Stored on the frozen task as set_c.
-        set_c = slice_assumptions(assumptions, 0, assignments_start_index, 2)
-
-        # Extract Part 4 data (assignment clauses added after Part 3)
+        # Extract Part 4 data. assignment_clauses is the set_kb tail; the assumptions
+        # are the (pos, neg) pairs the assignment step emitted, in name order — taken
+        # from the maps it returned, not sliced back out of the flat list.
         assignment_clauses = set_kb[assignment_kb_start:]
-        assignment_assumptions = assumptions[assignments_start_index:]
+        assignment_assumptions = [
+            aid for name in model.name_to_id
+            for aid in (pos_assignment_to_assumption[name],
+                        neg_assignment_to_assumption[name])]
 
         # Step 4: Extract root BG data for ConGen consumption (requires negated constraints)
         bg_data = BGData(
@@ -94,7 +95,7 @@ class FMOracleTaskPreparation:
             negation_map={assumptions[0]: assumptions[1]},
             descriptions=provider.get_descriptions_for(
                 [assumptions[0], assumptions[1]]),
-            next_available_id=id_assumption,
+            next_available_id=alloc.next_id,
             # Part 4
             assignment_clauses=assignment_clauses,
             assignment_assumptions=assignment_assumptions,
