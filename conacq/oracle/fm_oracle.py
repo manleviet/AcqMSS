@@ -9,22 +9,29 @@ from typing import Dict, Optional, Set, List
 
 from pysat.solvers import Solver
 
-from conacq.oracle.base import Oracle
 from conacq.oracle.fm_data import FMData
 from conacq.oracle.fm_oracle_model import FMOracleModel, FMOracleTaskPreparation
+from conacq.oracle.protocols import (
+    MembershipOracle,
+    CompletableOracle,
+    CatalogProvider,
+)
 from explanation.api import variable_literals_to_config, config_to_assignment_assumptions
 from explanation.api import build_checker, SolverBackend
 from profiling import get_global_profiler, AbstractProfiler, measure_time, count_calls
 
 
-class FMOracle(Oracle):
+class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
     """Oracle using feature model as ground truth.
 
     Loads a feature model, converts it to CNF, and uses a SAT solver
     to validate configurations.
 
-    Extends Oracle ABC with FM-specific methods:
-    get_fm_data(), complete_configuration(), get_features(), etc.
+    Declares its three answer roles (ADR-0009/0010) by inheriting the narrow
+    protocols: MembershipOracle (is_valid), CompletableOracle (complete_configuration),
+    CatalogProvider (get_variables/get_variable_ids). Provisioning (job ②) is NOT a
+    role of the oracle — it lives on the frozen OracleData snapshot.
+    FM-specific methods: get_fm_data(), get_features(), etc.
 
     Example:
         >>> oracle = FMOracle('data/fms/model.uvl')

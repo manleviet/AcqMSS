@@ -8,7 +8,7 @@ Tests core components: QueryProvider, QuAcq, QuAcqTask, QuAcqModel.
 import pytest
 from pathlib import Path
 
-from conacq.oracle import FMOracle, Oracle, CachedOracle
+from conacq.oracle import FMOracle, CachedOracle
 from conacq.bias import BiasIO
 from conacq.algorithms.quacq import (
     QuAcqResult,
@@ -141,7 +141,7 @@ class TestFMOracle:
         # Create an invalid config (all features false including root)
         features = oracle.get_variables()
         invalid_config = {f: False for f in features}
-        assert oracle.ask(invalid_config) is False
+        assert oracle.is_valid(invalid_config) is False
 
 
 class TestCachedOracle:
@@ -154,14 +154,14 @@ class TestCachedOracle:
         # First query — use a real feature name from the FM
         features = list(oracle.get_variables())
         config = {features[0]: True}
-        result1 = cached.ask(config)
+        result1 = cached.is_valid(config)
         stats1 = cached.get_cache_stats()
 
         assert stats1['misses'] == 1
         assert stats1['hits'] == 0
 
         # Same query should hit cache
-        result2 = cached.ask(config)
+        result2 = cached.is_valid(config)
         stats2 = cached.get_cache_stats()
 
         assert stats2['hits'] == 1
@@ -324,21 +324,6 @@ class TestFMData:
         fm_data = oracle.get_fm_data()
         with pytest.raises(AttributeError):
             fm_data.root_feature = "changed"
-
-
-class TestOracleABC:
-    """Tests for Oracle ABC contract."""
-
-    def test_oracle_abc_minimal(self):
-        """Verify Oracle ABC has only is_valid as abstract method."""
-        import inspect
-        from conacq.oracle.base import Oracle
-
-        abstract_methods = {
-            name for name, method in inspect.getmembers(Oracle)
-            if getattr(method, '__isabstractmethod__', False)
-        }
-        assert abstract_methods == {'is_valid'}
 
 
 # =========================================================================

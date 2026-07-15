@@ -12,14 +12,26 @@ the last-query pollution of ``get_c`` leaks, and its sole consumer is
 ``GenerateNE``. Giving it a name makes that blast radius visible in the type
 system instead of hiding it inside a 14-method class.
 
-The ``Oracle`` ABC stays as the implementation base (it supplies the ``ask``
-default); consumers type against these protocols, not the ABC or the concrete
-class. A couple of consumers span several roles — they type against the composite
-protocols (``GeneratorOracle``, ``PreparationOracle``), which are unions of the
-atomic roles, not new roles.
+There is no ONE fat ``Oracle`` base owning four roles — that class lied (it stubbed
+``get_variables``/``complete_configuration`` to None) and it is gone. But "no fat
+base" is not "no base": every atomic member here is ``@abstractmethod``, and the
+oracles we own DECLARE the roles they play by inheriting the narrow protocols
+(``FMOracle(MembershipOracle, CompletableOracle, CatalogProvider)`` etc). N narrow
+bases, each carrying exactly its own contract and none of them lying, IS the role
+design — the class line states ADR-0009's split in code the machine checks, instead
+of a docstring the reader must match by hand (ADR-0010).
+
+Substitutability is untouched and remains the point: ``@runtime_checkable`` means
+anything with the methods satisfies the protocol via ``isinstance`` without
+inheriting, so consumers still bind to the 1-3 method role they use, and test
+doubles / third-party oracles need not declare. A couple of consumers span several
+roles — they type against the composite protocols (``GeneratorOracle``,
+``PreparationOracle``), which are unions of the atomic roles, not new roles.
+If you are here to "simplify" those base lists away, read ADR-0010 first.
 """
 from __future__ import annotations
 
+from abc import abstractmethod
 from typing import (
     Dict,
     List,
@@ -38,6 +50,7 @@ if TYPE_CHECKING:
 class MembershipOracle(Protocol):
     """Answer membership queries: is this configuration valid?"""
 
+    @abstractmethod
     def is_valid(self, assignments: Dict[str, bool]) -> bool: ...
 
 
@@ -45,6 +58,7 @@ class MembershipOracle(Protocol):
 class CompletableOracle(Protocol):
     """Complete a partial configuration to a full valid one."""
 
+    @abstractmethod
     def complete_configuration(
         self, partial: Dict[str, bool]
     ) -> Optional[Dict[str, bool]]: ...
@@ -54,8 +68,10 @@ class CompletableOracle(Protocol):
 class CatalogProvider(Protocol):
     """Expose the variable-name <-> SAT-variable-id catalog."""
 
+    @abstractmethod
     def get_variables(self) -> Set[str]: ...
 
+    @abstractmethod
     def get_variable_ids(self) -> Dict[str, int]: ...
 
 
@@ -63,8 +79,10 @@ class CatalogProvider(Protocol):
 class BGProvider(Protocol):
     """Provide the root background-knowledge surface for task preparation."""
 
+    @abstractmethod
     def get_bg_data(self) -> "BGData": ...
 
+    @abstractmethod
     def get_root_clauses(self) -> List[List[int]]: ...
 
 
@@ -77,10 +95,13 @@ class KBProvider(Protocol):
     radius is visible in the type system, not buried in a 14-method class.
     """
 
+    @abstractmethod
     def get_kb(self) -> List[List[int]]: ...
 
+    @abstractmethod
     def get_assumptions(self) -> List[int]: ...
 
+    @abstractmethod
     def get_c(self) -> List[int]: ...
 
 

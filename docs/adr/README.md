@@ -23,6 +23,7 @@ These decisions were made during the **ABC-v2 redesign** (July 2026), a rebuild 
 | [0007](0007-no-runtime-read-only-views.md) | The name↔id catalog is a plain `dict` — no runtime read-only view | Accepted |
 | [0008](0008-run-result-and-result-data-stay-separate.md) | `ConGenRunResult` and `ConGenResultData` stay separate — write-product ≠ read-projection | Accepted |
 | [0009](0009-the-oracle-answers-it-does-not-provision.md) | The oracle answers questions; it does not provision the algorithm | Accepted |
+| [0010](0010-roles-are-declared-not-inferred.md) | Roles are declared, not inferred — protocol members are `@abstractmethod`; our oracles inherit the roles they play | Accepted |
 
 ## Writing a new one
 

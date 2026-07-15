@@ -113,6 +113,40 @@ def test_oracle_model_has_no_configuration_mutator():
     assert not hasattr(FMOracleModel, "with_configuration")
 
 
+def test_no_fat_oracle_abc():
+    """T11.1's own target: the fat ``Oracle`` ABC is gone. It promised a minimal
+    membership interface yet carried an ``ask`` alias and two None-returning stubs
+    (``get_variables``/``complete_configuration``) — a base class that hands out
+    methods it fakes to None. The oracle world is now typed on the narrow
+    ``@runtime_checkable`` protocols (MembershipOracle/CompletableOracle/
+    CatalogProvider/GeneratorOracle), so a consumer binds to the 1-3 methods it
+    actually needs, not to a class that lies about its surface. Permanent guard
+    against a fourth recurrence of the add-new-keep-old shape (after the
+    ``with_negation`` no-op and the hardcoded GenerateNE adapter)."""
+    import conacq.oracle as oracle_pkg
+    from conacq.algorithms import quacq as quacq_pkg
+    assert not hasattr(oracle_pkg, "Oracle"), "fat Oracle ABC still exported from conacq.oracle"
+    assert "Oracle" not in getattr(oracle_pkg, "__all__", [])
+    assert not hasattr(quacq_pkg, "Oracle"), "fat Oracle ABC still re-exported from conacq.algorithms.quacq"
+
+
+def test_declaring_a_role_without_implementing_it_fails_at_construction():
+    """The good half of the deleted fat ABC, restored via ``@abstractmethod`` on the
+    narrow protocol members (ADR-0010): a class that DECLARES a role by inheriting
+    its protocol but never implements the method is abstract — it raises TypeError
+    at construction, not silently at the first query deep in QuAcq's inner loop after
+    the eval has been running (the A6 shape: fails silently, no exception, no red
+    test). This is the machine-checked half; the class-line declaration is the point
+    (ADR-0010). Permanent guard."""
+    from conacq.oracle import MembershipOracle
+
+    class ForgotIsValid(MembershipOracle):
+        pass
+
+    with pytest.raises(TypeError):
+        ForgotIsValid()
+
+
 def test_prepare_task_is_unified_across_models():
     from explanation.models.pysat_diagnosis_model import DiagnosisModel
     from conacq.algorithms.acqmss.congen_model import ConGenModel

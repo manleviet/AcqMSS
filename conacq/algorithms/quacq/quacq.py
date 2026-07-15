@@ -2,7 +2,7 @@
 QuAcq algorithm for interactive constraint acquisition (IJCAI 2013).
 
 Supports three modes via single learn() method:
-- 'oracle': QueryProvider.generate_from_sat() + oracle.ask()
+- 'oracle': QueryProvider.generate_from_sat() + oracle.is_valid()
 - 'example_only': QueryProvider.generate_from_pool() (paper-filtered)
 - 'example_first': QueryProvider.generate() (pool first, SAT fallback)
 

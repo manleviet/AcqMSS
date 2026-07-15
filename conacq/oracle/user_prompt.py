@@ -2,23 +2,23 @@
 Human-in-the-loop oracle via terminal prompts.
 
 Prompts user for membership query answers in interactive mode.
-Only implements is_valid() from Oracle ABC.
+Implements is_valid() only — a MembershipOracle, no base class.
 """
 
 from typing import Dict
 
-from conacq.oracle.base import Oracle
+from conacq.oracle.protocols import MembershipOracle
 
 
-class UserPromptOracle(Oracle):
+class UserPromptOracle(MembershipOracle):
     """Interactive oracle that prompts user for answers.
 
-    Used for truly interactive constraint acquisition where
-    a human expert answers membership queries.
+    Declares the MembershipOracle role (ADR-0010). Used for truly interactive
+    constraint acquisition where a human expert answers membership queries.
 
     Example:
         >>> oracle = UserPromptOracle(features=['A', 'B', 'C'])
-        >>> answer = oracle.ask({'A': True, 'B': False, 'C': True})
+        >>> answer = oracle.is_valid({'A': True, 'B': False, 'C': True})
         Query: A=True, B=False, C=True
         Is this configuration valid? (y/n):
     """

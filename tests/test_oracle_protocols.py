@@ -16,6 +16,8 @@ import pytest
 
 from conacq.oracle import (
     FMOracle,
+    CachedOracle,
+    UserPromptOracle,
     MembershipOracle,
     CompletableOracle,
     CatalogProvider,
@@ -116,3 +118,25 @@ def test_kb_provider_and_bg_provider_are_distinct_roles():
     assert isinstance(_OnlyBG(), BGProvider)
     assert not isinstance(_OnlyBG(), KBProvider)
     assert not isinstance(_OnlyKB(), BGProvider)
+
+
+# --- ADR-0010: the oracles we own declare their roles by inheritance ---
+@pytest.mark.parametrize(
+    "cls,roles",
+    [
+        (FMOracle, (MembershipOracle, CompletableOracle, CatalogProvider)),
+        (CachedOracle, (MembershipOracle,)),
+        (UserPromptOracle, (MembershipOracle,)),
+    ],
+    ids=["FMOracle", "CachedOracle", "UserPromptOracle"],
+)
+def test_our_oracles_declare_their_roles_by_inheritance(cls, roles):
+    """Second-class guard (primary is the enforcement test above): the oracles we
+    own DECLARE their ADR-0009 roles by inheriting the protocols, so the role split
+    is machine-checked at every implementation site, not prose in a docstring.
+    Nominal (MRO) check, not structural isinstance — a class that merely has the
+    methods passes isinstance yet must fail here; that is what catches 'forgot to
+    inherit'. Third-party oracles and test doubles need not declare — that is what
+    structural substitutability is for (ADR-0010)."""
+    for role in roles:
+        assert role in cls.__mro__, f"{cls.__name__} must declare {role.__name__}"

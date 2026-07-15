@@ -43,7 +43,6 @@ from .task_preparation import QuAcqTask, QuAcqTaskPreparation
 from .quacq_model import QuAcqModel
 from .quacq_model_builder import QuAcqModelBuilder
 from conacq.oracle import (
-    Oracle,
     FMOracle,
     UserPromptOracle,
     CachedOracle,
@@ -65,7 +64,6 @@ __all__ = [
     'QuAcqModelBuilder',
     'QuAcqTaskPreparation',
     # Oracle implementations
-    'Oracle',
     'FMOracle',
     'UserPromptOracle',
     'CachedOracle',

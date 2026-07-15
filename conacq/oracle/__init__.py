@@ -2,7 +2,7 @@
 Oracle package for constraint acquisition.
 
 Provides ground truth interfaces for classifying configurations:
-- Oracle: Minimal ABC — only is_valid() / ask()
+- MembershipOracle / GeneratorOracle / … : narrow role protocols (see protocols.py)
 - FMOracle: Validates against a feature model (SAT-based)
 - UserPromptOracle: Human-in-the-loop oracle
 - CachedOracle: Wrapper caching oracle answers
@@ -10,7 +10,6 @@ Provides ground truth interfaces for classifying configurations:
 - GroundTruthData: Extracted ground truth for evaluation
 """
 
-from .base import Oracle
 from .bg_data import BGData
 from .oracle_data import OracleData
 from .fm_data import FMData
@@ -31,7 +30,6 @@ from .fm_oracle_model import FMOracleModel
 from .constraint_description import extract_constraint_descriptions
 
 __all__ = [
-    'Oracle',
     'BGData',
     'OracleData',
     'FMData',
