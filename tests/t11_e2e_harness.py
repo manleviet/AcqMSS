@@ -89,7 +89,9 @@ def generate_ne_subproblem():
         oracle.get_variable_ids(),
         result_set_kb,
         result_assumptions,
-        oracle.get_next_available_id(),
+        # was oracle.get_next_available_id() (deleted in the T11.4c API diet); the
+        # frozen snapshot carries the identical value (model.next_available_id).
+        oracle.oracle_data.next_available_id,
     )
     return {
         "per_testcase": [

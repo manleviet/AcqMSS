@@ -52,4 +52,11 @@ class FMOracleModelBuilder(AbstractModelBuilder):
         model.name_to_id = fm_model.variables
         model.id_to_name = fm_model.features
         model.next_available_id = fm_model.next_available_id
+        # Store the FM's declared root name explicitly at build — an independent
+        # witness (from the FM tree, not constraint_map's ordering) that lets the
+        # "root = first constraint_map key" invariant be machine-checked without a
+        # get_root_feature() getter (T11.4c). Preparation derives root_clauses as the
+        # first key's clauses; if FmToDiagPysat ever reorders, this witness diverges
+        # and the guard goes red instead of ConGen learning on a wrong background.
+        model.root_feature = fm.root.name
         return model

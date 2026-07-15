@@ -141,6 +141,20 @@ def test_fm_oracle_model_does_not_build_itself():
     assert not hasattr(FMOracleModel, "build"), "FMOracleModel still self-builds (build)"
 
 
+def test_fm_oracle_has_no_dead_metadata_getters():
+    """The API diet (T11.4c): FMOracle's five zero-consumer metadata getters are gone.
+    ``get_fm_data`` was the dead root; it alone called ``get_root_feature`` /
+    ``get_num_constraints`` / ``get_next_available_id``, and ``get_cnf_clauses`` had
+    only the net helper. Their sole reader was the T11 net itself — which was keeping
+    a dead API alive — so the five golden keys are dropped WITH the methods (the one
+    sanctioned golden-key drop; the drop IS this commit's purpose). Mechanism check
+    (hasattr), not ``__all__``. Permanent guard against the dead surface returning."""
+    from conacq.oracle import FMOracle
+    for name in ("get_fm_data", "get_root_feature", "get_num_constraints",
+                 "get_next_available_id", "get_cnf_clauses"):
+        assert not hasattr(FMOracle, name), f"FMOracle still exposes dead getter {name}"
+
+
 def test_declaring_a_role_without_implementing_it_fails_at_construction():
     """The good half of the deleted fat ABC, restored via ``@abstractmethod`` on the
     narrow protocol members (ADR-0010): a class that DECLARES a role by inheriting

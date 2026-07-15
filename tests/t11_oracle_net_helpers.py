@@ -63,16 +63,6 @@ def _canon_bgdata(bg):
     }
 
 
-def _canon_fmdata(fm):
-    return {
-        "features": sorted(fm.features),
-        "feature_ids": _canon(fm.feature_ids),
-        "root_feature": fm.root_feature,
-        "num_constraints": fm.num_constraints,
-        "next_available_id": fm.next_available_id,
-    }
-
-
 def canonical_snapshot(oracle):
     """Every observable getter on the oracle, taken BEFORE any query.
 
@@ -86,20 +76,21 @@ def canonical_snapshot(oracle):
     # Job ② (kb/assumptions/c/bg_data/root_clauses) moved off the live oracle onto
     # the frozen OracleData snapshot (ADR-0009); the values are byte-identical, so
     # the labels stay and the reads follow the data to its new home.
+    #
+    # The five FM-metadata labels (get_root_feature/get_cnf_clauses/
+    # get_num_constraints/get_next_available_id/get_fm_data) were DROPPED with the
+    # getters they recorded in the T11.4c API diet: a golden key may be dropped when
+    # the API it records is deliberately deleted (that drop was the commit's purpose).
+    # The retained labels below keep their exact recorded values.
     data = oracle.oracle_data
     return {
         "get_variables": sorted(oracle.get_variables()),
         "get_feature_ids": _canon(oracle.get_variable_ids()),
-        "get_root_feature": oracle.get_root_feature(),
         "get_root_clauses": _canon(data.get_root_clauses()),
-        "get_cnf_clauses": _canon(oracle.get_cnf_clauses()),
-        "get_num_constraints": oracle.get_num_constraints(),
-        "get_next_available_id": oracle.get_next_available_id(),
         "get_c": _canon(data.get_c()),
         "get_kb": _canon(data.get_kb()),
         "get_assumptions": _canon(data.get_assumptions()),
         "get_bg_data": _canon_bgdata(data.get_bg_data()),
-        "get_fm_data": _canon_fmdata(oracle.get_fm_data()),
     }
 
 

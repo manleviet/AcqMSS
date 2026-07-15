@@ -123,4 +123,9 @@ def test_root_constraint_is_the_first_constraint_map_key(name, fm_path, _bias):
         pytest.skip(f"feature model not found: {fm_path}")
     oracle = FMOracle(fm_path)
     model = oracle._oracle_model
-    assert next(iter(model.constraint_map)) == oracle.get_root_feature()
+    # ``root_feature`` is stored at build from the FM tree's declared root — an
+    # independent witness, NOT derived from constraint_map's ordering — so this
+    # asserts FmToDiagPysat put the root constraint first. If it ever reorders, the
+    # first key diverges from the stored root and this goes red (was oracle
+    # .get_root_feature(), deleted in the T11.4c API diet).
+    assert next(iter(model.constraint_map)) == model.root_feature

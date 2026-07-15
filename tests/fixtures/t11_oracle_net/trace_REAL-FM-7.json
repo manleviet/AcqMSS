@@ -820,97 +820,6 @@
    52,
    54
   ],
-  "get_cnf_clauses": [
-   [
-    1
-   ],
-   [
-    -1,
-    2
-   ],
-   [
-    -2,
-    1
-   ],
-   [
-    -2,
-    3,
-    4
-   ],
-   [
-    -3,
-    -4
-   ],
-   [
-    -3,
-    2
-   ],
-   [
-    -4,
-    2
-   ],
-   [
-    -5,
-    1
-   ],
-   [
-    -5,
-    6
-   ],
-   [
-    -6,
-    5
-   ],
-   [
-    -7,
-    5
-   ],
-   [
-    -8,
-    1
-   ],
-   [
-    -9,
-    1
-   ],
-   [
-    -9,
-    10,
-    11
-   ],
-   [
-    -10,
-    9
-   ],
-   [
-    -11,
-    9
-   ],
-   [
-    -12,
-    1
-   ],
-   [
-    -12,
-    13
-   ],
-   [
-    -13,
-    12
-   ],
-   [
-    -14,
-    12
-   ],
-   [
-    -5,
-    -3
-   ],
-   [
-    -8,
-    12
-   ]
-  ],
   "get_feature_ids": {
    "compiler": 9,
    "diagram_builder": 12,
@@ -926,43 +835,6 @@
    "qt": 7,
    "sdi": 3,
    "uml": 13
-  },
-  "get_fm_data": {
-   "feature_ids": {
-    "compiler": 9,
-    "diagram_builder": 12,
-    "gui_builder": 5,
-    "interface": 2,
-    "java": 6,
-    "javac": 10,
-    "jplug": 1,
-    "mdi": 4,
-    "model_code_synch": 8,
-    "mvc": 11,
-    "petri_net": 14,
-    "qt": 7,
-    "sdi": 3,
-    "uml": 13
-   },
-   "features": [
-    "compiler",
-    "diagram_builder",
-    "gui_builder",
-    "interface",
-    "java",
-    "javac",
-    "jplug",
-    "mdi",
-    "model_code_synch",
-    "mvc",
-    "petri_net",
-    "qt",
-    "sdi",
-    "uml"
-   ],
-   "next_available_id": 28,
-   "num_constraints": 14,
-   "root_feature": "jplug"
   },
   "get_kb": [
    [
@@ -1505,14 +1377,11 @@
     -14
    ]
   ],
-  "get_next_available_id": 28,
-  "get_num_constraints": 14,
   "get_root_clauses": [
    [
     1
    ]
   ],
-  "get_root_feature": "jplug",
   "get_variables": [
    "compiler",
    "diagram_builder",

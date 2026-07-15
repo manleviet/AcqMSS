@@ -9,7 +9,6 @@ from typing import Dict, Optional, Set, List
 
 from pysat.solvers import Solver
 
-from conacq.oracle.fm.data import FMData
 from conacq.oracle.fm.model import FMOracleModel
 from conacq.oracle.fm.builder import FMOracleModelBuilder
 from conacq.oracle.fm.task_preparation import FMOracleTaskPreparation
@@ -70,18 +69,6 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
             SolverBackend.from_flags(use_incremental=use_incremental),
             solver_name, self.profiler)
 
-        # Lazy-loaded for description extraction (most callers never need this)
-        self._fm = None
-
-    # TODO: need check
-    @property
-    def fm(self):
-        """Lazy-load FM for description extraction."""
-        if self._fm is None:
-            from flamapy.metamodels.fm_metamodel.transformations import UVLReader
-            self._fm = UVLReader(self.fm_path).transform()
-        return self._fm
-
     # --- Membership role (MembershipOracle) ---
 
     @measure_time('oracle_is_valid')
@@ -109,22 +96,7 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
 
         return self._checker.is_consistent(set_c)
 
-    # --- FM-specific extensions (not part of the narrow role protocols) ---
-
-    # TODO: need check
-    def get_fm_data(self) -> FMData:
-        """Create FMData snapshot from current oracle state.
-
-        Returns:
-            Frozen FMData with all FM metadata
-        """
-        return FMData(
-            features=self.get_variables(),
-            feature_ids=self.get_variable_ids(),
-            root_feature=self.get_root_feature(),
-            num_constraints=self.get_num_constraints(),
-            next_available_id=self.get_next_available_id(),
-        )
+    # --- Catalog role (CatalogProvider) ---
 
     def get_variables(self) -> Set[str]:
         """Get all feature names. The oracle exposes the catalog (CatalogProvider);
@@ -182,24 +154,6 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
     def _model_to_config(self, model: List[int]) -> Dict[str, bool]:
         """Convert SAT model to feature config dict."""
         return variable_literals_to_config(model, self._oracle_model.id_to_name)
-
-    # TODO: need check
-    def get_root_feature(self) -> str:
-        """Get root feature name."""
-        return self.fm.root.name
-
-    # TODO: need check
-    def get_cnf_clauses(self) -> List[List[int]]:
-        """Get the raw ground truth CNF clauses (without assumption guards)."""
-        return self._fm_clauses()
-
-    def get_num_constraints(self) -> int:
-        """Get number of FM constraints in ground truth."""
-        return len(self._oracle_model.constraint_map)
-
-    def get_next_available_id(self) -> int:
-        """Get starting Tseitin variable ID from FM model."""
-        return self._oracle_model.next_available_id
 
     def __repr__(self):
         return f"FMOracle(features={len(self._oracle_model.name_to_id)})"

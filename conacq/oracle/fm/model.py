@@ -26,7 +26,17 @@ class FMOracleModel(KBModel):
     assumption-guarded unit clauses:
       [-a_pos_i, fid]  → if a_pos_i active, feature must be true
       [-a_neg_i, -fid] → if a_neg_i active, feature must be false
+
+    The FM's declared root feature name is stored explicitly at build
+    (``root_feature``, set by FMOracleModelBuilder). It is the independent witness
+    for the "root = first constraint_map key" invariant — see
+    ``test_root_constraint_is_the_first_constraint_map_key``. Default "" on a bare
+    (unbuilt) model.
     """
+
+    # The FM's declared root name, filled by the builder. Class default keeps a bare
+    # FMOracleModel() (synthetic test KBs) attribute-safe.
+    root_feature: str = ""
 
     def prepare_task(self, task_input: Optional[TaskInput] = None) -> PreparedTask:
         """Derive a fresh PreparedTask from this FM KB (pure).

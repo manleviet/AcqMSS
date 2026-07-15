@@ -6,13 +6,11 @@ Provides ground truth interfaces for classifying configurations:
 - FMOracle: Validates against a feature model (SAT-based)
 - UserPromptOracle: Human-in-the-loop oracle
 - CachedOracle: Wrapper caching oracle answers
-- FMData: Immutable FM metadata snapshot
 - GroundTruthData: Extracted ground truth for evaluation
 """
 
 from .bg_data import BGData
 from .oracle_data import OracleData
-from .fm.data import FMData
 from .protocols import (
     MembershipOracle,
     CompletableOracle,
@@ -33,7 +31,6 @@ from .constraint_description import extract_constraint_descriptions
 __all__ = [
     'BGData',
     'OracleData',
-    'FMData',
     # Narrow role protocols (contracts consumers depend on)
     'MembershipOracle',
     'CompletableOracle',
