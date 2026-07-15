@@ -2,7 +2,7 @@
 Feature model metadata dataclass.
 
 Immutable container for FM metadata extracted from FMOracle.
-Created once, passed around explicitly to decouple callers from Oracle.
+Created once, passed around explicitly to decouple callers from the oracle.
 """
 
 from dataclasses import dataclass

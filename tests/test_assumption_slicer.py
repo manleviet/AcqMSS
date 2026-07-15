@@ -28,7 +28,7 @@ from explanation.models.task_preparation import (
 from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 from conacq.algorithms.acqmss.task_preparation import ConGenTaskPreparation
 from conacq.algorithms.quacq.task_preparation import QuAcqTaskPreparation
-from conacq.oracle.fm_oracle_model import FMOracleModel
+from conacq.oracle.fm.model import FMOracleModel
 from tests.resource_paths import DATA_DIR
 
 

@@ -12,7 +12,7 @@ Provides ground truth interfaces for classifying configurations:
 
 from .bg_data import BGData
 from .oracle_data import OracleData
-from .fm_data import FMData
+from .fm.data import FMData
 from .protocols import (
     MembershipOracle,
     CompletableOracle,
@@ -22,11 +22,12 @@ from .protocols import (
     GeneratorOracle,
     PreparationOracle,
 )
-from .fm_oracle import FMOracle
+from .fm.oracle import FMOracle
 from .user_prompt import UserPromptOracle
 from .cached import CachedOracle
 from .ground_truth import GroundTruthData
-from .fm_oracle_model import FMOracleModel
+from .fm.model import FMOracleModel
+from .fm.builder import FMOracleModelBuilder
 from .constraint_description import extract_constraint_descriptions
 
 __all__ = [
@@ -46,5 +47,6 @@ __all__ = [
     'CachedOracle',
     'GroundTruthData',
     'FMOracleModel',
+    'FMOracleModelBuilder',
     'extract_constraint_descriptions',
 ]

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from conacq.oracle import FMOracle
-from conacq.oracle.fm_oracle_model import FMOracleModel
+from conacq.oracle.fm.model import FMOracleModel
 from explanation.api import config_to_assignment_assumptions
 from explanation.checker.backend import build_checker, SolverBackend
 from tests.resource_paths import MODELS

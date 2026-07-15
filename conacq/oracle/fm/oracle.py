@@ -9,8 +9,10 @@ from typing import Dict, Optional, Set, List
 
 from pysat.solvers import Solver
 
-from conacq.oracle.fm_data import FMData
-from conacq.oracle.fm_oracle_model import FMOracleModel, FMOracleTaskPreparation
+from conacq.oracle.fm.data import FMData
+from conacq.oracle.fm.model import FMOracleModel
+from conacq.oracle.fm.builder import FMOracleModelBuilder
+from conacq.oracle.fm.task_preparation import FMOracleTaskPreparation
 from conacq.oracle.protocols import (
     MembershipOracle,
     CompletableOracle,
@@ -57,7 +59,7 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
         # Build the immutable FM KB, then RECEIVE the frozen provisioning snapshot
         # (job ②, ADR-0009) — the preparation assembles OracleData; the oracle does
         # not build what it provides, it only holds it.
-        self._oracle_model = FMOracleModel.from_fm(fm_path).build()
+        self._oracle_model = FMOracleModelBuilder.from_fm(fm_path).build()
         self.oracle_data = FMOracleTaskPreparation.prepare(self._oracle_model)
 
         # The oracle builds its own membership checker (job ①) from the REAL task in
@@ -80,7 +82,7 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
             self._fm = UVLReader(self.fm_path).transform()
         return self._fm
 
-    # --- Oracle ABC implementation ---
+    # --- Membership role (MembershipOracle) ---
 
     @measure_time('oracle_is_valid')
     @count_calls('oracle_is_valid_calls')
@@ -107,7 +109,7 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
 
         return self._checker.is_consistent(set_c)
 
-    # --- FM-specific extensions (not part of Oracle ABC) ---
+    # --- FM-specific extensions (not part of the narrow role protocols) ---
 
     # TODO: need check
     def get_fm_data(self) -> FMData:

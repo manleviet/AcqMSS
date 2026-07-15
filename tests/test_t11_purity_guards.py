@@ -109,7 +109,7 @@ def test_oracle_model_has_no_configuration_mutator():
     """The oracle model exposes no post-build mutator: nothing rebinds its task,
     so no query can shift the state a later reader sees. Permanent guard against
     reopening that seam."""
-    from conacq.oracle.fm_oracle_model import FMOracleModel
+    from conacq.oracle.fm.model import FMOracleModel
     assert not hasattr(FMOracleModel, "with_configuration")
 
 
@@ -128,6 +128,17 @@ def test_no_fat_oracle_abc():
     assert not hasattr(oracle_pkg, "Oracle"), "fat Oracle ABC still exported from conacq.oracle"
     assert "Oracle" not in getattr(oracle_pkg, "__all__", [])
     assert not hasattr(quacq_pkg, "Oracle"), "fat Oracle ABC still re-exported from conacq.algorithms.quacq"
+
+
+def test_fm_oracle_model_does_not_build_itself():
+    """T6's goal: all four models have an external builder and none builds itself.
+    FMOracleModel was the last self-builder — ``from_fm``/``build`` lived on the model
+    — and those move to ``FMOracleModelBuilder`` (inheriting AbstractModelBuilder like
+    the other three). The model is a pure KB: it holds data, it does not know how to
+    load an FM. Permanent guard against the self-build smell returning."""
+    from conacq.oracle import FMOracleModel
+    assert not hasattr(FMOracleModel, "from_fm"), "FMOracleModel still self-builds (from_fm)"
+    assert not hasattr(FMOracleModel, "build"), "FMOracleModel still self-builds (build)"
 
 
 def test_declaring_a_role_without_implementing_it_fails_at_construction():
@@ -151,7 +162,7 @@ def test_prepare_task_is_unified_across_models():
     from explanation.models.pysat_diagnosis_model import DiagnosisModel
     from conacq.algorithms.acqmss.congen_model import ConGenModel
     from conacq.algorithms.quacq.quacq_model import QuAcqModel
-    from conacq.oracle.fm_oracle_model import FMOracleModel
+    from conacq.oracle.fm.model import FMOracleModel
 
     for model in (DiagnosisModel, ConGenModel, QuAcqModel, FMOracleModel):
         assert hasattr(model, "prepare_task"), f"{model.__name__} lacks prepare_task"
@@ -205,7 +216,7 @@ def test_generate_ne_not_exported_from_algorithms():
            "reuse a single solver across calls",
 )
 def test_complete_configuration_builds_solver_once(oracle, monkeypatch):
-    import conacq.oracle.fm_oracle as fm_oracle_module
+    import conacq.oracle.fm.oracle as fm_oracle_module
 
     constructions = {"n": 0}
     real_solver = fm_oracle_module.Solver
