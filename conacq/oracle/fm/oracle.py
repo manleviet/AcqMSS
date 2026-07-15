@@ -69,6 +69,13 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
             SolverBackend.from_flags(use_incremental=use_incremental),
             solver_name, self.profiler)
 
+        # Precompute the raw FM clauses once. constraint_map is immutable after
+        # build, so this is a pure function of the KB (no solver state, no behaviour):
+        # complete_configuration reuses it instead of rebuilding the list per call.
+        self._fm_clauses = [
+            clause for clauses in self._oracle_model.constraint_map.values()
+            for clause in clauses]
+
     # --- Membership role (MembershipOracle) ---
 
     @measure_time('oracle_is_valid')
@@ -108,22 +115,19 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
         name↔id catalog."""
         return dict(self._oracle_model.name_to_id)
 
-    def _fm_clauses(self) -> List[List[int]]:
-        """Raw FM CNF clauses (no assumption guards), derived from the KB's
-        constraint_map.
-
-        NOTE: rebuilt on every call. ``complete_configuration`` is a hot path, so a
-        persistent completion solver (issue #10) belongs here — deferred to T11.5;
-        do NOT optimize it in this arc (behaviour must stay identical)."""
-        return [clause for clauses in self._oracle_model.constraint_map.values()
-                for clause in clauses]
-
     def complete_configuration(self, partial: Dict[str, bool]) -> Optional[Dict[str, bool]]:
         """Complete a partial configuration to a full valid one via SAT solving.
 
         If no valid completion exists for the given partial, falls back to
         returning any valid configuration (ignoring partial constraints).
         Returns None only if no valid configuration exists at all.
+
+        Builds a FRESH solver per call, on raw FM clauses — deliberately NOT through
+        ``self._checker`` (the membership port). This keeps completion a pure function
+        of ``partial``: the returned witness is reproducible from its inputs alone and
+        goes into a frozen dataset. Routing it through the (possibly persistent) port
+        would make the witness depend on query history — a dataset migration, not a
+        refactor (ADR-0011).
 
         Args:
             partial: Partial assignment {feature_name: True/False} for subset of features
@@ -137,7 +141,7 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
             assumptions.append(fid if value else -fid)
 
         solver = Solver(name=self.solver_name)
-        for clause in self._fm_clauses():
+        for clause in self._fm_clauses:
             solver.add_clause(clause)
 
         try:

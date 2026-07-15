@@ -19,9 +19,11 @@ the facade one) landed once ``FMOracleModel`` became a pure KB and stopped being
 KBProvider. ``test_prepare_task_is_unified_across_models`` and
 ``test_no_call_prepare_first_runtime_error_in_source`` landed once all three conacq
 models (FMOracle · QuAcq · ConGen) carry the pure ``prepare_task`` and shed the
-call-ordering RuntimeError — now permanent regression guards. The remaining two
-xfails flip at their own sub-changes: GenerateNE's relocation and
-``complete_configuration``'s single-solver reuse.
+call-ordering RuntimeError — now permanent regression guards. GenerateNE's
+relocation flipped its guard too. No xfails remain: the last one was DELETED rather
+than flipped, because its target — completion reusing one persistent solver — is a
+behaviour change (a persistent solver returns different completion witnesses → a
+different dataset), not a refactor (ADR-0011).
 
 Reasons describe the invariant that flips the guard, not a plan label (plan
 headers get renumbered; the behavioural target is stable).
@@ -224,24 +226,3 @@ def test_generate_ne_not_exported_from_algorithms():
         assert not hasattr(pkg, "GenerateNE"), f"GenerateNE bound on {pkg.__name__} (door)"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="complete_configuration rebuilds its SAT solver on every call; it must "
-           "reuse a single solver across calls",
-)
-def test_complete_configuration_builds_solver_once(oracle, monkeypatch):
-    import conacq.oracle.fm.oracle as fm_oracle_module
-
-    constructions = {"n": 0}
-    real_solver = fm_oracle_module.Solver
-
-    def counting_solver(*args, **kwargs):
-        constructions["n"] += 1
-        return real_solver(*args, **kwargs)
-
-    monkeypatch.setattr(fm_oracle_module, "Solver", counting_solver)
-
-    partial = {sorted(oracle.get_variables())[0]: True}
-    oracle.complete_configuration(partial)
-    oracle.complete_configuration(partial)
-    assert constructions["n"] == 1
