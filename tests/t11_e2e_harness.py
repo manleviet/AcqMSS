@@ -136,7 +136,7 @@ def _congen_setup(examples_path):
     model = (ConGenModelBuilder
              .from_bias(str(BIAS_PATH))
              .use_incremental(True)
-             .with_oracle(oracle.oracle_data)
+             .with_oracle_data(oracle.oracle_data)
              .with_examples(str(examples_path))
              .build())
     task = model.task
@@ -179,23 +179,25 @@ def run_congen(examples_path):
 
 
 def _quacq_setup():
-    """Build the QuAcq model/checker (mirrors tests/test_quacq.py fixtures)."""
+    """Build the QuAcq model + prepared task + checker (mirrors test_quacq fixtures)."""
     from conacq.oracle import FMOracle
     from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
+    from conacq.algorithms.quacq.task_preparation import QuAcqTaskInput
     from explanation.checker.backend import build_checker, SolverBackend
 
     oracle = FMOracle(str(FM_PATH))
-    model = QuAcqModelBuilder.from_bias(str(BIAS_PATH)).with_oracle(oracle.oracle_data).build()
+    model = QuAcqModelBuilder.from_bias(str(BIAS_PATH)).with_oracle_data(oracle.oracle_data).build()
+    prepared = model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
     checker = build_checker(
-        model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))
-    return oracle, model, checker
+        prepared.task, SolverBackend.from_flags(use_incremental=True))
+    return oracle, model, prepared, checker
 
 
 def quacq_prep_ids():
     """Layer 2: the QuAcq prepared-task ID layout (no learning run)."""
-    _oracle, model, checker = _quacq_setup()
+    _oracle, _model, prepared, checker = _quacq_setup()
     try:
-        return _task_id_fields(model.task)
+        return _task_id_fields(prepared.task)
     finally:
         checker.cleanup()
 
@@ -206,14 +208,16 @@ def run_quacq():
     from conacq.example_generators import QueryProvider
     from profiling import get_global_profiler
 
-    oracle, model, checker = _quacq_setup()
-    task = model.task
+    oracle, model, prepared, checker = _quacq_setup()
+    task = prepared.task
     try:
-        query_provider = QueryProvider(checker=checker, model=model)
+        query_provider = QueryProvider(checker=checker, model=model,
+                                       assignment_map=prepared.assignment_map)
         discrim_gen = DiscriminatingGenerator(
             checker=checker, model=model,
-            profiler=get_global_profiler(), root_assumption=task.set_b[0])
-        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
+            profiler=get_global_profiler(), root_assumption=task.set_b[0], task=task)
+        quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model,
+                                 task=task, assignment_map=prepared.assignment_map)
         result = quacq.learn(
             set_c=task.set_c, set_b=task.set_b, negation_map=task.negation_map,
             mode="oracle", max_queries=_QUACQ_MAX_QUERIES)

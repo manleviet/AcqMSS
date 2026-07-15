@@ -5,13 +5,14 @@ Pure functions extracted from QuAcqTask — shared by FindScope, FindC,
 DiscriminatingGenerator, and QuAcq.learn().
 """
 
+from explanation.api import config_to_assignment_assumptions
 from profiling import count_calls, get_global_profiler
 
 
 @count_calls('prune_calls')
 def prune_rejecting(
         checker,
-        model,
+        assignment_map,
         remaining_bias: set,
         assignment: dict,
         root_assumption: int,
@@ -21,12 +22,15 @@ def prune_rejecting(
 
     A constraint is pruned if KB + root + assignment_assumptions + constraint is UNSAT.
 
+    Stateless: the assignment→assumption map is passed in (from the prepared task),
+    not read from a live model.
+
     Returns list of pruned constraint assumption IDs.
     Mutates remaining_bias in-place.
     """
     if profiler is None:
         profiler = get_global_profiler()
-    config_assumptions = model.config_to_assumptions(assignment)
+    config_assumptions = config_to_assignment_assumptions(assignment, assignment_map)
     base = [root_assumption] + config_assumptions
     pruned = []
     for c_id in list(remaining_bias):

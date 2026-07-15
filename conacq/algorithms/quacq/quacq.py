@@ -61,7 +61,9 @@ class QuAcq:
                  model: Optional[QuAcqModel] = None,
                  query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
-                 profiler_instance: AbstractProfiler = None) -> None:
+                 profiler_instance: AbstractProfiler = None,
+                 task=None,
+                 assignment_map=None) -> None:
         self.checker = checker
         self.oracle = oracle
         self.model = model  # QuAcqModel (optional, enables SAT-based pruning)
@@ -70,6 +72,10 @@ class QuAcq:
 
         self.query_provider = query_provider
         self.discriminating_generator = discriminating_generator
+        # Prepared task + assignment map (the model is stateless; the run-time
+        # helpers read these, not stored model state). None for the empty-bias path.
+        self.task = task
+        self.assignment_map = assignment_map
 
     @classmethod
     def for_oracle(cls, checker: ConsistencyChecker,
@@ -77,12 +83,15 @@ class QuAcq:
                    query_provider: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
                    model: QuAcqModel = None,
-                   profiler: AbstractProfiler = None) -> 'QuAcq':
+                   profiler: AbstractProfiler = None,
+                   task=None,
+                   assignment_map=None) -> 'QuAcq':
         """Factory for oracle-based learning. discrim_gen required."""
         return cls(checker, oracle, model=model,
                    query_provider=query_provider,
                    discriminating_generator=discrim_gen,
-                   profiler_instance=profiler)
+                   profiler_instance=profiler,
+                   task=task, assignment_map=assignment_map)
 
     @classmethod
     def for_examples(cls, checker: ConsistencyChecker,
@@ -90,12 +99,15 @@ class QuAcq:
                      query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
                      model: QuAcqModel = None,
-                     profiler: AbstractProfiler = None) -> 'QuAcq':
+                     profiler: AbstractProfiler = None,
+                     task=None,
+                     assignment_map=None) -> 'QuAcq':
         """Factory for example-based learning."""
         return cls(checker, oracle, model=model,
                    query_provider=query_provider,
                    discriminating_generator=discrim_gen,
-                   profiler_instance=profiler)
+                   profiler_instance=profiler,
+                   task=task, assignment_map=assignment_map)
 
     @measure_time('quacq_runtime')
     @count_calls('quacq_calls')
@@ -184,14 +196,14 @@ class QuAcq:
 
             # Step 3: Process answer
             if answer:
-                pruned = prune_rejecting(self.checker, self.model, remaining_bias, query, set_b[0], self.profiler)
+                pruned = prune_rejecting(self.checker, self.assignment_map, remaining_bias, query, set_b[0], self.profiler)
                 logging.debug('Pruned %d constraints', len(pruned))
             else:
                 if n_queries >= max_queries:
                     convergence_reason = 'max_queries'
                     break
 
-                find_scope = FindScope(self.oracle, self.checker, self.model, self.profiler,
+                find_scope = FindScope(self.oracle, self.checker, self.assignment_map, self.profiler,
                                        record_query, set_b[0])
                 scope_vars = find_scope.run(
                     e=query, R=set(), Y=all_variables,
@@ -204,7 +216,8 @@ class QuAcq:
                 if scope:
                     find_c = FindC(self.oracle, self.checker, self.model,
                                    self.profiler, record_query, set_b[0],
-                                   generator=self.discriminating_generator)
+                                   generator=self.discriminating_generator,
+                                   task=self.task, assignment_map=self.assignment_map)
                     c_id = find_c.run(
                         e=query, scope=scope,
                         remaining_bias=remaining_bias,

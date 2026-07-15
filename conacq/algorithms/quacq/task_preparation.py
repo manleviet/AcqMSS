@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from explanation.api import (
+    AssignmentAssumptionMap,
     DescriptionProvider,
     DiagnosisTask,
     PreparedTask,
@@ -21,6 +22,15 @@ from explanation.api import (
 if TYPE_CHECKING:
     from conacq.oracle import OracleData
     from .quacq_model import QuAcqModel
+
+
+@dataclass(frozen=True)
+class QuAcqTaskInput:
+    """Per-preparation input for QuAcqModel.prepare_task: the oracle's frozen
+    provisioning snapshot. QuAcq's own input type — the prepare_task signature is
+    unified across models, the input TYPE is not (a shared union would be the
+    fat-container anti-pattern removed at T9, ADR-0006)."""
+    oracle_data: "OracleData"
 
 
 @dataclass(frozen=True)
@@ -54,17 +64,18 @@ class QuAcqTaskPreparation:
     """
 
     def prepare(self, model: QuAcqModel,
-                oracle: "OracleData") -> PreparedTask:
+                oracle_data: "OracleData") -> PreparedTask:
         """Prepare QuAcqTask from model and the frozen OracleData snapshot.
 
         Build-then-freeze: accumulate into locals, construct frozen QuAcqTask once.
 
         Args:
             model: QuAcqModel with bias constraint_map
-            oracle: OracleData supplying BG data and feature IDs
+            oracle_data: OracleData supplying BG data and feature IDs
 
         Returns:
-            PreparedTask with QuAcqTask and DescriptionProvider
+            PreparedTask with QuAcqTask, DescriptionProvider, and the
+            feature-assignment map (built here from the BG data, not the builder).
         """
         provider = DescriptionProvider()
 
@@ -74,7 +85,7 @@ class QuAcqTaskPreparation:
         negation_map: Dict[int, int] = {}
 
         # Step 0: Copy BG data from Oracle (root constraint pair)
-        bg_data = oracle.get_bg_data()
+        bg_data = oracle_data.get_bg_data()
         set_kb.extend(bg_data.set_kb)
         assumptions.extend(list(bg_data.assumptions))
         negation_map.update(bg_data.negation_map)
@@ -84,6 +95,13 @@ class QuAcqTaskPreparation:
         # Copy Part 4 data from BGData (feature assignment assumptions)
         set_kb.extend(bg_data.assignment_clauses)
         assumptions.extend(bg_data.assignment_assumptions)
+
+        # The feature-assignment map, built here from the BG data and returned on
+        # the PreparedTask. The QuAcq inner loop encodes configs through it
+        # (FindC/prune/query generation); it is derived per prepare, not stored.
+        assignment_map = AssignmentAssumptionMap(
+            dict(bg_data.pos_assignment_to_assumption),
+            dict(bg_data.neg_assignment_to_assumption))
 
         # Step 1: Assign assumption IDs (negated forms from builder)
         id_assumption = model.next_available_id
@@ -105,7 +123,7 @@ class QuAcqTaskPreparation:
             set_c=set_c, set_b=set_b, set_kb=set_kb,
             negation_map=negation_map, assumptions=assumptions,
             constraint_clauses=constraint_clauses)
-        return PreparedTask(task, provider)
+        return PreparedTask(task, provider, assignment_map)
 
     @staticmethod
     def _assign_sets(assumptions: List[int], bias_start_pos: int) -> Tuple[List[int], List[int]]:

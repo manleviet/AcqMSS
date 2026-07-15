@@ -1,12 +1,12 @@
 """Fluent builder for QuAcqModel, mirroring ConGenModelBuilder API.
 
 The bias-load → negation-via-oracle skeleton lives in OracleBiasModelBuilder;
-this builder supplies the two template hooks.
+this builder only supplies the model-instance hook. The model it returns is a pure
+KB: preparation (task + assignment map) is derived per run via
+``model.prepare_task(QuAcqTaskInput(oracle_data))``, not baked in at build time.
 """
 
 from __future__ import annotations
-
-from explanation.api import AssignmentAssumptionMap
 
 from conacq.oracle_bias_model_builder import OracleBiasModelBuilder
 
@@ -20,23 +20,15 @@ class QuAcqModelBuilder(OracleBiasModelBuilder):
         oracle = FMOracle('data/fms/model.uvl')
         model = (QuAcqModelBuilder
                  .from_bias('data/bias/model.json')
-                 .with_oracle(oracle)
-                 .build())  # Returns prepared model with task ready
+                 .with_oracle_data(oracle.oracle_data)
+                 .build())  # pure KB; call model.prepare_task(...) to get a task
     """
 
     # === OracleBiasModelBuilder template hooks ===
 
     def _create_model_instance(self) -> QuAcqModel:
-        """Return a new, empty QuAcqModel."""
+        """Return a new, empty QuAcqModel (bias KB filled by the base template)."""
         return QuAcqModel()
 
-    def _post_negation_build(self, model: QuAcqModel) -> None:
-        """Apply solver mode, copy BG assignment maps, then auto-prepare."""
-        model.use_incremental = self._use_incremental
-        bg_data = self._oracle.get_bg_data()
-        # Build the feature-assignment map once here (not per query): the QuAcq
-        # inner loop hits config_to_assumptions on every discriminating example.
-        model.assignment_map = AssignmentAssumptionMap(
-            dict(bg_data.pos_assignment_to_assumption),
-            dict(bg_data.neg_assignment_to_assumption))
-        model.prepare(self._oracle)
+    # No _post_negation_build override: the model is left as a pure KB. Solver mode
+    # is the caller's, and the assignment map is built inside prepare_task, not here.

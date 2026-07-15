@@ -59,7 +59,7 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     model = (ConGenModelBuilder
              .from_bias(bias_path)
              .use_incremental(is_incremental)
-             .with_oracle(oracle.oracle_data)
+             .with_oracle_data(oracle.oracle_data)
              .with_examples(examples_path)
              .build())
 
@@ -67,7 +67,7 @@ def create_checker_and_task(bias_path, fm_path, examples_path, is_incremental=Tr
     # examples = ExampleIO.load_json(examples_path)
     # pos = [e.assignments for e in examples.positive]
     # neg = [e.assignments for e in examples.negative]
-    # model.prepare(oracle=oracle, positive_examples=pos, negative_examples=neg)
+    # model.prepare(oracle_data=oracle.oracle_data, positive_examples=pos, negative_examples=neg)
 
     task = model.task
     checker = build_checker(
@@ -288,21 +288,21 @@ class TestConGenModelBuilder:
     """Tests for ConGenModelBuilder auto-prepare patterns."""
 
     def test_auto_prepare_from_file(self):
-        """Pattern 1: with_oracle + with_examples → build returns prepared model."""
+        """Pattern 1: with_oracle_data + with_examples → build returns prepared model."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle.oracle_data)
+                 .with_oracle_data(oracle.oracle_data)
                  .with_examples(str(EXAMPLES_FF_PATH))
                  .build())
         assert model.task is not None
         assert len(model.get_kb()) > 0
 
     def test_auto_prepare_from_data(self):
-        """Pattern 2: with_oracle + with_examples_data → build returns prepared model."""
+        """Pattern 2: with_oracle_data + with_examples_data → build returns prepared model."""
         if not FM_PATH.exists() or not EXAMPLES_FF_PATH.exists():
             pytest.skip("Test data files not found")
 
@@ -314,7 +314,7 @@ class TestConGenModelBuilder:
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle.oracle_data)
+                 .with_oracle_data(oracle.oracle_data)
                  .with_examples_data(positive_examples=pos, negative_examples=neg)
                  .build())
         assert model.task is not None
@@ -324,7 +324,7 @@ class TestConGenModelBuilder:
         if not BIAS_PATH.exists():
             pytest.skip("Bias file not found")
 
-        with pytest.raises(ValueError, match="Oracle required"):
+        with pytest.raises(ValueError, match="OracleData required"):
             ConGenModelBuilder.from_bias(str(BIAS_PATH)).build()
 
     def test_cv_re_prepare(self):
@@ -337,7 +337,7 @@ class TestConGenModelBuilder:
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle.oracle_data)
+                 .with_oracle_data(oracle.oracle_data)
                  .build())
         examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
         pos = [e.assignments for e in examples.positive]
@@ -366,7 +366,7 @@ class TestConGenModelBuilder:
         oracle = FMOracle(str(FM_PATH), use_incremental=False)
         model = (ConGenModelBuilder
                  .from_bias(str(BIAS_PATH))
-                 .with_oracle(oracle.oracle_data)
+                 .with_oracle_data(oracle.oracle_data)
                  .with_examples('nonexistent.json')  # Would fail if used
                  .with_examples_data(positive_examples=pos, negative_examples=neg)
                  .build())

@@ -67,7 +67,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
     def mode_name(self) -> str:
         return self._mode_name
 
-    def prepare(self, model: ConGenModel, oracle: "OracleData") -> PreparedTask:
+    def prepare(self, model: ConGenModel, oracle_data: "OracleData") -> PreparedTask:
         """Prepare ConGen task from model. BG + KB from the frozen OracleData snapshot.
 
         Shared Assumption ID Layout (ConGen owns Parts 5-8):
@@ -94,7 +94,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         set_neg_tc: List[int] = []
 
         # Step 0: Copy BG data from Oracle (root constraint pair from Part 3)
-        bg_data = oracle.get_bg_data()
+        bg_data = oracle_data.get_bg_data()
         set_kb.extend(bg_data.set_kb)
         assumptions.extend(list(bg_data.assumptions))
         negation_map.update(bg_data.negation_map)
@@ -126,7 +126,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         if testsuite is not None and len(testsuite.testcases) > 0:
             id_assumption = self._prepare_negative_examples(
                 set_kb, assumptions, negation_map, set_neg_tv,
-                provider, model, oracle, testsuite, id_assumption)
+                provider, model, oracle_data, testsuite, id_assumption)
 
         # NOTE: Do NOT update model.next_available_id here.
         # model.next_available_id was set by the builder at build time and should remain fixed.
@@ -150,7 +150,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
             set_neg_tv: List[int],
             provider: DescriptionProvider,
             model: ConGenModel,
-            oracle: "OracleData",
+            oracle_data: "OracleData",
             testsuite: TestSuite,
             id_assumption: int
     ) -> int:
@@ -159,7 +159,7 @@ class ConGenTaskPreparation(TestCaseTaskPreparationStrategy):
         Orchestrates: GenerateNE -> combine -> negate -> populate locals.
         """
 
-        generate_ne = GenerateNE(oracle)
+        generate_ne = GenerateNE(oracle_data)
         ne_results, id_assumption = generate_ne.generate(
             testsuite, model.name_to_id, set_kb, assumptions, id_assumption)
 

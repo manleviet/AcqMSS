@@ -20,23 +20,23 @@ class ConGenModelBuilder(OracleBiasModelBuilder):
         oracle = FMOracle('data/fms/model.uvl')
         model = (ConGenModelBuilder
                  .from_bias('data/bias/model.json')
-                 .with_oracle(oracle)
+                 .with_oracle_data(oracle.oracle_data)
                  .with_examples('data/examples/model.json')
                  .build())  # Returns prepared model
 
         # Pattern 2: Auto-prepare from raw data
         model = (ConGenModelBuilder
                  .from_bias('data/bias/model.json')
-                 .with_oracle(oracle)
+                 .with_oracle_data(oracle.oracle_data)
                  .with_examples_data(positive_examples=pos, negative_examples=neg)
                  .build())  # Returns prepared model
 
         # Pattern 3: CV build-once, prepare per fold
         model = (ConGenModelBuilder.from_bias('data/bias/model.json')
-                 .with_oracle(oracle)
+                 .with_oracle_data(oracle.oracle_data)
                  .build())
         for fold_pos, fold_neg in folds:
-            model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
+            model.prepare(oracle.oracle_data, positive_examples=fold_pos, negative_examples=fold_neg)
     """
 
     def __init__(self):
@@ -82,7 +82,7 @@ class ConGenModelBuilder(OracleBiasModelBuilder):
         if self._has_examples():
             pos, neg = self._resolve_examples()
             model.prepare(
-                oracle=self._oracle,
+                oracle_data=self._oracle_data,
                 positive_examples=pos,
                 negative_examples=neg or []
             )

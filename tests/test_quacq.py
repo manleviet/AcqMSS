@@ -15,7 +15,7 @@ from conacq.algorithms.quacq import (
     QuAcq,
     DiscriminatingGenerator,
 )
-from conacq.algorithms.quacq.task_preparation import QuAcqTask
+from conacq.algorithms.quacq.task_preparation import QuAcqTask, QuAcqTaskInput
 from conacq.algorithms.quacq.quacq_model import QuAcqModel
 from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
 from conacq.example_generators import QueryProvider
@@ -35,9 +35,8 @@ FM_PATH = DATA_DIR / "fms" / "REAL-FM-7.uvl"
 BIAS_PATH = DATA_DIR / "bias" / "REAL-FM-7-bias.json"
 
 
-def _learn_params_from_model(model):
-    """Extract flat learn() params from prepared QuAcqModel."""
-    task = model.task
+def _learn_params_from_task(task):
+    """Extract flat learn() params from a prepared QuAcqTask."""
     return dict(
         set_c=task.set_c,
         set_b=task.set_b,
@@ -63,27 +62,33 @@ def bias():
 
 @pytest.fixture
 def interactive_model(oracle):
-    """Create QuAcqModel via builder (auto-prepared)."""
+    """Create QuAcqModel via builder (a pure KB — preparation is per-run)."""
     if not BIAS_PATH.exists():
         pytest.skip(f"Bias file not found: {BIAS_PATH}")
     return (QuAcqModelBuilder
             .from_bias(str(BIAS_PATH))
-            .with_oracle(oracle.oracle_data)
+            .with_oracle_data(oracle.oracle_data)
             .build())
 
 
 @pytest.fixture
 def prepared_model(interactive_model):
-    """Alias for interactive_model (already prepared by builder)."""
+    """Alias for interactive_model (the pure KB model)."""
     return interactive_model
 
 
 @pytest.fixture
-def checker(prepared_model):
-    """Create checker from prepared QuAcqModel."""
+def prepared(oracle, interactive_model):
+    """The PreparedTask (task + describe + assignment_map) for the model."""
+    return interactive_model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+
+
+@pytest.fixture
+def checker(prepared):
+    """Create checker from the prepared QuAcqTask."""
     return build_checker(
-        prepared_model.task,
-        SolverBackend.from_flags(use_incremental=prepared_model.use_incremental))
+        prepared.task,
+        SolverBackend.from_flags(use_incremental=True))
 
 
 def _minimal_checker():
@@ -179,10 +184,11 @@ class TestQueryProvider:
         assert provider.pool_exhausted is False
         assert provider.pool_remaining == 1
 
-    def test_generate_from_sat(self, prepared_model, checker):
+    def test_generate_from_sat(self, prepared_model, prepared, checker):
         """Test SAT-based query generation."""
-        task = prepared_model.task
-        provider = QueryProvider(checker=checker, model=prepared_model)
+        task = prepared.task
+        provider = QueryProvider(checker=checker, model=prepared_model,
+                                 assignment_map=prepared.assignment_map)
         remaining_bias = set(task.set_c)
         query, tested_c_id = provider.generate_from_sat(
             remaining_bias=remaining_bias,
@@ -206,18 +212,20 @@ class TestQuAcq:
         quacq = QuAcq(checker, oracle)
         assert quacq.oracle is oracle
 
-    def test_quacq_learn_with_limit(self, prepared_model, oracle, bias, checker):
+    def test_quacq_learn_with_limit(self, prepared_model, prepared, oracle, bias, checker):
         """Test QuAcq learning with query limit."""
-        task = prepared_model.task
-        task_data = _learn_params_from_model(prepared_model)
+        task = prepared.task
+        task_data = _learn_params_from_task(task)
 
-        query_provider = QueryProvider(checker=checker, model=prepared_model)
+        query_provider = QueryProvider(checker=checker, model=prepared_model,
+                                       assignment_map=prepared.assignment_map)
         discrim_gen = DiscriminatingGenerator(
             checker=checker, model=prepared_model,
-            profiler=get_global_profiler(), root_assumption=task.set_b[0])
+            profiler=get_global_profiler(), root_assumption=task.set_b[0], task=task)
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
-                                   model=prepared_model)
+                                   model=prepared_model,
+                                   task=task, assignment_map=prepared.assignment_map)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=5)
@@ -265,20 +273,23 @@ class TestIntegration:
             oracle = FMOracle(str(FM_PATH))
             model = (QuAcqModelBuilder
                      .from_bias(str(BIAS_PATH))
-                     .with_oracle(oracle.oracle_data)
+                     .with_oracle_data(oracle.oracle_data)
                      .build())
 
-            task = model.task
-            task_data = _learn_params_from_model(model)
+            prepared = model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+            task = prepared.task
+            task_data = _learn_params_from_task(task)
 
             checker = build_checker(
-                model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))
-            query_provider = QueryProvider(checker=checker, model=model)
+                task, SolverBackend.from_flags(use_incremental=True))
+            query_provider = QueryProvider(checker=checker, model=model,
+                                           assignment_map=prepared.assignment_map)
             discrim_gen = DiscriminatingGenerator(
                 checker=checker, model=model,
-                profiler=get_global_profiler(), root_assumption=task.set_b[0])
+                profiler=get_global_profiler(), root_assumption=task.set_b[0], task=task)
 
-            quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
+            quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model,
+                                     task=task, assignment_map=prepared.assignment_map)
             result = quacq.learn(
                 **task_data, mode='oracle',
                 max_queries=50)
@@ -337,9 +348,9 @@ class TestOracleABC:
 class TestQuAcqTask:
     """Tests for QuAcqTask data structure (assumption-ID based)."""
 
-    def test_task_creation(self, prepared_model):
+    def test_task_creation(self, prepared_model, prepared):
         """Test QuAcqTask is created with correct structure."""
-        task = prepared_model.task
+        task = prepared.task
         assert isinstance(task, QuAcqTask)
         assert len(task.set_c) > 0
         assert len(prepared_model.name_to_id) > 0
@@ -348,24 +359,24 @@ class TestQuAcqTask:
         for aid in task.set_c:
             assert isinstance(aid, int)
 
-    def test_bias_has_clause_mappings(self, prepared_model):
+    def test_bias_has_clause_mappings(self, prepared):
         """Test each bias constraint has clause and negated clause mappings."""
-        task = prepared_model.task
+        task = prepared.task
         for aid in task.set_c:
             assert aid in task.constraint_clauses, f"Missing clauses for {aid}"
             assert len(task.constraint_clauses[aid]) > 0
 
-    def test_background_populated(self, prepared_model):
+    def test_background_populated(self, prepared):
         """Test background has BG assumption IDs from oracle."""
-        task = prepared_model.task
+        task = prepared.task
         assert len(task.set_b) > 0
         # BG assumptions should be in the full assumptions list
         for bg_id in task.set_b:
             assert bg_id in task.assumptions
 
-    def test_assumptions_and_negation_map(self, prepared_model):
+    def test_assumptions_and_negation_map(self, prepared):
         """Test assumption ID layout is consistent."""
-        task = prepared_model.task
+        task = prepared.task
         # Each bias constraint should have a negation mapping
         for aid in task.set_c:
             assert aid in task.negation_map, f"Missing negation for {aid}"
@@ -376,63 +387,65 @@ class TestQuAcqTask:
 class TestQuAcqModel:
     """Tests for QuAcqModel (assumption-ID based model)."""
 
-    def test_builder(self, interactive_model):
-        """Test model creation via builder."""
+    def test_builder(self, interactive_model, prepared):
+        """Test model creation via builder yields a pure KB that prepares a task."""
         assert len(interactive_model.constraint_map) > 0
         assert len(interactive_model.name_to_id) > 0
-        assert interactive_model.task is not None
+        assert prepared.task is not None
 
-    def test_prepare(self, prepared_model):
-        """Test model preparation creates QuAcqTask."""
-        assert prepared_model.task is not None
-        assert isinstance(prepared_model.task, QuAcqTask)
+    def test_prepare_task(self, prepared):
+        """Test prepare_task creates a QuAcqTask."""
+        assert prepared.task is not None
+        assert isinstance(prepared.task, QuAcqTask)
 
-    def test_description_provider(self, prepared_model):
-        """Test DescriptionProvider resolves assumption IDs to names."""
-        provider = prepared_model.description_provider
-        task = prepared_model.task
-        aid = task.set_c[0]
+    def test_prepared_describe(self, prepared):
+        """Test the PreparedTask's DescriptionProvider resolves IDs to names."""
+        provider = prepared.describe
+        aid = prepared.task.set_c[0]
         name = provider.get_description(aid)
         assert isinstance(name, str)
         assert len(name) > 0
 
-    def test_resolve_kb(self, prepared_model):
-        """Test resolve_kb maps assumption IDs to names and clauses."""
-        task = prepared_model.task
-        aid = task.set_c[0]
-        names, clauses = prepared_model.resolve_kb([aid])
+    def test_resolve_kb(self, prepared_model, prepared):
+        """Test resolve_kb maps assumption IDs to names and clauses (stateless:
+        the describe provider is passed in)."""
+        aid = prepared.task.set_c[0]
+        names, clauses = prepared_model.resolve_kb(prepared.describe, [aid])
         assert len(names) == 1
         assert isinstance(names[0], str)
         assert len(clauses) > 0
 
-    def test_resolve_kb_empty(self, prepared_model):
+    def test_resolve_kb_empty(self, prepared_model, prepared):
         """Test resolve_kb with empty list."""
-        names, clauses = prepared_model.resolve_kb([])
+        names, clauses = prepared_model.resolve_kb(prepared.describe, [])
         assert names == []
         assert clauses == []
 
-    def test_description_provider_before_prepare_raises(self):
-        """Test accessing description_provider before prepare raises."""
-        model = QuAcqModel()
-        with pytest.raises(RuntimeError, match="Call prepare"):
-            _ = model.description_provider
+    def test_prepare_task_is_pure(self, prepared_model, oracle):
+        """prepare_task stores nothing on the model; two calls are independent."""
+        p1 = prepared_model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+        p2 = prepared_model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+        assert p1.task.set_c == p2.task.set_c
+        assert p1.task is not p2.task
 
 
 class TestQuAcqWithAssumptionIDs:
     """Tests for QuAcq algorithm with QuAcqTask (assumption IDs)."""
 
-    def test_quacq_learn_with_quacq_task(self, prepared_model, oracle, checker):
+    def test_quacq_learn_with_quacq_task(self, prepared_model, prepared, oracle, checker):
         """Test QuAcq learning with QuAcqTask and DescriptionProvider."""
-        task = prepared_model.task
-        task_data = _learn_params_from_model(prepared_model)
+        task = prepared.task
+        task_data = _learn_params_from_task(task)
 
-        query_provider = QueryProvider(checker=checker, model=prepared_model)
+        query_provider = QueryProvider(checker=checker, model=prepared_model,
+                                       assignment_map=prepared.assignment_map)
         discrim_gen = DiscriminatingGenerator(
             checker=checker, model=prepared_model,
-            profiler=get_global_profiler(), root_assumption=task.set_b[0])
+            profiler=get_global_profiler(), root_assumption=task.set_b[0], task=task)
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
-                                   model=prepared_model)
+                                   model=prepared_model,
+                                   task=task, assignment_map=prepared.assignment_map)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=5)
@@ -441,7 +454,7 @@ class TestQuAcqWithAssumptionIDs:
         assert result.n_queries <= 5
         assert isinstance(result.kb_assumption_ids, list)
         if result.kb_assumption_ids:
-            names, _ = prepared_model.resolve_kb(result.kb_assumption_ids)
+            names, _ = prepared_model.resolve_kb(prepared.describe, result.kb_assumption_ids)
             for name in names:
                 assert isinstance(name, str)
         for aid in result.kb_assumption_ids:
@@ -466,25 +479,27 @@ class TestQuAcqWithAssumptionIDs:
         assert result.convergence_reason == 'empty_bias'
         assert result.kb_assumption_ids == []
 
-    def test_result_resolved_via_model(self, prepared_model, oracle, checker):
+    def test_result_resolved_via_model(self, prepared_model, prepared, oracle, checker):
         """Test result assumption IDs can be resolved via model."""
-        task = prepared_model.task
-        task_data = _learn_params_from_model(prepared_model)
+        task = prepared.task
+        task_data = _learn_params_from_task(task)
 
-        query_provider = QueryProvider(checker=checker, model=prepared_model)
+        query_provider = QueryProvider(checker=checker, model=prepared_model,
+                                       assignment_map=prepared.assignment_map)
         discrim_gen = DiscriminatingGenerator(
             checker=checker, model=prepared_model,
-            profiler=get_global_profiler(), root_assumption=task.set_b[0])
+            profiler=get_global_profiler(), root_assumption=task.set_b[0], task=task)
 
         quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen,
-                                   model=prepared_model)
+                                   model=prepared_model,
+                                   task=task, assignment_map=prepared.assignment_map)
         result = quacq.learn(
             **task_data, mode='oracle',
             max_queries=10)
 
         # Runner resolves names via model, not algorithm result
         if result.kb_assumption_ids:
-            names, _ = prepared_model.resolve_kb(result.kb_assumption_ids)
+            names, _ = prepared_model.resolve_kb(prepared.describe, result.kb_assumption_ids)
             assert len(names) == len(result.kb_assumption_ids)
 
 
@@ -513,10 +528,11 @@ class TestQuAcqResultAssumptionIDs:
 class TestQueryProviderWithQuAcqTask:
     """Tests for QueryProvider with raw params from QuAcqTask."""
 
-    def test_generate_from_sat_with_quacq_task(self, prepared_model, checker):
+    def test_generate_from_sat_with_quacq_task(self, prepared_model, prepared, checker):
         """Test SAT query generation with raw params from QuAcqTask."""
-        task = prepared_model.task
-        provider = QueryProvider(checker=checker, model=prepared_model)
+        task = prepared.task
+        provider = QueryProvider(checker=checker, model=prepared_model,
+                                 assignment_map=prepared.assignment_map)
         remaining_bias = set(task.set_c)
 
         query, tested_c_id = provider.generate_from_sat(
@@ -598,14 +614,15 @@ class TestQueryProviderPoolFiltering:
         provider = QueryProvider()
         assert provider.pool_exhausted is True
 
-    def test_pool_filtering_skips_invalid(self, prepared_model, checker):
+    def test_pool_filtering_skips_invalid(self, prepared_model, prepared, checker):
         """Pool examples not satisfying KB+BG are skipped."""
-        task = prepared_model.task
+        task = prepared.task
         features = list(prepared_model.name_to_id.keys())
         # All-false config almost certainly invalid (root must be true)
         invalid_config = {f: False for f in features}
         provider = QueryProvider(pool=[invalid_config], seed=42,
-                                 checker=checker, model=prepared_model)
+                                 checker=checker, model=prepared_model,
+                                 assignment_map=prepared.assignment_map)
         query, c_id = provider.generate_from_pool(
             remaining_bias=set(task.set_c),
             learned_kb=[],
@@ -620,37 +637,36 @@ class TestSatUtils:
     def test_get_constraint_vars(self):
         model = QuAcqModel()
         model.id_to_name = {1: 'a', 2: 'b', 3: 'c'}
-        model._task = QuAcqTask(constraint_clauses={10: [[1, -2], [3]]})
-        result = model.get_constraint_vars(10)
+        # Stateless: the task is passed in, not stored on the model.
+        task = QuAcqTask(constraint_clauses={10: [[1, -2], [3]]})
+        result = model.get_constraint_vars(task, 10)
         assert result == {'a', 'b', 'c'}
 
     def test_get_constraint_vars_missing(self):
         model = QuAcqModel()
         model.id_to_name = {}
-        model._task = QuAcqTask(constraint_clauses={})
-        result = model.get_constraint_vars(99)
+        task = QuAcqTask(constraint_clauses={})
+        result = model.get_constraint_vars(task, 99)
         assert result == set()
 
     def test_get_constraints_with_scope_exact(self):
         constraint_clauses = {10: [[1, -2]], 12: [[1]]}
-        id_to_feature = {1: 'a', 2: 'b'}
         scope = {'a', 'b'}
-        # Build minimal model with synthetic task
+        # Build minimal model with synthetic task (passed in, not stored)
         model = QuAcqModel()
-        model.id_to_name = id_to_feature
-        model._task = QuAcqTask(constraint_clauses=constraint_clauses)
-        result = model.get_constraints_with_scope(scope, {10, 12})
+        model.id_to_name = {1: 'a', 2: 'b'}
+        task = QuAcqTask(constraint_clauses=constraint_clauses)
+        result = model.get_constraints_with_scope(task, scope, {10, 12})
         assert result == [10]  # exact match
 
     def test_get_constraints_with_scope_subset(self):
         constraint_clauses = {10: [[1]], 12: [[2]]}
-        id_to_feature = {1: 'a', 2: 'b'}
         scope = {'a', 'b'}
-        # Build minimal model with synthetic task
+        # Build minimal model with synthetic task (passed in, not stored)
         model = QuAcqModel()
-        model.id_to_name = id_to_feature
-        model._task = QuAcqTask(constraint_clauses=constraint_clauses)
-        result = model.get_constraints_with_scope(scope, {10, 12})
+        model.id_to_name = {1: 'a', 2: 'b'}
+        task = QuAcqTask(constraint_clauses=constraint_clauses)
+        result = model.get_constraints_with_scope(task, scope, {10, 12})
         # No exact match, both are subsets
         assert set(result) == {10, 12}
 

@@ -77,7 +77,7 @@ class ConGenRunner(BaseRunner):
         # Build model (bias + negation, no examples yet)
         self.model = (ConGenModelBuilder
                       .from_bias(bias_path)
-                      .with_oracle(self.oracle.oracle_data)
+                      .with_oracle_data(self.oracle.oracle_data)
                       .use_incremental(use_incremental)
                       .build())
 
@@ -115,7 +115,7 @@ class ConGenRunner(BaseRunner):
                 try:
                     # Prepare for this fold's examples (runs GenerateNE)
                     self.model.prepare(
-                        oracle=self.oracle.oracle_data,
+                        oracle_data=self.oracle.oracle_data,
                         positive_examples=positive_examples,
                         negative_examples=negative_examples
                     )

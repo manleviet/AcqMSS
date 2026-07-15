@@ -1,193 +1,74 @@
 """
 Model for QuAcq constraint acquisition.
 
-Parallel to ConGenModel — stores bias data, delegates preparation
-to QuAcqTaskPreparation, produces QuAcqTask.
+An immutable KB: bias constraint_map + name↔id catalog (inherited from KBModel).
+``prepare_task`` derives a fresh PreparedTask per call (pure); the model stores no
+task state and no solver-mode field (that is a caller/checker concern). The
+task-computing helpers (get_constraint_vars, get_constraints_with_scope, resolve_kb,
+model_to_config) are STATELESS — they take the prepared task / provider as a
+parameter, never stored task state.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from conacq.kb_model import KBModel
 from explanation.api import (
-    AssignmentAssumptionMap,
     DescriptionProvider,
-    config_to_assignment_assumptions,
+    PreparedTask,
     get_constraint_vars,
     variable_literals_to_config,
 )
 
-from .task_preparation import QuAcqTask, QuAcqTaskPreparation
-
-if TYPE_CHECKING:
-    from conacq.oracle import OracleData
+from .task_preparation import QuAcqTask, QuAcqTaskInput, QuAcqTaskPreparation
 
 
 class QuAcqModel(KBModel):
-    """Model for QuAcq interactive learning, parallel to ConGenModel.
+    """Immutable QuAcq KB (bias constraints + name↔id catalog).
 
-    Pure data container for bias constraints and solver config.
-    Oracle injected at prepare() time — model has no FM dependency.
+    Pure data container. prepare_task builds a fresh QuAcqTask; the model holds no
+    task, no description provider, no assignment map, no solver mode.
 
     Usage:
         oracle = FMOracle('data/fms/model.uvl')
         model = (QuAcqModelBuilder
                  .from_bias('data/bias/model.json')
-                 .with_oracle(oracle)
-                 .build())  # Returns prepared model
-        task = model.task  # QuAcqTask with assumption IDs
+                 .with_oracle_data(oracle.oracle_data)
+                 .build())
+        prepared = model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+        task = prepared.task  # QuAcqTask with assumption IDs
     """
 
-    def __init__(self) -> None:
-        super().__init__()
+    def prepare_task(self, task_input: QuAcqTaskInput) -> PreparedTask:
+        """Assign assumption IDs and build a fresh QuAcqTask (pure).
 
-        # Solver selection consumed by build_checker()
-        self.use_incremental: bool = True
-
-        # Populated after prepare()
-        self._task: Optional[QuAcqTask] = None
-        self._description_provider: Optional[DescriptionProvider] = None
-
-        # Built once at prep (by the builder, from BG data). The query helpers
-        # reuse it instead of rebuilding this immutable map on every call — they
-        # run on QuAcq's inner loop (FindC, prune).
-        self.assignment_map: Optional[AssignmentAssumptionMap] = None
-
-    @property
-    def task(self) -> Optional[QuAcqTask]:
-        """Get prepared QuAcqTask (None if prepare() not called)."""
-        return self._task
-
-    @property
-    def description_provider(self) -> DescriptionProvider:
-        """Get DescriptionProvider for resolving assumption IDs to names.
-
-        Raises:
-            RuntimeError: If prepare() has not been called yet
+        Consumes a QuAcqTaskInput carrying the oracle's frozen provisioning
+        snapshot; returns a new PreparedTask (task + describe + assignment_map).
+        The signature is unified with the other models; the input TYPE is QuAcq's
+        own (not a shared union — ADR-0006).
         """
-        if self._description_provider is None:
-            raise RuntimeError("Call prepare() first")
-        return self._description_provider
+        return QuAcqTaskPreparation().prepare(self, task_input.oracle_data)
 
-    def _require_task(self) -> QuAcqTask:
-        """Return task or raise if not prepared."""
-        if self._task is None:
-            raise RuntimeError("Model not prepared. Call prepare() first.")
-        return self._task
-
-    # Convenience getters (delegate to result)
-    def get_c(self) -> List:
-        """Get the set of potentially faulty constraints."""
-        return self._require_task().set_c
-
-    def get_b(self) -> List:
-        """Get the background knowledge."""
-        return self._require_task().set_b
-
-    # def get_cf(self) -> List:
-    #     """Get all constraints (C ∪ B) for redundancy detection.
-    #
-    #     Returns:
-    #         List of all constraint IDs (set_c + set_b).
-    #     """
-    #     return self._require_task().get_cf()
-
-    def get_kb(self) -> List[List]:
-        """Get full KB: bias + root BG + Part 4 assignment clauses."""
-        task = self._require_task()
-        # return task.set_kb + task.assignment_clauses
-        return task.set_kb
-
-    def get_negation_map(self) -> dict:
-        """Get the mapping from original to negated assumption IDs.
-
-        Returns:
-            Dict mapping original assumption ID to negated assumption ID,
-            or empty dict if no negated forms.
-        """
-        return self._require_task().negation_map
-
-    def get_assumptions(self) -> List:
-        """Get all assumptions: bias + root BG + Part 4 assignments."""
-        task = self._require_task()
-        # return list(task.assumptions) + task.assignment_assumptions
-        return list(task.assumptions)
-
-    def config_to_assumptions(self, config: Dict[str, bool]) -> List[int]:
-        """Convert feature config to Part 4 assignment assumption IDs.
-
-        Args:
-            config: Feature name -> bool assignment
-
-        Returns:
-            List of assumption IDs for the given feature assignments
-        """
-        return config_to_assignment_assumptions(config, self.assignment_map)
-
-    def get_constraint_vars(self, assumption_id: int) -> Set[str]:
-        """Get feature names for constraint by assumption ID."""
-        clauses = self._require_task().constraint_clauses.get(assumption_id, [])
+    def get_constraint_vars(self, task: QuAcqTask, assumption_id: int) -> Set[str]:
+        """Feature names for a bias constraint (by assumption id). Stateless: the
+        constraint clauses come from the given task, the catalog from this KB."""
+        clauses = task.constraint_clauses.get(assumption_id, [])
         return get_constraint_vars(clauses, self.id_to_name)
 
-    def prepare(self, oracle: 'OracleData') -> QuAcqTask:
-        """Assign assumption IDs and build QuAcqTask.
-
-        Task preparation consumes the frozen OracleData snapshot, never the live
-        oracle — provisioning (job ②) reads a value, not a live actor's state
-        (ADR-0009). This was the second place a live oracle reached into prep.
-
-        Args:
-            oracle: OracleData supplying BG data and feature IDs
-
-        Returns:
-            Prepared QuAcqTask with assumption IDs assigned
-        """
-        preparation = QuAcqTaskPreparation()
-        output = preparation.prepare(self, oracle)
-
-        assert isinstance(output.task, QuAcqTask)
-        self._task = output.task
-        self._description_provider = output.describe
-
-        return self._task
-
-    def resolve_kb(self, kb_assumption_ids: List[int]) -> Tuple[List[str], List[List[int]]]:
-        """Resolve assumption IDs to constraint names and raw clauses.
-
-        Args:
-            kb_assumption_ids: List of learned KB assumption IDs
-
-        Returns:
-            Tuple of (constraint_names, combined_raw_clauses)
-        """
-        provider = self.description_provider
-        names = [provider.get_description(aid) for aid in kb_assumption_ids]
-        clauses: List[List[int]] = []
-        for aid in kb_assumption_ids:
-            name = provider.get_description(aid)
-            if name in self.constraint_map:
-                clauses.extend(self.constraint_map[name])
-        return names, clauses
-
-    def model_to_config(self, model):
-        """Convert SAT model to configuration dictionary."""
-        return variable_literals_to_config(model, self.id_to_name)
-
-    def get_constraints_with_scope(self,
-                                   scope: set,
-                                   remaining_bias: set) -> List[int]:
-        """Get bias constraint IDs whose variables match scope.
+    def get_constraints_with_scope(self, task: QuAcqTask,
+                                   scope: set, remaining_bias: set) -> List[int]:
+        """Bias constraint IDs whose variables match scope. Stateless (reads the
+        given task's constraint clauses).
 
         Prefers exact scope match (c_vars == scope). Falls back to subset
         match (c_vars ⊆ scope) if no exact matches found.
         """
         exact = []
         subset = []
-        task = self._require_task()
         # Collects bias constraints matching scope exactly or subset
         for aid in remaining_bias:
-            c_vars = self.get_constraint_vars(aid)
+            c_vars = self.get_constraint_vars(task, aid)
             if not c_vars:
                 continue
             if c_vars == scope:
@@ -195,3 +76,22 @@ class QuAcqModel(KBModel):
             elif c_vars.issubset(scope):
                 subset.append(aid)
         return exact if exact else subset
+
+    def resolve_kb(self, describe: DescriptionProvider,
+                   kb_assumption_ids: List[int]) -> Tuple[List[str], List[List[int]]]:
+        """Resolve learned assumption IDs to constraint names + raw clauses.
+
+        Stateless: the id→name provider is passed in (from the PreparedTask);
+        raw clauses come from this KB's constraint_map.
+        """
+        names = [describe.get_description(aid) for aid in kb_assumption_ids]
+        clauses: List[List[int]] = []
+        for aid in kb_assumption_ids:
+            name = describe.get_description(aid)
+            if name in self.constraint_map:
+                clauses.extend(self.constraint_map[name])
+        return names, clauses
+
+    def model_to_config(self, model):
+        """Convert a SAT model to a configuration dict (uses the KB catalog only)."""
+        return variable_literals_to_config(model, self.id_to_name)

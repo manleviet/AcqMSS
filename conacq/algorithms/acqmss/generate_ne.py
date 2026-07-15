@@ -39,10 +39,10 @@ class GenerateNE:
     result KB so subsequent testcases see previous NEs.
     """
 
-    def __init__(self, oracle: "OracleData") -> None:
+    def __init__(self, oracle_data: "OracleData") -> None:
         # Frozen provisioning snapshot (ADR-0009), not the live oracle: the KB and
         # background this reads cannot shift under it between test cases.
-        self.oracle = oracle
+        self.oracle_data = oracle_data
 
     def generate(
             self,
@@ -70,7 +70,7 @@ class GenerateNE:
         if not testsuite.testcases:
             return [], start_id
 
-        set_bg = self.oracle.get_c()
+        set_bg = self.oracle_data.get_c()
         results: List[NEPerTestcase] = []
         id_assumption = start_id
 
@@ -94,8 +94,8 @@ class GenerateNE:
     ) -> Tuple[NEPerTestcase, int]:
         """Process single testcase: merge KBs, QuickXPlain, create NE clause."""
         # Merge oracle KB with current result KB (creates new list)
-        set_kb = self.oracle.get_kb() + result_set_kb
-        assumptions = self.oracle.get_assumptions() + result_assumptions
+        set_kb = self.oracle_data.get_kb() + result_set_kb
+        assumptions = self.oracle_data.get_assumptions() + result_assumptions
 
         # Create per-assignment clauses
         set_tv, assumption_to_var, assumption_to_desc = [], {}, {}

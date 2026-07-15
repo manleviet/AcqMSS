@@ -9,7 +9,7 @@ Uses framework classes imported through the explanation.api façade:
 - TaskInput, DescriptionProvider (task preparation)
 
 ConGenModel uses composition to delegate task preparation to ConGenTaskPreparation.
-Call prepare(oracle) before accessing task or description_provider.
+Call prepare(oracle_data) before accessing task or description_provider.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ class ConGenModel(KBModel):
     Holds bias constraints, the name↔id catalog, and solver config.
     Oracle injected at prepare() time — no FM dependency.
 
-    Call prepare(oracle) before accessing task or description_provider.
+    Call prepare(oracle_data) before accessing task or description_provider.
     """
 
     def __init__(self) -> None:
@@ -198,7 +198,7 @@ class ConGenModel(KBModel):
 
     def prepare(
             self,
-            oracle: "OracleData",
+            oracle_data: "OracleData",
             positive_examples: Optional[List[Dict[str, bool]]] = None,
             negative_examples: Optional[List[Dict[str, bool]]] = None
     ) -> ConGenTask:
@@ -208,7 +208,7 @@ class ConGenModel(KBModel):
         stays FM-agnostic. Can be called multiple times (e.g., for CV folds).
 
         Args:
-            oracle: Frozen OracleData snapshot for NE generation and root BG/KB
+            oracle_data: Frozen OracleData snapshot for NE generation and root BG/KB
             positive_examples: Optional new E+ (for fold reuse)
             negative_examples: Optional new E- (for fold reuse)
 
@@ -225,15 +225,15 @@ class ConGenModel(KBModel):
                 for_redundancy=True
             )
 
-        # Run ConGenTaskPreparation (oracle provides BGData + GenerateNE)
+        # Run ConGenTaskPreparation (oracle_data provides BGData + GenerateNE)
         from .task_preparation import ConGenTaskPreparation
         preparation = ConGenTaskPreparation()
-        output = preparation.prepare(self, oracle)
+        output = preparation.prepare(self, oracle_data)
 
         assert isinstance(output.task, ConGenTask)
         self._task = output.task
         self._description_provider = output.describe
-        self._root_constraint = oracle.get_root_clauses()
+        self._root_constraint = oracle_data.get_root_clauses()
 
         return self._task
 

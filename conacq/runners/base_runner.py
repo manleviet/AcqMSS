@@ -75,6 +75,9 @@ class BaseRunner(ABC):
         self.bias_path = bias_path
         self.fm_path = fm_path
         self.solver_name = solver_name
+        # Solver mode is the runner's, not the model's — the runner passes it
+        # straight to build_checker instead of round-tripping through the model.
+        self.use_incremental = use_incremental
 
         # Create oracle once (reused across runs)
         from conacq.oracle import FMOracle

@@ -34,7 +34,7 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
     def __init__(self) -> None:
         super().__init__()
         self._bias_path: Optional[str] = None
-        self._oracle: Optional['OracleData'] = None
+        self._oracle_data: Optional['OracleData'] = None
         self._use_incremental: bool = True
 
     @classmethod
@@ -44,13 +44,11 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         builder._bias_path = bias_path
         return builder
 
-    def with_oracle(self, oracle: 'OracleData') -> 'OracleBiasModelBuilder':
-        """Set the provisioning snapshot (required — supplies BG data + next_available_id).
-
-        Takes the frozen OracleData, not the live oracle: the builder provisions
-        the model (job ②) and must not read a live actor's state (ADR-0009).
-        """
-        self._oracle = oracle
+    def with_oracle_data(self, oracle_data: 'OracleData') -> 'OracleBiasModelBuilder':
+        """Set the frozen provisioning snapshot (required — supplies BG data +
+        next_available_id). The builder provisions the model (job ②) from a value,
+        never a live actor (ADR-0009)."""
+        self._oracle_data = oracle_data
         return self
 
     def use_incremental(self, enabled: bool = True) -> 'OracleBiasModelBuilder':
@@ -62,8 +60,8 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         """Require a bias path and an oracle."""
         if self._bias_path is None:
             raise ValueError("Bias path required (use from_bias())")
-        if self._oracle is None:
-            raise ValueError("Oracle required (use with_oracle())")
+        if self._oracle_data is None:
+            raise ValueError("OracleData required (use with_oracle_data())")
 
     def _create_model(self) -> Any:
         """Load bias, instantiate the model, compute negation, run the post hook."""
@@ -77,8 +75,8 @@ class OracleBiasModelBuilder(AbstractModelBuilder):
         model.name_to_id = bias.feature_ids
         model.id_to_name = {vid: name for name, vid in bias.feature_ids.items()}
 
-        # Compute negation at build time (oracle supplies the first free Tseitin id).
-        next_tseitin_var = self._oracle.get_bg_data().next_available_id
+        # Compute negation at build time (the snapshot supplies the first free Tseitin id).
+        next_tseitin_var = self._oracle_data.get_bg_data().next_available_id
         for key, clauses in model.constraint_map.items():
             neg_clauses, next_tseitin_var = negate_cnf_tseitin(clauses, next_tseitin_var)
             model.negated_constraint_map[f"NOT({key})"] = neg_clauses

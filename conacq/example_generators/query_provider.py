@@ -11,13 +11,14 @@ import logging
 import random
 from typing import Optional, Dict, List, Tuple, TYPE_CHECKING
 
+from explanation.api import config_to_assignment_assumptions
 from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
 
 if TYPE_CHECKING:
     from explanation.api import ConsistencyChecker
-    from conacq.algorithms.quacq.quacq_model import QuAcqModel, model_to_config
+    from conacq.algorithms.quacq.quacq_model import QuAcqModel
 
 
 class QueryProvider:
@@ -30,7 +31,8 @@ class QueryProvider:
         pool: Optional list of example configs for pool-based generation
         seed: Random seed for pool shuffling
         checker: ConsistencyChecker for SAT checks
-        model: QuAcqModel for config_to_assumptions
+        model: QuAcqModel for model_to_config (KB catalog)
+        assignment_map: feature-assignment → assumption map (from the prepared task)
         profiler_instance: Optional profiler for timing/counting
     """
 
@@ -39,9 +41,11 @@ class QueryProvider:
                  seed: Optional[int] = None,
                  checker: 'ConsistencyChecker' = None,
                  model: 'QuAcqModel' = None,
+                 assignment_map=None,
                  profiler_instance: Optional[AbstractProfiler] = None) -> None:
         self.checker = checker
         self.model = model
+        self.assignment_map = assignment_map
         self.profiler = profiler_instance if profiler_instance else get_global_profiler()
 
         # Pool state
@@ -86,7 +90,7 @@ class QueryProvider:
             self._pool_index += 1
 
             # Condition 1: satisfies C_L + BG (via checker with Part 4 assumptions)
-            config_assumptions = self.model.config_to_assumptions(e)
+            config_assumptions = config_to_assignment_assumptions(e, self.assignment_map)
             set_c = learned_kb + set_b + config_assumptions
             self.profiler.increment("query_generation_consistency_checks")
             if not self.checker.is_consistent(set_c):

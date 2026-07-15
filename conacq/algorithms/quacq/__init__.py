@@ -22,15 +22,18 @@ Example Usage:
 
     model = (QuAcqModelBuilder
              .from_bias('data/bias/model-bias.json')
-             .with_oracle(oracle)
+             .with_oracle_data(oracle.oracle_data)
              .build())
-    task = model.task
-    checker = build_checker(task, SolverBackend.from_flags(use_incremental=model.use_incremental))
-    query_provider = QueryProvider()
+    prepared = model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+    task = prepared.task
+    checker = build_checker(task, SolverBackend.from_flags(use_incremental=True))
+    query_provider = QueryProvider(assignment_map=prepared.assignment_map)
     profiler = get_global_profiler()
     discrim_gen = DiscriminatingGenerator(
-        checker=checker, model=model, profiler=profiler, root_assumption=task.set_b[0])
-    quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
+        checker=checker, model=model, profiler=profiler,
+        root_assumption=task.set_b[0], task=task)
+    quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model,
+                             task=task, assignment_map=prepared.assignment_map)
     result = quacq.learn(
         set_c=task.set_c, set_b=task.set_b,
         negation_map=task.negation_map, mode='oracle')

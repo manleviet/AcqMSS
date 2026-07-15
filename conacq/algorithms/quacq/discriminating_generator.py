@@ -23,13 +23,16 @@ class DiscriminatingGenerator:
         checker: ConsistencyChecker with full KB loaded
         model: QuAcqModel for constraint variable lookup and config conversion
         root_assumption: Root BG assumption ID
+        task: prepared QuAcqTask (supplies constraint clauses + negation map)
     """
 
-    def __init__(self, checker: ConsistencyChecker, model, profiler, root_assumption: int) -> None:
+    def __init__(self, checker: ConsistencyChecker, model, profiler, root_assumption: int,
+                 task=None) -> None:
         self.checker = checker
         self.model = model
         self.profiler = profiler
         self.root_assumption = root_assumption
+        self.task = task
 
     @measure_time('dis_gen_runtime')
     @count_calls('dis_gen_calls')
@@ -48,11 +51,10 @@ class DiscriminatingGenerator:
         """
         # C_L[Y]: assumption IDs of learned constraints whose vars are in scope
         cl_y = [c_id for c_id in learned_kb
-                if self.model.get_constraint_vars(c_id).issubset(scope)]
+                if self.model.get_constraint_vars(self.task, c_id).issubset(scope)]
 
-        # Get negated assumption for c_j
-        negation_map = self.model.get_negation_map()
-        neg_j = negation_map.get(c_j)
+        # Get negated assumption for c_j (from the prepared task's negation map)
+        neg_j = self.task.negation_map.get(c_j)
         if neg_j is None:
             return None
 
