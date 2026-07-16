@@ -203,15 +203,62 @@ def test_declaring_a_role_without_implementing_it_fails_at_construction():
 
 
 def test_prepare_task_is_unified_across_models():
+    """The three SOLVE-TASK models share one facade: prepare_task(self, task_input).
+    FMOracleModel is deliberately NOT here — its task is fully FM-determined, so it
+    left the contract for prepare() -> OracleData (no per-task input) rather than keep
+    a received-then-discarded task_input. Signature is only a PROXY for the real T11.4
+    invariant (purity); test_prepare_is_pure_no_task_state_leaks checks the property
+    itself."""
     from explanation.models.pysat_diagnosis_model import DiagnosisModel
     from conacq.algorithms.acqmss.congen_model import ConGenModel
     from conacq.algorithms.quacq.quacq_model import QuAcqModel
-    from conacq.oracle.fm.model import FMOracleModel
 
-    for model in (DiagnosisModel, ConGenModel, QuAcqModel, FMOracleModel):
+    for model in (DiagnosisModel, ConGenModel, QuAcqModel):
         assert hasattr(model, "prepare_task"), f"{model.__name__} lacks prepare_task"
         params = list(inspect.signature(model.prepare_task).parameters)
         assert params == ["self", "task_input"], f"{model.__name__}: {params}"
+
+
+def test_prepare_is_pure_no_task_state_leaks():
+    """The real T11.4 invariant the unified-signature guard only PROXIES: preparing does
+    not mutate the model, and each call returns a fresh independent task. A model could
+    satisfy the signature check yet still do ``self._task = ...; return new`` — this
+    checks the property directly: vars(model) unchanged across two prepares, distinct
+    task objects, equal content. Covers the three oracle-data models (FMOracle via its
+    OracleData facade, ConGen, QuAcq). DiagnosisModel is NOT covered here (its
+    construction needs an FM transform) and is not covered elsewhere — measured; → T17.
+    Skips without the REAL-FM-7 fixtures."""
+    from tests.resource_paths import FM_PATH, BIAS_PATH
+    if not (FM_PATH.exists() and BIAS_PATH.exists()):
+        pytest.skip("REAL-FM-7 fixtures not found")
+    from conacq.oracle import FMOracle
+    from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
+    from conacq.algorithms.acqmss.task_preparation import ConGenTaskInput
+    from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
+    from conacq.algorithms.quacq.task_preparation import QuAcqTaskInput
+
+    oracle = FMOracle(str(FM_PATH), use_incremental=False)
+    try:
+        od = oracle.oracle_data
+        congen = (ConGenModelBuilder.from_bias(str(BIAS_PATH))
+                  .with_oracle_data(od).build())
+        quacq = (QuAcqModelBuilder.from_bias(str(BIAS_PATH))
+                 .with_oracle_data(od).build())
+        cases = [
+            (oracle._oracle_model, lambda m: m.prepare()),
+            (congen, lambda m: m.prepare_task(
+                ConGenTaskInput.from_examples(od, [{"java": True}], []))),
+            (quacq, lambda m: m.prepare_task(QuAcqTaskInput(od))),
+        ]
+        for model, prep in cases:
+            before = dict(vars(model))
+            p1 = prep(model)
+            p2 = prep(model)
+            assert vars(model) == before, f"{type(model).__name__} mutated on prepare"
+            assert p1.task is not p2.task, f"{type(model).__name__} reused a task object"
+            assert p1.task.set_c == p2.task.set_c, f"{type(model).__name__} content drifted"
+    finally:
+        oracle.cleanup()
 
 
 def test_every_prepare_strategy_inherits_the_contract():
@@ -274,17 +321,57 @@ def test_quacq_strategy_signature_matches_the_contract():
     assert params == ["self", "model", "task_input"], params
 
 
-def test_fm_oracle_task_prep_has_no_prepare_name_collision():
-    """FMOracleTaskPreparation is a static two-view factory, NOT a strategy: forcing it
-    to inherit TaskPreparationStrategy is wrong — its task view ``prepare_task`` is a
-    @staticmethod with no ``task_input`` (measured: it does not fit the contract). The
-    only defect was the NAME — ``prepare() -> OracleData`` collided with the strategy's
-    ``prepare() -> PreparedTask``. Renamed to ``build_oracle_data()``; ``prepare_task``
-    survives. Permanent guard against the collision returning."""
+def test_fm_oracle_task_prep_is_one_oracle_data_method():
+    """FMOracleTaskPreparation collapses to a single ``prepare(model) -> OracleData``.
+    The T11b.3 two-view split (``build_oracle_data`` + ``prepare_task`` sharing the
+    unnamed 5-tuple ``_prepare``) is gone: OracleData already carries ``.task`` +
+    ``.assignment_map`` — the only things any consumer reads (``describe``: 0 readers).
+    One view needs no shared private core. It still does NOT inherit
+    TaskPreparationStrategy — ``prepare`` here returns OracleData, a different
+    operation, so the population guard excludes it by return type. This supersedes the
+    T11b.3 intermediate rename guard. Permanent guard."""
     from conacq.oracle.fm.task_preparation import FMOracleTaskPreparation
-    assert not hasattr(FMOracleTaskPreparation, "prepare"), "the colliding prepare name is still present"
-    assert hasattr(FMOracleTaskPreparation, "build_oracle_data"), "the renamed job-② factory is missing"
-    assert hasattr(FMOracleTaskPreparation, "prepare_task"), "the PreparedTask view was lost"
+    from explanation.api import TaskPreparationStrategy
+    assert hasattr(FMOracleTaskPreparation, "prepare"), "the single OracleData factory is missing"
+    for gone in ("build_oracle_data", "prepare_task", "_prepare"):
+        assert not hasattr(FMOracleTaskPreparation, gone), f"{gone} should be folded away"
+    assert not issubclass(FMOracleTaskPreparation, TaskPreparationStrategy), \
+        "the static OracleData factory must not be forced into the strategy hierarchy"
+
+
+def test_fm_oracle_model_facade_returns_oracle_data():
+    """FMOracleModel's facade is ``prepare() -> OracleData`` — no received-then-discarded
+    ``task_input``. The oracle's snapshot is fully FM-determined, so unlike the three
+    solve-task models it takes no per-task input and returns OracleData, not a
+    PreparedTask. ``prepare_task`` is gone from the oracle model. Permanent guard."""
+    from conacq.oracle.fm.model import FMOracleModel
+    from conacq.oracle import OracleData
+    assert hasattr(FMOracleModel, "prepare"), "FMOracleModel lost its prepare facade"
+    assert "prepare_task" not in vars(FMOracleModel), "the discarded-input prepare_task lingers"
+    params = list(inspect.signature(FMOracleModel.prepare).parameters)
+    assert params == ["self"], params
+    assert inspect.signature(FMOracleModel.prepare).return_annotation is OracleData
+
+
+def test_fm_oracle_has_no_model_to_config_wrapper():
+    """FMOracle._model_to_config — a 1-line wrapper over ``variable_literals_to_config``
+    with two call-sites three lines apart in one function — is inlined (same family as
+    the ``config_to_assumptions`` wrapper deleted at 4b2; it survived only because it
+    was private). ``QuAcqModel.model_to_config`` STAYS: identical code, different role —
+    a public facade with cross-module callers. Same code, two fates, decided by who
+    calls from where. Permanent guard."""
+    from conacq.oracle import FMOracle
+    assert not hasattr(FMOracle, "_model_to_config")
+
+
+def test_oracle_prepares_through_the_model_facade():
+    """The oracle goes through the model facade (``self._oracle_model.prepare()``)
+    instead of reaching straight into the strategy — the three solve-task models all
+    go through their facade; the oracle was the only one climbing through the window.
+    So ``oracle.py`` no longer imports FMOracleTaskPreparation. Permanent guard."""
+    import conacq.oracle.fm.oracle as oracle_mod
+    assert not hasattr(oracle_mod, "FMOracleTaskPreparation"), \
+        "oracle.py still imports the strategy directly instead of going through model.prepare()"
 
 
 def test_oracle_data_snapshot_is_frozen():

@@ -180,7 +180,7 @@ def _synthetic_oracle_model():
 def test_site5_fm_only_slice_layout():
     model = _synthetic_oracle_model()
     first_id = model.next_available_id
-    prepared = model.prepare_task()
+    prepared = model.prepare()
 
     # With no prep-time configuration, task.set_c IS the FM-only slice.
     fm_only = prepared.task.set_c

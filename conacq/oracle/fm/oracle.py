@@ -5,13 +5,12 @@ Loads a feature model from .uvl file, converts to CNF, and validates
 configurations via persistent PySAT solver.
 """
 
-from typing import Dict, Optional, Set, List
+from typing import Dict, Optional, Set
 
 from pysat.solvers import Solver
 
 from conacq.oracle.fm.model import FMOracleModel
 from conacq.oracle.fm.builder import FMOracleModelBuilder
-from conacq.oracle.fm.task_preparation import FMOracleTaskPreparation
 from conacq.oracle.protocols import (
     MembershipOracle,
     CompletableOracle,
@@ -56,10 +55,12 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
         self.profiler = profiler if profiler is not None else get_global_profiler()
 
         # Build the immutable FM KB, then RECEIVE the frozen provisioning snapshot
-        # (job ②, ADR-0009) — the preparation assembles OracleData; the oracle does
-        # not build what it provides, it only holds it.
+        # (job ②, ADR-0009) through the model's own facade — the same door the three
+        # solve-task models use (model.prepare()), not a reach straight into the
+        # strategy. The preparation assembles OracleData; the oracle does not build
+        # what it provides, it only holds it.
         self._oracle_model = FMOracleModelBuilder.from_fm(fm_path).build()
-        self.oracle_data = FMOracleTaskPreparation.build_oracle_data(self._oracle_model)
+        self.oracle_data = self._oracle_model.prepare()
 
         # The oracle builds its own membership checker (job ①) from the REAL task in
         # the snapshot (one source — no fabricated task). The oracle owns its solver
@@ -144,20 +145,17 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
         for clause in self._fm_clauses:
             solver.add_clause(clause)
 
+        id_to_name = self._oracle_model.id_to_name
         try:
             if solver.solve(assumptions=assumptions):
-                return self._model_to_config(solver.get_model())
+                return variable_literals_to_config(solver.get_model(), id_to_name)
             # Fallback: try without assumptions
             if solver.solve():
-                return self._model_to_config(solver.get_model())
+                return variable_literals_to_config(solver.get_model(), id_to_name)
         finally:
             solver.delete()
 
         return None
-
-    def _model_to_config(self, model: List[int]) -> Dict[str, bool]:
-        """Convert SAT model to feature config dict."""
-        return variable_literals_to_config(model, self._oracle_model.id_to_name)
 
     def __repr__(self):
         return f"FMOracle(features={len(self._oracle_model.name_to_id)})"

@@ -1,4 +1,4 @@
-"""Tests for FMOracleModel — an immutable FM KB with a pure prepare_task."""
+"""Tests for FMOracleModel — an immutable FM KB with a pure prepare() -> OracleData."""
 
 from pathlib import Path
 
@@ -13,7 +13,7 @@ from tests.resource_paths import MODELS
 
 def _make_oracle_model(constraint_map, variables, next_available_id):
     """Test helper: create an FMOracleModel from raw KB data. No prep here —
-    prepare_task is pure and called on demand by each test."""
+    prepare() is pure and called on demand by each test."""
     model = FMOracleModel()
     model.constraint_map = constraint_map
     model.name_to_id = variables
@@ -33,16 +33,16 @@ class TestOracleModel:
     def test_prepare_task_produces_valid_task(self):
         """prepare_task produces a task with the expected set_kb + assumptions."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        prepared = model.prepare_task()
+        prepared = model.prepare()
 
         assert len(prepared.task.assumptions) == 5  # 1 FM constraint + 2 features * 2 (pos+neg)
         # set_kb = 1 FM guarded clause + 4 feature assignment clauses
         assert len(prepared.task.set_kb) == 1 + 4
 
     def test_prepare_task_returns_task_for_checker(self):
-        """prepare_task returns a PreparedTask carrying the task the checker consumes."""
+        """prepare returns an OracleData snapshot carrying the task the checker consumes."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, 2)
-        prepared = model.prepare_task()
+        prepared = model.prepare()
         assert prepared.task.set_kb is not None
         assert prepared.task.assumptions is not None
 
@@ -60,7 +60,7 @@ class TestOracleModel:
         (mapped via the prepared assignment_map) and leaves the prepared task
         untouched — a query cannot leak into the background."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        prepared = model.prepare_task()
+        prepared = model.prepare()
 
         before = list(prepared.task.set_c)
         active = _query_set_c(prepared, {"f1": True, "f2": False})
@@ -76,15 +76,15 @@ class TestOracleModel:
         """Two prepare_task calls yield equal-but-independent tasks (pure, no shared
         state) — the T3 purity property."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        p1 = model.prepare_task()
-        p2 = model.prepare_task()
+        p1 = model.prepare()
+        p2 = model.prepare()
         assert p1.task.set_c == p2.task.set_c
         assert p1.task is not p2.task
 
     def test_assumption_ids_start_after_tseitin(self):
         """Assumption IDs don't collide with FM variables."""
         model = _make_oracle_model({"fm": [[1, 2, 3]]}, {"f1": 1, "f2": 2, "f3": 3}, 3)
-        prepared = model.prepare_task()
+        prepared = model.prepare()
         # All assumption IDs should be >= next_available_id (3)
         for a in prepared.task.assumptions:
             assert a >= 3
@@ -93,7 +93,7 @@ class TestOracleModel:
         """build_checker creates valid checker; SAT case. use_incremental is the
         caller's choice, not the model's."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        prepared = model.prepare_task()
+        prepared = model.prepare()
         checker = build_checker(prepared.task, SolverBackend.from_flags(use_incremental=True), 'glucose4')
 
         # f1=True, f2=True → SAT
@@ -103,7 +103,7 @@ class TestOracleModel:
     def test_checker_integration_unsat(self):
         """build_checker creates valid checker; UNSAT case."""
         model = _make_oracle_model({"fm": [[1, 2]]}, {"f1": 1, "f2": 2}, next_available_id=2)
-        prepared = model.prepare_task()
+        prepared = model.prepare()
         checker = build_checker(prepared.task, SolverBackend.from_flags(use_incremental=True), 'glucose4')
 
         # f1=False, f2=False → UNSAT (neither true violates f1 OR f2)
