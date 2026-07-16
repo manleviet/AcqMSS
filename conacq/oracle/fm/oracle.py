@@ -59,7 +59,7 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
         # (job ②, ADR-0009) — the preparation assembles OracleData; the oracle does
         # not build what it provides, it only holds it.
         self._oracle_model = FMOracleModelBuilder.from_fm(fm_path).build()
-        self.oracle_data = FMOracleTaskPreparation.prepare(self._oracle_model)
+        self.oracle_data = FMOracleTaskPreparation.build_oracle_data(self._oracle_model)
 
         # The oracle builds its own membership checker (job ①) from the REAL task in
         # the snapshot (one source — no fabricated task). The oracle owns its solver

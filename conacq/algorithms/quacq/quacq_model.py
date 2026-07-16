@@ -48,7 +48,7 @@ class QuAcqModel(KBModel):
         The signature is unified with the other models; the input TYPE is QuAcq's
         own (not a shared union — ADR-0006).
         """
-        return QuAcqTaskPreparation().prepare(self, task_input.oracle_data)
+        return QuAcqTaskPreparation().prepare(self, task_input)
 
     def get_constraint_vars(self, task: QuAcqTask, assumption_id: int) -> Set[str]:
         """Feature names for a bias constraint (by assumption id). Stateless: the

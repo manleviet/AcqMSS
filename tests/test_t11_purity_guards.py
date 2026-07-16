@@ -214,6 +214,79 @@ def test_prepare_task_is_unified_across_models():
         assert params == ["self", "task_input"], f"{model.__name__}: {params}"
 
 
+def test_every_prepare_strategy_inherits_the_contract():
+    """Population sweep — the guard that watches the author, not a remembered list.
+
+    AST-scan explanation/ + conacq/ for EVERY class defining a method named
+    ``prepare`` that returns ``PreparedTask``, then assert each is a subclass of
+    ``TaskPreparationStrategy``. It names no concrete strategy in its assertion: it
+    enumerates the population by the contract's own shape, so a strategy added later
+    that forgets to inherit is caught without editing this test.
+
+    Two exclusions, both by MECHANISM, not by a by-name exception list:
+      - ``issubclass`` is reflexive, so ``TaskPreparationStrategy`` itself passes free.
+      - the filter is the method NAME ``prepare`` + a ``PreparedTask`` return, so
+        ``prepare_task`` (the MODEL contract, guarded by
+        ``test_prepare_task_is_unified_across_models``) and ``build_oracle_data``
+        (``-> OracleData``, a different operation) drop out on their own.
+
+    Why it exists: the model-layer guard above checks ``prepare_task`` and never saw
+    ``QuAcqTaskPreparation``'s drifted strategy signature. This guard watches the
+    strategy layer the model-layer guard is blind to. Permanent guard."""
+    import ast
+    import importlib
+    import pathlib
+
+    from explanation.api import TaskPreparationStrategy
+
+    repo = pathlib.Path(__file__).resolve().parent.parent
+    checked = []
+    offenders = []
+    for pkg in ("explanation", "conacq"):
+        for path in (repo / pkg).rglob("*.py"):
+            tree = ast.parse(path.read_text(), filename=str(path))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                for item in node.body:
+                    if (isinstance(item, ast.FunctionDef)
+                            and item.name == "prepare"
+                            and item.returns is not None
+                            and "PreparedTask" in ast.unparse(item.returns)):
+                        module = ".".join(path.relative_to(repo).with_suffix("").parts)
+                        cls = getattr(importlib.import_module(module), node.name)
+                        checked.append(node.name)
+                        if not issubclass(cls, TaskPreparationStrategy):
+                            offenders.append(f"{node.name} ({module})")
+    assert checked, "population scan found no prepare()->PreparedTask classes — the scan itself is broken"
+    assert not offenders, (
+        "classes with prepare()->PreparedTask that do not inherit TaskPreparationStrategy: "
+        + ", ".join(offenders))
+
+
+def test_quacq_strategy_signature_matches_the_contract():
+    """QuAcqTaskPreparation.prepare takes (self, model, task_input) like every other
+    strategy — not (self, model, oracle_data). The drift existed because prepare_task
+    unpacked task_input.oracle_data before handing it down; the strategy now receives
+    the whole QuAcqTaskInput and extracts oracle_data itself. Permanent guard."""
+    from conacq.algorithms.quacq.task_preparation import QuAcqTaskPreparation
+    params = list(inspect.signature(QuAcqTaskPreparation.prepare).parameters)
+    assert params == ["self", "model", "task_input"], params
+
+
+def test_fm_oracle_task_prep_has_no_prepare_name_collision():
+    """FMOracleTaskPreparation is a static two-view factory, NOT a strategy: forcing it
+    to inherit TaskPreparationStrategy is wrong — its task view ``prepare_task`` is a
+    @staticmethod with no ``task_input`` (measured: it does not fit the contract). The
+    only defect was the NAME — ``prepare() -> OracleData`` collided with the strategy's
+    ``prepare() -> PreparedTask``. Renamed to ``build_oracle_data()``; ``prepare_task``
+    survives. Permanent guard against the collision returning."""
+    from conacq.oracle.fm.task_preparation import FMOracleTaskPreparation
+    assert not hasattr(FMOracleTaskPreparation, "prepare"), "the colliding prepare name is still present"
+    assert hasattr(FMOracleTaskPreparation, "build_oracle_data"), "the renamed job-② factory is missing"
+    assert hasattr(FMOracleTaskPreparation, "prepare_task"), "the PreparedTask view was lost"
+
+
 def test_oracle_data_snapshot_is_frozen():
     """Job ② is an immutable value: OracleData is a frozen dataclass, so nothing
     a query does can rebind what the provisioning consumers read. Permanent

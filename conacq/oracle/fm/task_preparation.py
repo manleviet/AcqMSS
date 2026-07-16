@@ -2,9 +2,9 @@
 Task preparation for the FM oracle (job ①/② provisioning).
 
 FMOracleTaskPreparation builds the assumption-guarded task once (pure) and exposes
-two views of it: the oracle's frozen provisioning snapshot (``prepare`` -> OracleData,
-job ②) and the plain PreparedTask (``prepare_task``). The oracle *receives* its
-OracleData; it does not assemble what it provides (ADR-0009).
+two views of it: the oracle's frozen provisioning snapshot (``build_oracle_data`` ->
+OracleData, job ②) and the plain PreparedTask (``prepare_task``). The oracle
+*receives* its OracleData; it does not assemble what it provides (ADR-0009).
 """
 
 from typing import TYPE_CHECKING, Dict, List, Tuple
@@ -40,8 +40,9 @@ class FMOracleTaskPreparation:
     BGData extracts Part 3's first pair (root BG) + end-of-Part-4 ID.
 
     Pure: builds everything into locals; the model is never mutated. Two public
-    views over the same preparation — ``prepare`` (OracleData, job ②) and
-    ``prepare_task`` (PreparedTask).
+    views over the same preparation — ``build_oracle_data`` (OracleData, job ②) and
+    ``prepare_task`` (PreparedTask). Not a TaskPreparationStrategy: these are static
+    factories, not the instance ``prepare(model, task_input)`` contract.
     """
 
     @staticmethod
@@ -116,10 +117,12 @@ class FMOracleTaskPreparation:
         return task, provider, assignment_map, bg_data, root_clauses
 
     @staticmethod
-    def prepare(model: 'FMOracleModel') -> OracleData:
+    def build_oracle_data(model: 'FMOracleModel') -> OracleData:
         """Assemble the oracle's frozen provisioning snapshot (job ②).
 
         The oracle receives this; it does not build what it provides (ADR-0009).
+        Named apart from the strategy ``prepare`` contract: this returns OracleData,
+        a different operation, and must not be mistaken for a TaskPreparationStrategy.
         """
         task, _provider, assignment_map, bg_data, root_clauses = (
             FMOracleTaskPreparation._prepare(model))

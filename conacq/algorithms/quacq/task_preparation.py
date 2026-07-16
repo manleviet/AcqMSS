@@ -17,6 +17,7 @@ from explanation.api import (
     DescriptionProvider,
     DiagnosisTask,
     PreparedTask,
+    TaskPreparationStrategy,
     prepare_kb,
 )
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ class QuAcqTask(DiagnosisTask):
     constraint_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
 
 
-class QuAcqTaskPreparation:
+class QuAcqTaskPreparation(TaskPreparationStrategy):
     """Prepare QuAcqTask from bias + oracle. No E+/E-.
 
     Assumption ID layout (QuAcq owns Parts 5-6):
@@ -64,19 +65,23 @@ class QuAcqTaskPreparation:
     """
 
     def prepare(self, model: QuAcqModel,
-                oracle_data: "OracleData") -> PreparedTask:
+                task_input: QuAcqTaskInput) -> PreparedTask:
         """Prepare QuAcqTask from model and the frozen OracleData snapshot.
 
         Build-then-freeze: accumulate into locals, construct frozen QuAcqTask once.
 
         Args:
             model: QuAcqModel with bias constraint_map
-            oracle_data: OracleData supplying BG data and feature IDs
+            task_input: QuAcqTaskInput carrying the oracle's frozen snapshot; its
+                oracle_data is unpacked here so the signature matches the
+                TaskPreparationStrategy contract (model, task_input) — the model
+                layer no longer unpacks it before handing it down.
 
         Returns:
             PreparedTask with QuAcqTask, DescriptionProvider, and the
             feature-assignment map (built here from the BG data, not the builder).
         """
+        oracle_data = task_input.oracle_data
         provider = DescriptionProvider()
 
         # Local accumulation
