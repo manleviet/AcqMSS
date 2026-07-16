@@ -46,69 +46,88 @@ def _strided(seq):
 
 
 # ---------------------------------------------------------------------------
-# Site 1 — DiagnosisTaskPreparation._assign_sets  (5 branches, both stride modes)
-# assumptions[i] == 100 + i
+# Site 1 — DiagnosisTaskPreparation._assign_sets (5 use-case branches)
+# Now a pure role-assignment over the primitives' RETURNED originals (no offset+
+# stride slicing). Exercised directly with synthetic originals lists — the file's
+# stated design — where fm_originals[0] is the root. Expected set_b/set_c are the
+# same old-code literals the position-slicing version produced; the real-prepare()
+# integration is independently gated by the immobile layer-2 golden
+# (test_t11_prepared_task_ids::test_diagnosis_factory_id_layout_is_pinned, 7/7).
 # ---------------------------------------------------------------------------
-_A16 = list(range(100, 116))
-
-
-def test_site1_config_no_cf_stride2():
-    """C = configuration, B = FM + root (step=2 with negated forms)."""
-    dia = DiagnosisTaskPreparation()
-    set_b, set_c = dia._assign_sets(_A16, TaskInput(configuration={"x": True}), 6, 6, True)
-    assert set_b == [100, 102, 104]
-    assert set_c == [106, 107, 108, 109, 110, 111, 112, 113, 114, 115]
-
-
-def test_site1_config_with_cf_stride2():
-    """C = configuration + FM, B = root only."""
+def test_site1_config_no_cf():
+    """C = configuration, B = FM + root."""
     dia = DiagnosisTaskPreparation()
     set_b, set_c = dia._assign_sets(
-        _A16, TaskInput(configuration={"x": True}, with_cf_in_c=True), 6, 6, True)
+        TaskInput(configuration={"x": True}),
+        fm_originals=[100, 102, 104], config_originals=list(range(106, 116)), tc_originals=[])
+    assert set_b == [100, 102, 104]
+    assert set_c == list(range(106, 116))
+
+
+def test_site1_config_with_cf():
+    """C = configuration + FM (no root), B = root only."""
+    dia = DiagnosisTaskPreparation()
+    set_b, set_c = dia._assign_sets(
+        TaskInput(configuration={"x": True}, with_cf_in_c=True),
+        fm_originals=[100, 102, 104], config_originals=list(range(106, 116)), tc_originals=[])
     assert set_b == [100]
     assert set_c == [102, 104] + list(range(106, 116))
 
 
-def test_site1_test_case_stride2():
-    """C = FM constraints, B = root + test case (start_id_config == start_id_test)."""
+def test_site1_test_case():
+    """C = FM constraints (no root), B = root + test case."""
     dia = DiagnosisTaskPreparation()
-    set_b, set_c = dia._assign_sets(_A16, TaskInput(test_case={"x": True}), 10, 10, True)
+    set_b, set_c = dia._assign_sets(
+        TaskInput(test_case={"x": True}),
+        fm_originals=[100, 102, 104, 106, 108], config_originals=[],
+        tc_originals=[110, 111, 112, 113, 114, 115])
     assert set_b == [100, 110, 111, 112, 113, 114, 115]
     assert set_c == [102, 104, 106, 108]
 
 
-def test_site1_redundancy_fm_stride2():
-    """WipeOutR_FM: C = FM constraint originals (no root), B = {} (step=2)."""
+def test_site1_redundancy_fm():
+    """WipeOutR_FM: C = FM constraint originals (no root), B = {}."""
     dia = DiagnosisTaskPreparation()
-    set_b, set_c = dia._assign_sets(_A16, TaskInput(for_redundancy=True), 16, 16, True)
+    set_b, set_c = dia._assign_sets(
+        TaskInput(for_redundancy=True),
+        fm_originals=[100, 102, 104, 106, 108, 110, 112, 114], config_originals=[], tc_originals=[])
     assert set_b == []
     assert set_c == [102, 104, 106, 108, 110, 112, 114]
     assert _strided(set_c)
 
 
-def test_site1_fm_diagnosis_no_negation_stride1():
-    """FM diagnosis without negated forms: B = root, C = all remaining (step=1)."""
+def test_site1_fm_diagnosis():
+    """FM diagnosis: B = root, C = FM constraints (no root)."""
     dia = DiagnosisTaskPreparation()
-    set_b, set_c = dia._assign_sets(_A16, TaskInput(), 16, 16, False)
+    set_b, set_c = dia._assign_sets(
+        TaskInput(), fm_originals=list(range(100, 116)), config_originals=[], tc_originals=[])
     assert set_b == [100]
     assert set_c == list(range(101, 116))
 
 
 # ---------------------------------------------------------------------------
-# Site 2 — TestCaseTaskPreparation._assign_sets (explanation, stride 2)
+# Site 2 — TestCaseTaskPreparation._assign_sets (KBDiag role assignment)
+# Now a pure role assignment: TC = positive originals, TV = negative originals
+# (the returns of prepare_testsuite_with_negation). The non-empty set_tv branch is
+# pinned HERE with synthetic values — the layer-2 golden has no ±negatives scenario
+# (measured: its testcases/redundancy_t both have set_tv == []).
 # ---------------------------------------------------------------------------
 def test_site2_testcase_with_negatives():
     tc = _TestCaseTaskPreparation()
-    set_b, set_c, set_tc, set_tv = tc._assign_sets(list(range(200, 216)), 4, 8, True)
+    set_b, set_c, set_tc, set_tv = tc._assign_sets(
+        fm_originals=[200, 201, 202, 203],
+        pos_original_ids=[204, 206], neg_original_ids=[208, 210, 212, 214])
     assert set_b == [200]
     assert set_c == [201, 202, 203]
-    assert set_tc == [204, 206]          # originals of the TC region [4:8]
-    assert set_tv == [208, 210, 212, 214]  # originals of the TV region [8:]
+    assert set_tc == [204, 206]                # positive test-case originals
+    assert set_tv == [208, 210, 212, 214]      # negative test-case originals
 
 
 def test_site2_testcase_without_negatives():
     tc = _TestCaseTaskPreparation()
-    set_b, set_c, set_tc, set_tv = tc._assign_sets(list(range(200, 212)), 4, 12, False)
+    set_b, set_c, set_tc, set_tv = tc._assign_sets(
+        fm_originals=[200, 201, 202, 203],
+        pos_original_ids=[204, 206, 208, 210], neg_original_ids=[])
     assert set_b == [200]
     assert set_c == [201, 202, 203]
     assert set_tc == [204, 206, 208, 210]

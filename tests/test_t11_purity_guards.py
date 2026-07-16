@@ -451,3 +451,18 @@ def test_task_is_deeply_frozen():
             task.set_c.append(999)  # a tuple rejects this; a list (today) does not
 
 
+def test_no_position_slicing_in_task_preparation():
+    """Set carving reads the primitives' RETURNED originals, not offset+stride over the
+    flat assumption list. So ``slice_assumptions``, its stride constant, and the
+    per-call re-inference (``has_negated_forms``: prepare_kb already knows whether it
+    called allocate_pair or allocate) are gone — along with the position batons that
+    made two ID-mismatch bugs shippable. ``_assign_sets`` survives (assigning roles per
+    scenario is a real operation); only its inputs changed. Permanent guard."""
+    import explanation.api as api
+    import explanation.models.task_preparation as tp
+    assert not hasattr(tp, "slice_assumptions"), "position-slicing helper is back"
+    assert not hasattr(tp, "_ASSUMPTION_PAIR_STRIDE"), "the magic stride constant is back"
+    assert not hasattr(api, "slice_assumptions"), "slice_assumptions still exported (door)"
+    assert "slice_assumptions" not in getattr(api, "__all__", []), "still in api.__all__ (label)"
+
+

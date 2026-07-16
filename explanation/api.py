@@ -27,7 +27,6 @@ from explanation.models.task_preparation import (
     prepare_kb,
     prepare_testsuite_with_negation,
     prepare_variable_assignments,
-    slice_assumptions,
 )
 from explanation.models.assumption_id_allocator import AssumptionIdAllocator
 from explanation.models.testsuite import Assignment, TestCase, TestSuite
@@ -66,7 +65,6 @@ __all__ = [
     'prepare_kb',
     'prepare_testsuite_with_negation',
     'prepare_variable_assignments',
-    'slice_assumptions',
     # Test-suite data
     'Assignment',
     'TestCase',

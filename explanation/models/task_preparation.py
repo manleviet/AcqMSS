@@ -32,11 +32,6 @@ from explanation.operations.algorithms.utils import get_hashcode
 if TYPE_CHECKING:
     from .pysat_diagnosis_model import DiagnosisModel
 
-# Each constraint produces a pair of assumptions (original + negated),
-# so we stride by 2 to select only original assumptions.
-_ASSUMPTION_PAIR_STRIDE = 2
-_ASSUMPTION_SINGLE_STRIDE = 1
-
 
 # === INPUT DATA CLASS ===
 
@@ -136,19 +131,6 @@ def convert_keys_to_features(configuration: Configuration) -> Configuration:
     new_elements = {Feature(key) if isinstance(key, str) else key: value
                     for key, value in configuration.elements.items()}
     return Configuration(new_elements)
-
-
-def slice_assumptions(assumptions: List[int], start: int = 0,
-                      stop: Optional[int] = None, stride: int = 1) -> List[int]:
-    """Return ``assumptions[start:stop:stride]`` as a list.
-
-    Single home for the offset+stride arithmetic that carves set_b/set_c/set_tc/
-    set_tv out of the flat assumption list. Paired layouts (each constraint or
-    test case stored as an original + negated form) pass
-    ``stride=_ASSUMPTION_PAIR_STRIDE`` to pick only the originals; unpaired
-    layouts use the default stride 1.
-    """
-    return list(assumptions[start:stop:stride])
 
 
 # === RESULT DATA CLASSES (Core data only, immutable) ===
@@ -476,66 +458,64 @@ class DiagnosisTaskPreparation(TaskPreparationStrategy):
         assumptions: List[int] = []
         negation_map: Dict[int, int] = {}
 
-        # Prepare KB with assumptions and optionally negated forms. This strategy
-        # carves its sets by position in _assign_sets (config/test-case blocks
-        # interleave), so it reads the flat list, not the primitives' returns.
-        prepare_kb(set_kb, assumptions, negation_map, provider,
-                   model.constraint_map, alloc, negated_constraint_map)
+        # Prepare KB. Each primitive RETURNS its originals (the ids it emitted as
+        # originals, de-paired), so the sets are assigned by role below — no offset+
+        # stride re-derivation of what the primitives already know.
+        fm_originals = prepare_kb(set_kb, assumptions, negation_map, provider,
+                                  model.constraint_map, alloc, negated_constraint_map)
 
-        start_id_config = len(assumptions)
+        config_originals: List[int] = []
         if task_input.configuration is not None:
-            prepare_configuration(set_kb, assumptions, provider, model.variables,
-                                  task_input.configuration, alloc)
+            config_originals = prepare_configuration(
+                set_kb, assumptions, provider, model.variables,
+                task_input.configuration, alloc)
 
-        start_id_test_case = len(assumptions)
+        tc_originals: List[int] = []
         if task_input.test_case is not None:
-            prepare_configuration(set_kb, assumptions, provider, model.variables,
-                                  task_input.test_case, alloc)
+            tc_originals = prepare_configuration(
+                set_kb, assumptions, provider, model.variables,
+                task_input.test_case, alloc)
 
-        # Assign set_c and set_b
-        has_negated_forms = negated_constraint_map is not None
         set_b, set_c = self._assign_sets(
-            assumptions, task_input, start_id_config, start_id_test_case, has_negated_forms)
+            task_input, fm_originals, config_originals, tc_originals)
 
         task = DiagnosisTask(
             set_c=set_c, set_b=set_b, set_kb=set_kb,
             negation_map=negation_map, assumptions=assumptions)
         return PreparedTask(task, provider)
 
-    def _assign_sets(self, assumptions: List[int], task_input: TaskInput,
-                     start_id_config: int, start_id_test: int,
-                     has_negated_forms: bool = True) -> Tuple[List[int], List[int]]:
-        """Compute (set_b, set_c) from assumptions based on use case."""
-        # With negation: [root, neg_root, c1, neg_c1, ...] -> step=2
-        # Without negation: [root, c1, c2, ...] -> step=1
-        step = _ASSUMPTION_PAIR_STRIDE if has_negated_forms else _ASSUMPTION_SINGLE_STRIDE
+    def _assign_sets(self, task_input: TaskInput, fm_originals: List[int],
+                     config_originals: List[int], tc_originals: List[int]
+                     ) -> Tuple[List[int], List[int]]:
+        """Assign (set_b, set_c) roles per use case from the returned originals.
 
+        ``fm_originals[0]`` is the root constraint; ``fm_originals[1:]`` the rest.
+        Config/test-case originals come straight off ``prepare_configuration``. No
+        positional slicing — the scenario decides which originals play which role.
+        """
         set_b: List[int] = []
         set_c: List[int] = []
 
         if task_input.configuration is not None:
             if not task_input.with_cf_in_c:
                 # C = configuration, B = FM + root
-                set_b = slice_assumptions(assumptions, 0, start_id_config, step)
-                set_c = slice_assumptions(assumptions, start_id_config)
+                set_b = list(fm_originals)
+                set_c = list(config_originals)
             else:
                 # C = configuration + FM, B = root only
-                set_b = [assumptions[0]]
-                set_c = slice_assumptions(assumptions, step, start_id_config, step) + \
-                    slice_assumptions(assumptions, start_id_config)
+                set_b = [fm_originals[0]]
+                set_c = fm_originals[1:] + config_originals
+        elif task_input.test_case is not None:
+            # C = FM constraints (no root), B = root + test case
+            set_b = [fm_originals[0]] + tc_originals
+            set_c = fm_originals[1:]
+        elif task_input.for_redundancy:
+            # WipeOutR_FM: C = FM constraint originals (no root), B = {}
+            set_c = fm_originals[1:]
         else:
-            if task_input.test_case is not None:
-                # C = FM constraints, B = root + test case
-                set_b = [assumptions[0]] + slice_assumptions(assumptions, start_id_test)
-                set_c = slice_assumptions(assumptions, step, start_id_config, step)
-            else:
-                if has_negated_forms:
-                    # Redundancy detection: C = CF (PySATModel, no root), B = {}
-                    set_c = slice_assumptions(assumptions, step, None, step)
-                else:
-                    # C = FM constraints, B = root only
-                    set_b = [assumptions[0]]
-                    set_c = slice_assumptions(assumptions, step, None, step)
+            # FM diagnosis: C = FM constraints (no root), B = root only
+            set_b = [fm_originals[0]]
+            set_c = fm_originals[1:]
 
         return set_b, set_c
 
@@ -622,28 +602,27 @@ class TestCaseTaskPreparation(TaskPreparationStrategy):
         set_neg_tv: List[int] = []
         set_neg_tc: List[int] = []
 
-        # Prepare KB (no negated forms needed for TestCaseTask). This strategy
-        # carves its sets by position in _assign_sets, so it reads the flat list.
-        prepare_kb(set_kb, assumptions, negation_map, provider,
-                   model.constraint_map, alloc, negated_constraint_map=None)
+        # Prepare KB (no negated forms needed for TestCaseTask). Each primitive
+        # RETURNS its originals, so the sets are assigned by role below.
+        fm_originals = prepare_kb(set_kb, assumptions, negation_map, provider,
+                                  model.constraint_map, alloc, negated_constraint_map=None)
 
         # Prepare positive test cases with negated forms
-        start_id_tc = len(assumptions)
-        _, pos_negated_ids = prepare_testsuite_with_negation(
+        pos_original_ids, pos_negated_ids = prepare_testsuite_with_negation(
             set_kb, assumptions, negation_map, provider, model.variables,
             task_input.positive_test_cases, alloc)
         set_neg_tc.extend(pos_negated_ids)
 
         # Prepare negative test cases with negated forms if provided
-        start_id_tv = len(assumptions)
+        neg_original_ids: List[int] = []
         if task_input.negative_test_cases is not None:
-            _, neg_negated_ids = prepare_testsuite_with_negation(
+            neg_original_ids, neg_negated_ids = prepare_testsuite_with_negation(
                 set_kb, assumptions, negation_map, provider, model.variables,
                 task_input.negative_test_cases, alloc)
             set_neg_tv.extend(neg_negated_ids)
 
         set_b, set_c, set_tc, set_tv = self._assign_sets(
-            assumptions, start_id_tc, start_id_tv, task_input.negative_test_cases is not None)
+            fm_originals, pos_original_ids, neg_original_ids)
 
         task = TestCaseTask(
             set_c=set_c, set_b=set_b, set_kb=set_kb,
@@ -652,25 +631,20 @@ class TestCaseTaskPreparation(TaskPreparationStrategy):
             set_neg_tv=set_neg_tv, set_neg_tc=set_neg_tc)
         return PreparedTask(task, provider)
 
-    def _assign_sets(self, assumptions: List[int],
-                     start_id_tc: int, start_id_tv: int,
-                     has_negative_test_cases: bool
+    def _assign_sets(self, fm_originals: List[int], pos_original_ids: List[int],
+                     neg_original_ids: List[int]
                      ) -> Tuple[List[int], List[int], List[int], List[int]]:
-        """Compute (set_b, set_c, set_tc, set_tv) from assumptions.
+        """Assign the KBDiag roles from the returned originals — no positional slicing.
 
-        Each test case has two assumptions (original + negated),
-        so extract only the original assumptions for set_tc and set_tv.
-        Invariant: (start_id_tv - start_id_tc) is even (whole original+negated
-        pairs), so slicing originals directly from each sub-region is exact.
+        B = root, C = FM constraints minus root, TC = positive test-case originals,
+        TV = negative test-case originals (empty when there are no negatives). The
+        originals come straight off ``prepare_testsuite_with_negation``; the negated
+        twins already routed to set_neg_tc / set_neg_tv in ``prepare``.
         """
-        set_b = [assumptions[0]]
-        set_c = slice_assumptions(assumptions, 1, start_id_tc)
-
-        # Each test case is stored as an (original, negated) pair; stride by 2 to
-        # keep only the originals, sliced directly from each sub-region.
-        set_tc = slice_assumptions(assumptions, start_id_tc, start_id_tv, _ASSUMPTION_PAIR_STRIDE)
-        set_tv = (slice_assumptions(assumptions, start_id_tv, None, _ASSUMPTION_PAIR_STRIDE)
-                  if has_negative_test_cases else [])
+        set_b = [fm_originals[0]]
+        set_c = fm_originals[1:]
+        set_tc = list(pos_original_ids)
+        set_tv = list(neg_original_ids)
         return set_b, set_c, set_tc, set_tv
 
 
