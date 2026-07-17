@@ -86,6 +86,12 @@ The instinct behind it was not wrong: a KB *should not* be a live mutable store.
 
 Note also that runtime immutability is not even universally available here: `MappingProxyType` **cannot be pickled**, so applying the same idea to `Task.negation_map` would break FastDiagP's multiprocessing outright. The mechanism does not scale to the place immutability would actually have mattered.
 
+> **⚠️ CORRECTION (2026-07-17, ADR-0012).** The first sentence is true; **the conclusion is false**. `MappingProxyType` is *one mechanism*; "freezing a dict" is a *category*. A `dict` subclass with `__reduce__` pickles fine **and** blocks every mutator — verified. `Task.negation_map` is frozen this way in ADR-0012.
+>
+> This paragraph tested a mechanism, failed, and concluded about the category. The conclusion then hardened as it circulated — a design brief wrote *"`negation_map` **must** stay a `dict`"*, this ADR recorded *"the mechanism does not scale"*, an implementation report escalated it to *"structurally cannot be frozen"* — and nobody re-tested, because each reader checked the thing the previous one pointed at.
+>
+> **The decision in this ADR still stands** (the catalog is a plain `dict`, and for the reasons given: a *per-read* tax of ~25% protecting a mutation nobody performs). Only this closing generalisation is withdrawn. See ADR-0012 for the rule that separates the two cases: **immutability at construction is free; immutability at read is a tax.**
+
 ## Consequences
 
 **Easier**
