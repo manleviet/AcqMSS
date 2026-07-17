@@ -4,7 +4,7 @@ https://github.com/HiConfiT/hiconfit-core/blob/main/ca-cdr-package/src/main/java
 """
 
 import logging
-from typing import List
+from typing import List, Sequence
 
 from explanation.checker.protocols import ConsistencyChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
@@ -31,7 +31,7 @@ class FastDiag:
 
     @measure_time('fastdiag_runtime')
     @count_calls('fastdiag_calls')
-    def find_diagnosis(self, set_c: List, set_b: List) -> List:
+    def find_diagnosis(self, set_c: Sequence[int], set_b: Sequence[int]) -> List:
         """
         Activate FastDiag algorithm if there exists at least one constraint,
         which induces an inconsistency in B. Otherwise, it returns an empty set.
@@ -45,6 +45,10 @@ class FastDiag:
         """
         logging.debug('fastDiag [C=%s, B=%s]', set_c, set_b)
         # print(f'fastDiag [C={C}, B={B}]')
+
+        # Task solve-fields arrive as immutable tuples; this algorithm splits and
+        # concatenates them as working lists.
+        set_c, set_b = list(set_c), list(set_b)
 
         # if isEmpty(C) or consistent(B U C) return Φ
         if len(set_c) == 0 or self.checker.is_consistent(set_b + set_c):

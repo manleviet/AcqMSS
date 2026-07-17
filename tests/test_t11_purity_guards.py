@@ -91,17 +91,17 @@ def test_oracle_holds_no_provisioning_object(oracle):
 def test_oracle_background_is_invariant_across_queries(oracle):
     """The background the checker sees (``oracle_data.get_c()`` = the task's set_c)
     must not shift across membership queries — a query must never leak into the
-    facts the acquisition algorithm treats as true. ``frozen=True`` blocks
-    REBINDING the field, not MUTATING its contents in place (``.append(...)`` would
-    still run), so a future ``is_valid`` that did ``set_c.extend(...)`` instead of
-    ``set_c + ...`` would poison the background exactly like A6, silently. Permanent
-    guard for that invariant — moved onto the new surface, not retired."""
+    facts the acquisition algorithm treats as true. The task's set_c is now a frozen
+    tuple, so a stray ``set_c.extend(...)`` would raise instead of poisoning the
+    background silently (the A6 class); this behavioural guard still checks the
+    invariant end-to-end across 50 queries. Permanent guard, moved onto the new
+    surface, not retired."""
     before = list(oracle.oracle_data.get_c())
     feats = sorted(oracle.get_variables())
     rng = random.Random(1)
     for _ in range(50):
         oracle.is_valid({f: rng.choice([True, False]) for f in feats})
-    assert oracle.oracle_data.get_c() == before
+    assert list(oracle.oracle_data.get_c()) == before
 
 
 # ---------------------------------------------------------------------------
@@ -415,32 +415,15 @@ def test_generate_ne_not_exported_from_algorithms():
 
 
 # ---------------------------------------------------------------------------
-# T11b.0 — the deferred deep-immutable-Task ratchet (flips at T13)
+# Deep-immutable Task — list-valued solve fields are tuples (permanent guard).
 # ---------------------------------------------------------------------------
-@pytest.mark.xfail(
-    strict=True,
-    reason="Task is shallow-frozen; deep-freeze lands with T13 (its blast radius is "
-           "the labeler tree T13 restructures — 13 .copy() sites, 10 in hsdag/labeler/)",
-)
 def test_task_is_deeply_frozen():
-    """The Task family must become deeply immutable: the list-valued solve fields
-    become tuples that reject in-place mutation, so a task cannot be poisoned after
-    construction — the same silent-drift class the oracle arc kept killing. RED today
-    (Task is only shallow-frozen: ``set_c.append`` succeeds — pinned as the current
-    contract by ``test_task_is_only_shallow_frozen``).
-
-    Written NOW, at the moment of deferral, not at T13 when the work is done: a
-    deferral without a ratchet is a wish, and the brief that holds the promise is
-    deleted at project close, so a promise living only there evaporates by
-    construction (T11b design §1). T13 flips this (removes the marker) and deletes
-    ``test_task_is_only_shallow_frozen`` in the same change.
-
-    Safe to write despite the T11.5 lesson — a red xfail can still be *wrong* (that
-    one demanded solver reuse, which silently changed 18/20 witnesses). The
-    difference, measured before authorising this ratchet: a missed deep-freeze site
-    calls ``tuple.append``/``tuple.copy`` and raises AttributeError AT THE CALL — a
-    loud failure, not a silently-different result. (``negation_map`` stays a dict:
-    MappingProxyType does not pickle, which would break FastDiagP's multiprocessing.)"""
+    """The Task family is deeply immutable: the list-valued solve fields are tuples
+    that reject in-place mutation, so a task cannot be poisoned after construction —
+    the same silent-drift class the oracle arc kept killing. Built with a ``list``
+    (``task_cls(set_c=[1])``) so it passes only if ``__post_init__`` actually coerces
+    list→tuple, not merely if the annotation changed — the mechanism, not the label.
+    ``negation_map`` stays a dict (MappingProxyType does not pickle → FastDiagP)."""
     from explanation.models.task_preparation import DiagnosisTask, TestCaseTask
     from conacq.algorithms.acqmss.task_preparation import ConGenTask
     from conacq.algorithms.quacq.task_preparation import QuAcqTask

@@ -12,7 +12,7 @@ maxNumGenCC = min(numCores - 1, 7)
 
 import logging
 import multiprocessing as mp
-from typing import List
+from typing import List, Sequence
 
 from . import utils
 from explanation.checker.protocols import CopyableChecker
@@ -48,7 +48,7 @@ class FastDiagP:
 
     @measure_time('fastdiagp_runtime')
     @count_calls('fastdiagp_calls')
-    def find_diagnosis(self, set_c: List, set_b: List) -> List:
+    def find_diagnosis(self, set_c: Sequence[int], set_b: Sequence[int]) -> List:
         """
         Activate FastDiag algorithm if there exists at least one constraint,
         which induces an inconsistency in B. Otherwise, it returns an empty set.
@@ -62,6 +62,9 @@ class FastDiagP:
         """
         logging.debug('fastDiag [C=%s, B=%s]', set_c, set_b)
         # print(f'fastDiag [C={C}, B={B}]')
+
+        # Task solve-fields arrive as immutable tuples; work on lists.
+        set_c, set_b = list(set_c), list(set_b)
 
         # if isEmpty(C) or consistent(B U C) return Φ
         if len(set_c) == 0 or self.checker.is_consistent(set_b + set_c):

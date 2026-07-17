@@ -81,7 +81,7 @@ class CheckerBase(ABC):
         set_tcp = []
         # Accumulates test cases inconsistent with CNF formula
         for tc in set_tc:
-            if not self.is_consistent(set_c + [tc]):
+            if not self.is_consistent(list(set_c) + [tc]):
                 set_tcp.append(tc)
             if stop_at_first_violation and len(set_tcp) > 0:
                 break
@@ -127,7 +127,7 @@ class IncrementalPySATChecker(CheckerBase):
     @count_calls(key="is_consistent_calls")
     def is_consistent(self, set_c: List) -> bool:
         enabled, disabled = self._compute_delta(set_c)
-        final_assumptions = enabled + [-1 * item for item in disabled]
+        final_assumptions = list(enabled) + [-1 * item for item in disabled]
 
         result = self.solver.solve(assumptions=final_assumptions)
 
@@ -179,7 +179,7 @@ class NonIncrementalPySATChecker(CheckerBase):
     @count_calls(key="is_consistent_calls")
     def is_consistent(self, set_c: List) -> bool:
         enabled, disabled = self._compute_delta(set_c)
-        final_assumptions = enabled + [-1 * item for item in disabled]
+        final_assumptions = list(enabled) + [-1 * item for item in disabled]
 
         solver = Solver(self.solver_name, bootstrap_with=self.set_kb, use_timer=True)
         result = solver.solve(assumptions=final_assumptions)
@@ -228,7 +228,7 @@ class SAT4JChecker(CheckerBase):
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.cnf', delete=True) as f:
             cnf = CNF()
-            cnf.extend(self.set_kb + assumption_clauses)
+            cnf.extend(list(self.set_kb) + assumption_clauses)
             cnf.to_file(f.name)
 
             with self.profiler.timer("solver_time"):

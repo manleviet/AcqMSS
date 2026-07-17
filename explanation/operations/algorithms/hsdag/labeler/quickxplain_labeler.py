@@ -57,9 +57,9 @@ class QuickXPlainLabeler(QuickXPlain, IHSLabelable):
         assert isinstance(param_parent_node, QuickXPlainParameters), \
             "parameter must be an instance of QuickXPlainParameters"
 
-        new_c = param_parent_node.set_c.copy()
+        new_c = list(param_parent_node.set_c)
         new_c.remove(arc_label)
-        new_b = param_parent_node.set_b.copy()
+        new_b = list(param_parent_node.set_b)
 
         return QuickXPlainParameters(new_c, new_b)
 

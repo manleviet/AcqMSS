@@ -71,7 +71,7 @@ class WipeOutR_T:
             return [], set_t.copy()
 
         # T_π ← T (working set of test cases to check)
-        t_pi = set_t.copy()
+        t_pi = list(set_t)
         # T_Δ ← ∅ (set of redundant test cases)
         t_delta = []
 

@@ -58,9 +58,9 @@ class FastDiagLabeler(FastDiag, IHSLabelable):
         assert isinstance(param_parent_node, FastDiagParameters), \
             "parameter must be an instance of FastDiagParameters"
 
-        new_c = param_parent_node.set_c.copy()
+        new_c = list(param_parent_node.set_c)
         new_c.remove(arc_label)
-        new_b = param_parent_node.set_b.copy()
+        new_b = list(param_parent_node.set_b)
         new_b.append(arc_label)
 
         return FastDiagParameters(new_c, new_b)

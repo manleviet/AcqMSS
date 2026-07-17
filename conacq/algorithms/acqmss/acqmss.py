@@ -68,7 +68,7 @@ class AcqMSS:
                       delta, set_b, set_neg_tv, set_tc, set_bg)
 
         # E'+ <- E+
-        set_tcp = set_tc.copy()
+        set_tcp = list(set_tc)
 
         # if δ != Φ then E'+ <- TestC(B ∪ NE ∪ BG, E+)
         if len(delta) != 0:

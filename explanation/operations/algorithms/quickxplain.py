@@ -4,7 +4,7 @@ https://github.com/HiConfiT/hiconfit-core/blob/main/ca-cdr-package/src/main/java
 """
 
 import logging
-from typing import List
+from typing import List, Sequence
 
 from explanation.checker.protocols import ConsistencyChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
@@ -32,7 +32,7 @@ class QuickXPlain:
 
     @measure_time('quickxplain_runtime')
     @count_calls('quickxplain_calls')
-    def find_conflict(self, set_c: List, set_b: List) -> List:
+    def find_conflict(self, set_c: Sequence[int], set_b: Sequence[int]) -> List:
         """
         // Func QuickXPlain(C={c1,c2,…, cm}, B): CS
         // IF consistent(B∪C) return "No conflict";
@@ -44,6 +44,9 @@ class QuickXPlain:
         """
         logging.debug('>>> QuickXPlain [C=%s, B=%s]', set_c, set_b)
         # print(f'quickXPlain [C={C}, B={B}]')
+
+        # Task solve-fields arrive as immutable tuples; work on lists.
+        set_c, set_b = list(set_c), list(set_b)
 
         # if C is empty or consistent(B U C) then return empty set
         if len(set_c) == 0 or self.checker.is_consistent(set_b + set_c):

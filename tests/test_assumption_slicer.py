@@ -152,12 +152,12 @@ def test_site3_congen_prepared_set_layout():
     # 1 positive example, no negatives → set_tc non-empty, set_tv empty.
     task = model.prepare_task(
         ConGenTaskInput.from_examples(oracle.oracle_data, [{"java": True}], [])).task
-    assert task.set_b == [28]
-    assert task.set_c[:4] == [116, 118, 120, 122]   # bias originals, stride 2
+    assert list(task.set_b) == [28]
+    assert list(task.set_c[:4]) == [116, 118, 120, 122]   # bias originals, stride 2
     assert len(task.set_c) == 295
     assert _strided(task.set_c)
-    assert task.set_tc == [706]                     # the E+ testcase original
-    assert task.set_tv == []                        # E- → NE (set_neg_tv), not set_tv
+    assert list(task.set_tc) == [706]               # the E+ testcase original
+    assert list(task.set_tv) == []                  # E- → NE (set_neg_tv), not set_tv
     oracle.cleanup()
 
 
@@ -173,8 +173,8 @@ def test_site4_quacq_prepared_set_layout():
     model = (QuAcqModelBuilder.from_bias(str(BIAS_PATH))
              .with_oracle_data(oracle.oracle_data).build())
     task = model.prepare_task(QuAcqTaskInput(oracle.oracle_data)).task
-    assert task.set_b == [28]
-    assert task.set_c[:4] == [116, 118, 120, 122]   # bias originals, stride 2
+    assert list(task.set_b) == [28]
+    assert list(task.set_c[:4]) == [116, 118, 120, 122]   # bias originals, stride 2
     assert len(task.set_c) == 295
     assert _strided(task.set_c)
     oracle.cleanup()
@@ -202,7 +202,7 @@ def test_site5_fm_only_slice_layout():
     prepared = model.prepare()
 
     # With no prep-time configuration, task.set_c IS the FM-only slice.
-    fm_only = prepared.task.set_c
+    fm_only = list(prepared.task.set_c)
     assert fm_only == [4, 6, 8]          # originals of the three FM-constraint pairs
     assert fm_only[0] == first_id
     assert _strided(fm_only)             # stride 2

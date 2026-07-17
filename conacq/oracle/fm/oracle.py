@@ -99,7 +99,7 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
         # this query's feature-assignment assumptions. Both come from the immutable
         # OracleData: a query reads a frozen value, never a live actor's shiftable
         # state, so the background it hands the checker cannot drift.
-        set_c = self.oracle_data.task.set_c + config_to_assignment_assumptions(
+        set_c = list(self.oracle_data.task.set_c) + config_to_assignment_assumptions(
             assignments, self.oracle_data.assignment_map)
 
         return self._checker.is_consistent(set_c)

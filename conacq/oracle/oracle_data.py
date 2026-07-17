@@ -16,7 +16,7 @@ they simply receive a snapshot instead of the live oracle.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Tuple
 
 if TYPE_CHECKING:
     from conacq.oracle.bg_data import BGData
@@ -48,15 +48,17 @@ class OracleData:
     next_available_id: int
 
     # --- KBProvider surface (derived from the task — one source of truth) ---
-    def get_kb(self) -> List[List[int]]:
+    # Return types are the task's frozen tuples (not List): callers concatenate them
+    # (`set_b + set_c`), and typing.Sequence has no __add__ — so Tuple, honestly.
+    def get_kb(self) -> Tuple[Tuple[int, ...], ...]:
         """Get the full knowledge base with assumptions."""
         return self.task.set_kb
 
-    def get_assumptions(self) -> List[int]:
+    def get_assumptions(self) -> Tuple[int, ...]:
         """Get the list of assumption literals."""
         return self.task.assumptions
 
-    def get_c(self) -> List[int]:
+    def get_c(self) -> Tuple[int, ...]:
         """Get the FM constraint assumptions (background knowledge)."""
         return self.task.set_c
 

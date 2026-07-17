@@ -55,7 +55,7 @@ class KBDiagLabeler(KBDiag, IHSLabelable):
 
             # update the parameters, which will be used by the children's nodes
             # set_tcp
-            parameters.set_tcp = set_tcp.copy()
+            parameters.set_tcp = list(set_tcp)
 
             if len(diag) != 0:
                 return [diag]
@@ -69,15 +69,15 @@ class KBDiagLabeler(KBDiag, IHSLabelable):
         assert isinstance(param_parent_node, KBDiagParameters),\
             "parameter must be an instance of KBDiagParameters"
 
-        new_c = param_parent_node.set_c.copy()
+        new_c = list(param_parent_node.set_c)
         new_c.remove(arc_label)
-        new_b = param_parent_node.set_b.copy()
+        new_b = list(param_parent_node.set_b)
         new_b.append(arc_label)
 
         if param_parent_node.set_tcp is None:
             new_tc = []
         else:
-            new_tc = param_parent_node.set_tcp.copy()
+            new_tc = list(param_parent_node.set_tcp)
 
         return KBDiagParameters(new_c, new_b, new_tc, param_parent_node.set_neg_tv)
 

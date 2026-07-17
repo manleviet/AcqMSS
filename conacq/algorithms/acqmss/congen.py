@@ -87,6 +87,9 @@ class ConGen:
         """
         set_neg_tv = set_neg_tv or []
         negation_map = negation_map or {}
+        # Task solve-fields arrive as immutable tuples; work on lists.
+        set_b, set_bg, set_tc, set_neg_tv = (
+            list(set_b), list(set_bg), list(set_tc), list(set_neg_tv))
 
         logging.debug('>>> ConGen [B=%d, NE=%d, E+=%d, BG=%d]',
                       len(set_b), len(set_neg_tv), len(set_tc), len(set_bg))

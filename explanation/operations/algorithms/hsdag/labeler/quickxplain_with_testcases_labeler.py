@@ -110,7 +110,7 @@ class QuickXPlainWithTestCasesLabeler(QuickXPlainWithTestCases, IHSLabelable):
 
         # Update parameters with the test case that caused the conflict
         # This will be used by child nodes
-        parameters.test_case = test_case.copy()
+        parameters.test_case = list(test_case)
 
         if conflict_set:
             # Reverse the order of the conflict set
@@ -143,11 +143,11 @@ class QuickXPlainWithTestCasesLabeler(QuickXPlainWithTestCases, IHSLabelable):
         logging.debug('Creating new node parameters: removing %s', arc_label)
 
         # Create new C by removing arc_label
-        new_c = param_parent_node.set_c.copy()
+        new_c = list(param_parent_node.set_c)
         new_c.remove(arc_label)
 
         # Copy B (background knowledge doesn't change)
-        new_b = param_parent_node.set_b.copy()
+        new_b = list(param_parent_node.set_b)
 
         # Filter test cases: remove test cases before the current one
         # This prevents re-checking already satisfied test cases
@@ -177,7 +177,7 @@ class QuickXPlainWithTestCasesLabeler(QuickXPlainWithTestCases, IHSLabelable):
             List of test cases starting from current_testcase onwards
         """
         if not current_testcase:
-            return set_tc.copy()
+            return list(set_tc)
 
         # Unwrap single-element list from find_conflict_set return value
         # find_conflict_set wraps integer test cases as [tc] for consistency,
@@ -193,7 +193,7 @@ class QuickXPlainWithTestCasesLabeler(QuickXPlainWithTestCases, IHSLabelable):
         except ValueError:
             # Current testcase not found in list, return all test cases
             logging.warning("Test case not found in set_tc, returning all test cases")
-            return set_tc.copy()
+            return list(set_tc)
 
     def get_instance(self, checker: ConsistencyChecker) -> 'IHSLabelable':
         """

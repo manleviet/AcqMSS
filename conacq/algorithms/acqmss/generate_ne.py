@@ -92,8 +92,8 @@ class GenerateNE:
     ) -> NEPerTestcase:
         """Process single testcase: merge KBs, QuickXPlain, create NE clause."""
         # Merge oracle KB with current result KB (creates new list)
-        set_kb = self.oracle_data.get_kb() + result_set_kb
-        assumptions = self.oracle_data.get_assumptions() + result_assumptions
+        set_kb = list(self.oracle_data.get_kb()) + result_set_kb
+        assumptions = list(self.oracle_data.get_assumptions()) + result_assumptions
 
         # Create per-assignment clauses
         set_tv, assumption_to_var, assumption_to_desc = [], {}, {}

@@ -25,7 +25,7 @@ def _query_set_c(prepared, config):
     """The set_c a membership query builds (mirrors FMOracle.is_valid): the prepared
     task's FM constraints plus this query's assignment assumptions, via the prepared
     assignment_map. Pure — never touches the prepared task."""
-    return prepared.task.set_c + config_to_assignment_assumptions(
+    return list(prepared.task.set_c) + config_to_assignment_assumptions(
         config, prepared.assignment_map)
 
 
@@ -69,7 +69,7 @@ class TestOracleModel:
         assert prepared.assignment_map.pos_assignment_to_assumption["f1"] in active
         assert prepared.assignment_map.neg_assignment_to_assumption["f2"] in active
         # ...but the prepared task's own set_c is unchanged — no query leaks in.
-        assert prepared.task.set_c == before
+        assert list(prepared.task.set_c) == before
         assert active != before
 
     def test_prepare_task_yields_independent_tasks(self):

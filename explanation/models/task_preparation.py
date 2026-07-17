@@ -33,6 +33,28 @@ if TYPE_CHECKING:
     from .pysat_diagnosis_model import DiagnosisModel
 
 
+class FrozenDict(dict):
+    """An immutable ``dict``: every mutator raises, so a stored mapping cannot drift.
+
+    ``negation_map`` is read-only after construction (``in`` and ``[key]`` only), so
+    the deep-freeze that already coerces the list fields to tuples extends here too.
+    Unlike ``MappingProxyType`` it *pickles* — required by FastDiagP, which ships the
+    task to worker processes — via ``__reduce__`` reconstructing from a plain ``dict``
+    (so unpickling never calls the blocked ``__setitem__``). ``__ior__`` (``|=``,
+    Python 3.9+) is blocked too; it is an in-place mutator the terse spec omitted.
+    """
+    __slots__ = ()
+
+    def _no(self, *args, **kwargs):
+        raise TypeError("FrozenDict is immutable")
+
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = __ior__ = _no
+
+    def __reduce__(self):
+        # Reconstruct from a plain dict so pickle/deepcopy bypass __setitem__.
+        return (FrozenDict, (dict(self),))
+
+
 # === INPUT DATA CLASS ===
 
 @dataclass(frozen=True)
@@ -142,24 +164,37 @@ class Task(ABC):
     Pure data — no methods, no codec, no describe. Derived quantities are free
     functions (e.g. ``cf(task)``); formatting context lives outside the task.
 
-    **Shallow-frozen.** ``@dataclass(frozen=True)`` blocks *rebinding* a field
-    (``task.set_c = ...`` raises ``FrozenInstanceError``) but NOT *mutating* a
-    field's contents (``task.set_c.append(...)`` still works — the list objects
-    are shared, not copied). Callers must treat the list fields as read-only; the
-    frozen guarantee is against reassignment only. (Deep immutability via tuples
-    is deferred — see T11b.)
+    **Deeply frozen.** ``@dataclass(frozen=True)`` blocks *rebinding* a field
+    (``task.set_c = ...`` raises ``FrozenInstanceError``); ``__post_init__``
+    additionally coerces the list-valued solve fields to tuples, so their contents
+    cannot be mutated in place either (``task.set_c.append(...)`` raises
+    ``AttributeError`` — a loud failure at the call, not silent drift). Constructors
+    still accept lists; the coercion is transparent. ``negation_map`` is coerced to a
+    ``FrozenDict`` — a read-only ``dict`` that still *pickles* (FastDiagP ships the
+    task to workers), unlike ``MappingProxyType`` which does not.
     """
     # set of constraints which could be faulty
-    set_c: List[int] = field(default_factory=list)
+    set_c: Tuple[int, ...] = field(default_factory=tuple)
     # background knowledge (i.e., the knowledge that is known to be true)
-    set_b: List[int] = field(default_factory=list)
+    set_b: Tuple[int, ...] = field(default_factory=tuple)
     # set of all CNF with added assumptions
-    set_kb: List[List[int]] = field(default_factory=list)
-    # mapping: original assumption ID -> negated assumption ID
-    # Used by WipeOutR_FM (constraints) and WipeOutR_T (test cases)
-    negation_map: Dict[int, int] = field(default_factory=dict)
+    set_kb: Tuple[Tuple[int, ...], ...] = field(default_factory=tuple)
+    # mapping: original assumption ID -> negated assumption ID. Frozen (read-only).
+    # Annotated as its stored type (like the Tuple fields); constructors pass a plain
+    # dict and __post_init__ coerces. Used by WipeOutR_FM/WipeOutR_T.
+    negation_map: "FrozenDict[int, int]" = field(default_factory=dict)
     # list of assumptions for solver
-    assumptions: List[int] = field(default_factory=list)
+    assumptions: Tuple[int, ...] = field(default_factory=tuple)
+
+    def __post_init__(self):
+        # Deep-freeze every field (frozen=True only blocks rebinding).
+        # Constructors pass lists/dicts for convenience; storing tuples/FrozenDict
+        # makes in-place mutation raise. FrozenDict pickles (FastDiagP ships tasks).
+        object.__setattr__(self, 'set_c', tuple(self.set_c))
+        object.__setattr__(self, 'set_b', tuple(self.set_b))
+        object.__setattr__(self, 'assumptions', tuple(self.assumptions))
+        object.__setattr__(self, 'set_kb', tuple(tuple(clause) for clause in self.set_kb))
+        object.__setattr__(self, 'negation_map', FrozenDict(self.negation_map))
 
 
 @dataclass(frozen=True)
@@ -176,18 +211,26 @@ class TestCaseTask(Task):
     WipeOutR_T for test case redundancy detection, and ConGen.
     """
     # positive test cases (original form)
-    set_tc: List[int] = field(default_factory=list)
+    set_tc: Tuple[int, ...] = field(default_factory=tuple)
     # negative test cases (original form)
-    set_tv: List[int] = field(default_factory=list)
+    set_tv: Tuple[int, ...] = field(default_factory=tuple)
     # negated negative test cases (for KBDiag: B = B ∪ neg_Tν)
-    set_neg_tv: List[int] = field(default_factory=list)
+    set_neg_tv: Tuple[int, ...] = field(default_factory=tuple)
     # negated positive test cases (for WipeOutR)
-    set_neg_tc: List[int] = field(default_factory=list)
+    set_neg_tc: Tuple[int, ...] = field(default_factory=tuple)
+
+    def __post_init__(self):
+        super().__post_init__()
+        object.__setattr__(self, 'set_tc', tuple(self.set_tc))
+        object.__setattr__(self, 'set_tv', tuple(self.set_tv))
+        object.__setattr__(self, 'set_neg_tv', tuple(self.set_neg_tv))
+        object.__setattr__(self, 'set_neg_tc', tuple(self.set_neg_tc))
 
 
 def cf(task: Task) -> List[int]:
-    """All constraints (C ∪ B) for a task. Free function (was ``Task.get_cf``)."""
-    return task.set_b + task.set_c
+    """All constraints (C ∪ B) for a task. Free function (was ``Task.get_cf``).
+    Returns a fresh list — the task's own fields are frozen tuples."""
+    return list(task.set_b) + list(task.set_c)
 
 
 # === DESCRIPTION PROVIDERS (For formatting only) ===

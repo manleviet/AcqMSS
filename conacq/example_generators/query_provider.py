@@ -91,7 +91,7 @@ class QueryProvider:
 
             # Condition 1: satisfies C_L + BG (via checker with Part 4 assumptions)
             config_assumptions = config_to_assignment_assumptions(e, self.assignment_map)
-            set_c = learned_kb + set_b + config_assumptions
+            set_c = learned_kb + list(set_b) + config_assumptions
             self.profiler.increment("query_generation_consistency_checks")
             if not self.checker.is_consistent(set_c):
                 continue
@@ -128,7 +128,7 @@ class QueryProvider:
                 logging.warning('No negation for constraint %s, skipping', c_id)
                 continue
 
-            set_c = learned_kb + set_b + [neg_aid]
+            set_c = learned_kb + list(set_b) + [neg_aid]
             self.profiler.increment("query_generation_consistency_checks")
             if self.checker.is_consistent(set_c):
                 model_lits = self.checker.get_model()

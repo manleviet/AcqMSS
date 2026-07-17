@@ -90,13 +90,36 @@ The annotation that sounds better is not the annotation the code uses.
 | Arithmetic | `__post_init__` runs **3× per run** (counted, not inherited). 3 × 64 µs = **0.19 ms** of a 31.6 ms claimed penalty = **0.4%** |
 | Verdict | **Rejected — the worst of both.** Pays ~99.6% of a cost that does not exist, keeps an asymmetry ("why is `set_kb` different?") needing a permanent explanation. The 40× was real *per call* and irrelevant *per run*: an ingredient measured and mistaken for the dish |
 
-### Option D: S3 — tuple-native algorithms, no entry conversion
+### Option D: tuple-native algorithms — **built, measured, rejected on the numbers**
 
-| Dimension | Assessment |
+Two variants were argued, one was built end-to-end. The user's argument for them was the strongest in the whole review, and it deserves recording verbatim, because the numbers — not the reasoning — are what defeated it:
+
+> *"If tuple and list tie on speed, then use **one type only**. Supporting both means **converting forever**. Transformation is a **natural boundary** — it runs once at setup, not in the loop, and the algorithm benchmark doesn't include it. And tuple **gets the honest label for free**. Therefore: tuple everywhere."*
+
+Every premise is sound. The conclusion is still wrong, and only a build could show why.
+
+| | measured |
 |---|---|
-| Feasible? | **Unknown — the radius has never been measured.** See the correction below |
-| Cost | **Zero, measured.** `split()` preserves type through slicing (0 lines, 0.15 µs either way); `diff()` as `tuple([...])` is **−0.4%** |
-| Verdict | **DEFERRED, not rejected** — pending T20 (type-boundary inventory) |
+| **Workload** | synthetic k=5 inconsistent UVL → **647-node** HSDAG, real checker/labeler/Task. (The earlier 3-node workload could not measure a per-node cost at all.) |
+| **Method** | `perf_counter` around `hsdag.execute()` directly (not pytest), `gc.disable()`, warm-up 8, 15 reps, **min-primary**, arms in isolated `git worktree`s, **interleaved A↔B per round** |
+| **Controls** | `is_consistent` = 4440 **in all three arms**; nodes 647; diagnoses 243; **result md5 `4778f31` identical**. Same tree explored, same output — the arms differ in timing only |
+| **S4** (tuple everywhere) | **+3.5% vs S0**, **26/26 interleaved rounds slower** ⇒ two-sided **p ≈ 3×10⁻⁸** |
+| **S1** (this ADR's decision) | **+0.12–0.4%**, 17/27 rounds ⇒ **p = 0.25** ⇒ **not measurable** |
+
+**Why tuple-native loses — the mechanism, not the microbenchmark:**
+
+- **Labeler**: `index() + slice + concat` = **3 tuple allocations**; `copy() + remove()` = **1 list allocation, mutated in place**. **× 647 nodes.**
+- **`diff()`**: `tuple(genexpr)` runs the **Python iterator protocol**; `[listcomp]` is a **single C-loop opcode**.
+
+Eliminating the entry `list()` costs more than it saves. **Immutability buys safety, not speed** — and tuple-native pays for that safety 647 times per run, in the one place it was supposed to save.
+
+**Verdict: rejected.** Not because it is infeasible (it was built, and it is *functionally identical* — same md5), and not because "S1 was already done" (that was inertia, and it was named as such). **Because it is a measured 3.5% regression with no payoff.**
+
+> ⚠️ **Two spec errors of Cowork's cost real work here, and are recorded so the next reader does not repeat them:**
+> 1. **Under-spec:** the S3 brief said *"internals: Tuple"* but omitted **`return [] → return ()`**. The implementer followed the letter and hit **178 red tests**. The Cowork-built S3 that *did* run had the `return ()` — a change Cowork made and never wrote down. **Measured one thing, specified another.**
+> 2. **Over-spec:** the S4 brief said `@dataclass(frozen=True)` **+** `Tuple` fields for `AbstractHSParameters`. **`frozen` was Cowork's own addition** — "tuple everywhere" does not require it. It collided with `parameters.set_tcp = ...` in `get_label`, which the code's own comment explains is a **cache passed to the node's children** (*"update the parameters, which will be used by the children's nodes"*). Freezing it deletes that cache ⇒ re-run `find_diagnosis` per child ⇒ a real regression. The implementer correctly reported this as an **S4-killer** — **correct, against a wrong spec**. Dropping `frozen` and keeping `Tuple` leaves the rebind working: no bridge, no cache loss, and the conversions still vanish. **The corrected S4 is the one measured above, and it still lost.**
+>
+> **Root cause of both: two properties fused into one spec link** ("tuple" ≠ "frozen"; "tuple internals" ≠ "tuple base case"). **Read a type spec as a coherent system, not a checklist:** *"if I do all N links, is there anywhere a tuple still meets a list?"* and *"does any link demand two things — split it."*
 
 > **⚠️ CORRECTION (same day, before this ADR was acted on).** The first draft of this row read *"Rejected — it buys nothing; the cost it removes is below the noise floor."* **That argument answers a performance question. S3 is a design question**, and on design S3 is arguably *better*: the entry conversions (`list(set_c), list(set_b)`) exist because `set_b + set_c` **mixes types** — not because the algorithms mutate (0 mutations in 1663 recorded operations). They are a type accident, not a boundary.
 >
@@ -190,17 +213,16 @@ Coverage is bounded, and the boundary is part of the record:
 
 **The uncommitted working tree *is* the S1 experiment.** Committing it now freezes a choice that has not been weighed. T20 measures it live; if S3 wins we rework before it enters history — no revert, no churn in the record.
 
-**Gate**
-0. [ ] **T20 — inventory the type boundary.** **BLOCKS** items 1–4. (Option D is *deferred*, not rejected.)
-0b. [ ] Settle S1-vs-S3 on T20's numbers — **on design merit, not µs** (µs is measured: zero either way)
+**Gate — CLEARED 2026-07-17**
+0. [x] **T20** — type-boundary inventory: 7 `utils` functions (6 type-sensitive *in principle*, **0 live** across ~1600 recorded calls), 16 entry points across 11 classes (**8 annotations lie**), `AbstractHSParameters` genuinely mutated
+0b. [x] **T21/T21b/T21c/T21d** — S3 and S4 **built**; S4 measured at 647 HSDAG nodes: **+3.5%, p ≈ 3×10⁻⁸ ⇒ rejected**. S1: **p = 0.25 ⇒ not measurable ⇒ free**. **S0 (drop `frozen=True`) is not a live candidate — there is no measurable speed to reclaim by giving up immutability.**
 
-**Then, one commit, in the shape T20 chose**
+**One commit, shape S1**
 1. [ ] Solve fields on `Task` / `OracleData` → `Tuple[int, ...]` (**not** `Sequence[int]`) — *invariant: true under both S1 and S3*
 2. [ ] `negation_map` → `FrozenDict`; assert it pickles under FastDiagP — *invariant*
 3. [ ] Flip `test_task_is_deeply_frozen` (drop the xfail) **and** delete `test_task_is_only_shallow_frozen` **in the same commit** — the two contradict on purpose — *invariant*
-4. [ ] **Shape-dependent — do NOT pre-decide:**
-   - **If S1** → keep the entry conversions; annotate the public entry points **`Sequence[int]`**. They currently declare `List` and are handed `task.set_c`, a `Tuple` — every call site is a type error. **Fields and parameters are different roles and take different answers**: a field is *stored* and `get_cf()` does `set_b + set_c` **on it** (⇒ `Tuple`; `Sequence` has no `__add__`); a parameter is *received and copied immediately* (⇒ `Sequence`; the `+` happens on the local list afterwards). Internal recursion (`_fd`, `_qx`) and `is_consistent` keep `List` — they receive local lists and are already honest.
-   - **If S3** → delete the entry conversions; entry points become `Tuple[int, ...]`; `return []` → `return ()`; `diff()` → `tuple([...])`. **`AbstractHSParameters` is genuinely mutated (`new_c.remove(arc_label)`) — the labeler conversions stay either way.**
+4. [ ] **Keep the entry conversions** (they are the boundary, and they are cheap: p = 0.25). **Annotate the 8 lying public entry points `Sequence[int]`** — they declare `List` and are handed `task.set_c`, a `Tuple`; every call site is currently a type error, i.e. this ADR's own "labels must not lie" rule, freshly broken by its own decision.
+   **Fields and parameters are different roles and take different answers:** a field is *stored*, and `get_cf()` does `set_b + set_c` **on it** ⇒ **`Tuple`** (`Sequence` has no `__add__`, and `+` is 12% of recorded operations). A parameter is *received and copied immediately* ⇒ **`Sequence`**; the `+` happens on the local list afterwards. Internal recursion (`_fd`, `_qx`) and `is_consistent` keep **`List`** — they receive local lists and are already honest.
 
 **Independent of the gate**
 5. [ ] Commit this ADR + the ADR-0007 correction + the index as a **docs-only commit** — they record decisions already settled and are what the implementer reads
