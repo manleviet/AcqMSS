@@ -23,6 +23,7 @@ from explanation.models.task_preparation import (
     PreparedTask,
     DescriptionProvider,
     TaskPreparationStrategy,
+    FrozenDict,
     cf,
     prepare_kb,
     prepare_testsuite_with_negation,
@@ -54,6 +55,7 @@ from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 __all__ = [
     # Task family (frozen pure data) + preparation helpers
     'Task',
+    'FrozenDict',
     'DiagnosisTask',
     'TestCaseTask',
     'TaskInput',

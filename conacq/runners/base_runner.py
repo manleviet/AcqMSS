@@ -5,7 +5,7 @@ BaseRunResult: Shared result dataclass (9 fields common to ConGen and Interactiv
 BaseRunner: ABC defining build-once/run-many/cleanup-once lifecycle.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Sequence
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 
@@ -30,7 +30,7 @@ class BaseRunResult:
     # KB result
     kb_constraints: List[str]
     kb_clauses: List[List[int]]
-    bg_clauses: List[List[int]]
+    bg_clauses: Sequence[Sequence[int]]
     n_bias: int
     n_kb: int
 

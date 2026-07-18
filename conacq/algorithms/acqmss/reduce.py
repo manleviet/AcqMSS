@@ -8,7 +8,7 @@ Mode-agnostic: all elements are assumption IDs (int), negation_map is Dict[int, 
 """
 
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Dict, Mapping, Sequence, Tuple
 
 from explanation.api import ConsistencyChecker
 from profiling import (
@@ -42,7 +42,7 @@ class Reduce:
     @measure_time('reduce_runtime')
     @count_calls('reduce_calls')
     def reduce(self, set_b_prime: List[int], set_neg_tv: List[int],
-               set_bg: List[int], negation_map: Dict[int, int]) -> Tuple[List[int], List[int]]:
+               set_bg: Sequence[int], negation_map: Mapping[int, int]) -> Tuple[List[int], List[int]]:
         """
         Remove redundant constraints from KB.
 

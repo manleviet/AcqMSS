@@ -60,14 +60,14 @@ def test_no_get_cf_method_on_task():
 
 def test_cf_free_function():
     task = DiagnosisTask(set_c=[3, 4], set_b=[1, 2])
-    assert cf(task) == [1, 2, 3, 4]  # set_b + set_c
+    assert cf(task) == (1, 2, 3, 4)  # set_b + set_c (frozen tuples -> tuple)
 
 
 # --- QuAcq-specific field survives frozen construction ---
 
 def test_quacq_constraint_clauses_field():
     task = QuAcqTask(constraint_clauses={10: [[1, -2], [3]]})
-    assert task.constraint_clauses == {10: [[1, -2], [3]]}
+    assert task.constraint_clauses == {10: ((1, -2), (3,))}  # deep-frozen: nested tuples
     assert task.set_c == ()  # default (deep-frozen: fields are tuples)
 
 

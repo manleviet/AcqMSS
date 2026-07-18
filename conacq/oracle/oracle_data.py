@@ -43,9 +43,14 @@ class OracleData:
 
     task: "DiagnosisTask"
     bg_data: "BGData"
-    root_clauses: List[List[int]]
+    root_clauses: Tuple[Tuple[int, ...], ...]
     assignment_map: "AssignmentAssumptionMap"
     next_available_id: int
+
+    def __post_init__(self):
+        # Deep-freeze root_clauses (the only own mutable gut) so ``frozen=True`` is
+        # honest end-to-end: task/bg_data/assignment_map are already deeply frozen.
+        object.__setattr__(self, 'root_clauses', tuple(tuple(c) for c in self.root_clauses))
 
     # --- KBProvider surface (derived from the task — one source of truth) ---
     # Return types are the task's frozen tuples (not List): callers concatenate them
@@ -67,6 +72,6 @@ class OracleData:
         """Return root BG assumption data for ConGen/QuAcq."""
         return self.bg_data
 
-    def get_root_clauses(self) -> List[List[int]]:
+    def get_root_clauses(self) -> Tuple[Tuple[int, ...], ...]:
         """Get raw background-knowledge clauses (root constraint)."""
         return self.root_clauses

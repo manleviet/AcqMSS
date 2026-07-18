@@ -22,7 +22,7 @@ Mode-agnostic: works identically regardless of checker type.
 """
 
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Sequence
 from dataclasses import dataclass, field
 
 from conacq.algorithms.acqmss import AcqMSS
@@ -63,9 +63,9 @@ class ConGen:
     @count_calls('congen_calls')
     def acquire(
             self,
-            set_b: List[int],
-            set_bg: List[int],
-            set_tc: List[int],
+            set_b: Sequence[int],
+            set_bg: Sequence[int],
+            set_tc: Sequence[int],
             set_neg_tv: Optional[List[int]] = None,
             negation_map: Optional[Dict[int, int]] = None,
     ) -> ConGenResult:

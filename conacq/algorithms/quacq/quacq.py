@@ -12,7 +12,7 @@ Also contains QuAcqResult (co-located: algorithm produces its own result type).
 
 import logging
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple, Literal
+from typing import List, Dict, Mapping, Optional, Sequence, Tuple, Literal
 
 from conacq.oracle import MembershipOracle
 from conacq.example_generators import QueryProvider
@@ -112,9 +112,9 @@ class QuAcq:
     @measure_time('quacq_runtime')
     @count_calls('quacq_calls')
     def learn(self,
-              set_c: List[int],
-              set_b: List[int],
-              negation_map: Dict[int, int],
+              set_c: Sequence[int],
+              set_b: Sequence[int],
+              negation_map: Mapping[int, int],
               mode: Literal['oracle', 'example_only', 'example_first'] = 'oracle',
               max_queries: int = 1000,
               ) -> QuAcqResult:

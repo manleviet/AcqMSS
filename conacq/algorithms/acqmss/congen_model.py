@@ -11,7 +11,7 @@ are passed in per call, never read off stored task state.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, List, Sequence, Tuple
 
 from conacq.kb_model import KBModel
 from explanation.api import DescriptionProvider, PreparedTask
@@ -55,7 +55,7 @@ class ConGenModel(KBModel):
             self,
             result: "ConGenResult",
             describe: DescriptionProvider,
-            root_clauses: List[List[int]],
+            root_clauses: Sequence[Sequence[int]],
     ) -> Tuple[List[List[int]], List[List[int]], List[str], List[str]]:
         """Resolve a ConGenResult into clauses and names (stateless).
 

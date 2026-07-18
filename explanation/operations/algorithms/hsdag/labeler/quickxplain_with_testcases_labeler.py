@@ -12,7 +12,7 @@ Author: Viet-Man Le (Python port)
 
 import logging
 from dataclasses import dataclass, field
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Sequence
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
 from explanation.checker.protocols import ConsistencyChecker
@@ -21,9 +21,9 @@ from ...quickxplain_with_testcases import QuickXPlainWithTestCases
 
 @dataclass
 class QuickXPlainWithTestCasesParameters(AbstractHSParameters):
-    set_b: List
-    set_tc: List
-    set_neg_tv: List
+    set_b: Sequence[int]
+    set_tc: Sequence[int]
+    set_neg_tv: Sequence[int]
 
     test_case: Optional[List] = field(default=None)  # The specific test case causing conflict
 
@@ -161,7 +161,7 @@ class QuickXPlainWithTestCasesLabeler(QuickXPlainWithTestCases, IHSLabelable):
             set_neg_tv=param_parent_node.set_neg_tv
         )
 
-    def _copy_tc_without_testcases_before(self, set_tc: List,
+    def _copy_tc_without_testcases_before(self, set_tc: Sequence[int],
                                           current_testcase: Optional[List]) -> List:
         """
         Copy test cases, removing those before the current test case.

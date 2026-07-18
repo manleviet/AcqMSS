@@ -9,7 +9,7 @@ Paper condition for pool: query in sol(C_L + BG) AND violates >=1 c in B.
 
 import logging
 import random
-from typing import Optional, Dict, List, Tuple, TYPE_CHECKING
+from typing import Optional, Dict, List, Mapping, Sequence, Tuple, TYPE_CHECKING
 
 from explanation.api import config_to_assignment_assumptions
 from profiling import (
@@ -75,7 +75,7 @@ class QueryProvider:
             self,
             remaining_bias: set,
             learned_kb: List[int],
-            set_b: List[int],
+            set_b: Sequence[int],
     ) -> Tuple[Optional[Dict[str, bool]], Optional[int]]:
         """Generate query from pool with paper filtering.
 
@@ -112,8 +112,8 @@ class QueryProvider:
             self,
             remaining_bias: set,
             learned_kb: List[int],
-            set_b: List[int],
-            negation_map: Dict[int, int],
+            set_b: Sequence[int],
+            negation_map: Mapping[int, int],
     ) -> Tuple[Optional[Dict[str, bool]], Optional[int]]:
         """Generate query via SAT solving (matches paper Algorithm 1).
 

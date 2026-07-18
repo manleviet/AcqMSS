@@ -5,7 +5,7 @@ for detecting redundant constraints in feature models.
 """
 
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Dict, Mapping, Tuple
 
 from explanation.checker.protocols import ConsistencyChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
@@ -43,7 +43,7 @@ class WipeOutR_FM:
     @measure_time('wipeoutr_fm_runtime')
     @count_calls('wipeoutr_fm_calls')
     def find_redundancies(self, set_c: List,
-                          negation_map: Dict[int, int]) -> Tuple[List, List]:
+                          negation_map: Mapping[int, int]) -> Tuple[List, List]:
         """
         Find redundant constraints in CF.
 

@@ -658,9 +658,9 @@ class TestBGDataPart4:
         bg = BGData(set_kb=[], assumptions=(1, 2),
                     negation_map={}, descriptions={},
                     next_available_id=10)
-        assert bg.assignment_clauses == []
-        assert bg.assignment_assumptions == []
-        assert bg.pos_assignment_to_assumption == {}
+        assert bg.assignment_clauses == ()   # deep-frozen: list-valued guts are tuples
+        assert bg.assignment_assumptions == ()
+        assert bg.pos_assignment_to_assumption == {}   # FrozenDict compares equal to {}
         assert bg.neg_assignment_to_assumption == {}
 
 

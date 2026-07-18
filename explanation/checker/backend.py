@@ -20,7 +20,7 @@ import subprocess
 import tempfile
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Sequence
 
 from pysat.formula import CNF
 from pysat.solvers import Solver
@@ -55,14 +55,14 @@ class CheckerBase(ABC):
         # runtime AttributeError). Concrete backends overwrite it.
         self.assumptions: List[int] = []
 
-    def _compute_delta(self, set_c: List) -> tuple:
+    def _compute_delta(self, set_c: Sequence[int]) -> tuple:
         """Compute enabled/disabled assumption partition: delta = assumptions \\ set_c."""
         set_c_set = set(set_c)
         delta = [item for item in self.assumptions if item not in set_c_set]
         return set_c, delta
 
     @abstractmethod
-    def is_consistent(self, set_c: List) -> bool:
+    def is_consistent(self, set_c: Sequence[int]) -> bool:
         """Check if the given CNF formula is consistent."""
         pass
 
@@ -76,7 +76,7 @@ class CheckerBase(ABC):
         pass
 
     @count_calls(key="is_consistent_test_cases_calls")
-    def is_consistent_test_cases(self, set_c: List, set_tc: List, stop_at_first_violation: bool) -> List:
+    def is_consistent_test_cases(self, set_c: Sequence[int], set_tc: Sequence[int], stop_at_first_violation: bool) -> List:
         """Check consistency against multiple test cases, returning inconsistent ones."""
         set_tcp = []
         # Accumulates test cases inconsistent with CNF formula
@@ -116,7 +116,7 @@ class CheckerBase(ABC):
 class IncrementalPySATChecker(CheckerBase):
     """Incremental backend using PySAT with a persistent solver and assumptions."""
 
-    def __init__(self, set_kb: List[List[int]], assumptions: List[int],
+    def __init__(self, set_kb: Sequence[Sequence[int]], assumptions: Sequence[int],
                  solver_name: str = 'glucose3', profiler_instance: AbstractProfiler = None) -> None:
         super().__init__(profiler_instance)
         self.solver_name = solver_name
@@ -125,7 +125,7 @@ class IncrementalPySATChecker(CheckerBase):
         self.solver = Solver(solver_name, bootstrap_with=set_kb, use_timer=True)
 
     @count_calls(key="is_consistent_calls")
-    def is_consistent(self, set_c: List) -> bool:
+    def is_consistent(self, set_c: Sequence[int]) -> bool:
         enabled, disabled = self._compute_delta(set_c)
         final_assumptions = list(enabled) + [-1 * item for item in disabled]
 
@@ -168,7 +168,7 @@ class IncrementalPySATChecker(CheckerBase):
 class NonIncrementalPySATChecker(CheckerBase):
     """Non-incremental backend using PySAT — a fresh solver per check."""
 
-    def __init__(self, set_kb: List[List[int]], assumptions: List[int],
+    def __init__(self, set_kb: Sequence[Sequence[int]], assumptions: Sequence[int],
                  solver_name: str = 'glucose3', profiler_instance: AbstractProfiler = None) -> None:
         super().__init__(profiler_instance)
         self.solver_name = solver_name
@@ -177,7 +177,7 @@ class NonIncrementalPySATChecker(CheckerBase):
         self._cached_model: Optional[List[int]] = None
 
     @count_calls(key="is_consistent_calls")
-    def is_consistent(self, set_c: List) -> bool:
+    def is_consistent(self, set_c: Sequence[int]) -> bool:
         enabled, disabled = self._compute_delta(set_c)
         final_assumptions = list(enabled) + [-1 * item for item in disabled]
 
@@ -204,8 +204,8 @@ class NonIncrementalPySATChecker(CheckerBase):
 class SAT4JChecker(CheckerBase):
     """Backend using the external SAT4J solver via subprocess. Assumptions encoded as unit clauses."""
 
-    def __init__(self, set_kb: List[List[int]] = None,
-                 assumptions: List[int] = None,
+    def __init__(self, set_kb: Optional[Sequence[Sequence[int]]] = None,
+                 assumptions: Optional[Sequence[int]] = None,
                  jar_path: str = _DEFAULT_SAT4J_JAR,
                  profiler_instance: AbstractProfiler = None, timeout: int = 300) -> None:
         super().__init__(profiler_instance)
@@ -222,7 +222,7 @@ class SAT4JChecker(CheckerBase):
             )
 
     @count_calls(key="is_consistent_calls")
-    def is_consistent(self, set_c: List) -> bool:
+    def is_consistent(self, set_c: Sequence[int]) -> bool:
         enabled, disabled = self._compute_delta(set_c)
         assumption_clauses = [[a] for a in enabled] + [[-a] for a in disabled]
 

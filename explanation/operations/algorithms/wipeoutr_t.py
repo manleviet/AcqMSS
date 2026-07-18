@@ -8,7 +8,7 @@ This means t_γ is already covered by t_α and can be removed from the test suit
 """
 
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Dict, Mapping, Sequence, Tuple
 
 from explanation.checker.protocols import ConsistencyChecker
 from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
@@ -49,8 +49,8 @@ class WipeOutR_T:
 
     @measure_time('wipeoutr_t_runtime')
     @count_calls('wipeoutr_t_calls')
-    def find_redundant_testcases(self, set_t: List,
-                                 negation_map: Dict) -> Tuple[List, List]:
+    def find_redundant_testcases(self, set_t: Sequence[int],
+                                 negation_map: Mapping[int, int]) -> Tuple[List, List]:
         """
         Find redundant test cases in a test suite.
 

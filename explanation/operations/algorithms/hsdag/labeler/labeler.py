@@ -6,7 +6,7 @@ https://github.com/HiConfiT/hiconfit-core/tree/main/ca-cdr-package/src/main/java
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Any
+from typing import List, Any, Sequence
 
 from explanation.checker.protocols import ConsistencyChecker
 
@@ -18,7 +18,7 @@ class LabelerType(Enum):
 
 @dataclass
 class AbstractHSParameters:
-    set_c: List
+    set_c: Sequence[int]
 
 
 class IHSLabelable(ABC):

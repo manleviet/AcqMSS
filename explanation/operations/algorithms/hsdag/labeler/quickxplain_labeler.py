@@ -4,7 +4,7 @@ https://github.com/HiConfiT/hiconfit-core/blob/main/ca-cdr-package/src/main/java
 """
 
 from dataclasses import dataclass
-from typing import List, Any
+from typing import List, Any, Sequence
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
 from explanation.checker.protocols import ConsistencyChecker
@@ -13,7 +13,7 @@ from ...quickxplain import QuickXPlain
 
 @dataclass
 class QuickXPlainParameters(AbstractHSParameters):
-    set_b: List
+    set_b: Sequence[int]
 
     def __str__(self) -> str:
         return f"QuickXPlainParameters{{C={self.set_c}, B={self.set_b}}}"

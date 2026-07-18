@@ -17,14 +17,14 @@ module imports neither ``pysat`` nor ``subprocess`` and must stay that way.
 Build a checker with ``build_checker(task, backend=…)`` (``backend.py``) — the
 single construction door.
 """
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import List, Optional, Protocol, Sequence, runtime_checkable
 
 
 @runtime_checkable
 class ConsistencyChecker(Protocol):
     """The narrow consistency-checking contract algorithms depend on."""
 
-    def is_consistent(self, set_c: List) -> bool:
+    def is_consistent(self, set_c: Sequence[int]) -> bool:
         """Return whether the KB is satisfiable under the given active set."""
         ...
 
@@ -41,7 +41,7 @@ class ConsistencyChecker(Protocol):
 class TestCaseChecker(ConsistencyChecker, Protocol):
     """A ``ConsistencyChecker`` that can also test the KB against many test cases."""
 
-    def is_consistent_test_cases(self, set_c: List, set_tc: List,
+    def is_consistent_test_cases(self, set_c: Sequence[int], set_tc: Sequence[int],
                                  stop_at_first_violation: bool) -> List:
         """Return the test cases inconsistent with the KB under ``set_c``."""
         ...

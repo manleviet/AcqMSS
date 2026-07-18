@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Sequence
 
-from explanation.api import build_checker, SolverBackend, DiagnosisTask
 from explanation.api import QuickXPlain
+from explanation.api import build_checker, SolverBackend, DiagnosisTask
 
 if TYPE_CHECKING:
     from conacq.oracle import OracleData
@@ -87,7 +87,7 @@ class GenerateNE:
             variables: Dict[str, int],
             result_set_kb: List[List[int]],
             result_assumptions: List[int],
-            set_bg: List[int],
+            set_bg: Sequence[int],
             alloc: "AssumptionIdAllocator"
     ) -> NEPerTestcase:
         """Process single testcase: merge KBs, QuickXPlain, create NE clause."""

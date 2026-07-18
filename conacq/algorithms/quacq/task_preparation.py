@@ -16,6 +16,7 @@ from explanation.api import (
     AssumptionIdAllocator,
     DescriptionProvider,
     DiagnosisTask,
+    FrozenDict,
     PreparedTask,
     TaskPreparationStrategy,
     prepare_kb,
@@ -52,7 +53,15 @@ class QuAcqTask(DiagnosisTask):
     lives in the QuAcq algorithm, not here.
     """
     # assumption_id -> raw clauses (WITHOUT assumption guards, for violation checking)
-    constraint_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
+    constraint_clauses: "FrozenDict[int, Tuple[Tuple[int, ...], ...]]" = field(default_factory=dict)
+
+    def __post_init__(self):
+        # Freeze the Task guts (super) then deep-freeze constraint_clauses so the
+        # frozen=True label is honest (built-then-frozen in QuAcqTaskPreparation).
+        super().__post_init__()
+        object.__setattr__(self, 'constraint_clauses',
+                           FrozenDict({k: tuple(tuple(c) for c in v)
+                                       for k, v in self.constraint_clauses.items()}))
 
 
 class QuAcqTaskPreparation(TaskPreparationStrategy):

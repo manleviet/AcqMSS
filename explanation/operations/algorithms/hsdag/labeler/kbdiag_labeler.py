@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Sequence
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
 from explanation.checker.protocols import ConsistencyChecker
@@ -8,9 +8,9 @@ from ...kbdiag import KBDiag
 
 @dataclass
 class KBDiagParameters(AbstractHSParameters):
-    set_b: List
-    set_tc: List
-    set_neg_tv: List
+    set_b: Sequence[int]
+    set_tc: Sequence[int]
+    set_neg_tv: Sequence[int]
 
     set_tcp: List = None
 

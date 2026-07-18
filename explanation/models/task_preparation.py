@@ -28,31 +28,10 @@ from explanation.models.assignment_assumption_map import AssignmentAssumptionMap
 from explanation.models.assumption_id_allocator import AssumptionIdAllocator
 from explanation.models.testsuite import TestSuite
 from explanation.operations.algorithms.utils import get_hashcode
+from explanation.models.frozen_dict import FrozenDict
 
 if TYPE_CHECKING:
     from .pysat_diagnosis_model import DiagnosisModel
-
-
-class FrozenDict(dict):
-    """An immutable ``dict``: every mutator raises, so a stored mapping cannot drift.
-
-    ``negation_map`` is read-only after construction (``in`` and ``[key]`` only), so
-    the deep-freeze that already coerces the list fields to tuples extends here too.
-    Unlike ``MappingProxyType`` it *pickles* — required by FastDiagP, which ships the
-    task to worker processes — via ``__reduce__`` reconstructing from a plain ``dict``
-    (so unpickling never calls the blocked ``__setitem__``). ``__ior__`` (``|=``,
-    Python 3.9+) is blocked too; it is an in-place mutator the terse spec omitted.
-    """
-    __slots__ = ()
-
-    def _no(self, *args, **kwargs):
-        raise TypeError("FrozenDict is immutable")
-
-    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = __ior__ = _no
-
-    def __reduce__(self):
-        # Reconstruct from a plain dict so pickle/deepcopy bypass __setitem__.
-        return (FrozenDict, (dict(self),))
 
 
 # === INPUT DATA CLASS ===
@@ -227,10 +206,11 @@ class TestCaseTask(Task):
         object.__setattr__(self, 'set_neg_tc', tuple(self.set_neg_tc))
 
 
-def cf(task: Task) -> List[int]:
+def cf(task: Task) -> Tuple[int, ...]:
     """All constraints (C ∪ B) for a task. Free function (was ``Task.get_cf``).
-    Returns a fresh list — the task's own fields are frozen tuples."""
-    return list(task.set_b) + list(task.set_c)
+    Both fields are frozen tuples, so this is one tuple concat — no production
+    caller exists (only tests), and none mutates the result."""
+    return task.set_b + task.set_c
 
 
 # === DESCRIPTION PROVIDERS (For formatting only) ===
