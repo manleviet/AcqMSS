@@ -10,10 +10,10 @@ from explanation.checker.protocols import ConsistencyChecker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.kbdiag_labeler import KBDiagLabeler, KBDiagParameters
 from profiling import AbstractProfiler
-from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
+from explanation.operations.pysat_abstract_hsdag_explanation import PySATAbstractHSDAGExplanation
 
 
-class PySATTestCase(PySATAbstractExplanation):
+class PySATTestCase(PySATAbstractHSDAGExplanation):
     """Operation for test case diagnosis using KBDiag algorithm.
 
     This operation computes diagnoses using the KBDiag algorithm which

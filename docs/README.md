@@ -231,7 +231,7 @@ congen.md (ALGORITHM DETAILS)
 2. **Strategy Pattern** — Multiple solver implementations (Incremental, Non-Incremental, SAT4J)
 3. **Builder Pattern** — QuAcqModelBuilder, ConGenModelBuilder for immutable KB construction
 4. **Facade Pattern** — High-level interfaces (QuAcqRunner, ConGenRunner)
-5. **Template Method** — PySATAbstractExplanation algorithm base
+5. **Template Method** — PySATAbstractHSDAGExplanation algorithm base
 6. **Shared Utility Methods** — Centralized utilities (e.g., QuickXPlain) across modules
 7. **Executor Pattern** — ConsistencyExecutor Protocol + ProcessExecutor for parallelism (Phase R)
 

@@ -6,10 +6,10 @@ from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.quickxplain_labeler import QuickXPlainLabeler, \
     QuickXPlainParameters
 from profiling import AbstractProfiler
-from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
+from explanation.operations.pysat_abstract_hsdag_explanation import PySATAbstractHSDAGExplanation
 
 
-class PySATConflict(PySATAbstractExplanation):
+class PySATConflict(PySATAbstractHSDAGExplanation):
     """Operation that computes conflicts and diagnoses using HSDAG and QuickXPlain.
 
     This operation identifies conflicts (sets of constraints that are inconsistent)

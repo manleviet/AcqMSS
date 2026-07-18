@@ -8,10 +8,10 @@ from typing import List
 from explanation.models.task_preparation import PreparedTask
 from profiling import AbstractProfiler
 from explanation.operations.algorithms.wipeoutr_fm import WipeOutR_FM
-from explanation.operations.pysat_diagnosis import PySATDiagnosis
+from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
 
 
-class PySATRedundancyConstraints(PySATDiagnosis):
+class PySATRedundancyConstraints(PySATAbstractExplanation):
     """Operation for detecting redundant constraints using WipeOutR_FM.
 
     This operation finds constraints that are redundant (logically implied
@@ -30,14 +30,6 @@ class PySATRedundancyConstraints(PySATDiagnosis):
         super().__init__(profiler_instance)
         self.redundant: List = []
         self.non_redundant: List = []
-
-    # Not used - override execute() instead
-    def _create_labeler(self, checker, task):
-        pass
-
-    # Not used - override execute() instead
-    def prepare_hsdag(self, prepared):
-        pass
 
     def execute(self, prepared: PreparedTask) -> 'PySATRedundancyConstraints':
         """Execute redundancy detection using WipeOutR_FM algorithm.
@@ -95,6 +87,3 @@ class PySATRedundancyConstraints(PySATDiagnosis):
         """Get list of non-redundant constraint IDs."""
         return self.non_redundant
 
-    def get_result(self) -> List[str]:
-        """Get result messages."""
-        return self.result_messages

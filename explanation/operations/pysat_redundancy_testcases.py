@@ -8,10 +8,10 @@ from typing import List
 from explanation.models.task_preparation import PreparedTask
 from profiling import AbstractProfiler
 from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
-from explanation.operations.pysat_testcase import PySATTestCase
+from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
 
 
-class PySATRedundancyTestCases(PySATTestCase):
+class PySATRedundancyTestCases(PySATAbstractExplanation):
     """Operation for detecting redundant test cases using WipeOutR_T.
 
     This operation finds test cases that are redundant (logically covered
@@ -30,14 +30,6 @@ class PySATRedundancyTestCases(PySATTestCase):
         super().__init__(profiler_instance)
         self.redundant: str = '[]'
         self.non_redundant: str = '[]'
-
-    # Not used - override execute() instead
-    def _create_labeler(self, checker, task):
-        pass
-
-    # Not used - override execute() instead
-    def prepare_hsdag(self, prepared):
-        pass
 
     def execute(self, prepared: PreparedTask) -> 'PySATRedundancyTestCases':
         """Execute redundancy detection using WipeOutR_T algorithm.

@@ -14,7 +14,7 @@ from typing import Optional, TypeVar
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 
 from explanation.models.testsuite import TestSuite
-from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
+from explanation.operations.pysat_abstract_hsdag_explanation import PySATAbstractHSDAGExplanation
 from explanation.operations.pysat_conflict import PySATConflict
 from explanation.operations.pysat_testcase import PySATTestCase
 from explanation.operations.pysat_diagnosis import PySATDiagnosis
@@ -47,7 +47,7 @@ class PySATExplanationBuilder(ABC):
         >>> result = operation.execute(diagnosis_model)
     """
 
-    def __init__(self, operation: PySATAbstractExplanation):
+    def __init__(self, operation: PySATAbstractHSDAGExplanation):
         """Initialize builder with a specific operation type.
 
         Args:
@@ -139,11 +139,11 @@ class PySATExplanationBuilder(ABC):
         self._operation.use_incremental = enabled
         return self
 
-    def build(self) -> PySATAbstractExplanation:
+    def build(self) -> PySATAbstractHSDAGExplanation:
         """Build and return the configured operation.
 
         Returns:
-            Configured PySATAbstractExplanation instance ready for execution
+            Configured PySATAbstractHSDAGExplanation instance ready for execution
         """
         return self._operation
 

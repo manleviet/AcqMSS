@@ -50,6 +50,9 @@ from explanation.checker import (
 )
 from explanation.operations.algorithms.utils import split, diff, negate_cnf_tseitin
 from explanation.operations.algorithms.quickxplain import QuickXPlain
+from explanation.operations.registry import (
+    register_operation, get_operation, registered_operations,
+)
 from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
 
 __all__ = [
@@ -93,6 +96,10 @@ __all__ = [
     'diff',
     'negate_cnf_tseitin',
     'QuickXPlain',
+    # Operation registry (the plugin seam)
+    'register_operation',
+    'get_operation',
+    'registered_operations',
     # Transformation entry point
     'FmToDiagPysat',
 ]

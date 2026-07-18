@@ -239,7 +239,7 @@ SAT Infrastructure (explanation/)
 2. **Strategy Pattern** — Multiple solver implementations
 3. **Builder Pattern** — QuAcqModelBuilder, ConGenModelBuilder configuration
 4. **Facade Pattern** — QuAcqRunner, ConGenRunner high-level interfaces
-5. **Template Method** — PySATAbstractExplanation algorithm base
+5. **Template Method** — PySATAbstractHSDAGExplanation algorithm base
 
 ## Success Criteria
 

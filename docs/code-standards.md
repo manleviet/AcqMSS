@@ -242,7 +242,7 @@ Base class defines algorithm skeleton, subclasses fill steps:
 ```python
 from abc import abstractmethod
 
-class PySATAbstractExplanation(ABC):
+class PySATAbstractHSDAGExplanation(ABC):
     """Template for diagnosis operations."""
 
     def execute(self) -> list[Diagnosis]:
@@ -257,7 +257,7 @@ class PySATAbstractExplanation(ABC):
         """Subclass implements specific algorithm."""
         pass
 
-class FastDiag(PySATAbstractExplanation):
+class FastDiag(PySATAbstractHSDAGExplanation):
     def _diagnose(self, solver):
         # FastDiag-specific implementation
         pass

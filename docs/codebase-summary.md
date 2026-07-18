@@ -241,7 +241,9 @@ port + adapters they consume now live in `explanation/checker/`, above):
 | File | LOC | Purpose |
 |------|-----|---------|
 | `pysat_explanation_builder.py` | 437 | Builder for diagnosis operations (FastDiag, QuickXPlain, KBDiag) |
-| `pysat_abstract_explanation.py` | 299 | Template method base for diagnosis operations |
+| `pysat_abstract_explanation.py` | 52 | Thin base for ALL PySAT operations (checker seam + `get_result`, no HSDAG); redundancy ops extend this directly |
+| `pysat_abstract_hsdag_explanation.py` | 299 | Template-method base for HSDAG operations (diagnosis/conflict/testcase); extends `PySATAbstractExplanation` |
+| `registry.py` | 56 | Operation registry — name → operation-class seam (the plugin door); built-ins self-register |
 
 **Diagnosis Algorithm Implementations** (`algorithms/` subdirectory, ~2,200 LOC):
 
@@ -405,7 +407,7 @@ CONGEN and QuAcq learning results:
 - Evaluation strategies: `description`, `clause`
 
 ### 3. Template Method
-- `PySATAbstractExplanation` — Base for diagnosis algorithms
+- `PySATAbstractHSDAGExplanation` — Base for diagnosis algorithms
 - Subclasses implement specific algorithms
 
 ### 4. Dependency Injection

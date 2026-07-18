@@ -11,10 +11,10 @@ from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.quickxplain_with_testcases_labeler import \
     QuickXPlainWithTestCasesParameters, QuickXPlainWithTestCasesLabeler
 from profiling import AbstractProfiler
-from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
+from explanation.operations.pysat_abstract_hsdag_explanation import PySATAbstractHSDAGExplanation
 
 
-class PySATTestCaseQuickXPlain(PySATAbstractExplanation):
+class PySATTestCaseQuickXPlain(PySATAbstractHSDAGExplanation):
     """Operation for test case diagnosis using HSDAG + QuickXPlainWithTestCases algorithm.
 
     This operation computes conflicts using the QuickXPlainWithTestCases algorithm which

@@ -5,10 +5,10 @@ from explanation.checker.protocols import ConsistencyChecker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.fastdiag_labeler import FastDiagLabeler, FastDiagParameters
 from profiling import AbstractProfiler
-from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
+from explanation.operations.pysat_abstract_hsdag_explanation import PySATAbstractHSDAGExplanation
 
 
-class PySATDiagnosis(PySATAbstractExplanation):
+class PySATDiagnosis(PySATAbstractHSDAGExplanation):
     """Operation that computes diagnoses and conflicts using HSDAG and FastDiag.
 
     This operation identifies diagnoses (minimal sets of constraints whose removal

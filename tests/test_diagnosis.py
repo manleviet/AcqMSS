@@ -33,7 +33,7 @@ from explanation.operations.algorithms.kbdiag import KBDiag
 from profiling import ProfilerMode, ProfilerPreset, profiler_session
 from explanation.operations.algorithms.quickxplain import QuickXPlain
 from explanation.operations.algorithms.quickxplain_with_testcases import QuickXPlainWithTestCases
-from explanation.operations.pysat_abstract_explanation import _format_results
+from explanation.operations.pysat_abstract_hsdag_explanation import _format_results
 from explanation.operations.pysat_explanation_builder import (
     PySATDiagnosisBuilder, PySATTestcaseBuilder,
     PySATRedundancyTestCasesBuilder, PySATRedundancyConstraintsBuilder, PySATTestcaseQuickXplainBuilder
