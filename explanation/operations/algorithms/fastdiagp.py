@@ -41,7 +41,6 @@ class FastDiagP:
         self.maxNumGenCC = 0
 
         self.lookup_table = {}
-        self.counter_readyCC = 0
         self.pool = None
         self.currentNumGenCC = 0
         self.genhash = ""
@@ -160,7 +159,6 @@ class FastDiagP:
 
         if result.ready:
             self.profiler.increment('ready')
-            # self.counter_readyCC = self.counter_readyCC + 1
         else:
             self.profiler.increment('not_ready')
         return result.get()

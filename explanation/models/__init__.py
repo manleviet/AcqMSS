@@ -11,7 +11,7 @@ from .task_preparation import (
     DiagnosisTask,
     TestCaseTask,
     DescriptionProvider,
-    DiagnosisFormatter,
+    format_diagnoses,
     TaskPreparationFactory,
 )
 
@@ -26,6 +26,6 @@ __all__ = [
     'DiagnosisTask',
     'TestCaseTask',
     'DescriptionProvider',
-    'DiagnosisFormatter',
+    'format_diagnoses',
     'TaskPreparationFactory',
 ]

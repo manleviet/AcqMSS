@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional
 
 
 from explanation.models.task_preparation import (
-    PreparedTask, DescriptionProvider, DiagnosisFormatter, Task,
+    PreparedTask, DescriptionProvider, format_diagnoses, Task,
 )
 from explanation.checker.protocols import ConsistencyChecker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
@@ -29,7 +29,7 @@ def _format_results(singular: str, plural: str, items: List,
         return f'No {singular.lower()} found'
 
     label = singular if len(items) == 1 else plural
-    formatted_items = DiagnosisFormatter.format(items, describe)
+    formatted_items = format_diagnoses(items, describe)
     return f'{label}: {formatted_items}'
 
 

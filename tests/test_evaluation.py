@@ -492,8 +492,8 @@ class TestIntegration:
         """Verify bg_clauses are unioned with kb_clauses in clause eval."""
         comparator = KBComparator.from_files(FM_PATH, BIAS_PATH)
 
-        # Get root feature ID from oracle
-        root_id = comparator.oracle.feature_map[comparator.oracle.root_feature]
+        # Get root feature ID from ground truth
+        root_id = comparator.ground_truth.feature_map[comparator.ground_truth.root_feature]
 
         # Result with NO KB but WITH bg_clauses containing root
         result_with_bg = ConGenResultData(

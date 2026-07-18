@@ -673,17 +673,13 @@ class TestCaseTaskPreparation(TaskPreparationStrategy):
 
 # === FORMATTER ===
 
-class DiagnosisFormatter:
-    """Formats diagnosis results for display."""
-
-    @staticmethod
-    def format(diagnoses: List[List], provider: DescriptionProvider) -> str:
-        """Format diagnoses as human-readable string."""
-        diagnoses_str = []
-        for diag in diagnoses:
-            diag_str = [provider.get_description(item) for item in diag]
-            diagnoses_str.append(f"[{', '.join(diag_str)}]")
-        return ','.join(diagnoses_str)
+def format_diagnoses(diagnoses: List[List], provider: DescriptionProvider) -> str:
+    """Format diagnoses as a human-readable string."""
+    diagnoses_str = []
+    for diag in diagnoses:
+        diag_str = [provider.get_description(item) for item in diag]
+        diagnoses_str.append(f"[{', '.join(diag_str)}]")
+    return ','.join(diagnoses_str)
 
 
 # === FACTORY ===

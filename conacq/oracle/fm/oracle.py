@@ -160,7 +160,6 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
     def __repr__(self):
         return f"FMOracle(features={len(self._oracle_model.name_to_id)})"
 
-    # TODO: need update
     def cleanup(self):
         """Release checker resources."""
         if hasattr(self, '_checker') and self._checker is not None:
