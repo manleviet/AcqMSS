@@ -4,11 +4,10 @@ I/O utilities for saving and loading examples.
 Supports JSON format for ExampleSet serialization.
 """
 
-import json
 from pathlib import Path
 from typing import Union
 
-from conacq.atomic_io import write_json_atomic
+from conacq.atomic_io import write_json_atomic, read_json
 from .data_structures import Example, ExampleSet, ExampleType
 
 
@@ -71,8 +70,7 @@ class ExampleIO:
         Returns:
             Loaded ExampleSet
         """
-        with open(filepath, 'r') as f:
-            data = json.load(f)
+        data = read_json(filepath)
 
         example_set = ExampleSet(metadata=data.get('metadata', {}))
 

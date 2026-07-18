@@ -77,3 +77,12 @@ def write_json_atomic(path: Union[str, Path], data: Any, indent: int = 2) -> Non
     """
     with atomic_write(path) as f:
         json.dump(data, f, indent=indent)
+
+
+def read_json(path: Union[str, Path]) -> Any:
+    """Read and parse a JSON file (utf-8) — the read side symmetric to
+    ``write_json_atomic``, so both IO classes share one ``open + json.load``
+    instead of duplicating it. Raises ``FileNotFoundError`` / ``json.JSONDecodeError``
+    exactly as the plain reads it replaces (behaviour-inert)."""
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)

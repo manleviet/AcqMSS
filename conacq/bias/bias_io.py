@@ -5,11 +5,10 @@ This module provides functionality to save and load constraint biases
 in different formats: JSON (structured) and DIMACS CNF (standard SAT format).
 """
 
-import json
 from pathlib import Path
 from typing import Dict
 
-from conacq.atomic_io import atomic_write, write_json_atomic
+from conacq.atomic_io import atomic_write, write_json_atomic, read_json
 from .data_structures import Feature, Constraint, Bias, OperatorType
 
 
@@ -140,8 +139,7 @@ class BiasIO:
         if not file_path.exists():
             raise FileNotFoundError(f"Bias file not found: {filepath}")
 
-        with open(filepath, 'r') as f:
-            data = json.load(f)
+        data = read_json(filepath)
 
         # Reconstruct features
         features = [
