@@ -25,7 +25,7 @@ Interactive learning through membership queries:
 **Implementation**:
 - `conacq/algorithms/quacq/quacq.py` — Main QuAcq algorithm (oracle mode)
 - `conacq/example_generators/query_provider.py` — Unified QueryProvider (pool + SAT strategies)
-- `conacq/oracle/` — Oracle implementations (FeatureModelOracle, UserPromptOracle, CachedOracle)
+- `conacq/oracle/` — Oracle implementations (FMOracle, UserPromptOracle, CachedOracle)
 
 ### 2. Example-Based Mode (Batch Learning with FindScope/FindC)
 
@@ -192,7 +192,7 @@ QueryProvider(
 - `conacq/algorithms/quacq/quacq_model_builder.py` — QuAcqModelBuilder (fluent builder, auto-prepares on build())
 - `conacq/algorithms/quacq/task_preparation.py` — QuAcqTask + QuAcqTaskPreparation (inherited from DiagnosisTask)
 
-- `conacq/oracle/` — Oracle implementations: FeatureModelOracle, UserPromptOracle, CachedOracle, FMData, BGData
+- `conacq/oracle/` — Oracle implementations: FMOracle, UserPromptOracle, CachedOracle, OracleData, BGData
 - `conacq/example_generators/` — QueryProvider: unified pool + SAT query generation (query_provider.py)
 
 **Evaluation Support**:
@@ -204,7 +204,7 @@ QueryProvider(
 **Two Paradigms** (Now Unified via Assumption IDs):
 
 1. **CONGEN** (passive): Learns from E+/E- in one batch pass (GenerateNE → ACQMSS → REDUCE)
-   - **GenerateNE called internally by `ConGenModel.prepare()`** (not by callers)
+   - **GenerateNE called internally by `ConGenModel.prepare_task()`** (not by callers)
    - Uses `ConGenTask` (assumption-based constraint IDs)
    - Immutable checkers after construction
 
@@ -307,7 +307,7 @@ Key Classes (in conacq/algorithms/quacq/):
 - `Oracle` — Abstract base class for configuration validators
 
 **Concrete Oracles** (conacq/oracle/):
-- `FeatureModelOracle` — FM-based oracle using flamapy (fm_oracle.py)
+- `FMOracle` — FM-based oracle using flamapy (fm_oracle.py)
 - `UserPromptOracle` — Interactive user oracle (prompts on command line) (user_prompt.py)
 - `CachedOracle` — Caching wrapper to avoid re-asking same query (cached.py)
 
@@ -344,48 +344,42 @@ The following classes are **no longer available**:
 **Recommended Pattern** (DI-based, post-refactor, commit 260228):
 ```python
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
+from conacq.algorithms.quacq.task_preparation import QuAcqTaskInput
 from conacq.example_generators import QueryProvider
-from conacq.oracle import FeatureModelOracle
-from explanation.operations.algorithms.checker import CheckerFactory
+from conacq.oracle import FMOracle
+from explanation.api import build_checker, SolverBackend
+from profiling import get_global_profiler
 
-# Build and prepare model
-oracle = FeatureModelOracle('data/fms/model.uvl')
-model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
-         .with_oracle(oracle)
-         .build())  # Returns prepared QuAcqModel
+# Build model (unprepared — prepare_task is pure, called per run)
+oracle = FMOracle('data/fms/model.uvl')
+model = (QuAcqModelBuilder
+         .from_bias('data/bias/model.json')
+         .with_oracle_data(oracle.oracle_data)
+         .build())
 
-# Build checker and query provider (injected dependencies)
-checker = CheckerFactory.create_from_model(model)
-query_provider = QueryProvider(
-    checker=checker,    # Injected (NEW)
-    model=model,        # For config_to_assumptions (NEW)
-    pool=None           # Optional: provide pool for example-based mode
-)
+# Pure prepare: model keeps no task; `prepared` holds task + describe + assignment_map
+prepared = model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+task = prepared.task
+profiler = get_global_profiler()
 
-# DiscriminatingGenerator with injected checker + model (NEW - commit 260228)
-discrim_gen = DiscriminatingGenerator(checker, model, model.task.set_b[0])
+# Checker built from the Task
+checker = build_checker(task, SolverBackend.from_flags(use_incremental=True))
 
-# Build QuAcq with dependencies (oracle mode)
-quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen)
+# DI wiring (mirrors conacq/algorithms/quacq/__init__ example + QuAcqRunner._run_oracle_mode)
+query_provider = QueryProvider(assignment_map=prepared.assignment_map)
+discrim_gen = DiscriminatingGenerator(
+    checker=checker, model=model, profiler=profiler,
+    root_assumption=task.set_b[0], task=task)
+quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model,
+                         task=task, assignment_map=prepared.assignment_map)
 
-# Run learning (returns raw assumption IDs, simplified signature)
+# Run learning — real signature: set_c, set_b, negation_map, mode, max_queries (quacq.py:114-120)
 result = quacq.learn(
-    set_c=model.task.set_c,
-    set_b=model.task.set_b,
-    set_kb=model.task.set_kb,
-    negation_map=model.task.negation_map,
-    assumptions=model.task.assumptions,
-    background_clauses=model.task.background_clauses,
-    feature_ids=model.task.feature_ids,
-    id_to_feature=model.task.id_to_feature,
-    constraint_clauses=model.task.constraint_clauses,
-    negated_clauses=model.task.negated_clauses,
-    mode='oracle',
-    max_queries=1000
-)
+    set_c=task.set_c, set_b=task.set_b,
+    negation_map=task.negation_map, mode='oracle', max_queries=1000)
 
-# Runner layer resolves constraint names (matches ConGen pattern)
-kb_names, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
+# Runner layer resolves constraint names — describe comes from the PreparedTask
+kb_names, kb_clauses = model.resolve_kb(prepared.describe, result.kb_assumption_ids)
 print(f"Learned KB: {kb_names}")
 print(f"Queries: {result.n_queries}")
 ```
@@ -393,10 +387,10 @@ print(f"Queries: {result.n_queries}")
 **Example-Based Mode**:
 ```python
 from conacq.example_generators import QueryProvider
-from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.api import build_checker, SolverBackend
 
-# Build checker from model
-checker = CheckerFactory.create_from_model(model)
+# Build checker from the task (from `prepared.task` above)
+checker = build_checker(task, SolverBackend.from_flags(use_incremental=True))
 
 # QueryProvider with pool for example-based learning (injected dependencies)
 query_provider = QueryProvider(

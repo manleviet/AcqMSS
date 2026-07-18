@@ -47,7 +47,7 @@ Build a **production-ready constraint acquisition framework** that:
 - Handle up to 1,000 bias constraints per model
 
 **Key Algorithms**:
-1. GenerateNE — Create negated examples from E- (invoked internally by ConGenModel.prepare())
+1. GenerateNE — Create negated examples from E- (invoked internally by ConGenModel.prepare_task())
 2. ACQMSS — Find maximum satisfiable subset of bias
 3. REDUCE — Eliminate redundant constraints
 

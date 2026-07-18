@@ -45,7 +45,7 @@ Defines what AcqMSS is, why it exists, and what success looks like:
 High-level overview of what code exists where:
 - Package structure (conacq, explanation, apps, tests)
 - Detailed LOC breakdown per component
-- **conacq/oracle/**: Oracle ABC, FeatureModelOracle, FMData (9 files, ~929 LOC)
+- **conacq/oracle/**: role protocols, FMOracle, OracleData/BGData (13 files, ~1,090 LOC)
 - **conacq/runners/**: ConGenRunner, QuAcqRunner (3 files, ~446 LOC, moved from eval/)
 - File inventory by purpose
 - Data directory structure (feature models, configurations, results)
@@ -65,7 +65,7 @@ Comprehensive style guide and best practices:
 - Naming conventions (modules, classes, functions, variables)
 - File organization and import order
 - 7 design patterns (Builder, Strategy, Template, DI, Facade, Shared Utils, Interactive)
-- Oracle module conventions (Oracle ABC, FMData, FeatureModelOracle)
+- Oracle module conventions (role protocols, OracleData/BGData, FMOracle)
 - Testing strategy (parameterization, coverage requirements)
 - Documentation standards (docstring formats)
 - Type hints and error handling
@@ -199,10 +199,10 @@ congen.md (ALGORITHM DETAILS)
 
 **Key Classes** (conacq/oracle/):
 - `Oracle` — Abstract base class (base.py)
-- `FeatureModelOracle` — FM-based configuration validator (fm_oracle.py)
+- `FMOracle` — FM-based configuration validator (fm_oracle.py)
 - `UserPromptOracle` — Interactive user oracle (user_prompt.py)
 - `CachedOracle` — Caching wrapper (cached.py)
-- `FMData` — FM metadata container (frozen dataclass)
+- `OracleData` — frozen provisioning snapshot (`KBProvider`+`BGProvider`)
 - `QueryProvider` — Unified query/example provision (strategies: pool, SAT, pool+SAT)
 
 **Critical**: Feature ID consistency uses flamapy's variable mapping (tree traversal order) as authoritative source. Alphabetical sorting would cause critical mismatch.
@@ -227,13 +227,13 @@ congen.md (ALGORITHM DETAILS)
 
 ### Design Patterns Used
 
-1. **Dependency Injection** — Algorithms accept pluggable ConsistencyExecutor (Protocol)
+1. **Dependency Injection** — Algorithms accept pluggable ConsistencyChecker (Protocol) for solver abstraction
 2. **Strategy Pattern** — Multiple solver implementations (Incremental, Non-Incremental, SAT4J)
 3. **Builder Pattern** — QuAcqModelBuilder, ConGenModelBuilder for immutable KB construction
 4. **Facade Pattern** — High-level interfaces (QuAcqRunner, ConGenRunner)
 5. **Template Method** — PySATAbstractHSDAGExplanation algorithm base
 6. **Shared Utility Methods** — Centralized utilities (e.g., QuickXPlain) across modules
-7. **Executor Pattern** — ConsistencyExecutor Protocol + ProcessExecutor for parallelism (Phase R)
+7. **Parallel Executor** — **Deferred to canonical repo** (ADR-0014); FastDiagP + ProfilerMode.MULTI_PROCESS remain as scaffolding
 
 ## Common Tasks
 
@@ -360,7 +360,7 @@ Documentation is updated when:
 - v1.7 (2026-06-19): Phase R (Task-as-unit refactor) — immutable models, ConsistencyExecutor Protocol, parallel diagnosis
 - v1.6 (2026-02-28): QuAcqTask cleanup, DescriptionProvider removal, DI refactoring, system-architecture.md trimmed to 799 LOC
 - v1.5 (2026-02-18): ConGenModelBuilder auto-prepare pattern, BGData class, runner details
-- v1.4 (2026-02-17): Oracle refactoring (ABC slimmed, FMData, FeatureModelOracle extended)
+- v1.4 (2026-02-17): Oracle refactoring (ABC slimmed, FMData, FMOracle extended)
 - v1.3 (2026-02-16): Added congen.md, cross-linked all docs
 - v1.2 (2026-02-16): Variable naming refactor (neg_c_map → negation_map)
 - v1.1 (2026-02-13): Comprehensive update with oracle/ package, Phase 5 completion

@@ -22,7 +22,7 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 │ ├─ QuAcq: GenerateQuery → Oracle → Update KB                │
 │ ├─ Bias generation from feature models                      │
 │ ├─ Example generation (RS, FF, 2-COV strategies)            │
-│ ├─ Oracle implementations (FeatureModelOracle, etc.)        │
+│ ├─ Oracle implementations (FMOracle, etc.)        │
 │ └─ Evaluation framework (CV, accuracy metrics, profiling)    │
 └─────────────────┬───────────────────────────────────────────┘
                   │ Dependencies
@@ -58,72 +58,74 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
 ```python
 from conacq.algorithms import ConGen, ConGenModelBuilder
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 from conacq.example_generators import QueryProvider
 from explanation.api import build_checker, SolverBackend
 
 # Passive learning — Pattern 1: auto-prepare (oracle + examples at build time)
-oracle = FeatureModelOracle('data/fms/model.uvl')
+oracle = FMOracle('data/fms/model.uvl')
 model = (ConGenModelBuilder.from_bias('data/bias/model.json')
          .with_oracle(oracle).with_examples('data/examples/model.json').build())
 
 # Passive learning — Pattern 2: manual prepare (CV reuse)
-model = ConGenModelBuilder.from_bias('data/bias/model.json').build()  # unprepared
-model.prepare(oracle, positive_examples=pos, negative_examples=neg)  # Calls GenerateNE internally
+from dataclasses import replace
+from conacq.algorithms.acqmss import ConGen, ConGenTaskInput
 
-checker = build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental), profiler=profiler)
+model = ConGenModelBuilder.from_bias('data/bias/model.json').build()  # unprepared
+# Pure prepare — runs GenerateNE; model keeps no task (congen_runner.py:118-126)
+prepared = model.prepare_task(ConGenTaskInput.from_examples(oracle.oracle_data, pos, neg))
+task = prepared.task
+
+checker = build_checker(task, SolverBackend.from_flags(use_incremental=use_incremental), solver_name, profiler)
 congen = ConGen(checker, profiler)
 result = congen.acquire(
-    set_b=model.task.set_c,
-    set_bg=model.task.set_b,
-    set_tc=model.task.set_tc,
-    set_neg_tv=model.task.set_neg_tv,
-    negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
+    set_b=task.set_c,
+    set_bg=task.set_b,
+    set_tc=task.set_tc,
+    set_neg_tv=task.set_neg_tv,
+    negation_map=task.negation_map  # assumption ID → negated ID for REDUCE
 )
 
 # For cross-validation: build once, prepare per fold
 model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
-oracle = FeatureModelOracle('data/fms/model.uvl')
+oracle = FMOracle('data/fms/model.uvl')
 for fold_pos, fold_neg in folds:
-    model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
-    # Use model.task for this fold
+    prepared = model.prepare_task(ConGenTaskInput.from_examples(oracle.oracle_data, fold_pos, fold_neg))
+    task = prepared.task  # frozen task for this fold
 
-# Interactive learning — QuAcq (DI pattern, commit 260228)
+# Interactive learning — QuAcq (DI pattern)
+from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
+from conacq.algorithms.quacq.task_preparation import QuAcqTaskInput
 from conacq.example_generators import QueryProvider
-from conacq.algorithms.quacq import DiscriminatingGenerator, QuAcq
 from explanation.api import build_checker, SolverBackend
+from profiling import get_global_profiler
 
-oracle = FeatureModelOracle('data/fms/model.uvl')
-model = (QuAcqModelBuilder.from_bias('data/bias/model.json')
-         .with_oracle(oracle)
-         .build())  # Returns prepared model, task ready
+oracle = FMOracle('data/fms/model.uvl')
+model = (QuAcqModelBuilder
+         .from_bias('data/bias/model.json')
+         .with_oracle_data(oracle.oracle_data)
+         .build())  # unprepared — prepare_task is pure
 
-# Build checker (injected dependency) — NEW pattern
-checker = build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))
+# Pure prepare: model keeps no task; `prepared` holds task + describe + assignment_map
+prepared = model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+task = prepared.task
+profiler = get_global_profiler()
 
-# QueryProvider with injected checker + model — NEW: no solver_name parameter
-query_prov = QueryProvider(
-    checker=checker,    # Injected ConsistencyChecker
-    model=model         # For config_to_assumptions()
-)
+checker = build_checker(task, SolverBackend.from_flags(use_incremental=True))
 
-# DiscriminatingGenerator with injected checker + model (NEW - commit 260228)
-discrim_gen = DiscriminatingGenerator(checker, model, model.task.set_b[0])
+# DI wiring (mirrors conacq/algorithms/quacq/__init__ example + QuAcqRunner._run_oracle_mode)
+query_prov = QueryProvider(assignment_map=prepared.assignment_map)
+discrim_gen = DiscriminatingGenerator(
+    checker=checker, model=model, profiler=profiler,
+    root_assumption=task.set_b[0], task=task)
+quacq = QuAcq.for_oracle(checker, oracle, query_prov, discrim_gen, model=model,
+                         task=task, assignment_map=prepared.assignment_map)
 
-# QuAcq with checker parameter (NEW)
-quacq = QuAcq.for_oracle(checker, oracle, query_prov, discrim_gen)
-
-# Run learning (simplified signature, no background_clauses/negated_clauses params)
+# Real learn signature: set_c, set_b, negation_map, mode, max_queries (quacq.py:114-120)
 result = quacq.learn(
-    set_c=model.task.set_c, set_b=model.task.set_b,
-    set_kb=model.task.set_kb, negation_map=model.task.negation_map,
-    assumptions=model.task.assumptions,
-    background_clauses=model.task.background_clauses,
-    feature_ids=model.task.feature_ids, id_to_feature=model.task.id_to_feature,
-    constraint_clauses=model.task.constraint_clauses,
-    negated_clauses=model.task.negated_clauses,
-    mode='oracle', max_queries=1000)  # → QuAcqResult with KB assumption IDs only
-# Runner resolves names: kb_names, kb_clauses = model.resolve_kb(result.kb_assumption_ids)
+    set_c=task.set_c, set_b=task.set_b,
+    negation_map=task.negation_map, mode='oracle', max_queries=1000)
+# Runner resolves names: kb_names, kb_clauses = model.resolve_kb(prepared.describe, result.kb_assumption_ids)
 
 # Query generation (instance methods on QueryProvider instance)
 config, c_id = query_prov.generate_from_sat(remaining_bias, learned_kb, set_b, negation_map, id_to_feature)
@@ -136,14 +138,14 @@ config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_m
    - Input: Bias (B), E+ (set_tc), NE (set_neg_tv), BG (set_bg) as assumption IDs
    - Process: Check consistency → ACQMSS → REDUCE
    - Output: CONGENResult with KB constraint names and assumption IDs
-   - **GenerateNE now called internally by `ConGenModel.prepare()`** (callers no longer invoke directly)
-   - Can be reused across CV folds: Call `model.prepare(oracle, fold_pos, fold_neg)` per fold (oracle reused)
+   - **GenerateNE now called internally by `ConGenModel.prepare_task()`** (callers no longer invoke directly)
+   - Can be reused across CV folds: call `model.prepare_task(task_input)` per fold (pure; the oracle snapshot is carried in `task_input`)
 
 2. **GenerateNE** — Create negated examples (internal API, not caller-invoked)
-   - **Invoked only internally by `ConGenModel.prepare()`**
+   - **Invoked only internally by `ConGenModel.prepare_task()`**
    - Uses QuickXPlain to find minimal conflicts from E⁻
    - Simplified result: `NEResult(new_clauses, set_neg_tv, next_available_id)` (removed `assumption_ids`, `neg_map`)
-   - Results merged in-place via inline code in `ConGenModel.prepare()`
+   - Results merged into the fresh task inside `ConGenModel.prepare_task()` (pure — no model mutation)
 
 3. **ACQMSS** — Divide-and-conquer maximum satisfiable subset finding
    - Recursively partition bias constraints
@@ -202,38 +204,23 @@ config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_m
 
 **Key Classes**:
 
-1. **FMData** (`fm_data.py`): FM metadata (features, feature_ids, root, constraints, next_available_id)
-   - Created once by `FeatureModelOracle.get_fm_data()`, passed to decouple callers
-2. **FeatureModelOracle** (`fm_oracle.py`): FM-based oracle
-   - **ABC methods**: `is_valid(assignments)`, `ask(query)` for configuration validation
-   - **Extensions**: FM metadata access (FMData), SAT-based config completion, constraint descriptions
-   - Delegates consistency checks to `FMOracleModel` (incremental solver by default)
+1. **Role protocols** (`protocols.py`): narrow `@runtime_checkable` roles — `MembershipOracle` (`is_valid`), `CompletableOracle` (`complete_configuration`), `CatalogProvider` (`get_variables`/`get_variable_ids`), plus `BGProvider`/`KBProvider` (provisioning). No fat `Oracle` base (ADR-0009/0010).
 
-3. **BGData** (`bg_data.py`): Root FM constraint as assumption-guarded clauses
-   - Contains root constraint pair (original + negated form) and negation mapping
-   - Extracted post-preparation via `FMOracleModel.bg_data` property
-   - Enables ConGen to allocate assumption IDs without overlap
+2. **FMOracle** (`fm/oracle.py`): FM-based oracle implementing `MembershipOracle`+`CompletableOracle`+`CatalogProvider` — `is_valid()`, `complete_configuration()`, `get_variables()`/`get_variable_ids()`, `cleanup()`. Loads a `.uvl` → CNF; delegates consistency checks to `FMOracleModel` (persistent solver by default).
 
-4. **FMOracleModel** (`fm_oracle_model.py`): SAT representation of FM for consistency checking
-   - FM clauses in `set_kb`; feature assignments guarded by assumption literals
-   - Exposes `task`/`get_kb()`/`get_assumptions()`/`use_incremental` for `build_checker`
-   - Prepared via `OracleTaskPreparation`; exposes `bg_data` property for root constraint extraction
+3. **OracleData** (`oracle_data.py`): frozen provisioning snapshot (ADR-0009/0012) — a `KBProvider`+`BGProvider` handed to `GenerateNE`, the builders, and task-prep. **BGData** (`bg_data.py`): the root FM constraint pair (original + negated) + negation map, extracted via `FMOracleModel.bg_data` — lets ConGen allocate assumption IDs without overlap.
 
-5. **UserPromptOracle** (`user_prompt.py`): Interactive human-in-the-loop oracle
-   - Raises `NotImplementedError` for `complete_configuration()` and `get_cnf_clauses()`
-   - Suitable for interactive learning only
+4. **FMOracleModel** (`fm/model.py`): assumption-guarded FM clauses as a **pure KB** — FM clauses in `set_kb`, feature assignments guarded by assumption literals. Prepared via `FMOracleTaskPreparation`; exposes the `bg_data` property. Its Task feeds `build_checker()`.
 
-6. **CachedOracle** (`cached.py`): Transparent result caching wrapper
-   - Caches `is_valid()` results
-   - Delegates `complete_configuration()`, `get_cnf_clauses()` to base oracle
+5. **GroundTruthData** (`ground_truth.py`): eval-side ground truth — reads the FM directly (no solver) to extract constraint descriptions + CNF clauses. A **separate** class from `OracleData`, not an alias.
 
-7. **OracleData** (`extractor.py`): Extracted oracle data for evaluation
-   - Backward-compatible alias: `GroundTruthData`
-   - Reads FM directly (no solver)
+6. **UserPromptOracle** (`user_prompt.py`): interactive membership oracle (`is_valid()`/`ask()` only).
+
+7. **CachedOracle** (`cached.py`): transparent caching wrapper — caches `is_valid()`, delegates the rest to the base oracle.
 
 **Architecture Notes**:
-- Unified `Oracle` ABC with FM-specific extensions in concrete classes
-- FM metadata decoupled via `FMData` (explicit passing)
+- No fat `Oracle` ABC — each oracle declares the narrow roles it plays (ADR-0010).
+- Provisioning is a frozen snapshot (`OracleData`), never read off a live oracle (ADR-0009).
 
 **Critical Detail**: Feature ID consistency
 - `FMOracleModel.variables` uses flamapy's variable mapping (tree traversal order)
@@ -280,7 +267,7 @@ finally:
 **ConGenRunner** (inherits BaseRunner):
 - `__init__`: Builds ConGenModel via ConGenModelBuilder (requires oracle for negation at build time)
 - `run(positive_examples, negative_examples, shuffle_seed=None)` → `ConGenRunResult`
-  - Per-fold: `model.prepare(oracle, E+, E-)`
+  - Per-fold: `model.prepare_task(task_input)` (E+/E- + oracle snapshot carried in `task_input`)
   - Shuffle: `random.Random(shuffle_seed).shuffle(task.set_c)` after prepare
   - Run ConGen with shuffled bias iteration order
 - Calls `cleanup()` in CV wrapper functions via try/finally
@@ -288,7 +275,7 @@ finally:
 **QuAcqRunner** (inherits BaseRunner):
 - `__init__`: Builds QuAcqModel via QuAcqModelBuilder (requires oracle for negation at build time, auto-prepares)
 - `run(positive_examples=None, negative_examples=None, mode='example_only', shuffle_seed=None)` → `QuAcqRunResult`
-  - Per-run: `model.prepare(oracle)` (fresh task, reuses built negation)
+  - Per-run: `model.prepare_task(task_input)` (fresh task, reuses built negation)
   - Shuffle: `random.Random(shuffle_seed).shuffle(task.set_c)` after prepare
   - Dispatch to oracle or example path based on mode
 - Modes: 'automated'/'interactive' (oracle), 'example_only'/'example_first' (examples)
@@ -345,8 +332,7 @@ SAT4J timeout raises), clause
 utilities (`split`, `diff`, `negate_cnf_tseitin`, `QuickXPlain`), and the
 `FmToDiagPysat` transformation. It grows as later seams are formalized (e.g. the
 operation registry). It deliberately does NOT export the profiler (imported from
-`profiling` directly), the concrete `*Backend` adapter classes, or
-`VariableCodec`.
+`profiling` directly) or the concrete `*Backend` adapter classes.
 
 **Model-builder hierarchy (two tiers).** `AbstractModelBuilder` (framework,
 `explanation/models/abstract_model_builder.py`) is the universal base: a pure
@@ -358,7 +344,7 @@ and owns the shared bias-load → negation-via-oracle skeleton for the app build
 `ConGenModelBuilder` / `QuAcqModelBuilder` subclass it and supply two hooks
 (`_create_model_instance`, `_post_negation_build`). The oracle/bias builder lives
 in the app, not the framework, precisely because it imports `conacq.bias` and is
-typed against `FeatureModelOracle` — boundary rule 4 (explanation ⊥ conacq) would
+typed against `FMOracle` — boundary rule 4 (explanation ⊥ conacq) would
 flag it in the framework. `DiagnosisModelBuilder` no longer exposes a
 `use_incremental()` setter: incremental vs not is chosen when the checker is
 created (`build_checker(..., SolverBackend.from_flags(use_incremental=...))`), not on the
@@ -716,9 +702,9 @@ python -m apps.run_evaluation apps/conf/run_evaluation_config.toml -v
 ### 1. ConGen (Passive/Batch Learning)
 - Input: Pre-collected E+/E- examples
 - No user interaction required
-- Learns constraint KB in one pass (GenerateNE called by `ConGenModel.prepare()`, then ACQMSS → REDUCE)
-- **ConGenModel**: Pure data container (bias + solver config). Oracle injected at `prepare()` time.
-- **Preparation**: `model.prepare(oracle, positive_examples, negative_examples)` generates NE and populates `ConGenTask` (assumption-based).
+- Learns constraint KB in one pass (GenerateNE called by `ConGenModel.prepare_task()`, then ACQMSS → REDUCE)
+- **ConGenModel**: Pure KB container (bias + name↔id catalog). The oracle snapshot is carried in the `task_input` passed to `prepare_task()`.
+- **Preparation**: `model.prepare_task(ConGenTaskInput.from_examples(oracle.oracle_data, positive_examples, negative_examples))` generates NE and returns a `PreparedTask` (ConGenTask + describe).
 - **Reusable**: Build once, prepare multiple times per fold for cross-validation without rebuilding.
 - ConGenModel exposes `task`/`get_kb()`/`get_assumptions()`/`use_incremental` for `build_checker`
 - **Task Representation**: `ConGenTask` with assumption IDs (set_c, set_tc, set_neg_tv, negation_map)
@@ -757,11 +743,11 @@ Bias (JSON) + Feature Model (UVL) + Examples
     │       ├─ Store next_available_id (final tseitin var) in model
     │       └─ No auto-prepare (for CV reuse pattern)
     │
-    ├─→ [__init__] FeatureModelOracle.from(fm_path)
+    ├─→ [__init__] FMOracle.from(fm_path)
     │   └─ Builds FMOracleModel with assumption-guarded FM clauses
     │
-    ├─→ [run] ConGenModel.prepare(oracle, pos_examples, neg_examples)
-    │   ├─ [PREPARE TIME] GenerateNE: E- → NE (assumption IDs) [internal to prepare()]
+    ├─→ [run] ConGenModel.prepare_task(task_input)  # E+/E- + oracle snapshot inside task_input
+    │   ├─ [PREPARE TIME] GenerateNE: E- → NE (assumption IDs) [internal to prepare_task()]
     │   ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
     │   └─ ConGenTaskPreparation: Create unified task from bias + NE
     │       ├─ Use model.next_available_id (from build time)
@@ -773,7 +759,7 @@ Bias (JSON) + Feature Model (UVL) + Examples
     ├─→ [run] Shuffle bias iteration order (if shuffle_seed provided)
     │   └─ random.Random(seed).shuffle(task.set_c)
     │
-    ├─→ [run] build_checker(model.task, SolverBackend.from_flags(use_incremental=model.use_incremental))
+    ├─→ [run] build_checker(task, SolverBackend.from_flags(use_incremental=use_incremental))
     │   └─ Returns Incremental or NonIncremental checker
     │
     └─→ [run] ConGen Algorithm (mode-agnostic)
@@ -809,8 +795,8 @@ Feature Model + Bias + Oracle (required for both modes)
     │       ├─ Store next_available_id (final tseitin var) in model
     │       └─ Auto-prepare with configured oracle (initial preparation at build time)
     │
-    ├─→ [run] QuAcqModel.prepare(oracle) - fresh task per run
-    │   └─ QuAcqTaskPreparation.prepare(model, oracle) creates QuAcqTask
+    ├─→ [run] QuAcqModel.prepare_task(task_input) - fresh task per run
+    │   └─ the QuAcqTaskPreparation strategy builds a fresh QuAcqTask (pure)
     │       ├─ [PREPARE TIME] Read negated_constraint_map (built at build time, idempotent read)
     │       ├─ Inherits from DiagnosisTask: set_kb, assumptions, negation_map, set_b, set_c
     │       ├─ Copy BG data from Oracle (Parts 1-3) → set_b (assumption IDs)
@@ -858,7 +844,7 @@ Result: QuAcqResult with assumption IDs + query history
 
 **Key Changes** (commit 260228 - unified shuffle-after-prepare):
 - **Build-time Negation**: QuAcqModelBuilder.build() computes negation (idempotent, like ConGen)
-- **Per-run Prepare**: model.prepare(oracle) refreshes task for each run (new assumption IDs per run)
+- **Per-run Prepare**: `model.prepare_task(task_input)` refreshes the task for each run (new assumption IDs per run)
 - **Shuffle After Prepare**: Shuffle task.set_c AFTER prepare(), matching ConGen pattern
 - **next_available_id Stored**: Model stores tseitin var offset for reuse across multiple prepare() calls
 - **Idempotent Negation Maps**: Both prepare() calls read negated_constraint_map (never write to it)
@@ -920,12 +906,14 @@ Result: feature_ids matches SAT variable IDs in CNF
 
 ## Performance Metrics
 
-### PerformanceMetrics Updates
+### Run Metrics (conacq/runners/metrics.py)
 
-**PerformanceMetrics.n_mss** (NEW: `Optional[int] = None`):
-- ConGenRunner: Sets actual MSS count from ACQMSS
-- QuAcqRunner: None (no MSS concept in interactive learning)
-- Enables unified metrics across both runners while supporting ConGen-specific measurements
+**Architecture**: Metrics are collected per run via `MetricSpec` declarations + `RunMetrics` dict-backed container:
+
+- `MetricSpec('n_mss', ...)` — ConGenRunner sets actual MSS count from ACQMSS; QuAcqRunner leaves None
+- `RunMetrics` — Dict-backed, populated by `collect(profiler, <ALGO>_METRICS)` function
+- `conacq/runners/metrics.py` — Disjoint `CONGEN_METRICS` and `QUACQ_METRICS` tables (no union)
+- Per-run collection: runners call `collect()` after algorithm execution; CV aggregator calls `aggregate()` for fold statistics
 
 ### Algorithm Complexity
 
