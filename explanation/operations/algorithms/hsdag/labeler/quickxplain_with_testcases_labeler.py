@@ -66,15 +66,6 @@ class QuickXPlainWithTestCasesLabeler(QuickXPlainWithTestCases, IHSLabelable):
         """
         return LabelerType.CONFLICT
 
-    def get_initial_parameters(self) -> AbstractHSParameters:
-        """
-        Get the initial parameters for HSDAG root node.
-
-        Returns:
-            Initial QuickXPlainWithTestCasesParameters
-        """
-        return self.initial_parameters
-
     def get_label(self, parameters: AbstractHSParameters) -> List[List]:
         """
         Identify a conflict set (label) for the current node.

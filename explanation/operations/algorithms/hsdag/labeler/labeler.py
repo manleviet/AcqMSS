@@ -26,13 +26,23 @@ class IHSLabelable(ABC):
     Interface for the HSDAG's labeler
     """
 
+    # Root HSDAG-node parameters. Concrete labelers set this in their __init__; the
+    # getter below reads it. Declared here (not set in a base __init__) so the getter's
+    # contract is visible without injecting an __init__ into the labelers' multiple-
+    # inheritance MRO (each is ``<Algorithm>, IHSLabelable``).
+    initial_parameters: AbstractHSParameters
+
     @abstractmethod
     def get_type(self) -> LabelerType:
         pass
 
-    @abstractmethod
     def get_initial_parameters(self) -> AbstractHSParameters:
-        pass
+        """Return the root node's parameters (set by the concrete labeler's __init__).
+
+        Pulled up from the four concrete labelers — all were the identical
+        ``return self.initial_parameters``.
+        """
+        return self.initial_parameters
 
     @abstractmethod
     def get_label(self, parameters: AbstractHSParameters) -> List[List]:

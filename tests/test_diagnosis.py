@@ -209,11 +209,15 @@ def build_prepared(model_builder: DiagnosisModelBuilder):
     return model, prepared
 
 
-def create_checker(use_sat4j: bool, prepared: PreparedTask, is_incremental: bool):
-    """Create appropriate checker based on configuration."""
+def create_checker(use_sat4j: bool, prepared: PreparedTask, is_incremental: bool, solver_name: str):
+    """Create appropriate checker based on configuration.
+
+    solver_name is threaded through to build_checker (it was dropped before, so the
+    matrix's solver_name printed in the header but never reached the solver).
+    """
     task = prepared.task
     config = SolverBackend.from_flags(use_incremental=is_incremental, use_sat4j=use_sat4j)
-    return build_checker(task, config)
+    return build_checker(task, config, solver_name)
 
 def _skip_disabled(test_name: str):
     """Create unittest.skipIf decorator for disabled tests."""
@@ -240,7 +244,7 @@ class DiagnosisTest(unittest.TestCase):
                      .from_fide(Resources.FM_INCONSISTENT)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             fastdiag = FastDiag(checker)
             diagnosis = fastdiag.find_diagnosis(prepared.task.set_c, prepared.task.set_b)
 
@@ -263,7 +267,7 @@ class DiagnosisTest(unittest.TestCase):
                      .from_fide(Resources.FM_INCONSISTENT)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             quickxplain = QuickXPlain(checker)
             conflict = quickxplain.find_conflict(prepared.task.set_c, prepared.task.set_b)
 
@@ -286,7 +290,7 @@ class DiagnosisTest(unittest.TestCase):
                      .from_fide(Resources.FM_INCONSISTENT)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             fastdiagp = FastDiagP(checker)
             diagnosis = fastdiagp.find_diagnosis(prepared.task.set_c, prepared.task.set_b)
 
@@ -311,7 +315,7 @@ class DiagnosisTest(unittest.TestCase):
                      .with_positive_testcases(positive_testcases)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             kbdiag = KBDiag(checker)
             _, diagnosis = kbdiag.find_diagnosis(prepared.task.set_c, prepared.task.set_b, prepared.task.set_tc)
 
@@ -338,7 +342,7 @@ class DiagnosisTest(unittest.TestCase):
                      .with_negative_testcases(negative_testcases)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             kbdiag = KBDiag(checker)
             _, diagnosis = kbdiag.find_diagnosis(prepared.task.set_c, prepared.task.set_b, prepared.task.set_tc, prepared.task.set_neg_tv)
 
@@ -365,7 +369,7 @@ class DiagnosisTest(unittest.TestCase):
                      .with_negative_testcases(negative_testcases)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             kbdiag = KBDiag(checker)
             _, diagnosis = kbdiag.find_diagnosis(prepared.task.set_c, prepared.task.set_b, prepared.task.set_tc, prepared.task.set_neg_tv)
 
@@ -392,7 +396,7 @@ class DiagnosisTest(unittest.TestCase):
                      .with_negative_testcases(negative_testcases)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             kbdiag = KBDiag(checker)
             _, diagnosis = kbdiag.find_diagnosis(prepared.task.set_c, prepared.task.set_b, prepared.task.set_tc, prepared.task.set_neg_tv)
 
@@ -416,7 +420,7 @@ class DiagnosisTest(unittest.TestCase):
                      .with_positive_testcases(positive_testcases)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             quickxplain = QuickXPlainWithTestCases(checker)
             _, cs = quickxplain.find_conflict_set(prepared.task.set_c, prepared.task.set_b, prepared.task.set_tc)
 
@@ -442,7 +446,7 @@ class DiagnosisTest(unittest.TestCase):
                      .with_negative_testcases(negative_testcases)
                      )
 
-            checker = create_checker(use_sat4j, prepared, is_incremental)
+            checker = create_checker(use_sat4j, prepared, is_incremental, solver_name)
             quickxplain = QuickXPlainWithTestCases(checker)
             _, cs = quickxplain.find_conflict_set(prepared.task.set_c, prepared.task.set_b, prepared.task.set_tc, prepared.task.set_neg_tv)
 

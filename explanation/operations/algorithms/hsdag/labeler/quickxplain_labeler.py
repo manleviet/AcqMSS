@@ -31,8 +31,6 @@ class QuickXPlainLabeler(QuickXPlain, IHSLabelable):
     def get_type(self) -> LabelerType:
         return LabelerType.CONFLICT
 
-    def get_initial_parameters(self) -> AbstractHSParameters:
-        return self.initial_parameters
 
     def get_label(self, parameters: AbstractHSParameters) -> List[List]:
         """
