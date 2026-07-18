@@ -19,6 +19,20 @@ class TestSemanticEquivalenceChecker:
         assert result.unentailed_ct == []
         assert result.unentailed_kb == []
 
+    def test_accepts_frozen_tuple_bg_clauses(self):
+        """A real ConGen result has kb_clauses as a list but bg_clauses as a frozen
+        tuple-of-tuples (OracleData.root_clauses is deep-frozen). check_kb_entails_ct
+        does ``kb_clauses + bg_clauses`` — list + tuple raised TypeError, crashing
+        progressive_evaluation / cross-validation (paths no other test drives). The
+        checker must normalise both containers at its boundary."""
+        kb = [[1, 2], [-1, 3]]        # learned KB — a list
+        bg = ((4, -1),)               # frozen root clauses — a tuple of tuples
+        ct = [[1, 2], [-1, 3]]
+        checker = SemanticEquivalenceChecker(kb_clauses=kb, ct_clauses=ct, bg_clauses=bg)
+        result = checker.check_equivalence()   # would TypeError on list + tuple pre-fix
+        assert isinstance(result, SemanticResult)
+        assert result.n_kb_checked == 2
+
     def test_kb_superset_of_ct(self):
         """KB has extra clauses -> KB entails C_T, C_T may not entail KB."""
         kb = [[1, 2], [-1, 3], [4]]  # KB has extra [4]

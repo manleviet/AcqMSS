@@ -209,8 +209,10 @@ def _run_cv_loop(
         perf = run_result.metrics
         performance_list.append(perf)
 
-        # Test: calculate accuracy on held-out fold (union BG for root constraint)
-        with AccuracyCalculator(run_result.kb_clauses + run_result.bg_clauses,
+        # Test: calculate accuracy on held-out fold (union BG for root constraint).
+        # bg_clauses is a frozen tuple (root_clauses) and kb_clauses a list — coerce
+        # both so the union is list + list, not list + tuple.
+        with AccuracyCalculator(list(run_result.kb_clauses) + list(run_result.bg_clauses),
                                 variables, solver_name) as calculator:
             accuracy_result = calculator.calculate(test_pos, test_neg)
 
