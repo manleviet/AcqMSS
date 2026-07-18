@@ -26,6 +26,7 @@ These decisions were made during the **ABC-v2 redesign** (July 2026), a rebuild 
 | [0010](0010-roles-are-declared-not-inferred.md) | Roles are declared, not inferred — protocol members are `@abstractmethod`; our oracles inherit the roles they play | Accepted |
 | [0011](0011-completion-bypasses-the-checker-port.md) | `complete_configuration` bypasses the checker port — knowingly; routing it through is a dataset migration, not a refactor | Accepted |
 | [0012](0012-immutability-at-construction-not-at-read.md) | `Task`/`OracleData` are deep-frozen — immutability at *construction* is free; immutability at *read* is a tax (reconciles with 0007; corrects its closing generalisation) | Accepted |
+| [0013](0013-is-consistent-and-find-model-are-two-questions.md) | Split `is_consistent`/`find_model` — the ~617 guard-negations are redundant for the SAT answer, load-bearing for the model; **4.2× on `run()`** (first measurable runtime win) | Accepted |
 
 ## Writing a new one
 
