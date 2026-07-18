@@ -60,7 +60,7 @@ def test_copyable_is_a_separate_role_from_the_narrow_port():
         def is_consistent(self, set_c):
             return True
 
-        def get_model(self):
+        def find_model(self, set_c):
             return None
 
         def cleanup(self):
@@ -71,6 +71,33 @@ def test_copyable_is_a_separate_role_from_the_narrow_port():
     assert not isinstance(minimal, CopyableChecker)     # but cannot be cloned
     for backend_cls in _BACKEND_CLASSES:
         assert issubclass(backend_cls, CopyableChecker)  # real backends can
+
+
+@pytest.mark.parametrize("solver_name", ["glucose3", "cadical153"])
+def test_find_model_keeps_guards_pinned_under_glucose_and_cadical(solver_name):
+    """find_model must KEEP the disabled (negated) guard assumptions so inactive
+    constraints stay OFF in the model — under BOTH solvers. is_consistent drops them
+    (SAT/UNSAT is encoding-invariant), but a model needs them: without the pin, cadical
+    may set a guard true and force its literal — a divergence glucose's default-false
+    polarity HIDES. This is the net that only cadical can fail (ADR-0013)."""
+    from pysat.solvers import Solver
+    try:
+        Solver(name=solver_name).delete()
+    except Exception:
+        pytest.skip(f"{solver_name} not available")
+    # (a10 -> x1), (a11 -> not x1), plus a free clause; guard assumptions are 10, 11.
+    kb = [[-10, 1], [-11, -1], [2, 3]]
+    checker = IncrementalPySATChecker(set_kb=kb, assumptions=[10, 11], solver_name=solver_name)
+    try:
+        # Enable nothing -> both guards disabled -> both MUST be pinned false in the model.
+        model = checker.find_model([])
+        assert model is not None
+        assert -10 in model and -11 in model, (
+            f"{solver_name}: find_model left a guard free (model={model}) — pin dropped")
+        # is_consistent stays SAT regardless of solver (answer is encoding-invariant).
+        assert checker.is_consistent([]) is True
+    finally:
+        checker.cleanup()
 
 
 def test_pysat_backend_instances_satisfy_ports():

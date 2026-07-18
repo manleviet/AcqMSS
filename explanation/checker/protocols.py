@@ -25,11 +25,20 @@ class ConsistencyChecker(Protocol):
     """The narrow consistency-checking contract algorithms depend on."""
 
     def is_consistent(self, set_c: Sequence[int]) -> bool:
-        """Return whether the KB is satisfiable under the given active set."""
+        """Return whether the KB is satisfiable under the given active set.
+
+        Answers SAT/UNSAT only — the one-way guard encoding (``¬a ∨ literal``) makes
+        this invariant to the disabled assumptions, so they are dropped for speed.
+        """
         ...
 
-    def get_model(self) -> Optional[List[int]]:
-        """Return the SAT model from the last satisfiable ``is_consistent`` call."""
+    def find_model(self, set_c: Sequence[int]) -> Optional[List[int]]:
+        """Return a fully-pinned SAT model, or None if UNSAT.
+
+        Unlike ``is_consistent`` this keeps the disabled (negated) assumptions: the
+        one-way encoding leaves a guard free otherwise, and a solver may set it true
+        and force its literal — so the model needs them pinned (ADR-0013).
+        """
         ...
 
     def cleanup(self) -> None:

@@ -130,11 +130,10 @@ class QueryProvider:
 
             set_c = learned_kb + list(set_b) + [neg_aid]
             self.profiler.increment("query_generation_consistency_checks")
-            if self.checker.is_consistent(set_c):
-                model_lits = self.checker.get_model()
-                if model_lits is None:
-                    logging.warning('No model after SAT for constraint %s', c_id)
-                    continue
+            # Need the witnessing model, so find_model (keeps the pinned assumptions),
+            # not is_consistent+get_model. None ⇒ UNSAT for this constraint ⇒ skip.
+            model_lits = self.checker.find_model(set_c)
+            if model_lits is not None:
                 config = self.model.model_to_config(model_lits)
                 logging.debug('SAT query testing constraint %s', c_id)
                 return config, c_id

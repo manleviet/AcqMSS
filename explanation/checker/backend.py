@@ -67,12 +67,10 @@ class CheckerBase(ABC):
         pass
 
     @abstractmethod
-    def get_model(self) -> Optional[List[int]]:
-        """Return SAT model from last successful is_consistent() call.
-
-        Only valid after is_consistent() returned True.
-        Returns None if last check was UNSAT or no check performed.
-        """
+    def find_model(self, set_c: Sequence[int]) -> Optional[List[int]]:
+        """Solve KEEPING the disabled assumptions and return the pinned model, or None
+        if UNSAT. is_consistent drops them (SAT/UNSAT is encoding-invariant); a model
+        needs them (a free guard may flip true and force its literal). See ADR-0013."""
         pass
 
     @count_calls(key="is_consistent_test_cases_calls")
@@ -126,10 +124,11 @@ class IncrementalPySATChecker(CheckerBase):
 
     @count_calls(key="is_consistent_calls")
     def is_consistent(self, set_c: Sequence[int]) -> bool:
-        enabled, disabled = self._compute_delta(set_c)
-        final_assumptions = list(enabled) + [-1 * item for item in disabled]
-
-        result = self.solver.solve(assumptions=final_assumptions)
+        # SAT/UNSAT only — drop the disabled (negated) assumptions. The one-way guard
+        # encoding lets the solver deactivate a clause by setting its guard false, so
+        # the answer is identical (ADR-0013). This is the hot path (thousands of calls).
+        enabled, _ = self._compute_delta(set_c)
+        result = self.solver.solve(assumptions=list(enabled))
 
         self.profiler.record_time("solver_time", self.solver.time())
         if self.solver.time_accum() is not None:
@@ -137,11 +136,14 @@ class IncrementalPySATChecker(CheckerBase):
 
         return result
 
-    def get_model(self) -> Optional[List[int]]:
-        """Return model from persistent solver."""
-        if self.solver is None:
-            return None
-        return self.solver.get_model()
+    def find_model(self, set_c: Sequence[int]) -> Optional[List[int]]:
+        # Model path — KEEP the disabled negatives so every guard is pinned; a free
+        # guard could flip true and force its literal, giving a divergent model.
+        enabled, disabled = self._compute_delta(set_c)
+        final_assumptions = list(enabled) + [-1 * item for item in disabled]
+        result = self.solver.solve(assumptions=final_assumptions)
+        self.profiler.record_time("solver_time", self.solver.time())
+        return self.solver.get_model() if result else None
 
     def copy(self):
         return IncrementalPySATChecker(
@@ -174,25 +176,27 @@ class NonIncrementalPySATChecker(CheckerBase):
         self.solver_name = solver_name
         self.set_kb = set_kb
         self.assumptions = assumptions
-        self._cached_model: Optional[List[int]] = None
 
     @count_calls(key="is_consistent_calls")
     def is_consistent(self, set_c: Sequence[int]) -> bool:
-        enabled, disabled = self._compute_delta(set_c)
-        final_assumptions = list(enabled) + [-1 * item for item in disabled]
-
+        # SAT/UNSAT only — drop the disabled negatives (ADR-0013). Hot path.
+        enabled, _ = self._compute_delta(set_c)
         solver = Solver(self.solver_name, bootstrap_with=self.set_kb, use_timer=True)
-        result = solver.solve(assumptions=final_assumptions)
-
+        result = solver.solve(assumptions=list(enabled))
         self.profiler.record_time("solver_time", solver.time())
-        self._cached_model = solver.get_model() if result else None
         solver.delete()
-
         return result
 
-    def get_model(self) -> Optional[List[int]]:
-        """Return cached model from last is_consistent() call."""
-        return self._cached_model
+    def find_model(self, set_c: Sequence[int]) -> Optional[List[int]]:
+        # Model path — KEEP the disabled negatives so the model is fully pinned.
+        enabled, disabled = self._compute_delta(set_c)
+        final_assumptions = list(enabled) + [-1 * item for item in disabled]
+        solver = Solver(self.solver_name, bootstrap_with=self.set_kb, use_timer=True)
+        result = solver.solve(assumptions=final_assumptions)
+        self.profiler.record_time("solver_time", solver.time())
+        model = solver.get_model() if result else None
+        solver.delete()
+        return model
 
     def copy(self):
         return NonIncrementalPySATChecker(
@@ -213,7 +217,6 @@ class SAT4JChecker(CheckerBase):
         self.timeout = timeout
         self.set_kb = set_kb or []
         self.assumptions = assumptions or []
-        self._cached_model: Optional[List[int]] = None
 
         if not os.path.exists(jar_path):
             raise FileNotFoundError(
@@ -221,11 +224,8 @@ class SAT4JChecker(CheckerBase):
                 f"Please ensure the solver is installed."
             )
 
-    @count_calls(key="is_consistent_calls")
-    def is_consistent(self, set_c: Sequence[int]) -> bool:
-        enabled, disabled = self._compute_delta(set_c)
-        assumption_clauses = [[a] for a in enabled] + [[-a] for a in disabled]
-
+    def _solve(self, assumption_clauses: List[List[int]]) -> str:
+        """Run SAT4J on set_kb + the given assumption unit-clauses; return stdout."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.cnf', delete=True) as f:
             cnf = CNF()
             cnf.extend(list(self.set_kb) + assumption_clauses)
@@ -240,7 +240,7 @@ class SAT4JChecker(CheckerBase):
                         timeout=self.timeout,
                         check=False
                     )
-                    output = result.stdout
+                    return result.stdout
                 except subprocess.TimeoutExpired as e:
                     # Never coerce a timeout into a silent UNSAT: doing so recorded
                     # wrong (in)consistency answers with no signal. Surface it so the
@@ -255,9 +255,19 @@ class SAT4JChecker(CheckerBase):
                 except (OSError, subprocess.SubprocessError) as e:
                     raise RuntimeError(f"Failed to run SAT4J: {e}") from e
 
+    @count_calls(key="is_consistent_calls")
+    def is_consistent(self, set_c: Sequence[int]) -> bool:
+        # SAT/UNSAT only — enabled unit clauses, drop the disabled negatives (ADR-0013).
+        enabled, _ = self._compute_delta(set_c)
+        output = self._solve([[a] for a in enabled])
+        return "SATISFIABLE" in output and "UNSATISFIABLE" not in output
+
+    def find_model(self, set_c: Sequence[int]) -> Optional[List[int]]:
+        # Model path — KEEP the disabled negatives as unit clauses so the model is pinned.
+        enabled, disabled = self._compute_delta(set_c)
+        output = self._solve([[a] for a in enabled] + [[-a] for a in disabled])
         is_sat = "SATISFIABLE" in output and "UNSATISFIABLE" not in output
-        self._cached_model = self._parse_model(output) if is_sat else None
-        return is_sat
+        return self._parse_model(output) if is_sat else None
 
     def _parse_model(self, output: str) -> Optional[List[int]]:
         """Parse SAT model from SAT4J output (v lines)."""
@@ -266,10 +276,6 @@ class SAT4JChecker(CheckerBase):
             if line.startswith('v '):
                 model.extend(int(x) for x in line[2:].split() if x != '0')
         return model if model else None
-
-    def get_model(self) -> Optional[List[int]]:
-        """Return cached model from last is_consistent() call."""
-        return self._cached_model
 
     def copy(self):
         return SAT4JChecker(

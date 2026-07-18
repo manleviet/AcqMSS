@@ -62,6 +62,8 @@ class DiscriminatingGenerator:
         set_c = [self.root_assumption] + cl_y + [c_i, neg_j]
 
         self.profiler.increment("dis_gen_consistency_checks")
-        if self.checker.is_consistent(set_c):
-            return self.model.model_to_config(self.checker.get_model())
+        # Need the witnessing model → find_model (keeps the pinned assumptions).
+        model = self.checker.find_model(set_c)
+        if model is not None:
+            return self.model.model_to_config(model)
         return None
