@@ -148,8 +148,6 @@ class KBComparator:
         acquired_descriptions: Set[str] = set()
         kb_to_description: dict = {}
         for cid in result.kb_constraints:
-            if cid.startswith('ne_'):
-                continue  # Skip NE constraints
             if self.bias.has_constraint(cid):
                 desc = self.bias.get_description(cid)
                 acquired_descriptions.add(desc)
@@ -201,8 +199,6 @@ class KBComparator:
         kb_clauses: Set[Tuple[int, ...]] = set()
         kb_to_clauses: dict = {}
         for cid in result.kb_constraints:
-            if cid.startswith('ne_'):
-                continue
             if self.bias.has_constraint(cid):
                 constraint_clauses = []
                 for clause in self.bias.get_clauses(cid):
@@ -277,8 +273,6 @@ class KBComparator:
         """Find KB constraints not in ground truth (clause-based)."""
         extra = []
         for cid in kb_ids:
-            if cid.startswith('ne_'):
-                continue
             if cid in kb_to_clauses:
                 clauses = kb_to_clauses[cid]
                 if not any(c in self.ground_truth.clause_set for c in clauses):
@@ -296,8 +290,6 @@ class KBComparator:
         # Build KB clause lists from bias (same as clause strategy)
         kb_clause_lists = []
         for cid in result.kb_constraints:
-            if cid.startswith('ne_'):
-                continue
             if self.bias.has_constraint(cid):
                 for clause in self.bias.get_clauses(cid):
                     kb_clause_lists.append(list(clause))
