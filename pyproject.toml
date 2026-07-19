@@ -20,4 +20,10 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["conacq*", "explanation*", "apps*"]
+include = ["conacq*", "explanation*", "apps*", "profiling*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]

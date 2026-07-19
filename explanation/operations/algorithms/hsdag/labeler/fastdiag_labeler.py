@@ -4,16 +4,16 @@ https://github.com/HiConfiT/hiconfit-core/blob/main/ca-cdr-package/src/main/java
 """
 
 from dataclasses import dataclass
-from typing import List, Any
+from typing import List, Any, Sequence
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
-from ...checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from ...fastdiag import FastDiag
 
 
 @dataclass
 class FastDiagParameters(AbstractHSParameters):
-    set_b: List
+    set_b: Sequence[int]
 
     def __str__(self) -> str:
         return f"FastDiagParameters{{C={self.set_c}, B={self.set_b}}}"
@@ -31,8 +31,6 @@ class FastDiagLabeler(FastDiag, IHSLabelable):
     def get_type(self) -> LabelerType:
         return LabelerType.DIAGNOSIS
 
-    def get_initial_parameters(self) -> AbstractHSParameters:
-        return self.initial_parameters
 
     def get_label(self, parameters: AbstractHSParameters) -> List[List]:
         """
@@ -58,9 +56,9 @@ class FastDiagLabeler(FastDiag, IHSLabelable):
         assert isinstance(param_parent_node, FastDiagParameters), \
             "parameter must be an instance of FastDiagParameters"
 
-        new_c = param_parent_node.set_c.copy()
+        new_c = list(param_parent_node.set_c)
         new_c.remove(arc_label)
-        new_b = param_parent_node.set_b.copy()
+        new_b = list(param_parent_node.set_b)
         new_b.append(arc_label)
 
         return FastDiagParameters(new_c, new_b)

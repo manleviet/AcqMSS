@@ -14,15 +14,13 @@ from typing import Optional, TypeVar
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 
 from explanation.models.testsuite import TestSuite
-from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
+from explanation.operations.pysat_abstract_hsdag_explanation import PySATAbstractHSDAGExplanation
 from explanation.operations.pysat_conflict import PySATConflict
-from explanation.operations.pysat_conflict_sat4j import PySATConflictSAT4J
 from explanation.operations.pysat_testcase import PySATTestCase
 from explanation.operations.pysat_diagnosis import PySATDiagnosis
-from explanation.operations.pysat_diagnosis_sat4j import PySATDiagnosisSAT4J
 from explanation.operations.pysat_redundancy_testcases import PySATRedundancyTestCases
 from explanation.operations.pysat_redundancy_constraints import PySATRedundancyConstraints
-from explanation.operations.algorithms.profiler import AbstractProfiler
+from profiling import AbstractProfiler
 from explanation.operations.pysat_testcase_quickxplain import PySATTestCaseQuickXPlain
 
 # Type variable for method chaining with correct return types
@@ -49,7 +47,7 @@ class PySATExplanationBuilder(ABC):
         >>> result = operation.execute(diagnosis_model)
     """
 
-    def __init__(self, operation: PySATAbstractExplanation):
+    def __init__(self, operation: PySATAbstractHSDAGExplanation):
         """Initialize builder with a specific operation type.
 
         Args:
@@ -129,11 +127,23 @@ class PySATExplanationBuilder(ABC):
         self._operation.solver_name = solver_name
         return self
 
-    def build(self) -> PySATAbstractExplanation:
+    def with_incremental(self: T, enabled: bool = True) -> T:
+        """Select incremental vs non-incremental PySAT checking on the operation.
+
+        Args:
+            enabled: Whether to use the incremental checker (default: True)
+
+        Returns:
+            Self for method chaining
+        """
+        self._operation.use_incremental = enabled
+        return self
+
+    def build(self) -> PySATAbstractHSDAGExplanation:
         """Build and return the configured operation.
 
         Returns:
-            Configured PySATAbstractExplanation instance ready for execution
+            Configured PySATAbstractHSDAGExplanation instance ready for execution
         """
         return self._operation
 
@@ -184,7 +194,7 @@ class PySATDiagnosisBuilder(PySATExplanationBuilder):
         Returns:
             PySATDiagnosisBuilder configured for PySATDiagnosis with SAT4J
         """
-        return cls(PySATDiagnosisSAT4J())
+        return cls(PySATDiagnosis(use_sat4j=True))
 
     @classmethod
     def for_conflict_sat4j(cls) -> 'PySATDiagnosisBuilder':
@@ -193,7 +203,7 @@ class PySATDiagnosisBuilder(PySATExplanationBuilder):
         Returns:
             PySATDiagnosisBuilder configured for PySATConflict with SAT4J
         """
-        return cls(PySATConflictSAT4J())
+        return cls(PySATConflict(use_sat4j=True))
 
 
 class PySATTestcaseBuilder(PySATExplanationBuilder):
@@ -344,6 +354,11 @@ class PySATRedundancyTestCasesBuilder:
         self._operation.solver_name = solver_name
         return self
 
+    def with_incremental(self, enabled: bool = True) -> 'PySATRedundancyTestCasesBuilder':
+        """Select incremental vs non-incremental PySAT checking on the operation."""
+        self._operation.use_incremental = enabled
+        return self
+
     def build(self) -> PySATRedundancyTestCases:
         """Build and return the configured operation.
 
@@ -406,6 +421,11 @@ class PySATRedundancyConstraintsBuilder:
             Self for method chaining
         """
         self._operation.solver_name = solver_name
+        return self
+
+    def with_incremental(self, enabled: bool = True) -> 'PySATRedundancyConstraintsBuilder':
+        """Select incremental vs non-incremental PySAT checking on the operation."""
+        self._operation.use_incremental = enabled
         return self
 
     def build(self) -> PySATRedundancyConstraints:

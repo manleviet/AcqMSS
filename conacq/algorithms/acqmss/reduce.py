@@ -8,13 +8,13 @@ Mode-agnostic: all elements are assumption IDs (int), negation_map is Dict[int, 
 """
 
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Dict, Mapping, Sequence, Tuple
 
-from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.profiler import (
+from explanation.api import ConsistencyChecker
+from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
-from explanation.operations.algorithms.utils import diff
+from explanation.api import diff
 
 
 class Reduce:
@@ -42,7 +42,7 @@ class Reduce:
     @measure_time('reduce_runtime')
     @count_calls('reduce_calls')
     def reduce(self, set_b_prime: List[int], set_neg_tv: List[int],
-               set_bg: List[int], negation_map: Dict[int, int]) -> Tuple[List[int], List[int]]:
+               set_bg: Sequence[int], negation_map: Mapping[int, int]) -> Tuple[List[int], List[int]]:
         """
         Remove redundant constraints from KB.
 
@@ -59,8 +59,11 @@ class Reduce:
         """
         logging.debug('REDUCE [B\'=%s, NE=%s, BG=%s]', set_b_prime, set_neg_tv, set_bg)
 
-        # KB ← B' ∪ NE
-        kb = list(set(set_b_prime) | set(set_neg_tv))
+        # KB ← B' ∪ NE, preserving AcqMSS's gamma1+gamma2 appearance order.
+        # dict.fromkeys dedups (first occurrence wins) without going through set(),
+        # which would iterate in hash order and make the surviving representative of
+        # mutually-redundant constraints depend on hashing rather than the algorithm.
+        kb = list(dict.fromkeys(list(set_b_prime) + list(set_neg_tv)))
         kb_delta = kb.copy()
         redundant = []
 

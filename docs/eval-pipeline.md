@@ -23,6 +23,20 @@ run_congen.py       → single ConGen run (debug/demo), 1 KB file per model
 run_quacq.py  → single QuAcq run (debug/demo), 1 KB file per model
 ```
 
+### CLI output convention (stdout vs stderr)
+
+Every app writes its **result to files** (KB JSON, CV JSON, `.md`/`.tex` tables) and
+routes **diagnostics** — banners, progress, warnings, errors — through Python
+`logging`, which goes to **stderr**. The only thing on **stdout** is an app's
+*product*: currently just `run_cv`'s printed CV report. So `run_cv … > report.txt`
+captures the clean report with no banner noise.
+
+Verbosity is a **log level**, unified from the `-v` flag **or** a config
+`[general] verbose = true` (whichever is set, applied after the config loads):
+default shows INFO progress; `-v`/config-verbose adds DEBUG detail. (Before, some
+progress went to stdout and a config `verbose` could be silently ignored — both
+fixed.)
+
 ---
 
 ## Phase 1: Data Preparation (run once)
@@ -154,6 +168,23 @@ data/results/interactive/     ← algorithm = "interactive"
 ├── REAL-FM-7_rs_1n_non-incremental_intersected_kb.json  # Intersection of fold KBs
 └── REAL-FM-7_rs_1n_cv_non-incremental_example_only.json # CV summary (with query_mode suffix)
 ```
+
+**Performance-block schema (post-T9 — read this before diffing old vs new result files).**
+The CV summary's aggregated `"performance"` block is `{group: {stat: value}}`. As of
+the runners+metrics refactor (ADR-0006), each algorithm declares its own disjoint
+metric table (`conacq/runners/metrics.py`):
+
+- **New ConGen** CV files carry **13 groups** (runtime, consistency_checks, memory,
+  kb_size, congen_runtime, acqmss_runtime, acqmss_calls, reduce_runtime, solver_time,
+  is_consistent_calls, is_consistent_test_cases_calls, redundancy_consistency_checks —
+  plus `n_runs`). QuAcq gets its own disjoint table.
+- **Legacy** ConGen files (recorded before T9) carry **29 groups** — the extra 16 are
+  zeroed QuAcq groups the old single union-container emitted into every file. Those
+  files are **not** regenerated and stay byte-for-byte as recorded.
+- `apps.extract_results` reads **both** shapes: it consumes only the four ConGen-owned
+  groups (`runtime`/`consistency_checks`/`memory`/`kb_size`), so the paper tables are
+  identical from either. A diff of an old vs a new file will show the dropped zeroed
+  QuAcq groups — that is expected, not a regression.
 
 ### [6] run_compare.py — Optional KB Evaluation
 

@@ -5,6 +5,7 @@ This module implements the bias generator that creates
 constraint biases from YAML configurations.
 """
 
+import logging
 from itertools import combinations
 from typing import List, Dict
 from .data_structures import (
@@ -17,6 +18,8 @@ from .data_structures import (
     CrossTreeMode,
 )
 from .clause_generator import ConstraintClauseGenerator
+
+logger = logging.getLogger(__name__)
 
 # Operators that belong to hierarchical (parent-child) constraints.
 # Cross-tree operators (REQUIRES, EXCLUDES) are everything else.
@@ -236,14 +239,14 @@ class BiasGenerator:
               Generated 24 cross-tree constraints
             Total bias size: 32 constraints
         """
-        print("Generating hierarchical constraints...")
+        logger.info("Generating hierarchical constraints...")
         hierarchical = self.generate_hierarchical_constraints()
-        print(f"  Generated {len(hierarchical)} hierarchical constraints")
+        logger.info("  Generated %d hierarchical constraints", len(hierarchical))
 
         mode = self.config.cross_tree_config.cross_tree_mode.value
-        print(f"Generating cross-tree constraints (mode: {mode})...")
+        logger.info("Generating cross-tree constraints (mode: %s)...", mode)
         cross_tree = self.generate_cross_tree_constraints()
-        print(f"  Generated {len(cross_tree)} cross-tree constraints")
+        logger.info("  Generated %d cross-tree constraints", len(cross_tree))
 
         all_constraints = hierarchical + cross_tree
 
@@ -256,7 +259,7 @@ class BiasGenerator:
         )
 
         self._cached_bias = bias
-        print(f"Total bias size: {len(bias.constraints)} constraints")
+        logger.info("Total bias size: %d constraints", len(bias.constraints))
         return bias
 
     def get_statistics(self) -> Dict[str, any]:

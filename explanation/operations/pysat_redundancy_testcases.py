@@ -3,17 +3,15 @@
 This module provides an operation for detecting redundant test cases
 in a test suite using the WipeOutR_T algorithm.
 """
-from typing import List, Tuple, cast
+from typing import List
 
-from flamapy.core.models import VariabilityModel
-
-from explanation.models.pysat_diagnosis_model import DiagnosisModel
-from explanation.operations.algorithms.profiler import AbstractProfiler
+from explanation.models.task_preparation import PreparedTask
+from profiling import AbstractProfiler
 from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
-from explanation.operations.pysat_testcase import PySATTestCase
+from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
 
 
-class PySATRedundancyTestCases(PySATTestCase):
+class PySATRedundancyTestCases(PySATAbstractExplanation):
     """Operation for detecting redundant test cases using WipeOutR_T.
 
     This operation finds test cases that are redundant (logically covered
@@ -33,46 +31,39 @@ class PySATRedundancyTestCases(PySATTestCase):
         self.redundant: str = '[]'
         self.non_redundant: str = '[]'
 
-    # Not used - override execute() instead
-    def _create_labeler(self, checker, model):
-        pass
-
-    # Not used - override execute() instead
-    def prepare_hsdag(self, model):
-        pass
-
-    def execute(self, model: VariabilityModel) -> 'PySATRedundancyTestCases':
+    def execute(self, prepared: PreparedTask) -> 'PySATRedundancyTestCases':
         """Execute redundancy detection using WipeOutR_T algorithm.
 
         Args:
-            model: Variability model (will be cast to DiagnosisModel)
+            prepared: PreparedTask to use
 
         Returns:
             Self for method chaining
         """
-        model = cast(DiagnosisModel, model)
+        task = prepared.task
 
         # Create checker using parent's method
-        checker = self._create_checker(model)
+        checker = self._create_checker(task)
 
         try:
             # Use WipeOutR_T instead of HSDAG
             wipeoutr = WipeOutR_T(checker, self.profiler)
             redundant, non_redundant = wipeoutr.find_redundant_testcases(
-                model.get_tc(), model.get_negation_map())
+                task.set_tc, task.negation_map)
 
             # Format result messages
-            self._format_result_messages(model, redundant, non_redundant)
+            self._format_result_messages(prepared, redundant, non_redundant)
         finally:
             checker.cleanup()
 
         return self
 
-    def _format_result_messages(self, model: DiagnosisModel, redundant: List, non_redundant: List) -> None:
+    def _format_result_messages(self, prepared: PreparedTask, redundant: List, non_redundant: List) -> None:
         """Format result messages for display."""
-        redundant_names = [model.description_provider.get_description(r)
+        describe = prepared.describe
+        redundant_names = [describe.get_description(r)
                            for r in redundant]
-        non_redundant_names = [model.description_provider.get_description(r)
+        non_redundant_names = [describe.get_description(r)
                                for r in non_redundant]
 
         self.redundant = f"[{', '.join(redundant_names)}]" if redundant_names else '[]'

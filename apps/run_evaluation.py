@@ -15,17 +15,22 @@ import logging
 import sys
 import time
 from datetime import datetime
+
+from conacq.atomic_io import write_json_atomic
+from apps._harness import build_parser, setup_logging
 from pathlib import Path
 
 from conacq.runners import QuAcqRunner, ConGenRunner
-from conacq.eval.config import load_pipeline_config, parse_models
+from conacq.config import load_pipeline_config, parse_models
 from conacq.eval.kb_comparator import KBComparator
 from conacq.eval.progressive_evaluation import ProgressiveEvaluator
 from conacq.oracle.ground_truth import GroundTruthData
 
+logger = logging.getLogger(__name__)
+
 
 def process_model(model_config, eval_config, quacq_config, congen_config,
-                  output_dir: Path, verbose: bool):
+                  output_dir: Path):
     """Run full evaluation pipeline for a single model.
 
     Returns:
@@ -38,17 +43,15 @@ def process_model(model_config, eval_config, quacq_config, congen_config,
         shuffle_seed = quacq_config.get('shuffle_seed', None)
         checkpoints = eval_config.get('checkpoints', [10, 25, 50, 75, 100])
 
-        if verbose:
-            print(f"\n{'='*60}")
-            print(f"Model: {model_name}")
-            print(f"  FM: {model_config.oracle}")
-            print(f"  Bias: {model_config.bias}")
-            print(f"  Checkpoints: {checkpoints}")
-            print(f"{'='*60}")
+        logger.debug("=" * 60)
+        logger.debug("Model: %s", model_name)
+        logger.debug("  FM: %s", model_config.oracle)
+        logger.debug("  Bias: %s", model_config.bias)
+        logger.debug("  Checkpoints: %s", checkpoints)
+        logger.debug("=" * 60)
 
         # Step 1: Run QuAcq (automated)
-        if verbose:
-            print("\n  [1/3] Running QuAcq (automated)...")
+        logger.debug("  [1/3] Running QuAcq (automated)...")
 
         quacq_runner = QuAcqRunner(
             bias_path=model_config.bias,
@@ -63,15 +66,13 @@ def process_model(model_config, eval_config, quacq_config, congen_config,
         quacq_runtime = (time.perf_counter() - quacq_start) * 1000
         quacq_runner.cleanup()
 
-        if verbose:
-            print(f"    Queries: {quacq_result.n_queries}")
-            print(f"    KB size: {quacq_result.n_kb}")
-            print(f"    Convergence: {quacq_result.convergence_reason}")
-            print(f"    Runtime: {quacq_runtime:.0f}ms")
+        logger.debug("    Queries: %d", quacq_result.n_queries)
+        logger.debug("    KB size: %d", quacq_result.n_kb)
+        logger.debug("    Convergence: %s", quacq_result.convergence_reason)
+        logger.debug("    Runtime: %.0fms", quacq_runtime)
 
         # Step 2: Build ConGen runner, comparator, ground truth
-        if verbose:
-            print("\n  [2/3] Setting up progressive evaluation...")
+        logger.debug("  [2/3] Setting up progressive evaluation...")
 
         congen_runner = ConGenRunner(
             bias_path=model_config.bias,
@@ -92,8 +93,7 @@ def process_model(model_config, eval_config, quacq_config, congen_config,
         )
 
         # Step 3: Run progressive evaluation
-        if verbose:
-            print("\n  [3/3] Running progressive ConGen evaluation...")
+        logger.debug("  [3/3] Running progressive ConGen evaluation...")
 
         prog_result = evaluator.evaluate(
             query_history=quacq_result.query_history,
@@ -101,8 +101,7 @@ def process_model(model_config, eval_config, quacq_config, congen_config,
         )
         congen_runner.cleanup()
 
-        if verbose:
-            _print_checkpoint_table(prog_result)
+        _print_checkpoint_table(prog_result)
 
         # Step 4: Build output dict and save JSON
         output = {
@@ -149,11 +148,9 @@ def process_model(model_config, eval_config, quacq_config, congen_config,
         }
 
         output_file = output_dir / f"{model_name}_evaluation.json"
-        with open(output_file, 'w') as f:
-            json.dump(output, f, indent=2)
+        write_json_atomic(output_file, output)
 
-        if verbose:
-            print(f"\n  Saved: {output_file}")
+        logger.debug("  Saved: %s", output_file)
 
         # Summary dict for batch table
         last_cp = prog_result.checkpoints[-1] if prog_result.checkpoints else None
@@ -167,38 +164,36 @@ def process_model(model_config, eval_config, quacq_config, congen_config,
             'runtime_ms': quacq_runtime,
         }
 
-    except Exception as e:
-        print(f"Error processing {model_name}: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        logger.exception("Error processing %s", model_name)
         return None
 
 
 def _print_checkpoint_table(prog_result):
-    """Print checkpoint summary table."""
-    print(f"\n  {'Pct':>5}  {'Queries':>7}  {'E+':>4}  {'E-':>4}  "
-          f"{'KB':>4}  {'Desc-F1':>8}  {'Clause-F1':>10}  {'Sem-Eq':>6}")
-    print(f"  {'-'*58}")
+    """Log checkpoint summary table (debug level)."""
+    logger.debug(f"  {'Pct':>5}  {'Queries':>7}  {'E+':>4}  {'E-':>4}  "
+                 f"{'KB':>4}  {'Desc-F1':>8}  {'Clause-F1':>10}  {'Sem-Eq':>6}")
+    logger.debug("  %s", "-" * 58)
     for cp in prog_result.checkpoints:
         desc_f1 = (cp.description_comparison.metrics.f1_score
                    if cp.description_comparison else 0)
         clause_f1 = (cp.clause_comparison.metrics.f1_score
                      if cp.clause_comparison else 0)
         sem_eq = cp.semantic_result.is_equivalent if cp.semantic_result else False
-        print(f"  {cp.checkpoint_pct:>4}%  {cp.n_queries:>7}  {cp.n_positive:>4}  "
-              f"{cp.n_negative:>4}  {cp.n_kb:>4}  {desc_f1:>8.3f}  "
-              f"{clause_f1:>10.3f}  {'Yes' if sem_eq else 'No':>6}")
+        logger.debug("  %4d%%  %7d  %4d  %4d  %4d  %8.3f  %10.3f  %6s",
+                     cp.checkpoint_pct, cp.n_queries, cp.n_positive,
+                     cp.n_negative, cp.n_kb, desc_f1, clause_f1,
+                     'Yes' if sem_eq else 'No')
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run QuAcq -> ConGen evaluation pipeline",
+    parser = build_parser(
+        "Run QuAcq -> ConGen evaluation pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        verbose_help=None,
         epilog="Example:\n  python -m apps.run_evaluation "
                "apps/conf/run_evaluation_config.toml -v"
     )
-    parser.add_argument('config', help='Path to TOML configuration file')
-    parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-o', '--output-dir', help='Override output directory')
     parser.add_argument('--max-queries', type=int, help='Override max queries')
     parser.add_argument('--solver', default=None, help='Override SAT solver')
@@ -206,23 +201,21 @@ def main():
 
     args = parser.parse_args()
 
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-
     if not Path(args.config).exists():
-        print(f"Error: Config not found: {args.config}")
+        logger.error("Config not found: %s", args.config)
         sys.exit(1)
 
     config = load_pipeline_config(args.config)
 
     general = config.get('general', {})
+    setup_logging(verbose=args.verbose or general.get('verbose', False),
+                  debug=args.debug)
     eval_config = config.get('evaluation', {})
     quacq_config = config.get('quacq', {})
     congen_config = config.get('congen', {})
 
     output_dir = Path(args.output_dir or general.get(
         'output_dir', 'data/results/evaluation'))
-    verbose = args.verbose or general.get('verbose', False)
 
     if args.max_queries:
         quacq_config['max_queries'] = args.max_queries
@@ -232,35 +225,35 @@ def main():
 
     models = parse_models(config)
     if not models:
-        print("Error: No models in configuration")
+        logger.error("No models in configuration")
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if verbose:
-        print(f"QuAcq -> ConGen Evaluation Pipeline")
-        print(f"Models: {len(models)}")
+    logger.debug("QuAcq -> ConGen Evaluation Pipeline")
+    logger.debug("Models: %d", len(models))
 
     summaries = []
     for model_config in models:
         summary = process_model(
             model_config, eval_config, quacq_config, congen_config,
-            output_dir, verbose)
+            output_dir)
         if summary:
             summaries.append(summary)
 
-    # Print batch summary
-    if verbose and summaries:
-        print(f"\n{'='*70}")
-        print("BATCH SUMMARY")
-        print(f"{'Model':<20} {'Queries':>8} {'QuAcq-KB':>9} "
-              f"{'ConGen-KB':>10} {'Sem-Eq':>7} {'Runtime':>10}")
-        print(f"{'-'*70}")
+    # Log batch summary
+    if summaries:
+        logger.debug("=" * 70)
+        logger.debug("BATCH SUMMARY")
+        logger.debug(f"{'Model':<20} {'Queries':>8} {'QuAcq-KB':>9} "
+                     f"{'ConGen-KB':>10} {'Sem-Eq':>7} {'Runtime':>10}")
+        logger.debug("-" * 70)
         for s in summaries:
-            print(f"{s['model']:<20} {s['n_queries']:>8} {s['quacq_kb']:>9} "
-                  f"{s['congen_kb_100']:>10} "
-                  f"{'Yes' if s['semantic_eq'] else 'No':>7} "
-                  f"{s['runtime_ms']:>9.0f}ms")
+            logger.debug("%-20s %8d %9d %10d %7s %9.0fms",
+                         s['model'], s['n_queries'], s['quacq_kb'],
+                         s['congen_kb_100'],
+                         'Yes' if s['semantic_eq'] else 'No',
+                         s['runtime_ms'])
 
 
 if __name__ == '__main__':

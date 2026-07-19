@@ -103,7 +103,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ Bias shuffle seed support in congen_runner.py and run_congen_eval.py
 - ✅ generate_cv_folds.py CLI for reproducible fold generation
 - ✅ Two query modes: example_only and example_first (SAT fallback)
-- ✅ Oracle module (conacq/oracle/, 4 files, ~929 LOC) with FeatureModelOracle, UserPromptOracle, CachedOracle, FMData
+- ✅ Oracle module (conacq/oracle/, 4 files, ~929 LOC) with FMOracle, UserPromptOracle, CachedOracle, FMData
 
 **Achievements**:
 - QuAcq now supports both oracle-based (interactive) and example-based (batch) modes
@@ -125,7 +125,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ System architecture updated with oracle architecture, FMData, BGData, and checker interface
 - ✅ Code standards trimmed to 694 LOC, CheckerFactory import path corrected
 - ✅ Project overview updated with FindScope/FindC, oracle module, Phase 5 completion
-- ✅ Oracle refactoring documented (ABC slimmed, FMData introduced, FeatureModelOracle extended)
+- ✅ Oracle refactoring documented (ABC slimmed, FMData introduced, FMOracle extended)
 - ✅ Runners package move documented (ConGenRunner, QuAcqRunner in conacq/runners/)
 - ✅ All doc imports verified (conacq.* not acqmss.*)
 

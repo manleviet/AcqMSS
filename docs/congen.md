@@ -135,8 +135,8 @@ Converts negative examples E- into NE constraints that the KB must satisfy.
 
 **Subset minimality**: Assumes negative examples are subset-minimal — no proper subset of an e- is also negative.
 
-**Implementation**: `conacq/algorithms/generate_ne.py` — `GenerateNE.generate()` (193 LOC)
-- Called internally by `ConGenModel.prepare()`, not by callers directly
+**Implementation**: `conacq/algorithms/acqmss/generate_ne.py` — Pure function returning `NEPerTestcase` list (138 LOC)
+- Called internally by `ConGenModel.prepare_task()`, not by callers directly
 - Uses QuickXPlain from `explanation/operations/algorithms/quickxplain.py` (80 LOC)
 
 ## AcqMSS (Algorithm 2)
@@ -314,7 +314,7 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 |------|-----|---------|
 | `conacq/bias/` | ~1,176 | BiasGenerator, ClauseGenerator |
 | `conacq/example_generators/` | ~1,097 | RS, FF, 2-COV sampling strategies |
-| `conacq/oracle/` | ~929 | Oracle ABC, FeatureModelOracle, FMData |
+| `conacq/oracle/` | ~1,090 | role protocols, FMOracle, OracleData/BGData |
 | `conacq/eval/cross_validation.py` | 504 | n-fold cross-validation framework |
 | `conacq/runners/congen_runner.py` | 235 | ConGenRunner pipeline (moved from eval/) |
 | `conacq/eval/accuracy.py` | 170 | AccuracyCalculator metrics |
@@ -325,18 +325,19 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 |------|-----|---------|
 | `explanation/operations/algorithms/quickxplain.py` | 80 | QuickXPlain (used by GenerateNE) |
 | `explanation/operations/algorithms/kbdiag.py` | 100 | KBDiag (used by AcqMSS) |
-| `explanation/operations/algorithms/checker.py` | 450 | ConsistencyChecker ABC + implementations |
+| `explanation/checker/protocols.py` | 62 | Consistency-checker **port** (`ConsistencyChecker`/`TestCaseChecker`/`CopyableChecker` Protocols) |
+| `explanation/checker/backend.py` | 296 | Solver **adapters** (`CheckerBase` + PySAT/SAT4J checkers) + `build_checker` construction door |
 
 ## Implementation Details Beyond Paper
 
-1. **ConGenModel.prepare()**: Runs GenerateNE internally — callers don't invoke it separately
+1. **ConGenModel.prepare_task()**: Runs GenerateNE internally — callers don't invoke it separately
 2. **Builder pattern**: `ConGenModelBuilder` encapsulates file loading + model construction (auto-prepares if oracle+examples set)
-3. **CheckerModel protocol**: `get_kb()`, `get_assumptions()`, `use_incremental` for CheckerFactory
+3. **Checker building**: Task passed to `build_checker(task, backend=...)` (from `explanation.api`) to create solver instance
 4. **Assumption-based representation**: All data as `List[int]` assumption IDs, solver mode-agnostic
 5. **negation_map**: `Dict[int, int]` maps assumption ID → negated form for REDUCE
 6. **Tseitin encoding**: Used to negate CNF clauses for REDUCE redundancy checks
 7. **BGData extraction**: Post-preparation, `FMOracleModel.get_bg_data()` returns frozen dataclass with root constraint + negation map
-8. **CV fold reuse**: `model.prepare(fold_pos, fold_neg)` supports multiple fold evaluations
+8. **CV fold reuse**: `model.prepare_task(task_input)` supports multiple fold evaluations (pure per-fold)
 9. **Profiler integration**: `@measure_time`, `@count_calls` decorators on all algorithm methods
 
 ## Shared Infrastructure with QuAcq
@@ -348,7 +349,7 @@ ConGen and QuAcq share significant infrastructure:
 | SAT solvers | `explanation/operations/algorithms/` | IncrementalPySATChecker, NonIncrementalPySATChecker |
 | FM representation | `explanation/transformations/` | FM → SAT conversion pipeline |
 | Bias generation | `conacq/bias/` | Same BiasGenerator for both paradigms |
-| Oracle | `conacq/oracle/` | Oracle ABC, FeatureModelOracle, FMData |
+| Oracle | `conacq/oracle/` | role protocols, FMOracle, OracleData/BGData |
 | Evaluation | `conacq/eval/` | Same accuracy metrics and cross-validation |
 | CV folds | `conacq/eval/fold_io.py` | Pre-generated folds for fair comparison |
 | Feature IDs | flamapy tree traversal | Authoritative variable mapping (NOT alphabetical) |
@@ -363,7 +364,7 @@ ConGen supports n-fold cross-validation with shared folds for fair comparison wi
 
 ```python
 from conacq.algorithms.congen import ConGenModelBuilder
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 from conacq.eval.fold_io import load_folds
 from conacq.eval.cross_validation import n_fold_cross_validation
 
@@ -371,7 +372,7 @@ from conacq.eval.cross_validation import n_fold_cross_validation
 fold_data = load_folds('data/cv_folds.json')
 
 # Build model (auto-prepare: oracle + examples passed at build time)
-oracle = FeatureModelOracle('data/fms/model.uvl')
+oracle = FMOracle('data/fms/model.uvl')
 model = (ConGenModelBuilder
     .from_bias('data/bias/model.json')
     .with_oracle(oracle)

@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Union, Any
 from .labeler.labeler import IHSLabelable, LabelerType, AbstractHSParameters
 from .node import Node, NodeStatus
 from .. import utils
-from ..profiler import measure_time, get_global_profiler, AbstractProfiler
+from profiling import measure_time, get_global_profiler, AbstractProfiler
 from ..utils import diff, contains, get_hashcode
 
 
@@ -148,10 +148,6 @@ class HSDAG:
         """
         # first_node = None if len(self.open_nodes) == 0 else self.open_nodes[0]
 
-        # new_nodes = []  # TODO: check
-        # if self.labeler.get_type() == LabelerType.CONFLICT:
-        #     label = reversed(node_to_expand.label)
-        # else:
         label = node_to_expand.label
 
         for arc_label in label:  # node_to_expand.label:

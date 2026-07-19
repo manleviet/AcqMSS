@@ -11,16 +11,17 @@ Builds model once in __init__(), re-prepares per run() for fresh task.
 import logging
 import random
 import tracemalloc
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import List, Dict, Optional, Tuple
 
 from conacq.example_generators import QueryProvider
-from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
+from explanation.api import build_checker, SolverBackend
+from profiling import profiler_session, ProfilerPreset
 from .base_runner import BaseRunResult, BaseRunner
+from .metrics import QUACQ_METRICS, collect
 from ..algorithms import QuAcq
 from ..algorithms.quacq.discriminating_generator import DiscriminatingGenerator
-from ..eval import PerformanceMetrics
+from ..algorithms.quacq.task_preparation import QuAcqTaskInput
 
 
 @dataclass
@@ -34,29 +35,8 @@ class QuAcqRunResult(BaseRunResult):
     n_queries: int = 0
     convergence_reason: str = ''
 
-    # Extended profiler metrics
-    quacq_runtime_ms: float = 0.0
-    query_generation_runtime_ms: float = 0.0
-    findscope_runtime_ms: float = 0.0
-    findc_runtime_ms: float = 0.0
-    dis_gen_runtime_ms: float = 0.0
-    reduce_runtime_ms: float = 0.0
-    solver_time_ms: float = 0.0
-
-    is_consistent_calls: int = 0
-    is_consistent_test_cases_calls: int = 0
-    quacq_calls: int = 0
-    query_generation_calls: int = 0
-    query_generation_consistency_checks: int = 0
-    prune_calls: int = 0
-    prune_is_consistent_calls: int = 0
-    findscope_calls: int = 0
-    findc_calls: int = 0
-    findc_consistency_checks: int = 0
-    dis_gen_calls: int = 0
-    dis_gen_consistency_checks: int = 0
-    reduce_calls: int = 0
-    redundancy_consistency_checks: int = 0
+    # The extended profiler metrics live in the inherited ``metrics`` RunMetrics
+    # bundle (built via ``collect(profiler, QUACQ_METRICS)``), not hand-listed here.
 
     # Query history: (config, answer, source) tuples for progressive pipeline
     query_history: List[Tuple[Dict[str, bool], bool, str]] = field(default_factory=list)
@@ -66,64 +46,11 @@ class QuAcqRunResult(BaseRunResult):
         d = self._base_to_dict()
         d['n_queries'] = self.n_queries
         d['convergence_reason'] = self.convergence_reason
-        d['performance'].update({
-            'quacq_runtime_ms': self.quacq_runtime_ms,
-            'query_generation_runtime_ms': self.query_generation_runtime_ms,
-            'findscope_runtime_ms': self.findscope_runtime_ms,
-            'findc_runtime_ms': self.findc_runtime_ms,
-            'dis_gen_runtime_ms': self.dis_gen_runtime_ms,
-            'reduce_runtime_ms': self.reduce_runtime_ms,
-            'solver_time_ms': self.solver_time_ms,
-            'is_consistent_calls': self.is_consistent_calls,
-            'is_consistent_test_cases_calls': self.is_consistent_test_cases_calls,
-            'quacq_calls': self.quacq_calls,
-            'query_generation_calls': self.query_generation_calls,
-            'query_generation_consistency_checks': self.query_generation_consistency_checks,
-            'prune_calls': self.prune_calls,
-            'prune_is_consistent_calls': self.prune_is_consistent_calls,
-            'findscope_calls': self.findscope_calls,
-            'findc_calls': self.findc_calls,
-            'findc_consistency_checks': self.findc_consistency_checks,
-            'dis_gen_calls': self.dis_gen_calls,
-            'dis_gen_consistency_checks': self.dis_gen_consistency_checks,
-            'reduce_calls': self.reduce_calls,
-            'redundancy_consistency_checks': self.redundancy_consistency_checks,
-        })
         d['query_history'] = [
             {'config': config, 'answer': answer, 'source': source}
             for config, answer, source in self.query_history
         ]
         return d
-
-    def get_performance_metrics(self) -> PerformanceMetrics:
-        """Get performance metrics including QuAcq-specific metrics."""
-        return PerformanceMetrics(
-            runtime_ms=self.runtime_ms,
-            consistency_checks=self.consistency_checks,
-            memory_peak_mb=self.memory_peak_mb,
-            n_kb=self.n_kb,
-            quacq_runtime_ms=self.quacq_runtime_ms,
-            query_generation_runtime_ms=self.query_generation_runtime_ms,
-            findscope_runtime_ms=self.findscope_runtime_ms,
-            findc_runtime_ms=self.findc_runtime_ms,
-            dis_gen_runtime_ms=self.dis_gen_runtime_ms,
-            reduce_runtime_ms=self.reduce_runtime_ms,
-            solver_time_ms=self.solver_time_ms,
-            is_consistent_calls=self.is_consistent_calls,
-            is_consistent_test_cases_calls=self.is_consistent_test_cases_calls,
-            quacq_calls=self.quacq_calls,
-            query_generation_calls=self.query_generation_calls,
-            query_generation_consistency_checks=self.query_generation_consistency_checks,
-            prune_calls=self.prune_calls,
-            prune_is_consistent_calls=self.prune_is_consistent_calls,
-            findscope_calls=self.findscope_calls,
-            findc_calls=self.findc_calls,
-            findc_consistency_checks=self.findc_consistency_checks,
-            dis_gen_calls=self.dis_gen_calls,
-            dis_gen_consistency_checks=self.dis_gen_consistency_checks,
-            reduce_calls=self.reduce_calls,
-            redundancy_consistency_checks=self.redundancy_consistency_checks
-        )
 
 
 def _learn_params_from_task(task) -> dict:
@@ -174,16 +101,15 @@ class QuAcqRunner(BaseRunner):
         from conacq.algorithms.quacq.quacq_model_builder import QuAcqModelBuilder
         self.model = (QuAcqModelBuilder
                       .from_bias(bias_path)
-                      .with_oracle(self.oracle)
-                      .use_incremental(use_incremental)
+                      .with_oracle_data(self.oracle.oracle_data)
                       .build())
         self.max_queries = max_queries
         self.query_mode = query_mode
 
     @property
     def feature_ids(self) -> Dict[str, int]:
-        """Feature name -> SAT variable ID mapping from bias."""
-        return self.model.variables
+        """Feature name -> SAT variable ID mapping from bias (a plain dict — see ADR-0007)."""
+        return self.model.name_to_id
 
     def run(
             self,
@@ -235,17 +161,26 @@ class QuAcqRunner(BaseRunner):
             with profiler.timer("quacq_total_time"):
                 checker = None
                 try:
-                    # Re-prepare model for this run (fresh task, reuses negation)
-                    self.model.prepare(self.oracle)
-                    task = self.model.task
+                    # Re-prepare model for this run (fresh task, reuses negation).
+                    # Pure prepare_task consumes the frozen snapshot (ADR-0009) and
+                    # returns a new PreparedTask; the model stores nothing.
+                    prepared = self.model.prepare_task(
+                        QuAcqTaskInput(self.oracle.oracle_data))
+                    task = prepared.task
 
+                    # Task is frozen: shuffle a copy and rebind, never mutate in place.
                     if shuffle_seed is not None:
-                        random.Random(shuffle_seed).shuffle(task.set_c)
+                        shuffled_set_c = list(task.set_c)
+                        random.Random(shuffle_seed).shuffle(shuffled_set_c)
+                        task = replace(task, set_c=shuffled_set_c)
                         logging.debug('Shuffled bias (set_c) with seed=%d', shuffle_seed)
 
-                    # Create checker via factory
-                    checker = CheckerFactory.create_from_model(
-                        self.model, self.solver_name, profiler
+                    # Build the checker from the running task. Solver mode is the
+                    # runner's, passed straight through (no via-model round-trip).
+                    checker = build_checker(
+                        task,
+                        SolverBackend.from_flags(use_incremental=self.use_incremental),
+                        self.solver_name, profiler
                     )
 
                     # Extract flat params from task
@@ -253,10 +188,10 @@ class QuAcqRunner(BaseRunner):
 
                     if is_oracle_mode:
                         result = self._run_oracle_mode(
-                            checker, task, task_data, profiler, mode)
+                            checker, task, prepared.assignment_map, task_data, profiler, mode)
                     else:
                         result = self._run_example_mode(
-                            checker, task, task_data, profiler,
+                            checker, task, prepared.assignment_map, task_data, profiler,
                             positive_examples, negative_examples,
                             mode, shuffle_seed)
 
@@ -268,41 +203,19 @@ class QuAcqRunner(BaseRunner):
                     if checker is not None:
                         checker.cleanup()
 
-            # Extract core metrics
-            timer_values = profiler.get_metric('quacq_total_time', [0])
-            runtime_ms = timer_values[0] * 1000 if timer_values else 0
+            # Collect metrics declaratively from the profiler + memory (tracemalloc).
             memory_peak_mb = peak / (1024 * 1024)
-            consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
-
-            # Extract extended profiler metrics (timers are lists, sum all calls)
-            quacq_runtime_ms = sum(profiler.get_metric('quacq_runtime', [0])) * 1000
-            query_generation_runtime_ms = sum(profiler.get_metric('query_generation_runtime', [0])) * 1000
-            findscope_runtime_ms = sum(profiler.get_metric('findscope_runtime', [0])) * 1000
-            findc_runtime_ms = sum(profiler.get_metric('findc_runtime', [0])) * 1000
-            dis_gen_runtime_ms = sum(profiler.get_metric('dis_gen_runtime', [0])) * 1000
-            reduce_runtime_ms = sum(profiler.get_metric('reduce_runtime', [0])) * 1000
-            solver_time_ms = sum(profiler.get_metric('solver_time', [0])) * 1000
-
-            is_consistent_calls = profiler.get_metric('is_consistent_calls', 0)
-            is_consistent_test_cases_calls = profiler.get_metric('is_consistent_test_cases_calls', 0)
-            quacq_calls = profiler.get_metric('quacq_calls', 0)
-            query_generation_calls = profiler.get_metric('query_generation_calls', 0)
-            query_generation_consistency_checks = profiler.get_metric('query_generation_consistency_checks', 0)
-            prune_calls = profiler.get_metric('prune_calls', 0)
-            prune_is_consistent_calls = profiler.get_metric('prune_is_consistent_calls', 0)
-            findscope_calls = profiler.get_metric('findscope_calls', 0)
-            findc_calls = profiler.get_metric('findc_calls', 0)
-            findc_consistency_checks = profiler.get_metric('findc_consistency_checks', 0)
-            dis_gen_calls = profiler.get_metric('dis_gen_calls', 0)
-            dis_gen_consistency_checks = profiler.get_metric('dis_gen_consistency_checks', 0)
-            reduce_calls = profiler.get_metric('reduce_calls', 0)
-            redundancy_consistency_checks = profiler.get_metric('redundancy_consistency_checks', 0)
+            run_metrics = collect(profiler, QUACQ_METRICS, extra={
+                'memory_peak_mb': memory_peak_mb,
+            })
+            runtime_ms = run_metrics.values['runtime_ms']
+            consistency_checks = run_metrics.values['consistency_checks']
 
             profiler_snapshot = profiler.to_dict()
 
             # Resolve KB names and clauses, get BG clauses
-            kb_names, kb_clauses = self.model.resolve_kb(result.kb_assumption_ids)
-            bg_clauses = self.oracle.get_root_clauses()
+            kb_names, kb_clauses = self.model.resolve_kb(prepared.describe, result.kb_assumption_ids)
+            bg_clauses = self.oracle.oracle_data.get_root_clauses()
 
             run_result = QuAcqRunResult(
                 kb_constraints=kb_names,
@@ -315,27 +228,7 @@ class QuAcqRunner(BaseRunner):
                 runtime_ms=runtime_ms,
                 consistency_checks=consistency_checks,
                 memory_peak_mb=memory_peak_mb,
-                quacq_runtime_ms=quacq_runtime_ms,
-                query_generation_runtime_ms=query_generation_runtime_ms,
-                findscope_runtime_ms=findscope_runtime_ms,
-                findc_runtime_ms=findc_runtime_ms,
-                dis_gen_runtime_ms=dis_gen_runtime_ms,
-                reduce_runtime_ms=reduce_runtime_ms,
-                solver_time_ms=solver_time_ms,
-                is_consistent_calls=is_consistent_calls,
-                is_consistent_test_cases_calls=is_consistent_test_cases_calls,
-                quacq_calls=quacq_calls,
-                query_generation_calls=query_generation_calls,
-                query_generation_consistency_checks=query_generation_consistency_checks,
-                prune_calls=prune_calls,
-                prune_is_consistent_calls=prune_is_consistent_calls,
-                findscope_calls=findscope_calls,
-                findc_calls=findc_calls,
-                findc_consistency_checks=findc_consistency_checks,
-                dis_gen_calls=dis_gen_calls,
-                dis_gen_consistency_checks=dis_gen_consistency_checks,
-                reduce_calls=reduce_calls,
-                redundancy_consistency_checks=redundancy_consistency_checks,
+                metrics=run_metrics,
                 profiler_data=profiler_snapshot,
                 query_history=result.query_history
             )
@@ -345,32 +238,35 @@ class QuAcqRunner(BaseRunner):
 
         return run_result
 
-    def _run_oracle_mode(self, checker, task, task_data, profiler, mode):
+    def _run_oracle_mode(self, checker, task, assignment_map, task_data, profiler, mode):
         """Run oracle-based learning via QuAcq.learn(mode='oracle')."""
         if mode == 'interactive':
             from conacq.oracle import UserPromptOracle
             # learn_oracle = UserPromptOracle(list(task.feature_ids.keys()))
-            learn_oracle = UserPromptOracle(list(self.model.variables.keys()))
+            learn_oracle = UserPromptOracle(list(self.model.name_to_id.keys()))
         else:
             learn_oracle = self.oracle
 
         query_provider = QueryProvider(checker=checker,
                                        model=self.model,
+                                       assignment_map=assignment_map,
                                        profiler_instance=profiler)
         discrim_gen = DiscriminatingGenerator(
             checker=checker,
             model=self.model,
             profiler=profiler,
-            root_assumption=task.set_b[0])
+            root_assumption=task.set_b[0],
+            task=task)
 
         quacq = QuAcq.for_oracle(checker, learn_oracle, query_provider, discrim_gen,
-                                 model=self.model, profiler=profiler)
+                                 model=self.model, profiler=profiler,
+                                 task=task, assignment_map=assignment_map)
 
         return quacq.learn(
             **task_data, mode='oracle',
             max_queries=self.max_queries)
 
-    def _run_example_mode(self, checker, task, task_data, profiler,
+    def _run_example_mode(self, checker, task, assignment_map, task_data, profiler,
                           positive_examples, negative_examples,
                           mode, shuffle_seed):
         """Run example-based learning via QuAcq.learn(mode=...)."""
@@ -380,6 +276,7 @@ class QuAcqRunner(BaseRunner):
             seed=shuffle_seed,
             checker=checker,
             model=self.model,
+            assignment_map=assignment_map,
             profiler_instance=profiler)
 
         # For example_first, also need discrim_gen
@@ -389,7 +286,8 @@ class QuAcqRunner(BaseRunner):
                 checker=checker,
                 model=self.model,
                 profiler=profiler,
-                root_assumption=task.set_b[0])
+                root_assumption=task.set_b[0],
+                task=task)
 
         quacq = QuAcq(
             checker=checker,
@@ -397,7 +295,8 @@ class QuAcqRunner(BaseRunner):
             model=self.model,
             query_provider=query_provider,
             discriminating_generator=discrim_gen,
-            profiler_instance=profiler)
+            profiler_instance=profiler,
+            task=task, assignment_map=assignment_map)
 
         return quacq.learn(
             **task_data, mode=mode,

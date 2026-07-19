@@ -9,15 +9,16 @@ Paper condition for pool: query in sol(C_L + BG) AND violates >=1 c in B.
 
 import logging
 import random
-from typing import Optional, Dict, List, Tuple, TYPE_CHECKING
+from typing import Optional, Dict, List, Mapping, Sequence, Tuple, TYPE_CHECKING
 
-from explanation.operations.algorithms.profiler import (
+from explanation.api import config_to_assignment_assumptions
+from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
 
 if TYPE_CHECKING:
-    from explanation.operations.algorithms.checker import ConsistencyChecker
-    from conacq.algorithms.quacq.quacq_model import QuAcqModel, model_to_config
+    from explanation.api import ConsistencyChecker
+    from conacq.algorithms.quacq.quacq_model import QuAcqModel
 
 
 class QueryProvider:
@@ -30,7 +31,8 @@ class QueryProvider:
         pool: Optional list of example configs for pool-based generation
         seed: Random seed for pool shuffling
         checker: ConsistencyChecker for SAT checks
-        model: QuAcqModel for config_to_assumptions
+        model: QuAcqModel for model_to_config (KB catalog)
+        assignment_map: feature-assignment → assumption map (from the prepared task)
         profiler_instance: Optional profiler for timing/counting
     """
 
@@ -39,9 +41,11 @@ class QueryProvider:
                  seed: Optional[int] = None,
                  checker: 'ConsistencyChecker' = None,
                  model: 'QuAcqModel' = None,
+                 assignment_map=None,
                  profiler_instance: Optional[AbstractProfiler] = None) -> None:
         self.checker = checker
         self.model = model
+        self.assignment_map = assignment_map
         self.profiler = profiler_instance if profiler_instance else get_global_profiler()
 
         # Pool state
@@ -50,10 +54,10 @@ class QueryProvider:
         # Initializes pool state with optional seeded shuffling
         if pool is not None:
             self._pool = list(pool)
-            if seed is not None:
-                random.Random(seed).shuffle(self._pool)
-            else:
-                random.shuffle(self._pool)
+            # Per-call RNG instance keeps the shuffle off the process-global
+            # ``random`` stream. seed=None still isolates: Random(None) seeds
+            # from OS entropy without touching the shared generator.
+            random.Random(seed).shuffle(self._pool)
 
     @property
     def pool_exhausted(self) -> bool:
@@ -71,7 +75,7 @@ class QueryProvider:
             self,
             remaining_bias: set,
             learned_kb: List[int],
-            set_b: List[int],
+            set_b: Sequence[int],
     ) -> Tuple[Optional[Dict[str, bool]], Optional[int]]:
         """Generate query from pool with paper filtering.
 
@@ -86,8 +90,8 @@ class QueryProvider:
             self._pool_index += 1
 
             # Condition 1: satisfies C_L + BG (via checker with Part 4 assumptions)
-            config_assumptions = self.model.config_to_assumptions(e)
-            set_c = learned_kb + set_b + config_assumptions
+            config_assumptions = config_to_assignment_assumptions(e, self.assignment_map)
+            set_c = learned_kb + list(set_b) + config_assumptions
             self.profiler.increment("query_generation_consistency_checks")
             if not self.checker.is_consistent(set_c):
                 continue
@@ -108,8 +112,8 @@ class QueryProvider:
             self,
             remaining_bias: set,
             learned_kb: List[int],
-            set_b: List[int],
-            negation_map: Dict[int, int],
+            set_b: Sequence[int],
+            negation_map: Mapping[int, int],
     ) -> Tuple[Optional[Dict[str, bool]], Optional[int]]:
         """Generate query via SAT solving (matches paper Algorithm 1).
 
@@ -124,13 +128,12 @@ class QueryProvider:
                 logging.warning('No negation for constraint %s, skipping', c_id)
                 continue
 
-            set_c = learned_kb + set_b + [neg_aid]
+            set_c = learned_kb + list(set_b) + [neg_aid]
             self.profiler.increment("query_generation_consistency_checks")
-            if self.checker.is_consistent(set_c):
-                model_lits = self.checker.get_model()
-                if model_lits is None:
-                    logging.warning('No model after SAT for constraint %s', c_id)
-                    continue
+            # Need the witnessing model, so find_model (keeps the pinned assumptions),
+            # not is_consistent+get_model. None ⇒ UNSAT for this constraint ⇒ skip.
+            model_lits = self.checker.find_model(set_c)
+            if model_lits is not None:
                 config = self.model.model_to_config(model_lits)
                 logging.debug('SAT query testing constraint %s', c_id)
                 return config, c_id

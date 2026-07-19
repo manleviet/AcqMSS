@@ -2,7 +2,7 @@
 QuAcq algorithm for interactive constraint acquisition (IJCAI 2013).
 
 Supports three modes via single learn() method:
-- 'oracle': QueryProvider.generate_from_sat() + oracle.ask()
+- 'oracle': QueryProvider.generate_from_sat() + oracle.is_valid()
 - 'example_only': QueryProvider.generate_from_pool() (paper-filtered)
 - 'example_first': QueryProvider.generate() (pool first, SAT fallback)
 
@@ -12,17 +12,17 @@ Also contains QuAcqResult (co-located: algorithm produces its own result type).
 
 import logging
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple, Literal
+from typing import List, Dict, Mapping, Optional, Sequence, Tuple, Literal
 
-from conacq.oracle import Oracle
+from conacq.oracle import MembershipOracle
 from conacq.example_generators import QueryProvider
 from .findscope import FindScope
 from .sat_utils import prune_rejecting
 from .findc import FindC
 from .discriminating_generator import DiscriminatingGenerator
 from conacq.algorithms.acqmss.reduce import Reduce
-from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.profiler import (
+from explanation.api import ConsistencyChecker
+from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
 from .quacq_model import QuAcqModel
@@ -57,11 +57,13 @@ class QuAcq:
     """
 
     def __init__(self, checker: ConsistencyChecker,
-                 oracle: Oracle,
+                 oracle: MembershipOracle,
                  model: Optional[QuAcqModel] = None,
                  query_provider: QueryProvider = None,
                  discriminating_generator: DiscriminatingGenerator = None,
-                 profiler_instance: AbstractProfiler = None) -> None:
+                 profiler_instance: AbstractProfiler = None,
+                 task=None,
+                 assignment_map=None) -> None:
         self.checker = checker
         self.oracle = oracle
         self.model = model  # QuAcqModel (optional, enables SAT-based pruning)
@@ -70,39 +72,49 @@ class QuAcq:
 
         self.query_provider = query_provider
         self.discriminating_generator = discriminating_generator
+        # Prepared task + assignment map (the model is stateless; the run-time
+        # helpers read these, not stored model state). None for the empty-bias path.
+        self.task = task
+        self.assignment_map = assignment_map
 
     @classmethod
     def for_oracle(cls, checker: ConsistencyChecker,
-                   oracle: Oracle,
+                   oracle: MembershipOracle,
                    query_provider: QueryProvider,
                    discrim_gen: DiscriminatingGenerator,
                    model: QuAcqModel = None,
-                   profiler: AbstractProfiler = None) -> 'QuAcq':
+                   profiler: AbstractProfiler = None,
+                   task=None,
+                   assignment_map=None) -> 'QuAcq':
         """Factory for oracle-based learning. discrim_gen required."""
         return cls(checker, oracle, model=model,
                    query_provider=query_provider,
                    discriminating_generator=discrim_gen,
-                   profiler_instance=profiler)
+                   profiler_instance=profiler,
+                   task=task, assignment_map=assignment_map)
 
     @classmethod
     def for_examples(cls, checker: ConsistencyChecker,
-                     oracle: Oracle,
+                     oracle: MembershipOracle,
                      query_provider: QueryProvider,
                      discrim_gen: DiscriminatingGenerator = None,
                      model: QuAcqModel = None,
-                     profiler: AbstractProfiler = None) -> 'QuAcq':
+                     profiler: AbstractProfiler = None,
+                     task=None,
+                     assignment_map=None) -> 'QuAcq':
         """Factory for example-based learning."""
         return cls(checker, oracle, model=model,
                    query_provider=query_provider,
                    discriminating_generator=discrim_gen,
-                   profiler_instance=profiler)
+                   profiler_instance=profiler,
+                   task=task, assignment_map=assignment_map)
 
     @measure_time('quacq_runtime')
     @count_calls('quacq_calls')
     def learn(self,
-              set_c: List[int],
-              set_b: List[int],
-              negation_map: Dict[int, int],
+              set_c: Sequence[int],
+              set_b: Sequence[int],
+              negation_map: Mapping[int, int],
               mode: Literal['oracle', 'example_only', 'example_first'] = 'oracle',
               max_queries: int = 1000,
               ) -> QuAcqResult:
@@ -124,8 +136,12 @@ class QuAcq:
 
         convergence_reason = ''
 
-        # Local mutable state
-        remaining_bias = set(set_c)
+        # Local mutable state.
+        # Insertion-ordered membership: dict keys preserve set_c order (the runner's
+        # shuffle) for iteration — which drives the constraint-test order — while
+        # keeping O(1) ``in`` / ``pop``. A plain set() would iterate in hash order and
+        # silently discard the shuffle (values are unused).
+        remaining_bias = dict.fromkeys(set_c)
         learned_kb: List[int] = []
         n_queries = 0
         query_history: List[Tuple[Dict[str, bool], bool, str]] = []
@@ -136,7 +152,7 @@ class QuAcq:
                 n_queries += 1
                 query_history.append((config.copy(), answer, source))
 
-        all_variables = set(self.model.variables.keys()) if self.model else set()
+        all_variables = set(self.model.name_to_id.keys()) if self.model else set()
 
         logging.info('QuAcq starting: Bias=%d constraints, mode=%s', len(remaining_bias), mode)
 
@@ -184,14 +200,14 @@ class QuAcq:
 
             # Step 3: Process answer
             if answer:
-                pruned = prune_rejecting(self.checker, self.model, remaining_bias, query, set_b[0], self.profiler)
+                pruned = prune_rejecting(self.checker, self.assignment_map, remaining_bias, query, set_b[0], self.profiler)
                 logging.debug('Pruned %d constraints', len(pruned))
             else:
                 if n_queries >= max_queries:
                     convergence_reason = 'max_queries'
                     break
 
-                find_scope = FindScope(self.oracle, self.checker, self.model, self.profiler,
+                find_scope = FindScope(self.oracle, self.checker, self.assignment_map, self.profiler,
                                        record_query, set_b[0])
                 scope_vars = find_scope.run(
                     e=query, R=set(), Y=all_variables,
@@ -204,7 +220,8 @@ class QuAcq:
                 if scope:
                     find_c = FindC(self.oracle, self.checker, self.model,
                                    self.profiler, record_query, set_b[0],
-                                   generator=self.discriminating_generator)
+                                   generator=self.discriminating_generator,
+                                   task=self.task, assignment_map=self.assignment_map)
                     c_id = find_c.run(
                         e=query, scope=scope,
                         remaining_bias=remaining_bias,
@@ -214,7 +231,7 @@ class QuAcq:
                     if c_id is not None:
                         if c_id not in learned_kb:
                             learned_kb.append(c_id)
-                        remaining_bias.discard(c_id)
+                        remaining_bias.pop(c_id, None)
                         logging.debug('FindScope/FindC added constraint: %s', c_id)
                     else:
                         logging.warning('FindC returned no constraint for scope %s', scope)
@@ -223,7 +240,7 @@ class QuAcq:
                     if mode == 'oracle' and tested_c_id:
                         if tested_c_id not in learned_kb:
                             learned_kb.append(tested_c_id)
-                        remaining_bias.discard(tested_c_id)
+                        remaining_bias.pop(tested_c_id, None)
 
         if not remaining_bias:
             convergence_reason = 'empty_bias'

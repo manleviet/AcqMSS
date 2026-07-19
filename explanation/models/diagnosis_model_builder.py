@@ -8,12 +8,13 @@ from typing import Optional
 from flamapy.metamodels.configuration_metamodel.models import Configuration
 from flamapy.metamodels.fm_metamodel.models import FeatureModel
 
+from .abstract_model_builder import AbstractModelBuilder
 from .pysat_diagnosis_model import DiagnosisModel
 from .task_preparation import TaskInput
 from .testsuite import TestSuite
 
 
-class DiagnosisModelBuilder:
+class DiagnosisModelBuilder(AbstractModelBuilder[DiagnosisModel]):
     """Unified builder for creating DiagnosisModel instances.
 
     Supports all use cases through a fluent interface:
@@ -34,7 +35,6 @@ class DiagnosisModelBuilder:
         model = (DiagnosisModelBuilder
             .from_fide("smartwatch.xml")
             .with_configuration(config)
-            .use_incremental()
             .build())
 
         # Use Case 5: KBDiag with test cases
@@ -42,19 +42,18 @@ class DiagnosisModelBuilder:
             .from_uvl("feature_model.uvl")
             .with_positive_testcases(positive_ts)
             .with_negative_testcases(negative_ts)
-            .use_incremental()
             .build())
 
         # Use Case 7: FM Redundancy Detection
         model = (DiagnosisModelBuilder
             .from_uvl("redundant_fm.uvl")
             .for_redundancy()
-            .use_incremental()
             .build())
     """
 
     def __init__(self):
         """Initialize builder with default values."""
+        super().__init__()
         # Source configuration
         self._source_type: Optional[str] = None
         self._source_path: Optional[str] = None
@@ -62,9 +61,6 @@ class DiagnosisModelBuilder:
 
         # Mode flags
         self._for_redundancy: bool = False
-
-        # Solver configuration
-        self._use_incremental: bool = True
 
         # Diagnosis inputs
         self._configuration: Optional[Configuration] = None
@@ -265,51 +261,32 @@ class DiagnosisModelBuilder:
         self._sub_configuration = sub_config
         return self
 
-    # === Solver Mode ===
-
-    def use_incremental(self, enabled: bool = True) -> 'DiagnosisModelBuilder':
-        """Use incremental solver mode.
-
-        Incremental mode keeps solver state between checks, improving efficiency.
-
-        Args:
-            enabled: Whether to use incremental mode.
-
-        Returns:
-            Self for method chaining.
-        """
-        self._use_incremental = enabled
-        return self
-
     # === Build ===
 
     def build(self) -> DiagnosisModel:
-        """Build and return fully configured DiagnosisModel.
+        """Build and return the immutable DiagnosisModel (KB only).
 
-        This method:
-        1. Validates builder state
-        2. Loads/transforms the feature model
-        3. Sets solver mode configuration
-        4. Assigns task inputs to model
-        5. Calls prepare() to prepare the task
+        Runs the ``AbstractModelBuilder`` template (validate → create model).
+        Per-task inputs are NOT stored on the model. Callers obtain them via
+        ``build_task_input()`` and derive a task with ``model.prepare_task(...)``.
+        Solver mode (incremental vs not) is an operation/checker concern, chosen
+        when the checker is created — not on the model.
 
         Returns:
-            Fully configured DiagnosisModel with task prepared.
+            Immutable DiagnosisModel (KB).
 
         Raises:
             ValueError: If source is not specified or configuration is invalid.
         """
-        # Validate
-        self._validate()
+        return super().build()
 
-        # Create model
-        model = self._create_model()
+    def build_task_input(self) -> TaskInput:
+        """Return the configured per-task inputs for ``model.prepare_task``.
 
-        # Configure solver mode
-        model._use_incremental = self._use_incremental
-
-        # Create and assign TaskInput
-        model.task_input = TaskInput(
+        Returns:
+            TaskInput capturing configuration/test-case/redundancy selections.
+        """
+        return TaskInput(
             configuration=self._configuration,
             test_case=self._test_case,
             with_cf_in_c=self._with_cf_in_c,
@@ -319,11 +296,6 @@ class DiagnosisModelBuilder:
             requirement=self._requirement,
             sub_configuration=self._sub_configuration
         )
-
-        # Prepare the task
-        model.prepare()
-
-        return model
 
     def _validate(self) -> None:
         """Validate builder state before building.

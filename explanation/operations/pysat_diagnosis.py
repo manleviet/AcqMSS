@@ -1,14 +1,14 @@
 from typing import Tuple
 
-from explanation.models.pysat_diagnosis_model import DiagnosisModel
-from explanation.operations.algorithms.checker import ConsistencyChecker
+from explanation.models.task_preparation import PreparedTask, Task
+from explanation.checker.protocols import ConsistencyChecker
 from explanation.operations.algorithms.hsdag.hsdag import HSDAG
 from explanation.operations.algorithms.hsdag.labeler.fastdiag_labeler import FastDiagLabeler, FastDiagParameters
-from explanation.operations.algorithms.profiler import AbstractProfiler
-from explanation.operations.pysat_abstract_explanation import PySATAbstractExplanation
+from profiling import AbstractProfiler
+from explanation.operations.pysat_abstract_hsdag_explanation import PySATAbstractHSDAGExplanation
 
 
-class PySATDiagnosis(PySATAbstractExplanation):
+class PySATDiagnosis(PySATAbstractHSDAGExplanation):
     """Operation that computes diagnoses and conflicts using HSDAG and FastDiag.
 
     This operation identifies diagnoses (minimal sets of constraints whose removal
@@ -21,50 +21,45 @@ class PySATDiagnosis(PySATAbstractExplanation):
         max_depth: Maximum depth of HSDAG tree (None for no limit)
         depth_first_search: Whether to use depth-first search
         solver_name: SAT solver to use (default: 'glucose3')
+        use_sat4j: Whether to run consistency checks via the SAT4J checker
 
     Example:
         >>> operation = PySATDiagnosis()
         >>> operation.max_diagnoses = 5
-        >>> result = operation.execute(diagnosis_model)
+        >>> result = operation.execute(prepared_task)
         >>> messages = result.get_result()
     """
 
-    def __init__(self, profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, profiler_instance: AbstractProfiler = None,
+                 use_sat4j: bool = False) -> None:
         """Initialize PySATDiagnosis operation with default values."""
-        super().__init__(profiler_instance)
+        super().__init__(profiler_instance, use_sat4j)
 
-    def _create_labeler(self, checker: ConsistencyChecker, model: DiagnosisModel) -> FastDiagLabeler:
+    def _create_labeler(self, checker: ConsistencyChecker, task: Task) -> FastDiagLabeler:
         """Create FastDiag labeler for diagnosis computation.
 
         Args:
             checker: Consistency checker instance
-            model: Diagnosis model
+            task: Task carrying set_c and set_b
 
         Returns:
             Configured FastDiagLabeler instance
         """
-        set_c = model.get_c()
-        set_b = model.get_b()
-
-        parameters = FastDiagParameters(set_c, set_b)
+        parameters = FastDiagParameters(task.set_c, task.set_b)
         return FastDiagLabeler(checker, parameters)
 
-    def prepare_hsdag(self, model: DiagnosisModel) -> Tuple[ConsistencyChecker, HSDAG]:
+    def prepare_hsdag(self, prepared: PreparedTask) -> Tuple[ConsistencyChecker, HSDAG]:
         """Prepare HSDAG with FastDiag labeler for diagnosis computation.
 
-        This method uses the helper methods to:
-        1. Create a consistency checker
-        2. Create a FastDiag labeler
-        3. Configure HSDAG with operation parameters
-
         Args:
-            model: Diagnosis model to use
+            prepared: PreparedTask to use
 
         Returns:
             Tuple of (consistency_checker, configured_hsdag)
         """
-        checker = self._create_checker(model)
-        labeler = self._create_labeler(checker, model)
+        task = prepared.task
+        checker = self._create_checker(task)
+        labeler = self._create_labeler(checker, task)
 
         return checker, self._create_hsdag(labeler)
 

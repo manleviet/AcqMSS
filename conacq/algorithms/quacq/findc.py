@@ -13,19 +13,23 @@ Complexity: O(|Gamma|) queries where Gamma = candidate constraints with scope.
 
 import logging
 
-from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.profiler import measure_time, count_calls
+from explanation.api import ConsistencyChecker, config_to_assignment_assumptions
+from conacq.oracle import MembershipOracle
+from profiling import measure_time, count_calls
 
 
 class FindC:
     """Finds constraint with given scope violated by example.
 
     All collaborators and invariants (oracle, checker, model, record_query,
-    root_assumption, generator) injected at construction; per-call data passed to run().
+    root_assumption, generator, task, assignment_map) injected at construction;
+    per-call data passed to run(). The model's scope helper is stateless — it reads
+    the injected prepared task, not stored state.
     """
 
-    def __init__(self, oracle, checker: ConsistencyChecker, model, profiler,
-                 record_query, root_assumption: int, generator=None):
+    def __init__(self, oracle: MembershipOracle, checker: ConsistencyChecker, model, profiler,
+                 record_query, root_assumption: int, generator=None,
+                 task=None, assignment_map=None):
         self.oracle = oracle
         self.checker = checker
         self.model = model
@@ -33,6 +37,8 @@ class FindC:
         self.record_query = record_query
         self.root_assumption = root_assumption
         self.generator = generator
+        self.task = task
+        self.assignment_map = assignment_map
 
     @measure_time('findc_runtime')
     @count_calls('findc_calls')
@@ -40,7 +46,7 @@ class FindC:
             self,
             e: dict,
             scope: set,
-            remaining_bias: set,
+            remaining_bias: dict,
             learned_kb: list,
     ):
         """
@@ -60,7 +66,7 @@ class FindC:
             Constraint ID (int) or None
         """
         # Get candidate constraints: bias constraints whose scope matches
-        candidates = self.model.get_constraints_with_scope(scope, remaining_bias)
+        candidates = self.model.get_constraints_with_scope(self.task, scope, remaining_bias)
 
         if not candidates:
             logging.debug('FindC: no candidates with scope %s', scope)
@@ -71,7 +77,7 @@ class FindC:
 
         # Filter to constraints that actually reject e (SAT-based)
         rejecting = []
-        e_assumptions = self.model.config_to_assumptions(e)
+        e_assumptions = config_to_assignment_assumptions(e, self.assignment_map)
         base = [self.root_assumption] + e_assumptions
 
         for c_id in candidates:
@@ -102,7 +108,7 @@ class FindC:
     def _narrow_with_generator(
             self,
             candidates: list,
-            remaining_bias: set,
+            remaining_bias: dict,
             learned_kb: list,
             scope: set
     ):
@@ -126,7 +132,7 @@ class FindC:
                 if is_valid:
                     # c_j rejects a valid example -> c_j not in target
                     candidates.remove(c_j)
-                    remaining_bias.discard(c_j)
+                    remaining_bias.pop(c_j, None)
                     # don't increment j — next element shifted into position
                 else:
                     j += 1

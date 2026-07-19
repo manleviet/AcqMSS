@@ -3,6 +3,7 @@
 This package provides model classes for diagnosis operations.
 """
 from .pysat_diagnosis_model import DiagnosisModel
+from .abstract_model_builder import AbstractModelBuilder
 from .diagnosis_model_builder import DiagnosisModelBuilder
 from .testsuite import TestSuite, TestCase, Assignment
 from .task_preparation import (
@@ -10,12 +11,13 @@ from .task_preparation import (
     DiagnosisTask,
     TestCaseTask,
     DescriptionProvider,
-    DiagnosisFormatter,
+    format_diagnoses,
     TaskPreparationFactory,
 )
 
 __all__ = [
     'DiagnosisModel',
+    'AbstractModelBuilder',
     'DiagnosisModelBuilder',
     'TaskInput',
     'TestSuite',
@@ -24,6 +26,6 @@ __all__ = [
     'DiagnosisTask',
     'TestCaseTask',
     'DescriptionProvider',
-    'DiagnosisFormatter',
+    'format_diagnoses',
     'TaskPreparationFactory',
 ]

@@ -51,8 +51,12 @@ class DimacsToDiagPysat(DimacsReader):
         if self.create_negation:
             self._create_negated_forms(model)
         else:
-            # Set next_available_id for task preparation (no Tseitin vars in DIMACS)
-            model.next_available_id = len(variables) + 1
+            # Set next_available_id for task preparation (no Tseitin vars in DIMACS).
+            # Floor on the declared variable count (`p cnf <nvars>`): the `c` catalog
+            # can be incomplete, and a clause may use a variable no `c` line declares,
+            # so len(variables) alone would collide assumption/Tseitin ids with real
+            # variables and silently corrupt the diagnosis.
+            model.next_available_id = max(int(problem_list[2]), len(variables)) + 1
 
         return model
 

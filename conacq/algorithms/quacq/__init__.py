@@ -12,7 +12,7 @@ Main Components:
 - QuAcqResult: Learning result data structure (co-located in quacq.py)
 
 Oracle Implementations:
-- FeatureModelOracle: FM-based oracle for automated experiments
+- FMOracle: FM-based oracle for automated experiments
 - UserPromptOracle: Prompts human expert for interactive mode
 - CachedOracle: Wrapper that caches oracle answers
 
@@ -22,15 +22,18 @@ Example Usage:
 
     model = (QuAcqModelBuilder
              .from_bias('data/bias/model-bias.json')
-             .with_oracle(oracle)
+             .with_oracle_data(oracle.oracle_data)
              .build())
-    task = model.task
-    checker = CheckerFactory.create_from_model(model)
-    query_provider = QueryProvider()
+    prepared = model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+    task = prepared.task
+    checker = build_checker(task, SolverBackend.from_flags(use_incremental=True))
+    query_provider = QueryProvider(assignment_map=prepared.assignment_map)
     profiler = get_global_profiler()
     discrim_gen = DiscriminatingGenerator(
-        checker=checker, model=model, profiler=profiler, root_assumption=task.set_b[0])
-    quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model)
+        checker=checker, model=model, profiler=profiler,
+        root_assumption=task.set_b[0], task=task)
+    quacq = QuAcq.for_oracle(checker, oracle, query_provider, discrim_gen, model=model,
+                             task=task, assignment_map=prepared.assignment_map)
     result = quacq.learn(
         set_c=task.set_c, set_b=task.set_b,
         negation_map=task.negation_map, mode='oracle')
@@ -40,8 +43,7 @@ from .task_preparation import QuAcqTask, QuAcqTaskPreparation
 from .quacq_model import QuAcqModel
 from .quacq_model_builder import QuAcqModelBuilder
 from conacq.oracle import (
-    Oracle,
-    FeatureModelOracle,
+    FMOracle,
     UserPromptOracle,
     CachedOracle,
 )
@@ -62,8 +64,7 @@ __all__ = [
     'QuAcqModelBuilder',
     'QuAcqTaskPreparation',
     # Oracle implementations
-    'Oracle',
-    'FeatureModelOracle',
+    'FMOracle',
     'UserPromptOracle',
     'CachedOracle',
     # FindScope/FindC

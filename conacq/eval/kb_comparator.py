@@ -35,8 +35,8 @@ class ComparationResult:
         metrics: EvaluationMetrics (TP, TN, FP, FN)
         kb_constraints: List of KB constraint IDs
         matched_constraints: TP constraint IDs/descriptions
-        missed_constraints: FN - in oracle but not KB
-        extra_constraints: FP - in KB but not oracle
+        missed_constraints: FN - in ground truth but not KB
+        extra_constraints: FP - in KB but not ground truth
         kb_reduction_ratio: 1 - (n_kb / n_bias)
     """
     strategy: str
@@ -86,25 +86,25 @@ class ComparationResult:
 
 class KBComparator:
     """
-    Compare ConGen results against Oracle FM.
+    Compare ConGen results against ground-truth FM.
 
     Supports two strategies:
     1. Description-based (recommended): Compare constraint descriptions
     2. Clause-based: Compare CNF clauses (semantic)
     """
 
-    def __init__(self, oracle: GroundTruthData, bias: Bias):
+    def __init__(self, ground_truth: GroundTruthData, bias: Bias):
         """
-        Initialize comparator with oracle and bias data.
+        Initialize comparator with ground-truth and bias data.
 
         Args:
-            oracle: GroundTruthData extracted from feature model
+            ground_truth: GroundTruthData extracted from feature model
             bias: Bias loaded from bias JSON
         """
-        self.oracle = oracle
+        self.ground_truth = ground_truth
         self.bias = bias
-        logging.debug('KBComparator initialized: oracle=%d descriptions, bias=%d constraints',
-                      len(oracle.descriptions), len(bias))
+        logging.debug('KBComparator initialized: ground_truth=%d descriptions, bias=%d constraints',
+                      len(ground_truth.descriptions), len(bias))
 
     def compare(
             self,
@@ -112,7 +112,7 @@ class KBComparator:
             strategy: ComparationStrategy = ComparationStrategy.DESCRIPTION
     ) -> ComparationResult:
         """
-        Compare ConGen result against Oracle.
+        Compare ConGen result against ground truth.
 
         Args:
             result: ConGenResultData with kb_constraints
@@ -137,19 +137,17 @@ class KBComparator:
         """
         Compare using description-based strategy.
 
-        1. Get FM descriptions from oracle
+        1. Get FM descriptions from ground truth
         2. Get KB descriptions from bias
         3. Compare string sets
         """
-        # Get oracle descriptions (ground truth)
-        fm_descriptions = self.oracle.descriptions
+        # Get ground-truth descriptions
+        fm_descriptions = self.ground_truth.descriptions
 
         # Get acquired KB descriptions
         acquired_descriptions: Set[str] = set()
         kb_to_description: dict = {}
         for cid in result.kb_constraints:
-            if cid.startswith('ne_'):
-                continue  # Skip NE constraints
             if self.bias.has_constraint(cid):
                 desc = self.bias.get_description(cid)
                 acquired_descriptions.add(desc)
@@ -195,14 +193,12 @@ class KBComparator:
         Compare using clause-based strategy.
 
         1. Convert KB constraints to CNF clauses (sorted for normalization)
-        2. Compare with oracle clause set
+        2. Compare with ground-truth clause set
         """
         # Convert KB constraint IDs to clause sets (normalized with sorted)
         kb_clauses: Set[Tuple[int, ...]] = set()
         kb_to_clauses: dict = {}
         for cid in result.kb_constraints:
-            if cid.startswith('ne_'):
-                continue
             if self.bias.has_constraint(cid):
                 constraint_clauses = []
                 for clause in self.bias.get_clauses(cid):
@@ -221,7 +217,7 @@ class KBComparator:
         bias_clauses = self.bias.get_all_clause_tuples()
 
         # Compute metrics
-        metrics = compute_metrics(kb_clauses, self.oracle.clause_set, bias_clauses)
+        metrics = compute_metrics(kb_clauses, self.ground_truth.clause_set, bias_clauses)
 
         # Find matched/missed/extra constraints
         matched = self._find_matched_constraints(kb_clauses, kb_to_clauses)
@@ -251,11 +247,11 @@ class KBComparator:
             kb_clauses: Set[Tuple[int, ...]],
             kb_to_clauses: dict
     ) -> List[str]:
-        """Find constraint IDs that match oracle (clause-based)."""
+        """Find constraint IDs that match ground truth (clause-based)."""
         matched = []
         for cid, clauses in kb_to_clauses.items():
             for clause in clauses:
-                if clause in self.oracle.clause_set:
+                if clause in self.ground_truth.clause_set:
                     matched.append(cid)
                     break
         return matched
@@ -264,8 +260,8 @@ class KBComparator:
             self,
             kb_clauses: Set[Tuple[int, ...]]
     ) -> List[str]:
-        """Find oracle clauses not in KB as string descriptions."""
-        missed_clauses = self.oracle.clause_set - kb_clauses
+        """Find ground-truth clauses not in KB as string descriptions."""
+        missed_clauses = self.ground_truth.clause_set - kb_clauses
         return [str(list(c)) for c in list(missed_clauses)[:20]]  # Limit to 20
 
     def _find_extra_constraints(
@@ -274,14 +270,12 @@ class KBComparator:
             kb_clauses: Set[Tuple[int, ...]],
             kb_to_clauses: dict
     ) -> List[str]:
-        """Find KB constraints not in oracle (clause-based)."""
+        """Find KB constraints not in ground truth (clause-based)."""
         extra = []
         for cid in kb_ids:
-            if cid.startswith('ne_'):
-                continue
             if cid in kb_to_clauses:
                 clauses = kb_to_clauses[cid]
-                if not any(c in self.oracle.clause_set for c in clauses):
+                if not any(c in self.ground_truth.clause_set for c in clauses):
                     extra.append(cid)
         return extra
 
@@ -296,13 +290,11 @@ class KBComparator:
         # Build KB clause lists from bias (same as clause strategy)
         kb_clause_lists = []
         for cid in result.kb_constraints:
-            if cid.startswith('ne_'):
-                continue
             if self.bias.has_constraint(cid):
                 for clause in self.bias.get_clauses(cid):
                     kb_clause_lists.append(list(clause))
 
-        ct_clause_lists = [list(c) for c in self.oracle.clauses]
+        ct_clause_lists = [list(c) for c in self.ground_truth.clauses]
         bg_clauses = result.bg_clauses or []
 
         checker = SemanticEquivalenceChecker(
@@ -336,17 +328,17 @@ class KBComparator:
         )
 
     @classmethod
-    def from_files(cls, oracle_path: Path, bias_path: Path) -> 'KBComparator':
+    def from_files(cls, ground_truth_path: Path, bias_path: Path) -> 'KBComparator':
         """
         Create KBComparator from file paths.
 
         Args:
-            oracle_path: Path to feature model (.uvl)
+            ground_truth_path: Path to feature model (.uvl)
             bias_path: Path to bias JSON file
 
         Returns:
             KBComparator instance
         """
-        oracle = GroundTruthData.from_uvl(Path(oracle_path))
+        ground_truth = GroundTruthData.from_uvl(Path(ground_truth_path))
         bias = BiasIO.load_from_json(str(bias_path))
-        return cls(oracle, bias)
+        return cls(ground_truth, bias)

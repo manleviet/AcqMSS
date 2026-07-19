@@ -10,11 +10,11 @@ Pattern follows KBDiag._mssDirect() from the explanation package.
 import logging
 from typing import List
 
-from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.profiler import (
+from explanation.api import ConsistencyChecker
+from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
-from explanation.operations.algorithms.utils import split, diff
+from explanation.api import split, diff
 
 
 class AcqMSS:
@@ -68,7 +68,7 @@ class AcqMSS:
                       delta, set_b, set_neg_tv, set_tc, set_bg)
 
         # E'+ <- E+
-        set_tcp = set_tc.copy()
+        set_tcp = list(set_tc)
 
         # if δ != Φ then E'+ <- TestC(B ∪ NE ∪ BG, E+)
         if len(delta) != 0:

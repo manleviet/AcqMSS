@@ -30,10 +30,10 @@ Author: Viet-Man Le (Python port)
 """
 
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional, Sequence
 
-from .checker import ConsistencyChecker
-from .profiler import get_global_profiler, measure_time, count_calls, AbstractProfiler
+from explanation.checker.protocols import TestCaseChecker
+from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split
 
 
@@ -45,12 +45,12 @@ class QuickXPlainWithTestCases:
     cause inconsistency with respect to one or more test cases (examples).
     """
 
-    def __init__(self, checker: ConsistencyChecker, profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, checker: TestCaseChecker, profiler_instance: AbstractProfiler = None) -> None:
         """
         Initialize QuickXPlainWithTestCases algorithm.
 
         Args:
-            checker: ConsistencyChecker instance for checking consistency
+            checker: TestCaseChecker for checking consistency against test cases
             profiler_instance: Optional profiler instance. If None, uses global default profiler.
                               Pass NullProfiler() to disable profiling.
         """
@@ -59,8 +59,8 @@ class QuickXPlainWithTestCases:
 
     @measure_time('quickxplain_with_testcases_runtime')
     @count_calls('quickxplain_with_testcases_calls')
-    def find_conflict_set(self, set_c: List, set_b: List, set_tc: List, set_neg_tv: List = None) -> \
-            Tuple[List, List]:
+    def find_conflict_set(self, set_c: Sequence[int], set_b: Sequence[int], set_tc: Sequence[int],
+                          set_neg_tv: Optional[Sequence[int]] = None) -> Tuple[List, List]:
         """
         Find ONE conflict set from the constraint set C that is inconsistent with test cases.
 
@@ -89,6 +89,10 @@ class QuickXPlainWithTestCases:
 
         if set_neg_tv is None:
             set_neg_tv = []
+
+        # Task solve-fields arrive as immutable tuples; work on lists.
+        set_c, set_b, set_tc, set_neg_tv = (
+            list(set_c), list(set_b), list(set_tc), list(set_neg_tv))
 
         logging.debug('>>> QuickXPlainWithTestCases [C=%s, B=%s, TC=%s, neg_TV=%s]',
                       set_c, set_b, set_tc, set_neg_tv)

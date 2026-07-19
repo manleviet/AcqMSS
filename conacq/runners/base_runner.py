@@ -5,9 +5,11 @@ BaseRunResult: Shared result dataclass (9 fields common to ConGen and Interactiv
 BaseRunner: ABC defining build-once/run-many/cleanup-once lifecycle.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Sequence
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
+
+from .metrics import RunMetrics
 
 
 @dataclass
@@ -28,7 +30,7 @@ class BaseRunResult:
     # KB result
     kb_constraints: List[str]
     kb_clauses: List[List[int]]
-    bg_clauses: List[List[int]]
+    bg_clauses: Sequence[Sequence[int]]
     n_bias: int
     n_kb: int
 
@@ -37,33 +39,28 @@ class BaseRunResult:
     consistency_checks: int
     memory_peak_mb: float
 
-    # kw_only default: allows child classes to add required positional fields
+    # kw_only defaults: allow child classes to add required positional fields.
     profiler_data: Dict[str, Any] = field(default_factory=dict, kw_only=True)
+    # The declarative metric bundle (RunMetrics) this run produced, built via
+    # metrics.collect(profiler, <ALGO>_METRICS). The per-run ``performance`` block
+    # is derived from it — see _base_to_dict.
+    metrics: Optional[RunMetrics] = field(default=None, kw_only=True)
 
     def _base_to_dict(self) -> dict:
         """Shared serialization for base fields."""
+        perf = dict(self.metrics.to_dict()) if self.metrics is not None else {
+            'runtime_ms': self.runtime_ms,
+            'consistency_checks': self.consistency_checks,
+            'memory_peak_mb': self.memory_peak_mb,
+        }
+        perf['profiler'] = self.profiler_data
         return {
             'kb_constraints': self.kb_constraints,
             'bg_clauses': self.bg_clauses,
             'n_bias': self.n_bias,
             'n_kb': self.n_kb,
-            'performance': {
-                'runtime_ms': self.runtime_ms,
-                'consistency_checks': self.consistency_checks,
-                'memory_peak_mb': self.memory_peak_mb,
-                'profiler': self.profiler_data,
-            }
+            'performance': perf,
         }
-
-    def get_performance_metrics(self):
-        """Base performance metrics (n_mss=None). Override for ConGen-specific."""
-        from conacq.eval.performance_metrics import PerformanceMetrics
-        return PerformanceMetrics(
-            runtime_ms=self.runtime_ms,
-            consistency_checks=self.consistency_checks,
-            memory_peak_mb=self.memory_peak_mb,
-            n_kb=self.n_kb
-        )
 
 
 class BaseRunner(ABC):
@@ -78,10 +75,13 @@ class BaseRunner(ABC):
         self.bias_path = bias_path
         self.fm_path = fm_path
         self.solver_name = solver_name
+        # Solver mode is the runner's, not the model's — the runner passes it
+        # straight to build_checker instead of round-tripping through the model.
+        self.use_incremental = use_incremental
 
         # Create oracle once (reused across runs)
-        from conacq.oracle import FeatureModelOracle
-        self.oracle = FeatureModelOracle(
+        from conacq.oracle import FMOracle
+        self.oracle = FMOracle(
             fm_path, solver_name=solver_name, use_incremental=use_incremental)
 
     @abstractmethod

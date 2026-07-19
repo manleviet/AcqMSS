@@ -1,8 +1,8 @@
 import logging
-from typing import List, Tuple
+from typing import List, Optional, Sequence, Tuple
 
-from .checker import ConsistencyChecker
-from .profiler import get_global_profiler, measure_time, count_calls, AbstractProfiler
+from explanation.checker.protocols import TestCaseChecker
+from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split, diff
 
 class KBDiag:
@@ -11,14 +11,15 @@ class KBDiag:
     The algorithm determines a maximal satisfiable subset MSS (Γ) of C U B U -TV U TC.
     """
 
-    def __init__(self, checker: ConsistencyChecker, m: int = 1, profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, checker: TestCaseChecker, m: int = 1, profiler_instance: AbstractProfiler = None) -> None:
         self.checker = checker
         self.m = m
         self.profiler = profiler_instance if profiler_instance is not None else get_global_profiler()
 
     @measure_time('kbdiag_runtime')
     @count_calls('kbdiag_calls')
-    def find_diagnosis(self, set_c: List, set_b: List, set_tc: List, set_neg_tv: List = None) -> Tuple[List, List]:
+    def find_diagnosis(self, set_c: Sequence[int], set_b: Sequence[int], set_tc: Sequence[int],
+                       set_neg_tv: Optional[Sequence[int]] = None) -> Tuple[List, List]:
         """
         Activate KBDiag algorithm if there exists at least one positive test case,
         which induces an inconsistency in C U B. Otherwise, it returns an empty set.
@@ -42,6 +43,10 @@ class KBDiag:
         """
         if set_neg_tv is None:
             set_neg_tv = []
+
+        # Task solve-fields arrive as immutable tuples; work on lists.
+        set_c, set_b, set_tc, set_neg_tv = (
+            list(set_c), list(set_b), list(set_tc), list(set_neg_tv))
 
         logging.debug('kbDiag [C=%s, B=%s, TC=%s, neg_TV=%s]',
                       set_c, set_b, set_tc, set_neg_tv)

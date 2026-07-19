@@ -55,25 +55,25 @@ Learn constraints from positive (valid) and negative (invalid) example configura
 
 ```python
 from conacq.algorithms.acqmss import ConGen, ConGenModelBuilder
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 from explanation.models.task_preparation import TaskInput
-from explanation.operations.algorithms.checker import CheckerFactory
+from explanation.api import build_checker, SolverBackend
 
 # Build model (no FM dependency)
 model = ConGenModelBuilder.from_bias('data/bias/model.json').build()
 
 # Create oracle
-oracle = FeatureModelOracle('data/fms/model.uvl')
+oracle = FMOracle('data/fms/model.uvl')
 
 # Prepare task with examples (internally calls GenerateNE)
 task = model.prepare_task(TaskInput(positive_test_cases=pos_examples, negative_test_cases=neg_examples), oracle)
 
 # Create checker and run ConGen
-checker = CheckerFactory.create_from_task(task, solver_name='glucose4', use_incremental=True)
+checker = build_checker(task, backend=SolverBackend.PYSAT_INCREMENTAL, solver_name='glucose4')
 congen = ConGen(checker)
 result = congen.acquire(
-    set_c=task.set_c,
-    set_b=task.set_b,
+    set_b=task.set_c,
+    set_bg=task.set_b,
     set_tc=task.set_tc,
     set_neg_tv=task.set_neg_tv,
     negation_map=task.negation_map
@@ -130,7 +130,7 @@ AcqMSS/
 │   ├── bias/                  # Bias generation from feature models
 │   ├── example_generators/    # RS, 2-COV, FF + QueryGenerator, ExampleProvider
 │   ├── examples/              # Example data structures + I/O utilities
-│   ├── oracle/                # Oracle ABC, FeatureModelOracle, FMData, cached
+│   ├── oracle/                # role protocols, FMOracle, OracleData/BGData, cached
 │   ├── runners/               # ConGenRunner, QuAcqRunner (moved from eval/)
 │   └── eval/                  # Accuracy, cross-validation, evaluator
 ├── explanation/               # SAT solver infrastructure

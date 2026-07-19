@@ -12,11 +12,11 @@ maxNumGenCC = min(numCores - 1, 7)
 
 import logging
 import multiprocessing as mp
-from typing import List
+from typing import List, Sequence
 
 from . import utils
-from .checker import ConsistencyChecker
-from .profiler import get_global_profiler, measure_time, count_calls, AbstractProfiler
+from explanation.checker.protocols import CopyableChecker
+from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import split, diff
 
 
@@ -28,11 +28,12 @@ class FastDiagP:
     In Proceedings of the AAAI Conference on Artificial Intelligence (Vol. 37, No. 5, pp. 6442-6449).
     """
 
-    def __init__(self, checker: ConsistencyChecker, profiler_instance: AbstractProfiler = None) -> None:
+    def __init__(self, checker: CopyableChecker, profiler_instance: AbstractProfiler = None) -> None:
         """
         Initialize FastDiagP algorithm.
 
-        :param checker: ConsistencyChecker instance
+        :param checker: CopyableChecker — FastDiagP clones it (``checker.copy()``)
+            to fan consistency checks out across parallel workers.
         :param profiler_instance: Optional profiler for metrics tracking
         """
         self.checker = checker
@@ -40,14 +41,13 @@ class FastDiagP:
         self.maxNumGenCC = 0
 
         self.lookup_table = {}
-        self.counter_readyCC = 0
         self.pool = None
         self.currentNumGenCC = 0
         self.genhash = ""
 
     @measure_time('fastdiagp_runtime')
     @count_calls('fastdiagp_calls')
-    def find_diagnosis(self, set_c: List, set_b: List) -> List:
+    def find_diagnosis(self, set_c: Sequence[int], set_b: Sequence[int]) -> List:
         """
         Activate FastDiag algorithm if there exists at least one constraint,
         which induces an inconsistency in B. Otherwise, it returns an empty set.
@@ -62,6 +62,9 @@ class FastDiagP:
         logging.debug('fastDiag [C=%s, B=%s]', set_c, set_b)
         # print(f'fastDiag [C={C}, B={B}]')
 
+        # Task solve-fields arrive as immutable tuples; work on lists.
+        set_c, set_b = list(set_c), list(set_b)
+
         # if isEmpty(C) or consistent(B U C) return Φ
         if len(set_c) == 0 or self.checker.is_consistent(set_b + set_c):
             logging.debug('return Φ')
@@ -69,19 +72,16 @@ class FastDiagP:
             return []
 
         # return C \ FD(C, B, Φ)
-        numCores = mp.cpu_count()
-
-        self.maxNumGenCC = min(numCores - 1, 4)
+        self.maxNumGenCC = min(mp.cpu_count() - 1, 4)
         self.profiler.set_gauge('maxNumGenCC', self.maxNumGenCC)
-        self.pool = mp.Pool(self.maxNumGenCC)
 
-        mss = self._fd([], set_c, set_b)
-        diag = diff(set_c, mss)
-
-        self.profiler.set_gauge('lookup_table_size', len(self.lookup_table))
-
-        self.pool.close()
-        self.pool.terminate()
+        # Context manager closes/joins the pool even if _fd raises (no orphaned
+        # workers), and max(1, ...) floors the worker count so a 1-vCPU host never
+        # builds mp.Pool(0), which raises ValueError.
+        with mp.Pool(max(1, self.maxNumGenCC)) as self.pool:
+            mss = self._fd([], set_c, set_b)
+            diag = diff(set_c, mss)
+            self.profiler.set_gauge('lookup_table_size', len(self.lookup_table))
 
         logging.debug('return %s', diag)
         # print(f'return {diag}')
@@ -156,7 +156,6 @@ class FastDiagP:
 
         if result.ready:
             self.profiler.increment('ready')
-            # self.counter_readyCC = self.counter_readyCC + 1
         else:
             self.profiler.increment('not_ready')
         return result.get()

@@ -8,7 +8,7 @@ from typing import Optional, List
 from allpairspy import AllPairs
 
 from conacq.examples.data_structures import Example, ExampleSet
-from conacq.oracle import Oracle
+from conacq.oracle import GeneratorOracle
 from .base import ExampleGenerator
 
 
@@ -20,17 +20,17 @@ class NWiseCoverageGenerator(ExampleGenerator):
     For 2-COV (pairwise): each combination of 2 features appears at least once.
 
     Example:
-        >>> oracle = FeatureModelOracle('model.uvl')
+        >>> oracle = FMOracle('model.uvl')
         >>> gen = NWiseCoverageGenerator(oracle, n=2)
         >>> examples = gen.generate(seed=42)
     """
 
-    def __init__(self, oracle: Oracle, n: int = 2):
+    def __init__(self, oracle: GeneratorOracle, n: int = 2):
         """
         Initialize n-wise coverage generator.
 
         Args:
-            oracle: Oracle for classifying examples
+            oracle: GeneratorOracle for classifying/completing examples
             n: Coverage strength (2 for pairwise, 3 for 3-wise, etc.)
         """
         super().__init__(oracle)
@@ -95,7 +95,7 @@ class TwoCoverageGenerator(NWiseCoverageGenerator):
     for all value combinations: (T,T), (T,F), (F,T), (F,F).
     """
 
-    def __init__(self, oracle: Oracle):
+    def __init__(self, oracle: GeneratorOracle):
         super().__init__(oracle, n=2)
 
     def generate(self, seed: Optional[int] = None) -> ExampleSet:

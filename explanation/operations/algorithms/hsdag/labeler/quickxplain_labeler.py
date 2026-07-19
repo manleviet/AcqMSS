@@ -4,16 +4,16 @@ https://github.com/HiConfiT/hiconfit-core/blob/main/ca-cdr-package/src/main/java
 """
 
 from dataclasses import dataclass
-from typing import List, Any
+from typing import List, Any, Sequence
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
-from ...checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from ...quickxplain import QuickXPlain
 
 
 @dataclass
 class QuickXPlainParameters(AbstractHSParameters):
-    set_b: List
+    set_b: Sequence[int]
 
     def __str__(self) -> str:
         return f"QuickXPlainParameters{{C={self.set_c}, B={self.set_b}}}"
@@ -31,8 +31,6 @@ class QuickXPlainLabeler(QuickXPlain, IHSLabelable):
     def get_type(self) -> LabelerType:
         return LabelerType.CONFLICT
 
-    def get_initial_parameters(self) -> AbstractHSParameters:
-        return self.initial_parameters
 
     def get_label(self, parameters: AbstractHSParameters) -> List[List]:
         """
@@ -57,9 +55,9 @@ class QuickXPlainLabeler(QuickXPlain, IHSLabelable):
         assert isinstance(param_parent_node, QuickXPlainParameters), \
             "parameter must be an instance of QuickXPlainParameters"
 
-        new_c = param_parent_node.set_c.copy()
+        new_c = list(param_parent_node.set_c)
         new_c.remove(arc_label)
-        new_b = param_parent_node.set_b.copy()
+        new_b = list(param_parent_node.set_b)
 
         return QuickXPlainParameters(new_c, new_b)
 

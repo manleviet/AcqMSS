@@ -6,8 +6,8 @@ This package provides implementations of constraint acquisition algorithms:
 ConGen (Passive/Batch Learning):
 - AcqMSS: Divide-and-conquer algorithm for finding MSS of bias
 - REDUCE: Redundancy elimination from acquired KB
-- GenerateNE: Negated negative examples generation using QuickXPlain
 - ConGen: Main constraint acquisition algorithm
+  (GenerateNE is a task-preparation internal, not exported here)
 
 Interactive Learning (QuAcq):
 - QuAcq: Interactive constraint acquisition via membership queries
@@ -20,11 +20,11 @@ Task classes shared across incremental and non-incremental modes.
 from .acqmss import (
     AcqMSS,
     Reduce,
-    GenerateNE,
     ConGen,
     ConGenResult,
     ConGenModel,
     ConGenModelBuilder,
+    ConGenTaskInput,
 )
 
 # Interactive learning (QuAcq)
@@ -34,31 +34,31 @@ from .quacq import (
     QuAcqModelBuilder,
     QuAcqTask,
     QuAcqResult,
-    FeatureModelOracle,
+    FMOracle,
     UserPromptOracle,
     CachedOracle,
 )
 
 # Re-export explanation module classes for convenience
-from explanation.models.testsuite import Assignment, TestCase, TestSuite
-from explanation.models.task_preparation import TaskInput
+from explanation.api import Assignment, TestCase, TestSuite
+from explanation.api import TaskInput
 
 __all__ = [
     # ConGen (passive learning)
     'AcqMSS',
     'Reduce',
-    'GenerateNE',
     'ConGen',
     'ConGenResult',
     'ConGenModel',
     'ConGenModelBuilder',
+    'ConGenTaskInput',
     # Interactive learning (QuAcq)
     'QuAcq',
     'QuAcqModel',
     'QuAcqModelBuilder',
     'QuAcqTask',
     'QuAcqResult',
-    'FeatureModelOracle',
+    'FMOracle',
     'UserPromptOracle',
     'CachedOracle',
     # Re-exports from explanation module

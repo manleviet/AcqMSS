@@ -7,7 +7,7 @@ import multiprocessing as mp
 import sys
 import time
 
-from explanation.operations.algorithms.profiler import use_global_profiler, ProfilerPreset, count_calls, measure_time, \
+from profiling import use_global_profiler, ProfilerPreset, count_calls, measure_time, \
     ProfilerError, Profiler
 
 

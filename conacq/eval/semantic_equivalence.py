@@ -6,7 +6,7 @@ Checks KB ≡ C_T via bidirectional entailment:
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 from pysat.solvers import Solver
 
@@ -54,14 +54,18 @@ class SemanticEquivalenceChecker:
 
     def __init__(
         self,
-        kb_clauses: List[List[int]],
-        ct_clauses: List[List[int]],
-        bg_clauses: Optional[List[List[int]]] = None,
+        kb_clauses: Sequence[Sequence[int]],
+        ct_clauses: Sequence[Sequence[int]],
+        bg_clauses: Optional[Sequence[Sequence[int]]] = None,
         solver_name: str = 'glucose4'
     ):
-        self.kb_clauses = kb_clauses
-        self.ct_clauses = ct_clauses
-        self.bg_clauses = bg_clauses or []
+        # Eval-boundary consumer: inputs may be frozen tuples (root_clauses/set_kb are
+        # deep-frozen) or lists (learned KB). Normalise the outer container to a list so
+        # the internal ``kb + bg`` / ``source + negated`` concatenations never hit
+        # ``list + tuple``. Inner clauses stay as-is — pysat accepts tuple clauses.
+        self.kb_clauses = list(kb_clauses)
+        self.ct_clauses = list(ct_clauses)
+        self.bg_clauses = list(bg_clauses or [])
         self.solver_name = solver_name
 
     def _check_entails(

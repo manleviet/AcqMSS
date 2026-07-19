@@ -7,31 +7,35 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict
 
 from conacq.examples.data_structures import Example, ExampleSet, ExampleType
-from conacq.oracle import Oracle
-from conacq.oracle.fm_oracle import FeatureModelOracle
+from conacq.oracle import GeneratorOracle
 
 
 class ExampleGenerator(ABC):
     """
     Abstract base class for example example_generators.
 
-    Generators use a FeatureModelOracle to classify generated configurations
+    Generators use an oracle to classify generated configurations
     as positive or negative examples.
 
     Attributes:
-        oracle: FeatureModelOracle for classifying and completing examples
+        oracle: GeneratorOracle for classifying and completing examples
         features: Set of all feature names
     """
 
-    def __init__(self, oracle: Oracle):
+    def __init__(self, oracle: GeneratorOracle):
         """
-        Initialize generator with a FeatureModelOracle.
+        Initialize generator with an oracle.
 
         Args:
-            oracle: FeatureModelOracle for classifying examples
+            oracle: GeneratorOracle for classifying examples
         """
         self.oracle = oracle
         self.features = oracle.get_variables()
+        # Per-instance RNG so generation never touches the process-global
+        # ``random`` stream. Each ``generate`` call reseeds it via
+        # ``self._rng = random.Random(seed)``; this default keeps the attribute
+        # present for any helper reached before ``generate`` sets a seed.
+        self._rng = random.Random()
 
     @abstractmethod
     def generate(self, **kwargs) -> ExampleSet:
@@ -68,9 +72,9 @@ class ExampleGenerator(ABC):
             Valid configuration dict, or None if failed
         """
         shuffled = list(features_list)
-        random.shuffle(shuffled)
+        self._rng.shuffle(shuffled)
 
-        n_fixed = random.randint(0, len(shuffled) // 2)
-        partial = {f: random.choice([True, False]) for f in shuffled[:n_fixed]}
+        n_fixed = self._rng.randint(0, len(shuffled) // 2)
+        partial = {f: self._rng.choice([True, False]) for f in shuffled[:n_fixed]}
 
         return self.oracle.complete_configuration(partial)

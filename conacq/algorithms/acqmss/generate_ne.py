@@ -13,14 +13,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Sequence
 
-from explanation.operations.algorithms.checker import NonIncrementalPySATChecker
-from explanation.operations.algorithms.quickxplain import QuickXPlain
+from explanation.api import QuickXPlain
+from explanation.api import build_checker, SolverBackend, DiagnosisTask
 
 if TYPE_CHECKING:
-    from conacq.oracle import FeatureModelOracle
-    from explanation.models.testsuite import TestCase, TestSuite
+    from conacq.oracle import OracleData
+    from explanation.api import AssumptionIdAllocator, TestCase, TestSuite
 
 
 @dataclass
@@ -39,8 +39,10 @@ class GenerateNE:
     result KB so subsequent testcases see previous NEs.
     """
 
-    def __init__(self, oracle: FeatureModelOracle) -> None:
-        self.oracle = oracle
+    def __init__(self, oracle_data: "OracleData") -> None:
+        # Frozen provisioning snapshot (ADR-0009), not the live oracle: the KB and
+        # background this reads cannot shift under it between test cases.
+        self.oracle_data = oracle_data
 
     def generate(
             self,
@@ -48,8 +50,8 @@ class GenerateNE:
             variables: Dict[str, int],
             result_set_kb: List[List[int]],
             result_assumptions: List[int],
-            start_id: int
-    ) -> Tuple[List[NEPerTestcase], int]:
+            alloc: "AssumptionIdAllocator"
+    ) -> List[NEPerTestcase]:
         """Generate NE from negative examples using QuickXPlain.
 
         Per testcase: merges oracle KB with result KB, creates assignment
@@ -60,26 +62,24 @@ class GenerateNE:
             variables: Feature name -> SAT variable mapping
             result_set_kb: Task KB (mutated: NE clauses appended)
             result_assumptions: Task assumptions (read-only snapshot per iteration)
-            start_id: Starting assumption ID
+            alloc: assumption-id allocator (ids for the per-testcase probes + NE)
 
         Returns:
-            (per_testcase_results, next_id_assumption)
+            per_testcase_results
         """
         if not testsuite.testcases:
-            return [], start_id
+            return []
 
-        set_bg = self.oracle.get_c()
+        set_bg = self.oracle_data.get_c()
         results: List[NEPerTestcase] = []
-        id_assumption = start_id
 
         for testcase in testsuite.testcases:
-            ne, id_assumption = self._process_testcase(
+            results.append(self._process_testcase(
                 testcase, variables, result_set_kb, result_assumptions,
-                set_bg, id_assumption)
-            results.append(ne)
+                set_bg, alloc))
 
         logging.debug('<<< GenerateNE: %d NE constraints', len(results))
-        return results, id_assumption
+        return results
 
     def _process_testcase(
             self,
@@ -87,13 +87,13 @@ class GenerateNE:
             variables: Dict[str, int],
             result_set_kb: List[List[int]],
             result_assumptions: List[int],
-            set_bg: List[int],
-            id_assumption: int
-    ) -> Tuple[NEPerTestcase, int]:
+            set_bg: Sequence[int],
+            alloc: "AssumptionIdAllocator"
+    ) -> NEPerTestcase:
         """Process single testcase: merge KBs, QuickXPlain, create NE clause."""
         # Merge oracle KB with current result KB (creates new list)
-        set_kb = self.oracle.get_kb() + result_set_kb
-        assumptions = self.oracle.get_assumptions() + result_assumptions
+        set_kb = list(self.oracle_data.get_kb()) + result_set_kb
+        assumptions = list(self.oracle_data.get_assumptions()) + result_assumptions
 
         # Create per-assignment clauses
         set_tv, assumption_to_var, assumption_to_desc = [], {}, {}
@@ -104,17 +104,22 @@ class GenerateNE:
             desc = f'{assignment.feature} = {"true" if assignment.value else "false"}'
             var = variables[assignment.feature] if assignment.value else -variables[assignment.feature]
 
-            set_tv.append(id_assumption)
-            assumptions.append(id_assumption)
-            set_kb.append([var, -1 * id_assumption])
-            assumption_to_var[id_assumption] = var
-            assumption_to_desc[id_assumption] = desc
-            id_assumption += 1
+            aid = alloc.allocate()
+            set_tv.append(aid)
+            assumptions.append(aid)
+            set_kb.append([var, -1 * aid])
+            assumption_to_var[aid] = var
+            assumption_to_desc[aid] = desc
 
-        # QuickXPlain for minimal conflict
-        checker = NonIncrementalPySATChecker(set_kb, assumptions)
-        quickxplain = QuickXPlain(checker)
-        minimal_conflict = quickxplain.find_conflict(set_tv, set_bg)
+        # QuickXPlain for minimal conflict. The per-testcase subproblem is itself
+        # a Task (set_c = test-value assumptions, set_b = background), so the
+        # checker is built through the port like everywhere else.
+        task = DiagnosisTask(set_c=set_tv, set_b=set_bg,
+                             set_kb=set_kb, assumptions=assumptions)
+        # One checker per testcase — release its solver before the next iteration.
+        with build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL) as checker:
+            quickxplain = QuickXPlain(checker)
+            minimal_conflict = quickxplain.find_conflict(task.set_c, task.set_b)
         if len(minimal_conflict) > 0:
             set_tv = minimal_conflict
 
@@ -126,13 +131,12 @@ class GenerateNE:
                 desc_parts.append(assumption_to_desc[lit])
 
         # Create NE clause: not(e) = (not(l1) or not(l2) or ... or not(ne_id))
-        ne_id = id_assumption
+        ne_id = alloc.allocate()
         ne_clause = [-lit for lit in literals]
         ne_clause.append(-ne_id)
         result_set_kb.append(ne_clause)  # mutate for subsequent testcases
 
-        id_assumption += 1
         return NEPerTestcase(
             ne_id=ne_id, ne_clause=ne_clause,
             desc=f"NOT({' & '.join(desc_parts)})"
-        ), id_assumption
+        )

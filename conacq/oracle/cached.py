@@ -1,32 +1,33 @@
 """
-Caching wrapper for any Oracle implementation.
+Caching wrapper for any membership oracle.
 
 Caches membership query results to avoid redundant queries.
-Only caches is_valid() — the sole Oracle ABC method.
+Only caches is_valid() — a MembershipOracle wrapper, no base class.
 """
 
 from typing import Dict
 
-from conacq.oracle.base import Oracle
+from conacq.oracle.protocols import MembershipOracle
 
 
-class CachedOracle(Oracle):
+class CachedOracle(MembershipOracle):
     """Oracle wrapper that caches answers to avoid redundant queries.
 
-    Useful when the same configuration might be queried multiple times.
+    Declares the MembershipOracle role (ADR-0010) — delegates is_valid to the
+    wrapped oracle. Useful when the same configuration might be queried repeatedly.
 
     Example:
-        >>> base_oracle = FeatureModelOracle('model.uvl')
+        >>> base_oracle = FMOracle('model.uvl')
         >>> oracle = CachedOracle(base_oracle)
-        >>> oracle.ask({'A': True})  # Asks base oracle
-        >>> oracle.ask({'A': True})  # Returns cached answer
+        >>> oracle.is_valid({'A': True})  # Asks base oracle
+        >>> oracle.is_valid({'A': True})  # Returns cached answer
     """
 
-    def __init__(self, base_oracle: Oracle):
+    def __init__(self, base_oracle: "MembershipOracle"):
         """Initialize cached oracle.
 
         Args:
-            base_oracle: Underlying oracle to cache
+            base_oracle: Underlying oracle to cache (any MembershipOracle)
         """
         self.base_oracle = base_oracle
         self._cache: Dict[tuple, bool] = {}

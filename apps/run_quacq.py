@@ -16,12 +16,15 @@ import sys
 from pathlib import Path
 
 from conacq.runners import QuAcqRunner
-from conacq.eval.config import load_pipeline_config, parse_models
+from conacq.config import load_pipeline_config, parse_models
+from apps._harness import build_parser, setup_logging
 from conacq.eval.report import save_kb_result
+
+logger = logging.getLogger(__name__)
 
 
 def process_model(model_config, output_dir: Path, max_queries: int,
-                  mode: str, verbose: bool, solver_name: str = 'glucose4'):
+                  mode: str, solver_name: str = 'glucose4'):
     """Process a single model with QuAcq learning.
 
     Supports all four modes:
@@ -44,16 +47,14 @@ def process_model(model_config, output_dir: Path, max_queries: int,
             max_queries=max_queries
         )
 
-        if verbose:
-            print(f"\nProcessing: {model_name}")
-            print(f"  FM: {model_config.oracle}")
-            print(f"  Bias: {model_config.bias}")
-            print(f"  Mode: {mode}")
-            print(f"  Max queries: {max_queries}")
-            print(f"  Bias constraints: {len(runner.model.constraint_map)}")
-            print(f"  Features: {len(runner.feature_ids)}")
-            print()
-            print("  Starting QuAcq learning...")
+        logger.debug("Processing: %s", model_name)
+        logger.debug("  FM: %s", model_config.oracle)
+        logger.debug("  Bias: %s", model_config.bias)
+        logger.debug("  Mode: %s", mode)
+        logger.debug("  Max queries: %s", max_queries)
+        logger.debug("  Bias constraints: %d", len(runner.model.constraint_map))
+        logger.debug("  Features: %d", len(runner.feature_ids))
+        logger.debug("  Starting QuAcq learning...")
 
         # Mode dispatch: example modes require loading examples
         if mode in ('example_only', 'example_first'):
@@ -69,18 +70,17 @@ def process_model(model_config, output_dir: Path, max_queries: int,
         else:
             run_result = runner.run(mode=mode)
 
-        if verbose:
-            print(f"\n  Results:")
-            print(f"    Queries asked: {run_result.n_queries}")
-            print(f"    KB size: {run_result.n_kb}")
-            print(f"    Convergence: {run_result.convergence_reason}")
-            print(f"    Runtime: {run_result.runtime_ms:.2f} ms")
-            if run_result.kb_constraints:
-                print(f"    Constraints:")
-                for c in run_result.kb_constraints[:10]:
-                    print(f"      - {c}")
-                if len(run_result.kb_constraints) > 10:
-                    print(f"      ... and {len(run_result.kb_constraints) - 10} more")
+        logger.debug("  Results:")
+        logger.debug("    Queries asked: %d", run_result.n_queries)
+        logger.debug("    KB size: %d", run_result.n_kb)
+        logger.debug("    Convergence: %s", run_result.convergence_reason)
+        logger.debug("    Runtime: %.2f ms", run_result.runtime_ms)
+        if run_result.kb_constraints:
+            logger.debug("    Constraints:")
+            for c in run_result.kb_constraints[:10]:
+                logger.debug("      - %s", c)
+            if len(run_result.kb_constraints) > 10:
+                logger.debug("      ... and %d more", len(run_result.kb_constraints) - 10)
 
         # Save KB result (unified format with bg_clauses)
         output_file = output_dir / f"{model_name}_quacq_kb.json"
@@ -97,22 +97,19 @@ def process_model(model_config, output_dir: Path, max_queries: int,
                       'runtime_ms': run_result.runtime_ms}
         )
 
-        if verbose:
-            print(f"\n  Saved: {output_file}")
+        logger.debug("  Saved: %s", output_file)
 
         runner.cleanup()
         return run_result
 
-    except Exception as e:
-        print(f"Error processing {model_config.oracle}: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        logger.exception("Error processing %s", model_config.oracle)
         return None
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run QuAcq constraint acquisition",
+    parser = build_parser(
+        "Run QuAcq constraint acquisition",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
@@ -122,8 +119,6 @@ Example:
 Modes: automated | interactive | example_only | example_first
         """
     )
-    parser.add_argument('config', help='Path to TOML configuration file')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
     parser.add_argument('-o', '--output-dir', help='Output directory (overrides config)')
     parser.add_argument('--interactive', action='store_true',
                         help='Use interactive mode (human expert answers)')
@@ -134,11 +129,8 @@ Modes: automated | interactive | example_only | example_first
 
     args = parser.parse_args()
 
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-
     if not Path(args.config).exists():
-        print(f"Error: Config not found: {args.config}")
+        logger.error("Config not found: %s", args.config)
         sys.exit(1)
 
     config = load_pipeline_config(args.config)
@@ -146,58 +138,59 @@ Modes: automated | interactive | example_only | example_first
     # Parse settings from [quacq] section
     general = config.get('general', {})
     quacq_config = config.get('quacq', {})
+    setup_logging(verbose=args.verbose or general.get('verbose', False),
+                  debug=args.debug)
 
     output_dir = Path(args.output_dir or general.get('output_dir', 'data/results/quacq'))
-    verbose = args.verbose or general.get('verbose', False)
 
     mode = 'interactive' if args.interactive else quacq_config.get('mode', 'automated')
     max_queries = args.max_queries or quacq_config.get('max_queries', 1000)
 
     models = parse_models(config)
     if not models:
-        print("Error: No models specified in configuration")
+        logger.error("No models specified in configuration")
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("=" * 60)
-    print("QuAcq Constraint Acquisition")
-    print("=" * 60)
-    print(f"Config: {args.config}")
-    print(f"Output: {output_dir}")
-    print(f"Models: {len(models)}")
-    print(f"Mode: {mode}")
-    print(f"Max queries: {max_queries}")
-    print(f"Solver: {args.solver}")
+    logger.info("=" * 60)
+    logger.info("QuAcq Constraint Acquisition")
+    logger.info("=" * 60)
+    logger.info("Config: %s", args.config)
+    logger.info("Output: %s", output_dir)
+    logger.info("Models: %d", len(models))
+    logger.info("Mode: %s", mode)
+    logger.info("Max queries: %s", max_queries)
+    logger.info("Solver: %s", args.solver)
 
     results = []
     success_count = 0
 
     for model in models:
         result = process_model(model, output_dir, max_queries, mode,
-                               verbose, args.solver)
+                               args.solver)
         results.append((model, result))
         if result and (result.n_kb > 0 or result.convergence_reason in ['empty_bias', 'no_query']):
             success_count += 1
 
-    # Print summary
-    print()
-    print("=" * 60)
-    print("Summary")
-    print("=" * 60)
-    print(f"{'Model':<30} {'Queries':>8} {'KB':>5} {'Reason':<15} {'Runtime':>10}")
-    print("-" * 70)
+    # Log summary
+    logger.info("=" * 60)
+    logger.info("Summary")
+    logger.info("=" * 60)
+    logger.info(f"{'Model':<30} {'Queries':>8} {'KB':>5} {'Reason':<15} {'Runtime':>10}")
+    logger.info("-" * 70)
 
     for model, result in results:
         if result:
-            print(f"{model.name:<30} {result.n_queries:>8} {result.n_kb:>5} "
-                  f"{result.convergence_reason:<15} {result.runtime_ms:>8.2f}ms")
+            logger.info("%-30s %8d %5d %-15s %8.2fms",
+                        model.name, result.n_queries, result.n_kb,
+                        result.convergence_reason, result.runtime_ms)
         else:
-            print(f"{model.name:<30} {'ERROR':>8}")
+            logger.info("%-30s %8s", model.name, 'ERROR')
 
-    print("-" * 70)
-    print(f"Completed: {success_count}/{len(models)} models")
-    print("=" * 60)
+    logger.info("-" * 70)
+    logger.info("Completed: %d/%d models", success_count, len(models))
+    logger.info("=" * 60)
 
     if success_count < len(models):
         sys.exit(1)

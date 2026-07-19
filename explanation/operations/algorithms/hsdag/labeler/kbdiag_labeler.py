@@ -1,16 +1,16 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Sequence
 
 from .labeler import IHSLabelable, LabelerType, AbstractHSParameters
-from ...checker import ConsistencyChecker
+from explanation.checker.protocols import ConsistencyChecker
 from ...kbdiag import KBDiag
 
 
 @dataclass
 class KBDiagParameters(AbstractHSParameters):
-    set_b: List
-    set_tc: List
-    set_neg_tv: List
+    set_b: Sequence[int]
+    set_tc: Sequence[int]
+    set_neg_tv: Sequence[int]
 
     set_tcp: List = None
 
@@ -34,8 +34,6 @@ class KBDiagLabeler(KBDiag, IHSLabelable):
     def get_type(self) -> LabelerType:
         return LabelerType.DIAGNOSIS
 
-    def get_initial_parameters(self) -> AbstractHSParameters:
-        return self.initial_parameters
 
     def get_label(self, parameters: AbstractHSParameters) -> List[List]:
         """
@@ -55,7 +53,7 @@ class KBDiagLabeler(KBDiag, IHSLabelable):
 
             # update the parameters, which will be used by the children's nodes
             # set_tcp
-            parameters.set_tcp = set_tcp.copy()
+            parameters.set_tcp = list(set_tcp)
 
             if len(diag) != 0:
                 return [diag]
@@ -69,15 +67,15 @@ class KBDiagLabeler(KBDiag, IHSLabelable):
         assert isinstance(param_parent_node, KBDiagParameters),\
             "parameter must be an instance of KBDiagParameters"
 
-        new_c = param_parent_node.set_c.copy()
+        new_c = list(param_parent_node.set_c)
         new_c.remove(arc_label)
-        new_b = param_parent_node.set_b.copy()
+        new_b = list(param_parent_node.set_b)
         new_b.append(arc_label)
 
         if param_parent_node.set_tcp is None:
             new_tc = []
         else:
-            new_tc = param_parent_node.set_tcp.copy()
+            new_tc = list(param_parent_node.set_tcp)
 
         return KBDiagParameters(new_c, new_b, new_tc, param_parent_node.set_neg_tv)
 

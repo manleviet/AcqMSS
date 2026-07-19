@@ -17,18 +17,24 @@ Usage:
 
 import argparse
 import json
+import logging
 import statistics
 import sys
 from pathlib import Path
 from typing import List
 
-from conacq.eval.config import (
+from conacq.atomic_io import write_json_atomic
+from apps._harness import setup_logging
+
+from conacq.config import (
     find_cv_files, find_kb_files, load_pipeline_config, parse_models,
 )
 from conacq.eval.kb_comparator import KBComparator, ComparationStrategy
 from conacq.eval.result_loader import ConGenResultData
 from conacq.oracle.ground_truth import GroundTruthData
 from conacq.bias import BiasIO
+
+logger = logging.getLogger(__name__)
 
 
 def get_strategies(strategy_config: str) -> List[ComparationStrategy]:
@@ -56,17 +62,16 @@ def get_strategies(strategy_config: str) -> List[ComparationStrategy]:
 
 def compare_entry(entry: dict, comparator: KBComparator,
                   bias, strategies: List[ComparationStrategy],
-                  verbose: bool, label: str = "") -> dict:
+                  label: str = "") -> dict:
     """Compare a fold or intersected KB entry. Returns evaluation dict."""
     result_data = ConGenResultData.from_dict(entry)
     eval_dict = {}
     for strategy in strategies:
         com_result = comparator.compare(result_data, strategy)
         eval_dict[strategy.value] = com_result.to_enriched_dict(bias)
-        if verbose:
-            m = com_result.metrics
-            print(f"    {label}{strategy.value}: "
-                  f"P={m.precision:.4f}, R={m.recall:.4f}, F1={m.f1_score:.4f}")
+        m = com_result.metrics
+        logger.debug("    %s%s: P=%.4f, R=%.4f, F1=%.4f",
+                     label, strategy.value, m.precision, m.recall, m.f1_score)
     return eval_dict
 
 
@@ -100,19 +105,19 @@ def compute_summary(data: dict, strategies: List[ComparationStrategy]) -> dict:
     return summary
 
 
-def compare_model_unified(model, strategies, verbose):
+def compare_model_unified(model, strategies):
     """Compare all unified CV files for a model."""
     if not model.kb_dir:
-        print(f"  Warning: No kb_dir configured for {model.name}")
+        logger.warning("No kb_dir configured for %s", model.name)
         return 0
     kb_path = Path(model.kb_dir)
     if not kb_path.exists():
-        print(f"  Warning: kb_dir not found: {model.kb_dir}")
+        logger.warning("kb_dir not found: %s", model.kb_dir)
         return 0
 
     cv_files = find_cv_files(kb_path)
     if not cv_files:
-        print(f"  Warning: No CV files found in {model.kb_dir}")
+        logger.warning("No CV files found in %s", model.kb_dir)
         return 0
 
     bias = BiasIO.load_from_json(model.bias)
@@ -121,7 +126,7 @@ def compare_model_unified(model, strategies, verbose):
 
     count = 0
     for cv_file in cv_files:
-        print(f"  {cv_file.name}")
+        logger.info("%s", cv_file.name)
         with open(cv_file) as f:
             data = json.load(f)
 
@@ -129,27 +134,25 @@ def compare_model_unified(model, strategies, verbose):
         for fold in data.get('folds', []):
             label = f"Fold {fold.get('fold_index', '?')}: "
             fold['evaluation'] = compare_entry(
-                fold, comparator, bias, strategies, verbose, label)
+                fold, comparator, bias, strategies, label)
 
         # Compare intersected KB
         ik = data.get('intersected_kb', {})
         if ik and ik.get('kb_constraints'):
             ik['evaluation'] = compare_entry(
-                ik, comparator, bias, strategies, verbose, "Intersected: ")
+                ik, comparator, bias, strategies, "Intersected: ")
 
         # Compute summary
         data['summary'] = compute_summary(data, strategies)
-        if verbose:
-            for key, vals in data['summary'].items():
-                p, r, f1 = vals['precision'], vals['recall'], vals['f1_score']
-                print(f"    Summary({key}): "
-                      f"P={p['mean']:.4f}+/-{p['std']:.4f}, "
-                      f"R={r['mean']:.4f}+/-{r['std']:.4f}, "
-                      f"F1={f1['mean']:.4f}+/-{f1['std']:.4f}")
+        for key, vals in data['summary'].items():
+            p, r, f1 = vals['precision'], vals['recall'], vals['f1_score']
+            logger.debug("    Summary(%s): "
+                         "P=%.4f+/-%.4f, R=%.4f+/-%.4f, F1=%.4f+/-%.4f",
+                         key, p['mean'], p['std'], r['mean'], r['std'],
+                         f1['mean'], f1['std'])
 
         # Write back (idempotent)
-        with open(cv_file, 'w') as f:
-            json.dump(data, f, indent=2)
+        write_json_atomic(cv_file, data)
         count += 1
 
     return count
@@ -158,30 +161,32 @@ def compare_model_unified(model, strategies, verbose):
 def run_config_mode(config_path: str, verbose: bool, output_dir_override: str = None):
     """Run in config mode: batch compare unified CV files."""
     config = load_pipeline_config(config_path)
+    general = config.get('general', {})
+    setup_logging(verbose=verbose or general.get('verbose', False))
+
     models = parse_models(config)
     if not models:
-        print("Error: No models specified in configuration")
+        logger.error("No models specified in configuration")
         sys.exit(1)
 
-    general = config.get('general', {})
     compare_config = config.get('compare', {})
-    verbose = verbose or general.get('verbose', False)
     strategy_str = compare_config.get('strategy', 'all')
     strategies = get_strategies(strategy_str)
 
-    print("=" * 60)
-    print("KB Comparison (unified CV mode)")
-    print("=" * 60)
-    print(f"Config: {config_path}")
-    print(f"Models: {len(models)}")
-    print(f"Strategies: {[s.value for s in strategies]}")
+    logger.info("=" * 60)
+    logger.info("KB Comparison (unified CV mode)")
+    logger.info("=" * 60)
+    logger.info("Config: %s", config_path)
+    logger.info("Models: %d", len(models))
+    logger.info("Strategies: %s", [s.value for s in strategies])
 
     total = 0
     for model in models:
-        print(f"\n--- {model.name} ---")
-        total += compare_model_unified(model, strategies, verbose)
+        logger.info("--- %s ---", model.name)
+        total += compare_model_unified(model, strategies)
 
-    print(f"\nDone. Compared {total} unified CV files across {len(models)} models.")
+    logger.info("Done. Compared %d unified CV files across %d models.",
+                total, len(models))
 
 
 # ── CLI mode (legacy standalone KB files) ──────────────────────
@@ -189,7 +194,7 @@ def run_config_mode(config_path: str, verbose: bool, output_dir_override: str = 
 
 def compare_kb(kb_path: Path, comparator: KBComparator,
                strategies: List[ComparationStrategy],
-               output_dir: Path, verbose: bool) -> dict:
+               output_dir: Path) -> dict:
     """Compare a single standalone KB file against ground truth."""
     result_data = ConGenResultData.from_json(kb_path)
 
@@ -197,9 +202,9 @@ def compare_kb(kb_path: Path, comparator: KBComparator,
     for strategy in strategies:
         com_result = comparator.compare(result_data, strategy)
         eval_result[strategy.value] = com_result.to_dict()
-        if verbose:
-            m = com_result.metrics
-            print(f"  {strategy.value}: P={m.precision:.4f}, R={m.recall:.4f}, F1={m.f1_score:.4f}")
+        m = com_result.metrics
+        logger.debug("  %s: P=%.4f, R=%.4f, F1=%.4f",
+                     strategy.value, m.precision, m.recall, m.f1_score)
 
     eval_file = output_dir / f"{kb_path.stem}_eval.json"
     eval_data = {
@@ -207,23 +212,23 @@ def compare_kb(kb_path: Path, comparator: KBComparator,
         'n_kb': result_data.n_kb,
         'evaluation': eval_result,
     }
-    output_dir.mkdir(parents=True, exist_ok=True)
-    with open(eval_file, 'w') as f:
-        json.dump(eval_data, f, indent=2)
+    write_json_atomic(eval_file, eval_data)
 
     return eval_result
 
 
 def run_cli_mode(args):
     """Run in CLI mode: single model comparison (standalone KB files)."""
+    setup_logging(verbose=args.verbose)
+
     kb_path = Path(args.kb)
     if not kb_path.exists():
-        print(f"Error: KB path not found: {args.kb}")
+        logger.error("KB path not found: %s", args.kb)
         sys.exit(1)
 
     kb_files = find_kb_files(kb_path)
     if not kb_files:
-        print(f"Error: No KB files found at: {args.kb}")
+        logger.error("No KB files found at: %s", args.kb)
         sys.exit(1)
 
     bias = BiasIO.load_from_json(args.bias)
@@ -235,18 +240,18 @@ def run_cli_mode(args):
         kb_path if kb_path.is_dir() else kb_path.parent
     )
 
-    print("=" * 60)
-    print("KB Comparison (CLI mode)")
-    print("=" * 60)
-    print(f"KB files: {len(kb_files)}")
-    print(f"Strategies: {[s.value for s in strategies]}")
-    print(f"Output: {output_dir}")
+    logger.info("=" * 60)
+    logger.info("KB Comparison (CLI mode)")
+    logger.info("=" * 60)
+    logger.info("KB files: %d", len(kb_files))
+    logger.info("Strategies: %s", [s.value for s in strategies])
+    logger.info("Output: %s", output_dir)
 
     for kb_file in kb_files:
-        print(f"\n--- {kb_file.name} ---")
-        compare_kb(kb_file, comparator, strategies, output_dir, args.verbose)
+        logger.info("--- %s ---", kb_file.name)
+        compare_kb(kb_file, comparator, strategies, output_dir)
 
-    print(f"\nDone. Eval files saved to {output_dir}")
+    logger.info("Done. Eval files saved to %s", output_dir)
 
 
 # ── Main ───────────────────────────────────────────────────────
@@ -280,12 +285,12 @@ Example:
 
     if args.config and args.config.endswith('.toml'):
         if not Path(args.config).exists():
-            print(f"Error: Config not found: {args.config}")
+            logger.error("Config not found: %s", args.config)
             sys.exit(1)
         run_config_mode(args.config, args.verbose, args.output_dir)
     elif args.kb:
         if not args.bias or not args.oracle:
-            print("Error: CLI mode requires --kb, --bias, and --oracle")
+            logger.error("CLI mode requires --kb, --bias, and --oracle")
             sys.exit(1)
         run_cli_mode(args)
     else:

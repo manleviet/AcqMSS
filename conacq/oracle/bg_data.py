@@ -8,6 +8,8 @@ Parts 3+4, allowing ConGen to start its own ID allocation cleanly.
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 
+from explanation.api import FrozenDict
+
 
 @dataclass(frozen=True)
 class BGData:
@@ -26,14 +28,25 @@ class BGData:
         pos_assignment_to_assumption: {feature_name: pos_assumption_id}
         neg_assignment_to_assumption: {feature_name: neg_assumption_id}
     """
-    set_kb: List[List[int]]
+    set_kb: Tuple[Tuple[int, ...], ...]
     assumptions: Tuple[int, int]
-    negation_map: Dict[int, int]
-    descriptions: Dict[int, str]
+    negation_map: "FrozenDict[int, int]"
+    descriptions: "FrozenDict[int, str]"
     next_available_id: int
 
     # Part 4: Feature assignment assumptions (for QuAcq pruning)
-    assignment_clauses: List[List[int]] = field(default_factory=list)
-    assignment_assumptions: List[int] = field(default_factory=list)
-    pos_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
-    neg_assignment_to_assumption: Dict[str, int] = field(default_factory=dict)
+    assignment_clauses: Tuple[Tuple[int, ...], ...] = field(default_factory=tuple)
+    assignment_assumptions: Tuple[int, ...] = field(default_factory=tuple)
+    pos_assignment_to_assumption: "FrozenDict[str, int]" = field(default_factory=dict)
+    neg_assignment_to_assumption: "FrozenDict[str, int]" = field(default_factory=dict)
+
+    def __post_init__(self):
+        # Deep-freeze every gut so ``frozen=True`` is honest (built-then-frozen:
+        # the preparer accumulates locals and constructs BGData once).
+        object.__setattr__(self, 'set_kb', tuple(tuple(c) for c in self.set_kb))
+        object.__setattr__(self, 'negation_map', FrozenDict(self.negation_map))
+        object.__setattr__(self, 'descriptions', FrozenDict(self.descriptions))
+        object.__setattr__(self, 'assignment_clauses', tuple(tuple(c) for c in self.assignment_clauses))
+        object.__setattr__(self, 'assignment_assumptions', tuple(self.assignment_assumptions))
+        object.__setattr__(self, 'pos_assignment_to_assumption', FrozenDict(self.pos_assignment_to_assumption))
+        object.__setattr__(self, 'neg_assignment_to_assumption', FrozenDict(self.neg_assignment_to_assumption))

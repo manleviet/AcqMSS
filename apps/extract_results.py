@@ -13,12 +13,18 @@ Tables generated:
 
 import argparse
 import json
+import logging
 import re
 import statistics
 import tomllib
 from pathlib import Path
+
+from conacq.atomic_io import write_text_atomic
+from apps._harness import build_parser, load_config, setup_logging
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 # KB name mapping (paper names)
@@ -125,7 +131,7 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         with open(filepath) as f:
             data = json.load(f)
     except Exception as e:
-        print(f"Error loading {filepath}: {e}")
+        logger.error("Error loading %s: %s", filepath, e)
         return None
 
     perf = data.get('performance', {})
@@ -653,12 +659,12 @@ def generate_single_strategy_table(
 # =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = build_parser(
         description='Extract evaluation results and generate tables',
+        config='optional',
+        verbose=False,
         epilog='Usage: PYTHONPATH=. python apps/extract_results.py apps/conf/extract_results_config.toml'
     )
-    parser.add_argument('config', nargs='?', default=None,
-                        help='Path to TOML configuration file')
     parser.add_argument('--results-dir', type=str, default=None,
                         help='Directory containing CV result JSON files')
     parser.add_argument('--output-dir', type=str, default=None,
@@ -667,11 +673,12 @@ def main():
                         default=None, help='Solver mode to include in tables')
     args = parser.parse_args()
 
+    setup_logging()
+
     # Load defaults from TOML config if provided
     toml_config = {}
     if args.config and Path(args.config).exists():
-        with open(args.config, 'rb') as f:
-            toml_config = tomllib.load(f)
+        toml_config = load_config(args.config)
 
     general = toml_config.get('general', {})
     results_dir = Path(args.results_dir or general.get('results_dir', 'data/results'))
@@ -680,19 +687,19 @@ def main():
 
     mode = args.mode or general.get('mode', 'both')
 
-    print(f"Loading results from: {results_dir}")
+    logger.info("Loading results from: %s", results_dir)
     results = load_all_results(results_dir)
 
     # Summary
-    print(f"\nLoaded results:")
+    logger.info("Loaded results:")
     for model in sorted(results.keys()):
         strats = sorted(results[model].keys())
         modes = set()
         for s in strats:
             modes.update(results[model][s].keys())
-        print(f"  {model}: {len(strats)} strategies, modes: {sorted(modes)}")
+        logger.info("  %s: %d strategies, modes: %s", model, len(strats), sorted(modes))
 
-    print(f"\nGenerating tables to: {output_dir}")
+    logger.info("Generating tables to: %s", output_dir)
     modes_to_gen = ['incremental', 'non-incremental'] if mode == 'both' else [mode]
 
     md_content = [
@@ -751,16 +758,14 @@ def main():
         latex_content.append("\n" + generate_incremental_comparison(results, 'latex'))
 
     md_file = output_dir / "results_tables.md"
-    with open(md_file, 'w') as f:
-        f.write("\n".join(md_content))
-    print(f"  Markdown tables: {md_file}")
+    write_text_atomic(md_file, "\n".join(md_content))
+    logger.info("  Markdown tables: %s", md_file)
 
     latex_file = output_dir / "results_tables.tex"
-    with open(latex_file, 'w') as f:
-        f.write("\n".join(latex_content))
-    print(f"  LaTeX tables: {latex_file}")
+    write_text_atomic(latex_file, "\n".join(latex_content))
+    logger.info("  LaTeX tables: %s", latex_file)
 
-    print("\nDone!")
+    logger.info("Done!")
 
 
 if __name__ == '__main__':

@@ -9,21 +9,33 @@ Also contains QuAcqTaskPreparation (co-located: creation logic next to data).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
-from explanation.models.task_preparation import (
+from explanation.api import (
+    AssignmentAssumptionMap,
+    AssumptionIdAllocator,
     DescriptionProvider,
     DiagnosisTask,
-    PreparationOutput,
+    FrozenDict,
+    PreparedTask,
+    TaskPreparationStrategy,
     prepare_kb,
-    _ASSUMPTION_PAIR_STRIDE,
 )
 if TYPE_CHECKING:
-    from conacq.oracle import FeatureModelOracle
+    from conacq.oracle import OracleData
     from .quacq_model import QuAcqModel
 
 
-@dataclass
+@dataclass(frozen=True)
+class QuAcqTaskInput:
+    """Per-preparation input for QuAcqModel.prepare_task: the oracle's frozen
+    provisioning snapshot. QuAcq's own input type — the prepare_task signature is
+    unified across models, the input TYPE is not (a shared union would be the
+    fat-container anti-pattern removed at T9, ADR-0006)."""
+    oracle_data: "OracleData"
+
+
+@dataclass(frozen=True)
 class QuAcqTask(DiagnosisTask):
     """Immutable task for QuAcq constraint acquisition.
 
@@ -41,10 +53,18 @@ class QuAcqTask(DiagnosisTask):
     lives in the QuAcq algorithm, not here.
     """
     # assumption_id -> raw clauses (WITHOUT assumption guards, for violation checking)
-    constraint_clauses: Dict[int, List[List[int]]] = field(default_factory=dict)
+    constraint_clauses: "FrozenDict[int, Tuple[Tuple[int, ...], ...]]" = field(default_factory=dict)
+
+    def __post_init__(self):
+        # Freeze the Task guts (super) then deep-freeze constraint_clauses so the
+        # frozen=True label is honest (built-then-frozen in QuAcqTaskPreparation).
+        super().__post_init__()
+        object.__setattr__(self, 'constraint_clauses',
+                           FrozenDict({k: tuple(tuple(c) for c in v)
+                                       for k, v in self.constraint_clauses.items()}))
 
 
-class QuAcqTaskPreparation:
+class QuAcqTaskPreparation(TaskPreparationStrategy):
     """Prepare QuAcqTask from bias + oracle. No E+/E-.
 
     Assumption ID layout (QuAcq owns Parts 5-6):
@@ -54,50 +74,66 @@ class QuAcqTaskPreparation:
     """
 
     def prepare(self, model: QuAcqModel,
-                oracle: FeatureModelOracle) -> PreparationOutput:
-        """Prepare QuAcqTask from model and oracle.
+                task_input: QuAcqTaskInput) -> PreparedTask:
+        """Prepare QuAcqTask from model and the frozen OracleData snapshot.
+
+        Build-then-freeze: accumulate into locals, construct frozen QuAcqTask once.
 
         Args:
             model: QuAcqModel with bias constraint_map
-            oracle: FeatureModelOracle for BG data and feature IDs
+            task_input: QuAcqTaskInput carrying the oracle's frozen snapshot; its
+                oracle_data is unpacked here so the signature matches the
+                TaskPreparationStrategy contract (model, task_input) — the model
+                layer no longer unpacks it before handing it down.
 
         Returns:
-            PreparationOutput with QuAcqTask and DescriptionProvider
+            PreparedTask with QuAcqTask, DescriptionProvider, and the
+            feature-assignment map (built here from the BG data, not the builder).
         """
-        result = QuAcqTask()
+        oracle_data = task_input.oracle_data
         provider = DescriptionProvider()
 
+        # Local accumulation
+        set_kb: List[List[int]] = []
+        assumptions: List[int] = []
+        negation_map: Dict[int, int] = {}
+
         # Step 0: Copy BG data from Oracle (root constraint pair)
-        bg_data = oracle.get_bg_data()
-        result.set_kb.extend(bg_data.set_kb)
-        result.assumptions.extend(list(bg_data.assumptions))
-        result.negation_map.update(bg_data.negation_map)
+        bg_data = oracle_data.get_bg_data()
+        set_kb.extend(bg_data.set_kb)
+        assumptions.extend(list(bg_data.assumptions))
+        negation_map.update(bg_data.negation_map)
         for aid, desc in bg_data.descriptions.items():
             provider.add_constraint_description(aid, desc)
 
         # Copy Part 4 data from BGData (feature assignment assumptions)
-        result.set_kb.extend(bg_data.assignment_clauses)
-        result.assumptions.extend(bg_data.assignment_assumptions)
+        set_kb.extend(bg_data.assignment_clauses)
+        assumptions.extend(bg_data.assignment_assumptions)
 
-        # Step 1: Assign assumption IDs (negated forms from builder)
-        id_assumption = model.next_available_id
-        bias_start_pos = len(result.assumptions)
-        id_assumption = prepare_kb(
-            result, provider, model.constraint_map,
-            id_assumption, model.negated_constraint_map)
-        # Assign set_b and set_c from assumptions
-        self._assign_sets(result, bias_start_pos)
+        # The feature-assignment map, built here from the BG data and returned on
+        # the PreparedTask. The QuAcq inner loop encodes configs through it
+        # (FindC/prune/query generation); it is derived per prepare, not stored.
+        assignment_map = AssignmentAssumptionMap(
+            dict(bg_data.pos_assignment_to_assumption),
+            dict(bg_data.neg_assignment_to_assumption))
+
+        # Step 1: Assign assumption IDs (negated forms from builder). set_c is the
+        # bias originals prepare_kb emitted; set_b is the BG root (first assumption).
+        alloc = AssumptionIdAllocator(model.next_available_id)
+        set_c = prepare_kb(
+            set_kb, assumptions, negation_map, provider,
+            model.constraint_map, alloc, model.negated_constraint_map)
+        set_b = [assumptions[0]]
 
         # Step 2: Build constraint_clauses mapping
-        for aid in result.set_c:
+        constraint_clauses: Dict[int, List[List[int]]] = {}
+        for aid in set_c:
             name = provider.get_description(aid)
             if name in model.constraint_map:
-                result.constraint_clauses[aid] = model.constraint_map[name]
+                constraint_clauses[aid] = model.constraint_map[name]
 
-        return PreparationOutput(result, provider)
-
-    @staticmethod
-    def _assign_sets(result: QuAcqTask, bias_start_pos: int) -> None:
-        """Assign set_b and set_c from assumptions."""
-        result.set_b = [result.assumptions[0]]
-        result.set_c = list(result.assumptions[bias_start_pos::_ASSUMPTION_PAIR_STRIDE])
+        task = QuAcqTask(
+            set_c=set_c, set_b=set_b, set_kb=set_kb,
+            negation_map=negation_map, assumptions=assumptions,
+            constraint_clauses=constraint_clauses)
+        return PreparedTask(task, provider, assignment_map)

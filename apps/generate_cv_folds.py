@@ -7,6 +7,7 @@ Usage:
 """
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
@@ -17,22 +18,22 @@ except ImportError:
 
 from conacq.examples import ExampleIO
 from conacq.eval.folds import generate_folds, save_folds
+from apps._harness import build_parser, load_config, setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate shared CV folds for evaluation"
-    )
-    parser.add_argument('config', help='Path to TOML configuration file')
+    parser = build_parser("Generate shared CV folds for evaluation", verbose=False)
 
     args = parser.parse_args()
 
     if not Path(args.config).exists():
-        print(f"Error: Config not found: {args.config}")
+        logger.error("Config not found: %s", args.config)
         sys.exit(1)
 
-    with open(args.config, 'rb') as f:
-        config = tomllib.load(f)
+    config = load_config(args.config)
+    setup_logging()
 
     folds_config = config.get('folds', {})
     seed = folds_config.get('seed', 42)
@@ -42,7 +43,7 @@ def main():
 
     models = config.get('models', [])
     if not models:
-        print("Error: No models in config")
+        logger.error("No models in config")
         sys.exit(1)
 
     for model in models:
@@ -50,11 +51,12 @@ def main():
         examples_path = model.get('examples')
 
         if not examples_path:
-            print(f"  Skipping {name}: no examples path")
+            logger.warning("Skipping %s: no examples path", name)
             continue
 
         if not Path(examples_path).exists():
-            print(f"  Skipping {name}: examples file not found: {examples_path}")
+            logger.warning("Skipping %s: examples file not found: %s",
+                           name, examples_path)
             continue
 
         examples = ExampleIO.load_json(examples_path)
@@ -66,9 +68,10 @@ def main():
         output_file = output_dir / f"{name}_folds.json"
         save_folds(fold_data, str(output_file))
 
-        print(f"  {name}: {n_folds} folds (E+={n_pos}, E-={n_neg}) -> {output_file}")
+        logger.info("%s: %d folds (E+=%d, E-=%d) -> %s",
+                    name, n_folds, n_pos, n_neg, output_file)
 
-    print("Done.")
+    logger.info("Done.")
 
 
 if __name__ == '__main__':

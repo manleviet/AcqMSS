@@ -22,13 +22,13 @@ Mode-agnostic: works identically regardless of checker type.
 """
 
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Sequence
 from dataclasses import dataclass, field
 
 from conacq.algorithms.acqmss import AcqMSS
 from .reduce import Reduce
-from explanation.operations.algorithms.checker import ConsistencyChecker
-from explanation.operations.algorithms.profiler import (
+from explanation.api import ConsistencyChecker
+from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
 
@@ -63,9 +63,9 @@ class ConGen:
     @count_calls('congen_calls')
     def acquire(
             self,
-            set_b: List[int],
-            set_bg: List[int],
-            set_tc: List[int],
+            set_b: Sequence[int],
+            set_bg: Sequence[int],
+            set_tc: Sequence[int],
             set_neg_tv: Optional[List[int]] = None,
             negation_map: Optional[Dict[int, int]] = None,
     ) -> ConGenResult:
@@ -87,6 +87,9 @@ class ConGen:
         """
         set_neg_tv = set_neg_tv or []
         negation_map = negation_map or {}
+        # Task solve-fields arrive as immutable tuples; work on lists.
+        set_b, set_bg, set_tc, set_neg_tv = (
+            list(set_b), list(set_bg), list(set_tc), list(set_neg_tv))
 
         logging.debug('>>> ConGen [B=%d, NE=%d, E+=%d, BG=%d]',
                       len(set_b), len(set_neg_tv), len(set_tc), len(set_bg))

@@ -7,18 +7,19 @@ Runs ConGen directly to:
 """
 
 from typing import List, Dict, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import random
 import tracemalloc
 import logging
 
 from conacq.algorithms.acqmss.congen import ConGen
 from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder
-from explanation.operations.algorithms.checker import CheckerFactory
-from explanation.operations.algorithms.profiler import profiler_session, ProfilerPreset
+from conacq.algorithms.acqmss.task_preparation import ConGenTaskInput
+from explanation.api import build_checker, SolverBackend
+from profiling import profiler_session, ProfilerPreset
 
-from conacq.eval.performance_metrics import PerformanceMetrics
 from .base_runner import BaseRunResult, BaseRunner
+from .metrics import CONGEN_METRICS, collect
 
 
 @dataclass
@@ -26,56 +27,20 @@ class ConGenRunResult(BaseRunResult):
     """
     Result of running ConGen with metrics.
 
-    Inherits 9 shared fields from BaseRunResult.
-    Adds ConGen-specific: redundant_constraints, n_mss, extended profiler metrics.
+    Inherits the shared fields from BaseRunResult (including the declarative
+    ``metrics`` RunMetrics bundle). Adds ConGen-specific: redundant_constraints,
+    n_mss. The extended profiler metrics are no longer hand-listed here — they
+    live in ``metrics`` (built via ``collect(profiler, CONGEN_METRICS)``).
     """
     redundant_constraints: List[str] = field(default_factory=list)
     n_mss: int = 0
-
-    # Extended profiler metrics
-    congen_runtime_ms: float = 0.0
-    acqmss_runtime_ms: float = 0.0
-    acqmss_calls: int = 0
-    reduce_runtime_ms: float = 0.0
-    solver_time_ms: float = 0.0
-    is_consistent_calls: int = 0
-    is_consistent_test_cases_calls: int = 0
-    redundancy_consistency_checks: int = 0
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         d = self._base_to_dict()
         d['redundant_constraints'] = self.redundant_constraints
         d['n_mss'] = self.n_mss
-        d['performance'].update({
-            'congen_runtime_ms': self.congen_runtime_ms,
-            'acqmss_runtime_ms': self.acqmss_runtime_ms,
-            'acqmss_calls': self.acqmss_calls,
-            'reduce_runtime_ms': self.reduce_runtime_ms,
-            'solver_time_ms': self.solver_time_ms,
-            'is_consistent_calls': self.is_consistent_calls,
-            'is_consistent_test_cases_calls': self.is_consistent_test_cases_calls,
-            'redundancy_consistency_checks': self.redundancy_consistency_checks,
-        })
         return d
-
-    def get_performance_metrics(self) -> PerformanceMetrics:
-        """Get performance metrics including ConGen-specific n_mss."""
-        return PerformanceMetrics(
-            runtime_ms=self.runtime_ms,
-            consistency_checks=self.consistency_checks,
-            memory_peak_mb=self.memory_peak_mb,
-            n_mss=self.n_mss,
-            n_kb=self.n_kb,
-            congen_runtime_ms=self.congen_runtime_ms,
-            acqmss_runtime_ms=self.acqmss_runtime_ms,
-            acqmss_calls=self.acqmss_calls,
-            reduce_runtime_ms=self.reduce_runtime_ms,
-            solver_time_ms=self.solver_time_ms,
-            is_consistent_calls=self.is_consistent_calls,
-            is_consistent_test_cases_calls=self.is_consistent_test_cases_calls,
-            redundancy_consistency_checks=self.redundancy_consistency_checks,
-        )
 
 
 class ConGenRunner(BaseRunner):
@@ -110,17 +75,16 @@ class ConGenRunner(BaseRunner):
         """
         super().__init__(bias_path, fm_path, solver_name, use_incremental=use_incremental)
 
-        # Build model (bias + negation, no examples yet)
+        # Build model (pure bias KB; solver mode is the runner's, examples per run)
         self.model = (ConGenModelBuilder
                       .from_bias(bias_path)
-                      .with_oracle(self.oracle)
-                      .use_incremental(use_incremental)
+                      .with_oracle_data(self.oracle.oracle_data)
                       .build())
 
     @property
     def feature_ids(self) -> Dict[str, int]:
-        """Feature name -> SAT variable ID mapping."""
-        return self.model.variables
+        """Feature name -> SAT variable ID mapping (a plain dict — see ADR-0007)."""
+        return self.model.name_to_id
 
     def run(
             self,
@@ -149,22 +113,33 @@ class ConGenRunner(BaseRunner):
             with profiler.timer("congen_total_time"):
                 checker = None
                 try:
-                    # Prepare for this fold's examples (runs GenerateNE)
-                    self.model.prepare(
-                        oracle=self.oracle,
-                        positive_examples=positive_examples,
-                        negative_examples=negative_examples
+                    # Prepare this fold's task (pure — runs GenerateNE). The model
+                    # keeps no task; the prepared task + describe live here locally.
+                    prepared = self.model.prepare_task(
+                        ConGenTaskInput.from_examples(
+                            self.oracle.oracle_data,
+                            positive_examples,
+                            negative_examples,
+                        )
                     )
-                    task = self.model.task
+                    task = prepared.task
+                    describe = prepared.describe
 
-                    # Shuffle bias iteration order if seed provided
+                    # Shuffle bias iteration order if seed provided.
+                    # Task is frozen: shuffle a copy and rebind, never mutate in place.
                     if shuffle_seed is not None:
-                        random.Random(shuffle_seed).shuffle(task.set_c)
+                        shuffled_set_c = list(task.set_c)
+                        random.Random(shuffle_seed).shuffle(shuffled_set_c)
+                        task = replace(task, set_c=shuffled_set_c)
                         logging.debug('Shuffled set_c with seed=%d', shuffle_seed)
 
-                    # Create checker via factory
-                    checker = CheckerFactory.create_from_model(
-                        self.model, self.solver_name, profiler
+                    # Build the checker from the running task (possibly shuffled).
+                    # The un-shuffled order is not retained — a fresh prepare_task
+                    # rebuilds it deterministically when needed.
+                    checker = build_checker(
+                        task,
+                        SolverBackend.from_flags(use_incremental=self.use_incremental),
+                        self.solver_name, profiler
                     )
 
                     # Run ConGen
@@ -186,27 +161,25 @@ class ConGenRunner(BaseRunner):
                     if checker is not None:
                         checker.cleanup()
 
-            # Extract core metrics
-            timer_values = profiler.get_metric('congen_total_time', [0])
-            runtime_ms = timer_values[0] * 1000 if timer_values else 0
+            # Collect metrics declaratively from the profiler + the values that
+            # do not live in it (memory from tracemalloc, KB sizes from result).
             memory_peak_mb = peak / (1024 * 1024)
-            consistency_checks = profiler.get_metric('paper_consistency_checks', 0)
-
-            # Extract extended profiler metrics (timers are lists, sum all calls)
-            congen_runtime_ms = sum(profiler.get_metric('congen_runtime', [0])) * 1000
-            acqmss_runtime_ms = sum(profiler.get_metric('acqmss_runtime', [0])) * 1000
-            reduce_runtime_ms = sum(profiler.get_metric('reduce_runtime', [0])) * 1000
-            solver_time_ms = sum(profiler.get_metric('solver_time', [0])) * 1000
-            acqmss_calls = profiler.get_metric('acqmss_calls', 0)
-            is_consistent_calls = profiler.get_metric('is_consistent_calls', 0)
-            is_consistent_test_cases_calls = profiler.get_metric('is_consistent_test_cases_calls', 0)
-            redundancy_consistency_checks = profiler.get_metric('redundancy_consistency_checks', 0)
+            run_metrics = collect(profiler, CONGEN_METRICS, extra={
+                'memory_peak_mb': memory_peak_mb,
+                'n_mss': result.n_mss,
+                'n_kb': result.n_kb,
+            })
+            runtime_ms = run_metrics.values['runtime_ms']
+            consistency_checks = run_metrics.values['consistency_checks']
 
             profiler_snapshot = profiler.to_dict()
 
-            # Resolve assumption IDs -> clauses/names via model
+            # Resolve assumption IDs -> clauses/names via the KB (stateless): the
+            # describe provider comes from the prepared task, the root BG clauses
+            # from the frozen OracleData snapshot.
             bg_clauses, kb_clauses, kb_names, redundant_names = \
-                self.model.resolve_result(result)
+                self.model.resolve_result(
+                    result, describe, self.oracle.oracle_data.get_root_clauses())
 
             run_result = ConGenRunResult(
                 kb_constraints=kb_names,
@@ -219,14 +192,7 @@ class ConGenRunner(BaseRunner):
                 runtime_ms=runtime_ms,
                 consistency_checks=consistency_checks,
                 memory_peak_mb=memory_peak_mb,
-                congen_runtime_ms=congen_runtime_ms,
-                acqmss_runtime_ms=acqmss_runtime_ms,
-                acqmss_calls=acqmss_calls,
-                reduce_runtime_ms=reduce_runtime_ms,
-                solver_time_ms=solver_time_ms,
-                is_consistent_calls=is_consistent_calls,
-                is_consistent_test_cases_calls=is_consistent_test_cases_calls,
-                redundancy_consistency_checks=redundancy_consistency_checks,
+                metrics=run_metrics,
                 profiler_data=profiler_snapshot
             )
 

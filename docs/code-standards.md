@@ -192,34 +192,40 @@ High-level interfaces hiding complexity. QuAcqRunner demonstrates the pattern wi
 ```python
 from conacq.algorithms.quacq import QuAcqModelBuilder, QuAcq, DiscriminatingGenerator
 from conacq.example_generators import QueryProvider
-from conacq.oracle import FeatureModelOracle
+from conacq.oracle import FMOracle
 
 class QuAcqRunner:
     """High-level interface for QuAcq learning (DI-based, returns resolved KB)."""
 
     def run(self, positive_examples=None, negative_examples=None, mode='oracle'):
         """Learn constraints interactively, resolve names."""
-        # Create checker from model (DI pattern)
-        from explanation.operations.algorithms.checker import CheckerFactory
-        checker = CheckerFactory.create_from_model(self.model)
+        from explanation.api import build_checker, SolverBackend
+        # Pure prepare — the model keeps no task; `prepared` carries the frozen
+        # task + describe + assignment_map (quacq_runner.py:167-169).
+        prepared = self.model.prepare_task(QuAcqTaskInput(self.oracle.oracle_data))
+        task = prepared.task
 
-        # Inject checker + model into query provider
-        query_prov = QueryProvider(checker=checker, model=self.model)
+        # Checker built from the Task; solver mode is the runner's (quacq_runner.py:180-184).
+        checker = build_checker(
+            task,
+            SolverBackend.from_flags(use_incremental=self.use_incremental),
+            self.solver_name, profiler)
 
-        # Inject checker + model + root_assumption into DiscriminatingGenerator (NEW - commit 260228)
-        discrim_gen = DiscriminatingGenerator(checker, self.model, self.model.task.set_b[0])
+        # DI wiring (quacq_runner.py:250-263):
+        query_prov = QueryProvider(checker=checker, model=self.model,
+                                   assignment_map=prepared.assignment_map,
+                                   profiler_instance=profiler)
+        discrim_gen = DiscriminatingGenerator(
+            checker=checker, model=self.model, profiler=profiler,
+            root_assumption=task.set_b[0], task=task)
+        quacq = QuAcq.for_oracle(checker, self.oracle, query_prov, discrim_gen,
+                                 model=self.model, profiler=profiler,
+                                 task=task, assignment_map=prepared.assignment_map)
 
-        quacq = QuAcq.for_oracle(checker, self.oracle, query_prov, discrim_gen)
-
-        # Algorithm returns raw assumption IDs
+        # Algorithm returns raw assumption IDs. Real learn signature = 3 data
+        # params + mode + max_queries (quacq.py:114-120).
         result = quacq.learn(
-            set_c=self.model.task.set_c, set_b=self.model.task.set_b,
-            set_kb=self.model.task.set_kb, negation_map=self.model.task.negation_map,
-            assumptions=self.model.task.assumptions,
-            background_clauses=self.model.task.background_clauses,
-            feature_ids=self.model.task.feature_ids, id_to_feature=self.model.task.id_to_feature,
-            constraint_clauses=self.model.task.constraint_clauses,
-            negated_clauses=self.model.task.negated_clauses,
+            set_c=task.set_c, set_b=task.set_b, negation_map=task.negation_map,
             mode=mode, max_queries=self.max_queries)
 
         # Runner resolves names (matches ConGen pattern)
@@ -229,7 +235,7 @@ class QuAcqRunner:
             n_kb=result.n_kb, n_queries=result.n_queries, ...)
 
 # Usage
-oracle = FeatureModelOracle('model.uvl')
+oracle = FMOracle('model.uvl')
 model = QuAcqModelBuilder.from_bias('bias.json').with_oracle(oracle).build()
 runner = QuAcqRunner(bias_path, fm_path)
 result = runner.run(mode='oracle')
@@ -242,7 +248,7 @@ Base class defines algorithm skeleton, subclasses fill steps:
 ```python
 from abc import abstractmethod
 
-class PySATAbstractExplanation(ABC):
+class PySATAbstractHSDAGExplanation(ABC):
     """Template for diagnosis operations."""
 
     def execute(self) -> list[Diagnosis]:
@@ -257,7 +263,7 @@ class PySATAbstractExplanation(ABC):
         """Subclass implements specific algorithm."""
         pass
 
-class FastDiag(PySATAbstractExplanation):
+class FastDiag(PySATAbstractHSDAGExplanation):
     def _diagnose(self, solver):
         # FastDiag-specific implementation
         pass
@@ -342,34 +348,46 @@ class QuAcq:
 # Usage with ConGenModelBuilder (fluent pattern)
 
 # Pattern: Build once, prepare+shuffle per fold (cross-validation)
-oracle = FeatureModelOracle('data/fms/model.uvl')
+oracle = FMOracle('data/fms/model.uvl')
 model = (ConGenModelBuilder
          .from_bias('data/bias/model.json')
          .with_oracle(oracle)  # Required for build-time negation
          .use_incremental(True)
          .build())  # Returns unprepared model (negation computed at build time)
 
-# Cross-validation pattern: build once, prepare multiple times
+# Cross-validation pattern: build once, prepare per fold (prepare_task is pure)
 import random
+from dataclasses import replace
+from explanation.api import build_checker, SolverBackend
+from conacq.algorithms.acqmss import ConGen, ConGenTaskInput
+
 for fold_idx, (fold_pos, fold_neg) in enumerate(folds):
-    # Step 1: Prepare for this fold's examples (GenerateNE called internally)
-    model.prepare(oracle, positive_examples=fold_pos, negative_examples=fold_neg)
+    # Step 1: Prepare this fold's task (pure — runs GenerateNE). The model keeps
+    # no task; the prepared task + describe live locally (congen_runner.py:118-126).
+    prepared = model.prepare_task(
+        ConGenTaskInput.from_examples(oracle.oracle_data, fold_pos, fold_neg))
+    task = prepared.task
 
-    # Step 2: Shuffle bias iteration order (after prepare, for reproducibility)
+    # Step 2: Shuffle bias order. Task is frozen — shuffle a copy and rebind,
+    # never mutate in place (congen_runner.py:130-133).
     shuffle_seed = fold_idx + 42
-    random.Random(shuffle_seed).shuffle(model.task.set_c)
+    shuffled_set_c = list(task.set_c)
+    random.Random(shuffle_seed).shuffle(shuffled_set_c)
+    task = replace(task, set_c=shuffled_set_c)
 
-    # Step 3: Create checker and run ConGen
-    from explanation.operations.algorithms.checker import CheckerFactory, CheckerModel
-    checker = CheckerFactory.create_from_model(model, profiler)
+    # Step 3: Build checker from the (possibly shuffled) task and run ConGen
+    # (congen_runner.py:139-151). Solver mode / name come from the runner.
+    checker = build_checker(
+        task,
+        SolverBackend.from_flags(use_incremental=use_incremental),
+        solver_name, profiler)
     congen = ConGen(checker, profiler)
     result = congen.acquire(
-        set_b=model.task.set_c,
-        set_bg=model.task.set_b,
-        set_tc=model.task.set_tc,
-        set_neg_tv=model.task.set_neg_tv,
-        negation_map=model.task.negation_map  # Maps assumption ID → negated ID for REDUCE
-    )
+        set_b=task.set_c,
+        set_bg=task.set_b,
+        set_tc=task.set_tc,
+        set_neg_tv=task.set_neg_tv,
+        negation_map=task.negation_map)  # assumption ID → negated ID for REDUCE
 
 # Alternative: Use ConGenRunner facade (recommended for production)
 from conacq.runners import ConGenRunner
@@ -396,14 +414,23 @@ Extract duplicated logic into static/class methods. Example: Violation checking 
 
 `QuAcqRunner` provides high-level facade for QuAcq learning. QuAcq processes negative examples with FindScope/FindC to identify violated constraints in both oracle and example-based modes.
 
-### 8. CheckerModel Protocol (Duck Typing)
+### 8. Checker Construction from Tasks
 
-Classes implementing `CheckerModel` must provide:
-- `get_kb() -> List[List[int]]` — Return CNF clauses
-- `get_assumptions() -> List[int]` — Return all possible assumptions
-- `use_incremental: bool` — Flag for solver mode preference
+The checker is built from a Task via `build_checker()` (from `explanation.api`):
 
-Both `ConGenModel` and `FMOracleModel` implement this protocol for integration with `CheckerFactory`.
+```python
+from explanation.api import build_checker, SolverBackend
+
+# Build checker from a task
+checker = build_checker(
+    task,
+    backend=SolverBackend.PYSAT_INCREMENTAL,
+    solver_name='glucose4',
+    profiler=profiler  # optional
+)
+```
+
+Models are pure knowledge base containers (bias + constraint maps) — they do NOT implement a checker protocol. The task contains all solver-related data (CNF clauses with assumption literals, assumption IDs, negation maps), which is what `build_checker` needs. Checker mode (incremental vs non-incremental) is selected via the `SolverBackend` enum, not on the model or builder.
 
 ## Oracle Module Conventions
 
@@ -413,16 +440,16 @@ Both `ConGenModel` and `FMOracleModel` implement this protocol for integration w
 
 **Key Classes**:
 
-1. **FMData** (`@dataclass(frozen=True)`): Immutable FM metadata container
-   - Fields: `features`, `feature_ids`, `root_feature`, `num_constraints`, `next_available_id`, `feature_count` property
-   - Created by `FeatureModelOracle.get_fm_data()`, passed explicitly to decouple callers
+1. **OracleData** (`@dataclass(frozen=True)`): Frozen provisioning snapshot (ADR-0009/0012)
+   - Carries the algorithm's SAT inputs (`kb`/`assumptions`/`c`/`bg_data`/`root_clauses`); satisfies `KBProvider`+`BGProvider`
+   - Built once from the oracle model, then handed to `GenerateNE`, the builders, and task-prep — a snapshot, not the live oracle
 
 2. **BGData** (`@dataclass(frozen=True)`): Root background knowledge constraint data
    - Fields: `set_kb` (assumption-guarded clauses), `assumptions` (tuple of root and negated IDs), `negation_map`, `descriptions`, `next_available_id`
    - Created by `FMOracleModel.get_bg_data()` after task preparation
    - Enables ConGen to cleanly allocate assumption IDs without overlap with oracle assumptions
 
-3. **FeatureModelOracle**: Main FM oracle
+3. **FMOracle**: Main FM oracle
    - ABC methods: `is_valid()`, `ask()`
    - FM extensions: `get_fm_data()`, `get_features()`, `get_feature_ids()`, `get_root_feature()`, `get_num_constraints()`, `get_next_available_id()`, `complete_configuration()`, `get_cnf_clauses()`, `get_constraint_descriptions()`
    - Delegates to `FMOracleModel` for consistency checking
@@ -431,7 +458,7 @@ Both `ConGenModel` and `FMOracleModel` implement this protocol for integration w
 4. **FMOracleModel**: Assumption-guarded FM model
    - FM clauses in `set_kb` (always active)
    - Feature assignments as assumption-guarded unit clauses: `[-a_pos_i, fid]`, `[-a_neg_i, -fid]`
-   - Satisfies `CheckerModel` protocol for `CheckerFactory`
+   - Its prepared Task carries the assumption-guarded clauses that `build_checker()` consumes
    - Exposes `bg_data` property and `get_bg_data()` method to extract root constraint
 
 5. **UserPromptOracle**: Interactive human oracle (implements `is_valid()` only)
@@ -440,9 +467,9 @@ Both `ConGenModel` and `FMOracleModel` implement this protocol for integration w
 
 **Design Principles**:
 - Minimal ABC (only `is_valid()`)
-- FM metadata via `FMData` (decoupled)
-- FM-specific methods on `FeatureModelOracle` (not ABC)
-- Example generators typed as `FeatureModelOracle` (not generic `Oracle`)
+- Provisioning via a frozen `OracleData` snapshot (ADR-0009)
+- FM-specific methods on `FMOracle` (not ABC)
+- Example generators typed as `FMOracle` (not generic `Oracle`)
 
 **Critical**: Feature ID consistency — `FMOracleModel.variables` uses flamapy's tree traversal order (source: `FmToPysat.variables`). **Never** sort alphabetically — breaks SAT clause literal mapping.
 

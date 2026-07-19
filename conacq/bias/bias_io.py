@@ -5,9 +5,10 @@ This module provides functionality to save and load constraint biases
 in different formats: JSON (structured) and DIMACS CNF (standard SAT format).
 """
 
-import json
 from pathlib import Path
 from typing import Dict
+
+from conacq.atomic_io import atomic_write, write_json_atomic, read_json
 from .data_structures import Feature, Constraint, Bias, OperatorType
 
 
@@ -50,7 +51,7 @@ class BiasIO:
             -2 1 0
             ...
         """
-        with open(filepath, 'w') as f:
+        with atomic_write(filepath) as f:
             # Header comments
             f.write("c Constraint Bias B\n")
             f.write("c Generated for constraint acquisition\n")
@@ -117,8 +118,7 @@ class BiasIO:
             ]
         }
 
-        with open(filepath, 'w') as f:
-            json.dump(data, f, indent=2)
+        write_json_atomic(filepath, data)
 
     @staticmethod
     def load_from_json(filepath: str) -> Bias:
@@ -139,8 +139,7 @@ class BiasIO:
         if not file_path.exists():
             raise FileNotFoundError(f"Bias file not found: {filepath}")
 
-        with open(filepath, 'r') as f:
-            data = json.load(f)
+        data = read_json(filepath)
 
         # Reconstruct features
         features = [
@@ -210,7 +209,7 @@ class BiasIO:
         """
         from collections import Counter
 
-        with open(filepath, 'w') as f:
+        with atomic_write(filepath) as f:
             f.write("=== Bias Statistics ===\n")
             f.write(f"Total features: {len(bias.features)}\n")
             f.write(f"Total constraints: {len(bias.constraints)}\n")

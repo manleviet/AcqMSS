@@ -8,10 +8,10 @@ This means t_γ is already covered by t_α and can be removed from the test suit
 """
 
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Dict, Mapping, Sequence, Tuple
 
-from .checker import ConsistencyChecker
-from .profiler import get_global_profiler, measure_time, count_calls, AbstractProfiler
+from explanation.checker.protocols import ConsistencyChecker
+from profiling import get_global_profiler, measure_time, count_calls, AbstractProfiler
 from .utils import diff
 
 
@@ -49,8 +49,8 @@ class WipeOutR_T:
 
     @measure_time('wipeoutr_t_runtime')
     @count_calls('wipeoutr_t_calls')
-    def find_redundant_testcases(self, set_t: List,
-                                 negation_map: Dict) -> Tuple[List, List]:
+    def find_redundant_testcases(self, set_t: Sequence[int],
+                                 negation_map: Mapping[int, int]) -> Tuple[List, List]:
         """
         Find redundant test cases in a test suite.
 
@@ -67,11 +67,12 @@ class WipeOutR_T:
         logging.debug('WipeOutR_T [T=%s, negation_map=%s]', set_t, negation_map)
 
         if len(set_t) <= 1:
-            # No redundancy possible with 0 or 1 test cases
-            return [], set_t.copy()
+            # No redundancy possible with 0 or 1 test cases.
+            # set_t arrives as a frozen tuple (task.set_tc); list() not .copy().
+            return [], list(set_t)
 
         # T_π ← T (working set of test cases to check)
-        t_pi = set_t.copy()
+        t_pi = list(set_t)
         # T_Δ ← ∅ (set of redundant test cases)
         t_delta = []
 

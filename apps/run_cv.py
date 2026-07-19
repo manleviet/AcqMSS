@@ -16,6 +16,9 @@ import sys
 from pathlib import Path
 from typing import List
 
+from conacq.atomic_io import write_json_atomic
+from apps._harness import build_parser, setup_logging
+
 from conacq.eval import (
     n_fold_cross_validation,
     n_fold_cross_validation_interactive,
@@ -23,9 +26,11 @@ from conacq.eval import (
     generate_unified_cv_dict,
     load_folds,
 )
-from conacq.eval.config import load_pipeline_config, parse_models
+from conacq.config import load_pipeline_config, parse_models
 from conacq.examples import ExampleIO
 from conacq.bias import BiasIO
+
+logger = logging.getLogger(__name__)
 
 
 def get_solver_modes(mode_config: str) -> List[bool]:
@@ -40,38 +45,35 @@ def get_solver_modes(mode_config: str) -> List[bool]:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Unified n-fold cross-validation",
+    parser = build_parser(
+        "Unified n-fold cross-validation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
     python -m apps.run_cv apps/conf/run_cv_config.toml -v
         """
     )
-    parser.add_argument('config', help='Path to TOML configuration file')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
     parser.add_argument('-o', '--output-dir', help='Output directory (overrides config)')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
 
     args = parser.parse_args()
 
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
-
     if not Path(args.config).exists():
-        print(f"Error: Config not found: {args.config}")
+        logger.error("Config not found: %s", args.config)
         sys.exit(1)
 
     config = load_pipeline_config(args.config)
 
     # Parse settings
     general = config.get('general', {})
+    # Log level from the -v flag OR the config's `verbose`, now that config is
+    # loaded (diagnostics go to stderr; the CV report stays on stdout).
+    setup_logging(verbose=args.verbose or general.get('verbose', False), debug=args.debug)
     eval_config = config.get('evaluation', {})
     seed = general.get('seed', 42)
     algorithm = eval_config.get('algorithm', 'congen')
     base_dir = Path(args.output_dir or general.get('output_dir', 'data/results'))
     output_dir = base_dir / algorithm
-    verbose = args.verbose or general.get('verbose', False)
     n_folds = eval_config.get('n_folds', 5)
     solver_name = eval_config.get('solver_name', 'glucose4')
     solver_modes = get_solver_modes(eval_config.get('solver_mode', 'all'))
@@ -84,48 +86,47 @@ Example:
 
     models = parse_models(config)
     if not models:
-        print("Error: No models specified in configuration")
+        logger.error("No models specified in configuration")
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("=" * 60)
-    print(f"Cross-Validation ({algorithm.upper()})")
-    print("=" * 60)
-    print(f"Config: {args.config}")
-    print(f"Output: {output_dir}")
-    print(f"Algorithm: {algorithm}")
-    print(f"Models: {len(models)}")
-    print(f"Folds: {n_folds}")
-    print(f"Solver modes: {['inc' if m else 'non-inc' for m in solver_modes]}")
-    print(f"Solver: {solver_name}")
-    print(f"Shuffle bias: {shuffle_bias}")
+    logger.info("=" * 60)
+    logger.info("Cross-Validation (%s)", algorithm.upper())
+    logger.info("=" * 60)
+    logger.info("Config: %s", args.config)
+    logger.info("Output: %s", output_dir)
+    logger.info("Algorithm: %s", algorithm)
+    logger.info("Models: %d", len(models))
+    logger.info("Folds: %d", n_folds)
+    logger.info("Solver modes: %s", ['inc' if m else 'non-inc' for m in solver_modes])
+    logger.info("Solver: %s", solver_name)
+    logger.info("Shuffle bias: %s", shuffle_bias)
     if algorithm == 'interactive':
-        print(f"Max queries: {max_queries}")
-        print(f"Query mode: {query_mode}")
+        logger.info("Max queries: %s", max_queries)
+        logger.info("Query mode: %s", query_mode)
 
     success_count = 0
 
     for model_config in models:
-        print(f"\n{'=' * 60}")
-        print(f"Model: {model_config.name}")
-        print(f"{'=' * 60}")
+        logger.info("%s", "=" * 60)
+        logger.info("Model: %s", model_config.name)
+        logger.info("%s", "=" * 60)
 
         try:
             # Load examples
             if not model_config.examples:
-                print(f"  WARNING: No examples for {model_config.name}, skipping")
+                logger.warning("No examples for %s, skipping", model_config.name)
                 continue
 
             examples = ExampleIO.load_json(model_config.examples)
             pos = [e.assignments for e in examples.positive]
             neg = [e.assignments for e in examples.negative]
 
-            if verbose:
-                print(f"  Oracle: {model_config.oracle}")
-                print(f"  Bias: {model_config.bias}")
-                print(f"  Examples: {model_config.examples}")
-                print(f"  E+: {len(pos)}, E-: {len(neg)}")
+            logger.debug("  Oracle: %s", model_config.oracle)
+            logger.debug("  Bias: %s", model_config.bias)
+            logger.debug("  Examples: %s", model_config.examples)
+            logger.debug("  E+: %d, E-: %d", len(pos), len(neg))
 
             # Load bias once per model (for description resolution and interactive)
             bias = BiasIO.load_from_json(model_config.bias)
@@ -136,14 +137,13 @@ Example:
             if model_config.folds_path and Path(model_config.folds_path).exists():
                 fold_data = load_folds(model_config.folds_path)
                 actual_n_folds = fold_data.n_folds
-                if verbose:
-                    print(f"  Folds: {model_config.folds_path} ({actual_n_folds} folds)")
+                logger.debug("  Folds: %s (%d folds)", model_config.folds_path, actual_n_folds)
             elif model_config.folds_path:
-                print(f"  WARNING: folds_path not found: {model_config.folds_path}")
+                logger.warning("folds_path not found: %s", model_config.folds_path)
 
             for is_incremental in solver_modes:
                 mode_name = "incremental" if is_incremental else "non-incremental"
-                print(f"\n--- Mode: {mode_name.upper()} ---")
+                logger.info("--- Mode: %s ---", mode_name.upper())
 
                 if algorithm == 'congen':
                     cv_result = n_fold_cross_validation(
@@ -174,10 +174,10 @@ Example:
                         shuffle_bias=shuffle_bias
                     )
                 else:
-                    print(f"  ERROR: Unknown algorithm: {algorithm}")
+                    logger.error("Unknown algorithm: %s", algorithm)
                     continue
 
-                # Print CV report
+                # The CV report is this command's product — keep it on stdout.
                 cv_report = generate_cv_report(cv_result)
                 print(cv_report)
 
@@ -188,23 +188,18 @@ Example:
                     cv_file = output_dir / f"{model_config.name}_cv_{mode_name}_{query_mode}.json"
                 else:
                     cv_file = output_dir / f"{model_config.name}_cv_{mode_name}.json"
-                cv_file.parent.mkdir(parents=True, exist_ok=True)
-                with open(cv_file, 'w') as f:
-                    json.dump(unified, f, indent=2)
-                print(f"  Unified CV: {cv_file}")
-                print(f"  Intersected KB: {len(cv_result.intersected_kb)} constraints")
+                write_json_atomic(cv_file, unified)
+                logger.info("  Unified CV: %s", cv_file)
+                logger.info("  Intersected KB: %d constraints", len(cv_result.intersected_kb))
 
             success_count += 1
 
-        except Exception as e:
-            print(f"Error evaluating {model_config.name}: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            logger.exception("Error evaluating %s", model_config.name)
 
-    print()
-    print("=" * 60)
-    print(f"Completed: {success_count}/{len(models)} models")
-    print("=" * 60)
+    logger.info("%s", "=" * 60)
+    logger.info("Completed: %d/%d models", success_count, len(models))
+    logger.info("%s", "=" * 60)
 
     if success_count < len(models):
         sys.exit(1)
