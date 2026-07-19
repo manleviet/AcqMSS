@@ -45,7 +45,7 @@ def test_quickxplainwithtestcases_1cs_1(name, is_incremental, solver_name, use_s
 
         profiler.print_summary(include_raw_timers=True)
         print(cs_mess)
-        assert cs_mess == 'Conflict: [(mandatory) CheckR[1,1]SDC , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]]]'
+        assert cs_mess == 'Conflict: [(mandatory) CheckR[1,1]SDC, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]]]'
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -72,4 +72,4 @@ def test_quickxplainwithtestcases_1diag_1_neg(name, is_incremental, solver_name,
 
         profiler.print_summary(include_raw_timers=True)
         print(diag_mess)
-        assert diag_mess == 'Conflict: [(mandatory) CheckR[1,1]SDC ]'
+        assert diag_mess == 'Conflict: [(mandatory) CheckR[1,1]SDC]'

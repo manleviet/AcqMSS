@@ -295,9 +295,9 @@ def test_hsdag_fastdiag_with_test_case(name, is_incremental, solver_name, use_sa
         profiler.print_summary(include_raw_timers=True)
         print(result)
         assert result == ['Diagnoses: [(4) IMPLIES[Smartwatch][Analog]],'
-                          '[(alternative) Screen[1,1]Analog High Resolution E-ink ]',
+                          '[(alternative) Screen[1,1]Analog High Resolution E-ink]',
                           'Conflict: [(4) IMPLIES[Smartwatch][Analog], '
-                          '(alternative) Screen[1,1]Analog High Resolution E-ink ]']
+                          '(alternative) Screen[1,1]Analog High Resolution E-ink]']
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -323,9 +323,9 @@ def test_hsdag_quickxplain_with_testcase(name, is_incremental, solver_name, use_
 
         print(result)
         assert result == ['Conflict: [(4) IMPLIES[Smartwatch][Analog], '
-                          '(alternative) Screen[1,1]Analog High Resolution E-ink ]',
+                          '(alternative) Screen[1,1]Analog High Resolution E-ink]',
                           'Diagnoses: [(4) IMPLIES[Smartwatch][Analog]],'
-                          '[(alternative) Screen[1,1]Analog High Resolution E-ink ]']
+                          '[(alternative) Screen[1,1]Analog High Resolution E-ink]']
 
 # =============================================================================
 # HSDAG + KBDIAG TESTS
@@ -359,7 +359,7 @@ def test_hsdag_kbdiag_1diag_1(name, is_incremental, solver_name, use_sat4j, enab
         profiler.print_summary(include_raw_timers=True)
         print(result)
         assert result == [
-            'Diagnosis: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]',
+            'Diagnosis: [(mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]QType, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]',
             'No conflict found']
 
 
@@ -394,7 +394,7 @@ def test_hsdag_kbdiag_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, 
         profiler.print_summary(include_raw_timers=True)
         print(result)
         assert result == [
-            'Diagnosis: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]QType ]',
+            'Diagnosis: [(mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]SDC, (mandatory) CheckR[1,1]QType]',
             'No conflict found']
 
 
@@ -424,10 +424,10 @@ def test_hsdag_kbdiag_all_1(name, is_incremental, solver_name, use_sat4j, enable
 
         profiler.print_summary(include_raw_timers=True)
         print(result[0])
-        assert result[0] == ('Diagnoses: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType , '
+        assert result[0] == ('Diagnoses: [(mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]QType, '
                              '(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], '
-                             '(Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , '
-                             '(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]QType ]')
+                             '(Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, '
+                             '(mandatory) CheckR[1,1]SDC, (mandatory) CheckR[1,1]QType]')
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -459,7 +459,7 @@ def test_hsdag_kbdiag_all_1_neg(name, is_incremental, solver_name, use_sat4j, en
 
         profiler.print_summary(include_raw_timers=True)
         print(result[0])
-        assert result[0] == 'Diagnoses: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]QType ],[(mandatory) CheckR[1,1]RecEng , (alternative) RecEng[1,1]UBRec CBRec , (optional) CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (optional) CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (alternative) RecEng[1,1]UBRec CBRec , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (alternative) RecEng[1,1]UBRec CBRec , (optional) CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (optional) CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]'
+        assert result[0] == 'Diagnoses: [(mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]SDC, (mandatory) CheckR[1,1]QType],[(mandatory) CheckR[1,1]RecEng, (alternative) RecEng[1,1]UBRec CBRec, (optional) CheckR[0,1]Stat, (mandatory) CheckR[1,1]QType, (or) QType[1,2]MulChoice ImgAnaTask, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (optional) CheckR[0,1]Stat, (mandatory) CheckR[1,1]QType, (or) QType[1,2]MulChoice ImgAnaTask, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (alternative) RecEng[1,1]UBRec CBRec, (mandatory) CheckR[1,1]QType, (or) QType[1,2]MulChoice ImgAnaTask, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (alternative) RecEng[1,1]UBRec CBRec, (optional) CheckR[0,1]Stat, (mandatory) CheckR[1,1]QType, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]QType, (or) QType[1,2]MulChoice ImgAnaTask, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (optional) CheckR[0,1]Stat, (mandatory) CheckR[1,1]QType, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]'
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -489,7 +489,7 @@ def test_hsdag_kbdiag_1diag_2(name, is_incremental, solver_name, use_sat4j, enab
         profiler.print_summary(include_raw_timers=True)
         print(result)
         assert result == [
-            'Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]',
+            'Diagnosis: [(mandatory) jplug[1,1]interface, (alternative) interface[1,1]sdi mdi, (optional) diagram_builder[0,1]uml, (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]',
             'No conflict found']
 
 
@@ -524,7 +524,7 @@ def test_hsdag_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, 
         profiler.print_summary(include_raw_timers=True)
         print(result)
         assert result == [
-            'Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]',
+            'Diagnosis: [(mandatory) jplug[1,1]interface, (alternative) interface[1,1]sdi mdi, (optional) diagram_builder[0,1]uml, (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]',
             'No conflict found']
 
 
@@ -554,7 +554,7 @@ def test_hsdag_kbdiag_all_2(name, is_incremental, solver_name, use_sat4j, enable
 
         profiler.print_summary(include_raw_timers=True)
         print(result[0])
-        assert result[0] == ('Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]')
+        assert result[0] == ('Diagnosis: [(mandatory) jplug[1,1]interface, (alternative) interface[1,1]sdi mdi, (optional) diagram_builder[0,1]uml, (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]')
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -586,7 +586,7 @@ def test_hsdag_kbdiag_all_2_neg(name, is_incremental, solver_name, use_sat4j, en
 
         profiler.print_summary(include_raw_timers=True)
         print(result[0])
-        assert result[0] == ('Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]')
+        assert result[0] == ('Diagnosis: [(mandatory) jplug[1,1]interface, (alternative) interface[1,1]sdi mdi, (optional) diagram_builder[0,1]uml, (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]')
 
 # =============================================================================
 # HSDAG + QUICKXPLAINWITHTESTCASES TESTS
@@ -619,11 +619,11 @@ def test_hsdag_quickxplainwithtestcases_1diag_1(name, is_incremental, solver_nam
         profiler.print_summary(include_raw_timers=True)
         print(result)
         assert result == [
-            'Diagnosis: [(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType ]',
+            'Diagnosis: [(mandatory) CheckR[1,1]SDC, (mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]QType]',
             'Conflicts: [(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (mandatory) '
-            'CheckR[1,1]SDC ],[(Constraint 1) OR[NOT[SDC][]][Stat], (mandatory) '
-            'CheckR[1,1]SDC ],[(mandatory) CheckR[1,1]RecEng ],[(mandatory) '
-            'CheckR[1,1]QType ]']
+            'CheckR[1,1]SDC],[(Constraint 1) OR[NOT[SDC][]][Stat], (mandatory) '
+            'CheckR[1,1]SDC],[(mandatory) CheckR[1,1]RecEng],[(mandatory) '
+            'CheckR[1,1]QType]']
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -656,8 +656,8 @@ def test_hsdag_quickxplainwithtestcases_1diag_1_neg(name, is_incremental, solver
         profiler.print_summary(include_raw_timers=True)
         print(result)
         assert result == [
-            'Diagnosis: [(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType ]',
-            'Conflicts: [(mandatory) CheckR[1,1]SDC ],[(mandatory) CheckR[1,1]RecEng ],[(mandatory) CheckR[1,1]QType ]']
+            'Diagnosis: [(mandatory) CheckR[1,1]SDC, (mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]QType]',
+            'Conflicts: [(mandatory) CheckR[1,1]SDC],[(mandatory) CheckR[1,1]RecEng],[(mandatory) CheckR[1,1]QType]']
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -685,12 +685,12 @@ def test_hsdag_quickxplainwithtestcases_all_1(name, is_incremental, solver_name,
 
         profiler.print_summary(include_raw_timers=True)
         print(result[0])
-        assert result[0] == ('Diagnoses: [(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]RecEng , '
-                             '(mandatory) CheckR[1,1]QType ],[(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], '
-                             '(Constraint 1) OR[NOT[SDC][]][Stat], (mandatory) CheckR[1,1]RecEng , '
-                             '(mandatory) CheckR[1,1]QType ],[(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], '
-                             '(mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]RecEng , (mandatory) '
-                             'CheckR[1,1]QType ]')
+        assert result[0] == ('Diagnoses: [(mandatory) CheckR[1,1]SDC, (mandatory) CheckR[1,1]RecEng, '
+                             '(mandatory) CheckR[1,1]QType],[(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], '
+                             '(Constraint 1) OR[NOT[SDC][]][Stat], (mandatory) CheckR[1,1]RecEng, '
+                             '(mandatory) CheckR[1,1]QType],[(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], '
+                             '(mandatory) CheckR[1,1]SDC, (mandatory) CheckR[1,1]RecEng, (mandatory) '
+                             'CheckR[1,1]QType]')
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -721,24 +721,24 @@ def test_hsdag_quickxplainwithtestcases_all_1_neg(name, is_incremental, solver_n
 
         profiler.print_summary(include_raw_timers=True)
         print(result[0])
-        assert result[0] == ('Diagnoses: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]SDC , '
-                             '(mandatory) CheckR[1,1]QType ],[(mandatory) CheckR[1,1]RecEng , '
-                             '(alternative) RecEng[1,1]UBRec CBRec , (optional) CheckR[0,1]Stat , '
-                             '(mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , '
+        assert result[0] == ('Diagnoses: [(mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]SDC, '
+                             '(mandatory) CheckR[1,1]QType],[(mandatory) CheckR[1,1]RecEng, '
+                             '(alternative) RecEng[1,1]UBRec CBRec, (optional) CheckR[0,1]Stat, '
+                             '(mandatory) CheckR[1,1]QType, (or) QType[1,2]MulChoice ImgAnaTask, '
                              '(Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
-                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (optional) '
-                             'CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (or) QType[1,2]MulChoice '
-                             'ImgAnaTask , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
-                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (alternative) '
-                             'RecEng[1,1]UBRec CBRec , (mandatory) CheckR[1,1]QType , (or) '
-                             'QType[1,2]MulChoice ImgAnaTask , (Constraint 0) '
+                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (optional) '
+                             'CheckR[0,1]Stat, (mandatory) CheckR[1,1]QType, (or) QType[1,2]MulChoice '
+                             'ImgAnaTask, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
+                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (alternative) '
+                             'RecEng[1,1]UBRec CBRec, (mandatory) CheckR[1,1]QType, (or) '
+                             'QType[1,2]MulChoice ImgAnaTask, (Constraint 0) '
                              'OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
-                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (alternative) '
-                             'RecEng[1,1]UBRec CBRec , (optional) CheckR[0,1]Stat , (mandatory) '
-                             'CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint '
-                             '1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (mandatory) '
-                             'CheckR[1,1]QType , (or) QType[1,2]MulChoice ImgAnaTask , (Constraint 0) '
+                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (alternative) '
+                             'RecEng[1,1]UBRec CBRec, (optional) CheckR[0,1]Stat, (mandatory) '
+                             'CheckR[1,1]QType, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint '
+                             '1) OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (mandatory) '
+                             'CheckR[1,1]QType, (or) QType[1,2]MulChoice ImgAnaTask, (Constraint 0) '
                              'OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) '
-                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng , (optional) '
-                             'CheckR[0,1]Stat , (mandatory) CheckR[1,1]QType , (Constraint 0) '
+                             'OR[NOT[SDC][]][Stat]],[(mandatory) CheckR[1,1]RecEng, (optional) '
+                             'CheckR[0,1]Stat, (mandatory) CheckR[1,1]QType, (Constraint 0) '
                              'OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]')
