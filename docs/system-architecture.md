@@ -946,7 +946,7 @@ Combined: 500-1000x speedup over naive approaches.
 
 ```
 tests/
-├── test_diagnosis.py        # FastDiag, QuickXPlain, KBDiag, WipeOutR
+├── test_diagnosis_*.py      # per-algorithm (T13 split): fastdiag, hsdag, kbdiag, quickxplain(_wtc), redundancy
 ├── test_congen.py           # CONGEN, ACQMSS, REDUCE, GenerateNE
 ├── test_quacq.py            # QuAcq, QuAcqTask, QueryGenerator, FindScope/FindC
 ├── test_evaluation.py       # CrossValidation, AccuracyCalculator

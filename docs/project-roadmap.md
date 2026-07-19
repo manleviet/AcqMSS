@@ -34,7 +34,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - `explanation/operations/algorithms/` — 11 files, ~1,382 LOC
 - `explanation/operations/checker.py` — 494 LOC
 - `explanation/operations/hsdag.py` — 353 LOC
-- `tests/test_diagnosis.py` — 1,416 LOC (in AcqMSS repo)
+- `tests/test_diagnosis_*.py` — per-algorithm diagnosis tests in the AcqMSS repo (split in T13 from the former 1,416-LOC `test_diagnosis.py`: `fastdiag`, `hsdag`, `kbdiag`, `quickxplain`, `quickxplain_wtc`, `redundancy`)
 
 ### Phase 2: Constraint Acquisition ✅ COMPLETE
 
@@ -309,7 +309,7 @@ PYTHONPATH=. pytest tests/ -v
 pytest --cov=acqmss --cov=explanation tests/ -v
 
 # Performance profiling
-pytest tests/test_diagnosis.py -k "with_profiling" -v
+pytest tests/ -k "with_profiling" -v   # diagnosis tests are split per-algorithm (test_diagnosis_*.py)
 ```
 
 ## Release Strategy

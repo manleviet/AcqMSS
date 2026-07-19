@@ -622,7 +622,7 @@ python -m apps.run_evaluation apps/conf/run_evaluation_config.toml -v
 
 Largest files (by line count):
 - `explanation/models/task_preparation.py` — 952 LOC (SAT task setup, in canonical `../explanation`)
-- `tests/test_diagnosis.py` — 1,416 LOC (diagnosis tests)
+- `tests/test_diagnosis_hsdag.py` — 744 LOC (largest of the per-algorithm diagnosis tests, split from the former 1,416-LOC `test_diagnosis.py` in T13)
 - `apps/extract_results.py` — 621 LOC (result processing, DRY-refactored from 1,139 LOC)
 
 Most files keep to ~200 LOC for maintainability, except specialized components.
