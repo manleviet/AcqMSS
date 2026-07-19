@@ -24,3 +24,27 @@
 - B2 (`quacq.py:140` bias order) + knob test + `layer23[.quacq]` regen — committed.
 - B3 (`reduce.py:63` MSS order) + knob test + `layer23[.congen_*]` + `congen_runner.json` re-baseline — committed.
 - `n_mss` (pre-reduce) unchanged throughout; QuAcq arm unaffected by B3 (empty KB on REAL-FM-7).
+
+## Coverage gap to close at the revision — QuAcqRunner net (from the branch-parity audit)
+
+The branch-parity audit (`plans/reports/branch-feature-parity-audit-260719-1439-…`) found **0 dropped features** but **1 coverage gap**: `QuAcqRunner.run()` is unpinned in v2 (ConGenRunner has `test_t11_congen_runner_net.py`; QuAcqRunner has nothing). Build `tests/test_t11_quacq_runner_net.py` at the ConGen/B1 revision — **with the interactive bundle**, since its golden depends on B1+B2+B3.
+
+**Template — reference from `feat/redesign-abc:tests/test_runners_characterization.py::TestQuAcqRunnerCharacterization` (deleted branch; preserved here).** Structure only — **RE-RECORD every value on v2**: the ids are strings on v1 (`'c103'`) but ints in v2, and B1 (example seed) + B2 (`quacq.py:140` order) + B3 (`reduce.py` order) all move the example-mode counts.
+
+```python
+# _load_examples(): ExampleIO.load_json(REAL-FM-7 rs_1n) -> pos[:5], neg[:1] (small, <30s)
+# Run QuAcqRunner once (class fixture), reuse across assertions:
+runner = QuAcqRunner(BIAS_PATH, FM_PATH, query_mode='example_only')
+result = runner.run(positive_examples=pos, negative_examples=neg, shuffle_seed=42)
+
+# PINNED (v1 golden values — RE-RECORD on v2):
+#   n_bias == 295            n_kb == 1                 n_queries == 17
+#   convergence_reason == 'pool_exhausted'            consistency_checks == 17
+#   is_consistent_calls == 1996   quacq_calls == 1    findscope_calls == 15
+#   findc_calls == 1         dis_gen_calls == 0        reduce_calls == 1
+#   sorted(kb_constraints) == ['c103']   len(kb_clauses) == 1   len(bg_clauses) == 1
+#   n_kb == len(kb_constraints)
+# NOT pinned (presence+type only): runtime_ms, memory_peak_mb, solver_time_ms  (> 0)
+```
+
+This is the example-mode path B2 (`quacq.py:140`) touches, so the net is what would guard B2 there — deferred to the revision because its golden rides the B1 bundle.
