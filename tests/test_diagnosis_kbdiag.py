@@ -46,7 +46,7 @@ def test_kbdiag_1diag_1(name, is_incremental, solver_name, use_sat4j, enable_pro
 
         profiler.print_summary(include_raw_timers=True)
         print(diag_mess)
-        assert diag_mess == 'Diagnosis: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]QType , (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]'
+        assert diag_mess == 'Diagnosis: [(mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]QType, (Constraint 0) OR[NOT[CBRec][]][NOT[SDC][]], (Constraint 1) OR[NOT[SDC][]][Stat]]'
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -74,7 +74,7 @@ def test_kbdiag_1diag_1_neg(name, is_incremental, solver_name, use_sat4j, enable
 
         profiler.print_summary(include_raw_timers=True)
         print(diag_mess)
-        assert diag_mess == 'Diagnosis: [(mandatory) CheckR[1,1]RecEng , (mandatory) CheckR[1,1]SDC , (mandatory) CheckR[1,1]QType ]'
+        assert diag_mess == 'Diagnosis: [(mandatory) CheckR[1,1]RecEng, (mandatory) CheckR[1,1]SDC, (mandatory) CheckR[1,1]QType]'
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -102,7 +102,7 @@ def test_kbdiag_1diag_2(name, is_incremental, solver_name, use_sat4j, enable_pro
 
         profiler.print_summary(include_raw_timers=True)
         print(diag_mess)
-        assert diag_mess == 'Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]'
+        assert diag_mess == 'Diagnosis: [(mandatory) jplug[1,1]interface, (alternative) interface[1,1]sdi mdi, (optional) diagram_builder[0,1]uml, (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]'
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -130,4 +130,4 @@ def test_kbdiag_1diag_2_neg(name, is_incremental, solver_name, use_sat4j, enable
 
         profiler.print_summary(include_raw_timers=True)
         print(diag_mess)
-        assert diag_mess == 'Diagnosis: [(mandatory) jplug[1,1]interface , (alternative) interface[1,1]sdi mdi , (optional) diagram_builder[0,1]uml , (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]'
+        assert diag_mess == 'Diagnosis: [(mandatory) jplug[1,1]interface, (alternative) interface[1,1]sdi mdi, (optional) diagram_builder[0,1]uml, (Constraint 0) OR[NOT[gui_builder][]][NOT[sdi][]]]'

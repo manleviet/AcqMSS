@@ -7,8 +7,10 @@ name = "acqmss"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-    "flamapy~=2.0.1",
-    "python-sat",
+    "flamapy-fw==2.6.0.dev4",
+    "flamapy-fm==2.6.0.dev4",
+    "flamapy-sat==2.6.0.dev4",
+    "python-sat==0.1.8.dev17",
     "toml~=0.10.2",
     "allpairspy~=2.5.1",
 ]
@@ -20,7 +22,9 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["conacq*", "explanation*", "apps*", "profiling*"]
+# explanation and profiling both come from the canonical ../explanation package
+# (pip install -e ../explanation), not bundled here.
+include = ["conacq*", "apps*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

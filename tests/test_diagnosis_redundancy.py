@@ -84,7 +84,7 @@ def test_wipeoutr_fm_redundancy(name, is_incremental, solver_name, use_sat4j, en
 
         assert len(result) == 2, f"Expected 2 lists (redundant and non-redundant), got {len(result)}"
         assert result[0] == 'Redundant constraints: [(Constraint 0) IMPLIES[RedundantFM][FeatureA]]'
-        assert result[1] == 'Non-redundant constraints: [(Constraint 1) OR[NOT[FeatureC][]][NOT[FeatureB][]], (optional) RedundantFM[0,1]FeatureC , (mandatory) RedundantFM[1,1]FeatureB , (mandatory) RedundantFM[1,1]FeatureA ]'
+        assert result[1] == 'Non-redundant constraints: [(Constraint 1) OR[NOT[FeatureC][]][NOT[FeatureB][]], (optional) RedundantFM[0,1]FeatureC, (mandatory) RedundantFM[1,1]FeatureB, (mandatory) RedundantFM[1,1]FeatureA]'
 
 
 @pytest.mark.parametrize(PARAM_SPEC, STANDARD_PARAMS)
@@ -149,7 +149,7 @@ def test_pysat_redundancy_constraints(name, is_incremental, solver_name, use_sat
             "Total redundant + non-redundant should equal all constraints"
 
         assert operation.get_result()[0] == 'Redundant constraints: [(Constraint 0) IMPLIES[RedundantFM][FeatureA]]'
-        assert operation.get_result()[1] == 'Non-redundant constraints: [(Constraint 1) OR[NOT[FeatureC][]][NOT[FeatureB][]], (optional) RedundantFM[0,1]FeatureC , (mandatory) RedundantFM[1,1]FeatureB , (mandatory) RedundantFM[1,1]FeatureA ]'
+        assert operation.get_result()[1] == 'Non-redundant constraints: [(Constraint 1) OR[NOT[FeatureC][]][NOT[FeatureB][]], (optional) RedundantFM[0,1]FeatureC, (mandatory) RedundantFM[1,1]FeatureB, (mandatory) RedundantFM[1,1]FeatureA]'
 
 # =============================================================================
 # WIPEOUTR_T TESTS
