@@ -28,6 +28,9 @@ These decisions were made during the **ABC-v2 redesign** (July 2026), a rebuild 
 | [0012](0012-immutability-at-construction-not-at-read.md) | `Task`/`OracleData` are deep-frozen — immutability at *construction* is free; immutability at *read* is a tax (reconciles with 0007; corrects its closing generalisation) | Accepted |
 | [0013](0013-is-consistent-and-find-model-are-two-questions.md) | Split `is_consistent`/`find_model` — the ~617 guard-negations are redundant for the SAT answer, load-bearing for the model; **4.2× on `run()`** (first measurable runtime win) | Accepted |
 | [0014](0014-parallel-executor-deferred-to-canonical.md) | The parallel executor is deferred to the canonical repo — `FastDiagP`, `get_instance`, `ProfilerMode.MULTI_PROCESS` are scaffolding, not dead code (guarded) | Accepted |
+| [0015](0015-example-mode-pool-shuffle-must-be-seeded.md) | The example-mode pool shuffle must be seeded (per-fold) — its OS-entropy shuffle makes one paper table irreproducible; impl+regen deferred to paper-writing | Accepted |
+| [0016](0016-shuffle-bias-is-a-no-op-for-quacq.md) | `shuffle_bias` is a no-op for QuAcq — `set(set_c)` drops the runner's shuffle; honor the order; impl+QuAcq-golden regen deferred to a gated command | Accepted |
+| [0017](0017-reduce-discards-mss-order.md) | REDUCE discards the MSS ordering through `set()` — preserve `gamma1+gamma2` order; impl+AcqMSS/ConGen-golden regen deferred to a gated command (after 0016) | Accepted |
 
 ## Writing a new one
 
