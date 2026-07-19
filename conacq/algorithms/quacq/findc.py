@@ -46,7 +46,7 @@ class FindC:
             self,
             e: dict,
             scope: set,
-            remaining_bias: set,
+            remaining_bias: dict,
             learned_kb: list,
     ):
         """
@@ -108,7 +108,7 @@ class FindC:
     def _narrow_with_generator(
             self,
             candidates: list,
-            remaining_bias: set,
+            remaining_bias: dict,
             learned_kb: list,
             scope: set
     ):
@@ -132,7 +132,7 @@ class FindC:
                 if is_valid:
                     # c_j rejects a valid example -> c_j not in target
                     candidates.remove(c_j)
-                    remaining_bias.discard(c_j)
+                    remaining_bias.pop(c_j, None)
                     # don't increment j — next element shifted into position
                 else:
                     j += 1

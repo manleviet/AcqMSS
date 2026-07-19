@@ -13,7 +13,7 @@ from profiling import count_calls, get_global_profiler
 def prune_rejecting(
         checker,
         assignment_map,
-        remaining_bias: set,
+        remaining_bias: dict,
         assignment: dict,
         root_assumption: int,
         profiler=None
@@ -37,5 +37,6 @@ def prune_rejecting(
         profiler.increment('prune_is_consistent_calls')
         if not checker.is_consistent(base + [c_id]):
             pruned.append(c_id)
-    remaining_bias -= set(pruned)
+    for c_id in pruned:
+        remaining_bias.pop(c_id, None)
     return pruned

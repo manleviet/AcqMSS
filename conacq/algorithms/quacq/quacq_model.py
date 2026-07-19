@@ -57,7 +57,7 @@ class QuAcqModel(KBModel):
         return get_constraint_vars(clauses, self.id_to_name)
 
     def get_constraints_with_scope(self, task: QuAcqTask,
-                                   scope: set, remaining_bias: set) -> List[int]:
+                                   scope: set, remaining_bias: dict) -> List[int]:
         """Bias constraint IDs whose variables match scope. Stateless (reads the
         given task's constraint clauses).
 

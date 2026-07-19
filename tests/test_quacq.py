@@ -668,5 +668,51 @@ class TestQuAcqTaskPart4:
     """Tests for QuAcqTask Part 4 fields."""
 
 
+@pytest.mark.slow
+def test_bias_order_drives_quacq_query_trajectory():
+    """The runner shuffles ``set_c`` under a seed to control QuAcq's
+    constraint-test order (``quacq_runner`` ≡ ``congen_runner``). This pins that
+    the order actually bites: the *same* ordering is reproducible, and two
+    *different* orderings yield different query trajectories. Before the fix
+    (``remaining_bias = set(set_c)``) both orderings iterate in identical hash
+    order, so the two trajectories were equal — this test could not distinguish
+    them, so it fails on pre-fix code (the knob-has-teeth guard, not a tautology).
+    """
+    import random
+    from tests.t11_e2e_harness import _quacq_setup
+    from conacq.algorithms.quacq import QuAcq, DiscriminatingGenerator
+    from conacq.example_generators import QueryProvider
+    from profiling import get_global_profiler
+
+    def trajectory(order):
+        oracle, model, prepared, checker = _quacq_setup()
+        task = prepared.task
+        try:
+            qp = QueryProvider(checker=checker, model=model,
+                               assignment_map=prepared.assignment_map)
+            dg = DiscriminatingGenerator(checker=checker, model=model,
+                                         profiler=get_global_profiler(),
+                                         root_assumption=task.set_b[0], task=task)
+            quacq = QuAcq.for_oracle(checker, oracle, qp, dg, model=model,
+                                     task=task, assignment_map=prepared.assignment_map)
+            result = quacq.learn(set_c=order, set_b=task.set_b,
+                                 negation_map=task.negation_map,
+                                 mode="oracle", max_queries=15)
+            return [cfg for (cfg, _ans, _src) in result.query_history]
+        finally:
+            checker.cleanup()
+
+    _o, _m, prepared, checker = _quacq_setup()
+    base = list(prepared.task.set_c)
+    checker.cleanup()
+    order_a = base[:]
+    random.Random(1).shuffle(order_a)
+    order_b = base[:]
+    random.Random(2).shuffle(order_b)
+
+    assert trajectory(order_a) == trajectory(order_a)  # same order -> reproducible
+    assert trajectory(order_a) != trajectory(order_b)  # different order -> teeth
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

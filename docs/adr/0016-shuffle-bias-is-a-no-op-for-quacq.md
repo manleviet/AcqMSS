@@ -1,6 +1,6 @@
 # ADR-0016: `shuffle_bias` is a no-op for QuAcq — the bias order is discarded by `set(set_c)`, and restoring it changes the golden tables
 
-**Status:** Accepted — decision made; implementation + QuAcq golden regeneration deferred to a separate, gated command
+**Status:** Accepted — implemented and committed on `feat/redesign-abc-v2`. B2 also moves the paper's iterative tables (`quacq.py:140` runs in example mode too), which are regenerated once with the B1+B2+B3 bundle at the ConGen revision — this is **not** a "0 paper impact" change.
 **Date:** 2026-07-19
 **Deciders:** Viet-Man Le
 **Relates to:** ADR-0015 (the sibling determinism defect on the example path), ADR-0001 (behaviour held identical to `main`)
@@ -73,3 +73,13 @@ The fix at `quacq.py:140` (and its `remaining_bias` removal sites) preserves the
 - **Paper:** the QuAcq results columns/tables.
 - AcqMSS/ConGen tables are **not** touched by this change (ADR-0017 is the separate AcqMSS/ConGen reorder).
 - Seed source ties into ADR-0015 so the regenerated tables are themselves reproducible.
+
+## Implemented (2026-07-19)
+
+Fix: `quacq.py:140` `set(set_c)` → `dict.fromkeys(set_c)` (insertion-ordered membership: iteration follows the runner's shuffled `set_c`; O(1) `in`/`pop`). Mutation sites updated: `sat_utils.py:40` `-= set(pruned)` → per-id `pop`; `quacq.py:230/239`, `findc.py:135` `.discard` → `.pop(x, None)`. Consumer annotations `remaining_bias: set` → `dict` (findscope/findc/sat_utils/quacq_model/query_provider).
+
+- **Knob-has-teeth guard:** `test_bias_order_drives_quacq_query_trajectory` — same order → reproducible trajectory; two different shuffles → different trajectories. Verified red-first: reverting line 140 to `set()` makes it **fail** (both orders collapse to one hash order), restoring makes it pass. Not a tautology.
+- **In-repo golden regenerated:** `tests/fixtures/t11_oracle_net/layer23_prepared_and_e2e.json` — **only** `.layer3.quacq.query_history` changed (via `record_layer2_layer3()`; ConGen keys + prepared-task IDs byte-unchanged). The terminal invariants held: `n_kb=0`, `n_queries=15`, `convergence_reason=max_queries`, `kb_assumption_ids=[]`. Only the exploration *path* differs — the intended effect of honoring the bias order.
+- **`test_quacq.py` needed no change** — every hard KB pin there is a synthetic `QuAcqResult(...)` literal (data-structure tests), not a `learn()` output; the `learn()` tests use structural asserts. (This corrects the earlier "regen test_quacq.py pins" expectation.)
+- **Paper impact is NOT zero.** `quacq.py:140` runs *before* the mode branch, so it also affects `example_only`/`example_first`. The paper's iterative tables (`tab:iterative_*` in `paper/evaluation.tex`, from `data/results/interactive/`) run through this line and therefore move — but they sit under B1+B2+B3 and are **deferred to the single B1 bundle regen at paper-writing** (regenerating them now would bake in the still-unseeded example order). This ADR does **not** claim "0 paper impact".
+- **Suite:** 507 passed (506 + the knob guard). Not committed; awaiting Cowork golden-diff review.

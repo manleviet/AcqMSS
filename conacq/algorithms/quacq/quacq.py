@@ -136,8 +136,12 @@ class QuAcq:
 
         convergence_reason = ''
 
-        # Local mutable state
-        remaining_bias = set(set_c)
+        # Local mutable state.
+        # Insertion-ordered membership: dict keys preserve set_c order (the runner's
+        # shuffle) for iteration — which drives the constraint-test order — while
+        # keeping O(1) ``in`` / ``pop``. A plain set() would iterate in hash order and
+        # silently discard the shuffle (values are unused).
+        remaining_bias = dict.fromkeys(set_c)
         learned_kb: List[int] = []
         n_queries = 0
         query_history: List[Tuple[Dict[str, bool], bool, str]] = []
@@ -227,7 +231,7 @@ class QuAcq:
                     if c_id is not None:
                         if c_id not in learned_kb:
                             learned_kb.append(c_id)
-                        remaining_bias.discard(c_id)
+                        remaining_bias.pop(c_id, None)
                         logging.debug('FindScope/FindC added constraint: %s', c_id)
                     else:
                         logging.warning('FindC returned no constraint for scope %s', scope)
@@ -236,7 +240,7 @@ class QuAcq:
                     if mode == 'oracle' and tested_c_id:
                         if tested_c_id not in learned_kb:
                             learned_kb.append(tested_c_id)
-                        remaining_bias.discard(tested_c_id)
+                        remaining_bias.pop(tested_c_id, None)
 
         if not remaining_bias:
             convergence_reason = 'empty_bias'

@@ -4144,8 +4144,8 @@
       "diagram_builder": false,
       "gui_builder": false,
       "interface": false,
-      "java": true,
-      "javac": true,
+      "java": false,
+      "javac": false,
       "jplug": true,
       "mdi": false,
       "model_code_synch": false,
@@ -4164,8 +4164,8 @@
       "diagram_builder": false,
       "gui_builder": false,
       "interface": false,
-      "java": true,
-      "javac": true,
+      "java": false,
+      "javac": false,
       "jplug": true
      },
      false,
@@ -4186,7 +4186,7 @@
       "diagram_builder": false,
       "gui_builder": false,
       "interface": false,
-      "java": true
+      "java": false
      },
      false,
      "findscope"
@@ -4214,8 +4214,8 @@
       "diagram_builder": false,
       "gui_builder": false,
       "interface": false,
-      "java": true,
-      "javac": true,
+      "java": false,
+      "javac": false,
       "jplug": true,
       "mdi": false,
       "model_code_synch": false,
@@ -4234,8 +4234,8 @@
       "diagram_builder": false,
       "gui_builder": false,
       "interface": false,
-      "java": true,
-      "javac": true,
+      "java": false,
+      "javac": false,
       "jplug": true
      },
      false,
@@ -4256,7 +4256,7 @@
       "diagram_builder": false,
       "gui_builder": false,
       "interface": false,
-      "java": true
+      "java": false
      },
      false,
      "findscope"
@@ -4284,8 +4284,8 @@
       "diagram_builder": false,
       "gui_builder": false,
       "interface": false,
-      "java": true,
-      "javac": true,
+      "java": false,
+      "javac": false,
       "jplug": true,
       "mdi": false,
       "model_code_synch": false,
@@ -4304,8 +4304,8 @@
       "diagram_builder": false,
       "gui_builder": false,
       "interface": false,
-      "java": true,
-      "javac": true,
+      "java": false,
+      "javac": false,
       "jplug": true
      },
      false,

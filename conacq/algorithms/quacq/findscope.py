@@ -43,7 +43,7 @@ class FindScope:
             R: set,
             Y: set,
             ask_query: bool,
-            remaining_bias: set,
+            remaining_bias: dict,
     ) -> List[str]:
         """
         Find scope of violated constraint via partial membership queries.
