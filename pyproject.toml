@@ -22,7 +22,9 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["conacq*", "explanation*", "apps*", "profiling*"]
+# explanation now comes from the canonical ../explanation package (pip install -e),
+# not bundled here. profiling stays local for now.
+include = ["conacq*", "apps*", "profiling*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
