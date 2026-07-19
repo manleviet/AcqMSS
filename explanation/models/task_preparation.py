@@ -150,7 +150,8 @@ class Task(ABC):
     ``AttributeError`` — a loud failure at the call, not silent drift). Constructors
     still accept lists; the coercion is transparent. ``negation_map`` is coerced to a
     ``FrozenDict`` — a read-only ``dict`` that still *pickles* (FastDiagP ships the
-    task to workers), unlike ``MappingProxyType`` which does not.
+    task to workers), unlike the abandoned ``MappingProxyType`` (ADR-0007) which does
+    not.
     """
     # set of constraints which could be faulty
     set_c: Tuple[int, ...] = field(default_factory=tuple)
@@ -161,6 +162,10 @@ class Task(ABC):
     # mapping: original assumption ID -> negated assumption ID. Frozen (read-only).
     # Annotated as its stored type (like the Tuple fields); constructors pass a plain
     # dict and __post_init__ coerces. Used by WipeOutR_FM/WipeOutR_T.
+    # Task is intentionally NOT hashable: negation_map is a FrozenDict (a dict
+    # subclass, hence unhashable), so hash(task) raises TypeError. No caller hashes a
+    # task or uses one as a dict key / set member (verified by grep); revisit before
+    # adding one.
     negation_map: "FrozenDict[int, int]" = field(default_factory=dict)
     # list of assumptions for solver
     assumptions: Tuple[int, ...] = field(default_factory=tuple)

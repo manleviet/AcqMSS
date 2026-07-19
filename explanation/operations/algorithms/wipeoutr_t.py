@@ -67,8 +67,9 @@ class WipeOutR_T:
         logging.debug('WipeOutR_T [T=%s, negation_map=%s]', set_t, negation_map)
 
         if len(set_t) <= 1:
-            # No redundancy possible with 0 or 1 test cases
-            return [], set_t.copy()
+            # No redundancy possible with 0 or 1 test cases.
+            # set_t arrives as a frozen tuple (task.set_tc); list() not .copy().
+            return [], list(set_t)
 
         # T_π ← T (working set of test cases to check)
         t_pi = list(set_t)

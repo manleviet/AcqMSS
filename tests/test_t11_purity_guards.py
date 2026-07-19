@@ -419,19 +419,28 @@ def test_generate_ne_not_exported_from_algorithms():
 # ---------------------------------------------------------------------------
 def test_task_is_deeply_frozen():
     """The Task family is deeply immutable: the list-valued solve fields are tuples
-    that reject in-place mutation, so a task cannot be poisoned after construction —
-    the same silent-drift class the oracle arc kept killing. Built with a ``list``
-    (``task_cls(set_c=[1])``) so it passes only if ``__post_init__`` actually coerces
-    list→tuple, not merely if the annotation changed — the mechanism, not the label.
-    ``negation_map`` stays a dict (MappingProxyType does not pickle → FastDiagP)."""
+    that reject in-place mutation, and ``negation_map`` is a ``FrozenDict``, so a
+    task cannot be poisoned after construction — the same silent-drift class the
+    oracle arc kept killing. Built with a plain ``list``/``dict`` so it passes only
+    if ``__post_init__`` actually coerces, not merely if the annotation changed —
+    the mechanism, not the label. ``negation_map`` is a ``FrozenDict`` (a read-only
+    ``dict`` subclass that still pickles) rather than the abandoned
+    ``MappingProxyType`` (ADR-0007/0012), which does not pickle → FastDiagP ships
+    tasks to workers. Both the identity type AND the mutate-block are pinned."""
     from explanation.models.task_preparation import DiagnosisTask, TestCaseTask
     from conacq.algorithms.acqmss.task_preparation import ConGenTask
     from conacq.algorithms.quacq.task_preparation import QuAcqTask
 
     for task_cls in (DiagnosisTask, TestCaseTask, ConGenTask, QuAcqTask):
-        task = task_cls(set_c=[1])
+        task = task_cls(set_c=[1], negation_map={1: 2})
+        # list-valued solve field → tuple (rejects in-place mutation)
         with pytest.raises((TypeError, AttributeError)):
-            task.set_c.append(999)  # a tuple rejects this; a list (today) does not
+            task.set_c.append(999)  # a tuple rejects this; a list would not
+        # mapping-valued field → FrozenDict: pin the identity type ...
+        assert type(task.negation_map).__name__ == "FrozenDict"
+        # ... AND the mutate-block mechanism (a plain dict would accept this).
+        with pytest.raises(TypeError):
+            task.negation_map[3] = 4
 
 
 def test_no_position_slicing_in_task_preparation():

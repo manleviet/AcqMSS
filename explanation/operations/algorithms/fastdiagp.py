@@ -72,19 +72,16 @@ class FastDiagP:
             return []
 
         # return C \ FD(C, B, Φ)
-        numCores = mp.cpu_count()
-
-        self.maxNumGenCC = min(numCores - 1, 4)
+        self.maxNumGenCC = min(mp.cpu_count() - 1, 4)
         self.profiler.set_gauge('maxNumGenCC', self.maxNumGenCC)
-        self.pool = mp.Pool(self.maxNumGenCC)
 
-        mss = self._fd([], set_c, set_b)
-        diag = diff(set_c, mss)
-
-        self.profiler.set_gauge('lookup_table_size', len(self.lookup_table))
-
-        self.pool.close()
-        self.pool.terminate()
+        # Context manager closes/joins the pool even if _fd raises (no orphaned
+        # workers), and max(1, ...) floors the worker count so a 1-vCPU host never
+        # builds mp.Pool(0), which raises ValueError.
+        with mp.Pool(max(1, self.maxNumGenCC)) as self.pool:
+            mss = self._fd([], set_c, set_b)
+            diag = diff(set_c, mss)
+            self.profiler.set_gauge('lookup_table_size', len(self.lookup_table))
 
         logging.debug('return %s', diag)
         # print(f'return {diag}')

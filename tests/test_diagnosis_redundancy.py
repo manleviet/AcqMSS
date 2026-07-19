@@ -202,3 +202,27 @@ def test_wipeoutr_t_redundancy(name, is_incremental, solver_name, use_sat4j, ena
         assert result[0] == 'Redundant test cases: [FeatureA=true]', "Expected 'FeatureA = true' to be redundant"
         assert result[1] == 'Non-redundant test cases: [FeatureC=false, FeatureA=true & FeatureB=true]', \
             "Expected 'FeatureC = false' and 'FeatureA = true & FeatureB = true' to be non-redundant"
+
+
+def test_wipeoutr_t_single_or_empty_testcase_reads_frozen_tuple():
+    """WipeOutR_T's <=1-testcase early return must not assume a list.
+
+    ``PySATRedundancyTestCases`` feeds ``task.set_tc`` — a deep-frozen *tuple*
+    (``TestCaseTask.__post_init__`` coerces list->tuple) — into
+    ``find_redundant_testcases``. The early return copied it with ``.copy()``,
+    which a tuple does not have (``AttributeError``). Only the <=1 branch touched
+    it and no test exercised that branch, so the suite stayed green after the
+    deep-freeze. Passing a tuple — as production always does — is what makes this
+    bite; a list would ``.copy()`` cleanly and hide the defect.
+    """
+    from explanation.operations.algorithms.wipeoutr_t import WipeOutR_T
+    from explanation.models.task_preparation import TestCaseTask
+
+    wipeoutr = WipeOutR_T(checker=None)  # checker is untouched on the <=1 branch
+    for ids in ([], [7]):
+        task = TestCaseTask(set_tc=ids)
+        assert isinstance(task.set_tc, tuple)  # freeze precondition
+        redundant, non_redundant = wipeoutr.find_redundant_testcases(
+            task.set_tc, task.negation_map)
+        assert redundant == []                   # nothing redundant with <=1 case
+        assert list(non_redundant) == list(ids)  # content preserved (behaviour-inert)

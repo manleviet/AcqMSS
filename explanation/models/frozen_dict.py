@@ -12,8 +12,9 @@ class FrozenDict(dict):
 
     Mapping-valued frozen-dataclass fields (``negation_map``, assignment maps) are
     read-only after construction (``in`` and ``[key]`` only), so the deep-freeze that
-    coerces list fields to tuples extends here too. Unlike ``MappingProxyType`` it
-    *pickles* — required by FastDiagP, which ships the task to worker processes — via
+    coerces list fields to tuples extends here too. Unlike the abandoned
+    ``MappingProxyType`` (ADR-0007) it *pickles* — required by FastDiagP, which
+    ships the task to worker processes — via
     ``__reduce__`` reconstructing from a plain ``dict`` (so unpickling never calls the
     blocked ``__setitem__``). ``__ior__`` (``|=``, Python 3.9+) is blocked too.
     """

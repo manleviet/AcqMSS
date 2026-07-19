@@ -14,9 +14,11 @@ traversal-order invariant.
 from flamapy.metamodels.fm_metamodel.transformations import UVLReader
 
 from explanation.transformations.fm_to_diag_pysat import FmToDiagPysat
-from tests.resource_paths import DATA_DIR
+from explanation.transformations.dimacs_to_diag_pysat import DimacsToDiagPysat
+from tests.resource_paths import DATA_DIR, RESOURCES_DIR, CNF_PROD
 
 _ARCADE_FM = str(DATA_DIR / "fms" / "arcade-game.uvl")
+_INCOMPLETE_CATALOG_CNF = str(RESOURCES_DIR / "incomplete_catalog.cnf")
 
 # Feature names in SAT-variable-id order (id == index + 1). This is the
 # flamapy tree-traversal order; ArcadeGame is the root (id 1).
@@ -76,3 +78,27 @@ def test_next_available_id_is_feature_count_plus_one_without_negation():
     model = _transform(create_negation=False)
     assert len(model.negated_constraint_map) == 0
     assert model.next_available_id == _N_FEATURES + 1  # 66
+
+
+# --- DIMACS transform: next_available_id must clear every clause variable ------
+
+def test_dimacs_next_available_id_clears_every_clause_variable():
+    """``next_available_id`` must sit strictly above every variable that appears in
+    a clause. Task preparation allocates assumption/Tseitin ids starting there; if
+    it lands on a real variable the diagnosis is silently wrong. The ``c`` catalog
+    can be incomplete — a clause may use a variable no ``c`` line declares — so the
+    floor must come from the ``p cnf <nvars>`` header, not ``len(catalog)``.
+
+    Fixture: 2 ``c`` lines, but ``p cnf 5`` and clause ``4 -5 0`` uses variable 5.
+    """
+    model = DimacsToDiagPysat(_INCOMPLETE_CATALOG_CNF, create_negation=False).transform()
+    max_clause_var = 5  # highest variable used in any clause of the fixture
+    assert model.next_available_id > max_clause_var
+
+
+def test_dimacs_next_available_id_unchanged_for_complete_catalog():
+    """Behaviour-inert guard: with a complete catalog (``len(catalog) == nvars``),
+    ``max(nvars, len(catalog)) + 1`` equals ``len(catalog) + 1`` — the id floor
+    changes nothing on the real fixtures (only rescues an incomplete catalog)."""
+    model = DimacsToDiagPysat(str(CNF_PROD), create_negation=False).transform()
+    assert model.next_available_id == len(model.variables) + 1
