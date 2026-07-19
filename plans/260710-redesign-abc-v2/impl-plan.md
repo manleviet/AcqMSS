@@ -330,3 +330,32 @@ Main: `fastdiagp.py` `lookup_table:42` + `mp.Pool:76`; profiling còn `ProfilerM
 
 - Không có câu hỏi design chặn. 7 lỗi cơ học brief↔main → Bước-0 report (Cowork đồng bộ brief; không đổi quyết định).
 - Vị trí file mới chưa chốt trong brief (tôi đề xuất, user chỉnh được khi review task): `explanation/models/kb_protocol.py`, `conacq/kb_model.py`, `conacq/oracle_bias_model_builder.py`, `conacq/oracle/oracle_data.py`.
+
+## Code-review remediation batch (2026-07-19) — nguồn: `handoff-consolidated-2026-07-18.md`
+
+Xử findings 2 vòng review (Cowork M1–M6 + CC C1/C2/I3–I6). Phân theo QUYẾT ĐỊNH (đụng golden/paper hay không), KHÔNG theo severity.
+
+**Nhóm A — behaviour-inert, red-first (committed `59d37bc`; suite 501→506):**
+- A1 `wipeoutr_t.py:71` `set_t.copy()`→`list(set_t)` (tuple đóng băng vỡ `.copy()` nhánh ≤1; hậu quả deep-freeze T11b, không phải bug mới).
+- A2 `dimacs_to_diag_pysat.py:55` id floor = `max(int(p_cnf_nvars), len(variables))+1` (catalog `c` thiếu → id assumption đụng biến thật). Behaviour-inert trên fixture đủ-catalog (prod_1_1/linux). `from_dimacs` trước đó 0 test.
+- A3 `fastdiagp.py:75-91` `with mp.Pool(max(1, …))` (Pool(0) crash 1-vCPU + leak khi `_fd` raise). Sửa TRƯỚC publish; T4/ADR-0014 sẽ xoá ở canonical.
+- A4 guard `test_task_is_deeply_frozen` pin `negation_map`→FrozenDict (type + mutate-block). Red-first 3 bước: xoá coercion `:176`→đỏ→khôi phục→xanh→suite 506.
+- A5 docstring: 3 mention `MappingProxyType` = đối chiếu-lịch-sử (đã ghi "abandoned, ADR-0007"). **Premise A5 đã được T18 giải quyết** — 0 text stale "negation_map IS MappingProxyType"; chỉ chỉnh phrasing. Diff docstring-only, 0 dòng thực thi.
+- A6 comment: Task cố ý KHÔNG hashable (grep sạch: 0 `hash(task)`/`Task ==`/task-as-key). Comment-only, `hash(task)` vẫn raise.
+
+**Nhóm C — dead-code (committed `ec56bdf`):** xoá 4 guard `if cid.startswith('ne_'): continue` (kb_comparator.py:151/204/280/299). `cid` không bao giờ bắt đầu `ne_` (NE gộp→NOT(...); scheme cũ bỏ)→strict no-op; NE-exclusion thật = `has_constraint`/`kb_to_clauses`. grep→0; test_evaluation 29 pass y hệt.
+
+**Nhóm B — ĐỔI HÀNH VI, CHẶN → ADR (committed `7e9d87d`, Status Accepted, impl+regen HOÃN):**
+- ADR-0015 (B1 `query_provider.py:60`): seed = **per-fold**; code+regen bảng example-mode → hoãn tới lúc viết bài.
+- ADR-0016 (B2 `quacq.py:140`): QuAcq **có ý** phụ thuộc thứ tự bias (runner shuffle `set_c` y hệt ConGen); fix = giữ thứ tự, không đổi núm; impl+regen golden QuAcq → **chờ lệnh riêng**.
+- ADR-0017 (B3 `reduce.py:63`): giữ thứ tự `gamma1+gamma2`; impl+regen golden AcqMSS/ConGen → **chờ lệnh riêng, SAU 0016** (mỗi golden-diff quy về 1 fix).
+
+**Ngoài phạm vi (giữ nguyên):** M4 (leak non-incremental pre-existing, ticket riêng sau merge); minors §98 handoff (div-by-zero, broad except…) — chưa làm, tránh phồng batch.
+
+**Nghiệm thu:** suite py3.11 **506** (501 baseline giữ nguyên = behaviour-inert; +5 red-first). 3 commit local, CHƯA push. B2/B3 code CHƯA làm (mới ADR).
+
+**Cập nhật 2026-07-19 (B2/B3 landed, user phương án B — commit ngay, CHƯA push):**
+- **B2** `quacq.py:140` `set(set_c)`→`dict.fromkeys` (ordered membership; 4 pop site; annotation consumers, KHÔNG chạm query_provider). Knob `test_bias_order_drives_quacq_query_trajectory` red-first. Golden: `layer23[.quacq.query_history]` (invariants n_kb=0/n_queries=15/max_queries giữ; chỉ đổi path). **test_quacq.py 0 đổi** (pins đều synthetic `QuAcqResult`). ADR-0016 Accepted-done (B2 CHẠM bảng iterative — defer B1 bundle, KHÔNG "0 paper"). → commit.
+- **B3** `reduce.py:63` giữ thứ tự `gamma1+gamma2` (dict.fromkeys). Knob `test_reduce_survivor_follows_input_order` red-first. Golden in-repo: `layer23[.congen_rs/ff n_kb]` (17→14, 18→16; **n_mss giữ** pre-reduce) + `congen_runner.json` re-baseline. **PASSIVE-ConGen hoãn revision** (data/results/congen 19 file → t9 golden → Tables 7/9/10/11, ~multi-giờ REAL-FM-4): `test_extraction_tables_are_byte_identical` **SKIP loud** (ADR-0017); checklist `B3-pending-revision.md`. → commit.
+- **Interactive/iterative** (B1+B2+B3) → bundle B1 ở revision. B1 (`query_provider.py`) KHÔNG đụng đợt này (byte-identical baseline).
+- Suite: **508** (506 + 2 knob) trước skip → **507 passed + 1 skipped** sau skip.

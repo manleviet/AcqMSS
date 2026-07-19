@@ -262,6 +262,36 @@ class TestReduce:
         finally:
             checker.cleanup()
 
+    def test_reduce_survivor_follows_input_order(self):
+        """The surviving representative of mutually-redundant constraints must
+        follow the input (gamma1+gamma2) order, not hash order. REDUCE removes a
+        constraint when the rest entail it, so with three mutually-redundant
+        constraints it keeps the LAST one reached — and two different input orders
+        keep different survivors. Before the fix (``list(set(...))``) both orders
+        collapse to one hash order and keep the same survivor, so this guard fails
+        on pre-fix code (teeth, not a tautology).
+        """
+        class _MutualRedundancyChecker:
+            """Any single remaining constraint entails all others: BG ∪ (KB-{c}) ∪
+            {¬c} is inconsistent iff a positive constraint remains alongside ¬c."""
+            NEG = {101, 102, 103}
+            POS = {1, 2, 3}
+
+            def is_consistent(self, test_set):
+                has_neg = any(a in self.NEG for a in test_set)
+                has_pos = any(a in self.POS for a in test_set)
+                return not (has_neg and has_pos)
+
+        negation_map = {1: 101, 2: 102, 3: 103}
+        reduce = Reduce(_MutualRedundancyChecker())
+
+        _, kb_fwd = reduce.reduce([1, 2, 3], [], [], negation_map)
+        _, kb_rev = reduce.reduce([3, 2, 1], [], [], negation_map)
+
+        assert kb_fwd == [3]      # input order [1,2,3] -> last (3) survives
+        assert kb_rev == [1]      # input order [3,2,1] -> last (1) survives
+        assert kb_fwd != kb_rev   # different input order -> different survivor (teeth)
+
 
 class TestGenerateNE:
     """Tests for GenerateNE algorithm."""

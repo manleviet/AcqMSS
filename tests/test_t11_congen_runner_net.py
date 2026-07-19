@@ -12,6 +12,13 @@ and compares the DETERMINISTIC result fields to a golden recorded from ``main``
 record time, so the golden gates the whole arc's runner behaviour, not just 4b3).
 A red here means ``run()`` drifted: STOP and report — do NOT regenerate to green.
 
+**Re-baselined once for B3 (ADR-0017, 2026-07-19).** The REDUCE MSS-order fix is an
+intentional behaviour change, so this golden was deliberately regenerated: only the
+reduce-dependent fields moved (``kb_constraints``/``kb_clauses``/``n_kb``/
+``redundant_constraints``); ``n_mss``, ``n_bias``, ``bg_clauses``, ``consistency_checks``
+and the pinned counts held. From here it again gates against drift — the
+"do NOT regenerate to green" rule stands for any future red.
+
 Only deterministic fields are pinned. The six timing/memory fields (``runtime_ms``,
 ``memory_peak_mb``, ``*_runtime_ms``, ``solver_time_ms``) are deliberately NOT in
 the golden: pinning a wall-clock value makes a flaky net, and a flaky net gets

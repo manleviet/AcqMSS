@@ -18,6 +18,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = REPO_ROOT / "data" / "results"
 CONGEN_DIR = RESULTS_DIR / "congen"
@@ -32,9 +34,18 @@ CONGEN_REL = "data/results/congen"
 # Test 1 — extraction diff (the real acceptance)                              #
 # --------------------------------------------------------------------------- #
 
+@pytest.mark.skip(reason="data/results/congen + t9 golden pending B3 REDUCE regen — "
+                         "validates stale-vs-stale until ConGen revision; see ADR-0017")
 def test_extraction_tables_are_byte_identical(tmp_path, monkeypatch):
     """`python -m apps.extract_results` over the recorded data reproduces the
     frozen paper tables byte-for-byte. No experiment is re-run — only re-extraction.
+
+    SKIPPED until the ConGen revision: B3 (``reduce.py`` MSS-order fix, ADR-0017)
+    changed ConGen's learned KB, so ``data/results/congen`` and this frozen golden
+    are both stale. Re-extracting stale data still matches the stale golden — a
+    green that proves nothing. Kept loud (skip, not pass) so the pending
+    multi-hour CV regen is visible. Unskip after regen (see
+    ``plans/260710-redesign-abc-v2/B3-pending-revision.md``).
     """
     from apps import extract_results
 
