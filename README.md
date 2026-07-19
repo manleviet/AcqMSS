@@ -10,6 +10,9 @@ A research system for automatically acquiring constraints from feature models th
 git clone https://github.com/manleviet/AcqMSS.git
 cd AcqMSS
 
+# Install the external canonical explanation package (required)
+pip install -e ../explanation
+
 # Recommended: uv (installs from pyproject.toml + uv.lock)
 uv sync --extra dev          # creates .venv with runtime + dev (pytest) deps
 
@@ -133,14 +136,12 @@ AcqMSS/
 │   ├── oracle/                # role protocols, FMOracle, OracleData/BGData, cached
 │   ├── runners/               # ConGenRunner, QuAcqRunner (moved from eval/)
 │   └── eval/                  # Accuracy, cross-validation, evaluator
-├── explanation/               # SAT solver infrastructure
-│   ├── models/                # DiagnosisModel, builder, task preparation
-│   ├── operations/            # FastDiag, QuickXPlain, KBDiag, WipeOutR, HSDAG
-│   └── transformations/       # FM → SAT converters
 ├── apps/                      # CLI applications + TOML configs
 ├── data/                      # Feature models, bias, examples, results
 ├── tests/                     # Parameterized test suite
 └── docs/                      # Comprehensive documentation
+
+*Note: SAT solver infrastructure (explanation/ + profiling/) is consumed from the canonical `../explanation` package.*
 ```
 
 ## Configuration

@@ -137,7 +137,7 @@ Converts negative examples E- into NE constraints that the KB must satisfy.
 
 **Implementation**: `conacq/algorithms/acqmss/generate_ne.py` — Pure function returning `NEPerTestcase` list (138 LOC)
 - Called internally by `ConGenModel.prepare_task()`, not by callers directly
-- Uses QuickXPlain from `explanation/operations/algorithms/quickxplain.py` (80 LOC)
+- Uses QuickXPlain from `explanation/operations/algorithms/quickxplain.py` (80 LOC, in canonical `../explanation`)
 
 ## AcqMSS (Algorithm 2)
 
@@ -174,7 +174,7 @@ Output: B' ⊆ B (maximum satisfiable subset)
 - **Lines 6-8**: Base case — single constraint that causes inconsistency is removed
 
 **Implementation**: `conacq/algorithms/acqmss.py` — `AcqMSS.find_mss()` (104 LOC)
-- Uses KBDiag from `explanation/operations/algorithms/kbdiag.py` (100 LOC)
+- Uses KBDiag from `explanation/operations/algorithms/kbdiag.py` (100 LOC, in canonical `../explanation`)
 
 ## REDUCE (Algorithm 3)
 
@@ -319,7 +319,7 @@ Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
 | `conacq/runners/congen_runner.py` | 235 | ConGenRunner pipeline (moved from eval/) |
 | `conacq/eval/accuracy.py` | 170 | AccuracyCalculator metrics |
 
-### SAT Solver Layer
+### SAT Solver Layer (Canonical `../explanation` Package)
 
 | File | LOC | Purpose |
 |------|-----|---------|
@@ -346,8 +346,8 @@ ConGen and QuAcq share significant infrastructure:
 
 | Component | Shared Module | Usage |
 |-----------|--------------|-------|
-| SAT solvers | `explanation/operations/algorithms/` | IncrementalPySATChecker, NonIncrementalPySATChecker |
-| FM representation | `explanation/transformations/` | FM → SAT conversion pipeline |
+| SAT solvers | `explanation/operations/algorithms/` (canonical `../explanation`) | IncrementalPySATChecker, NonIncrementalPySATChecker |
+| FM representation | `explanation/transformations/` (canonical `../explanation`) | FM → SAT conversion pipeline |
 | Bias generation | `conacq/bias/` | Same BiasGenerator for both paradigms |
 | Oracle | `conacq/oracle/` | role protocols, FMOracle, OracleData/BGData |
 | Evaluation | `conacq/eval/` | Same accuracy metrics and cross-validation |

@@ -226,11 +226,12 @@ Core Algorithms (conacq/)
   ├── Oracle implementations
   └── Evaluation
        ↓
-SAT Infrastructure (explanation/)
-  ├── Diagnosis algorithms (FastDiag, QuickXPlain, KBDiag, WipeOutR)
+SAT Infrastructure (canonical ../explanation package)
+  ├── explanation/ — Diagnosis algorithms (FastDiag, QuickXPlain, KBDiag, WipeOutR)
   ├── HSDAG tree search
   ├── Solver abstraction (Incremental, NonIncremental, SAT4J)
-  └── Model transformation (FM → SAT)
+  ├── Model transformation (FM → SAT)
+  └── profiling/ — Neutral measurement infrastructure
 ```
 
 ### Key Design Patterns

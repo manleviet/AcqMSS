@@ -30,11 +30,11 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ SAT4J external solver support
 - ✅ Comprehensive diagnosis tests (1,416 LOC)
 
-**Key Files**:
+**Key Files** (in canonical `../explanation` package):
 - `explanation/operations/algorithms/` — 11 files, ~1,382 LOC
 - `explanation/operations/checker.py` — 494 LOC
 - `explanation/operations/hsdag.py` — 353 LOC
-- `tests/test_diagnosis.py` — 1,416 LOC
+- `tests/test_diagnosis.py` — 1,416 LOC (in AcqMSS repo)
 
 ### Phase 2: Constraint Acquisition ✅ COMPLETE
 
@@ -159,10 +159,11 @@ AcqMSS is a mature research system with core functionality fully implemented and
 | Component | LOC | Files | Test Coverage | Status |
 |-----------|-----|-------|---------------|--------|
 | conacq/ | ~9,272 | ~50 | 85% | ✅ Complete (includes runners/) |
-| explanation/ | ~4,600 | ~35 | 90% | ✅ Complete |
 | apps/ | ~3,025 | 11 | 60% | ✅ Complete |
 | tests/ | ~3,745 | 8 | — | ✅ Complete (308/310 passing) |
-| **Total** | **~20,900** | **~104** | **80%** | ✅ **Complete** |
+| **In-Repo Total** | **~16,042** | **~69** | **80%** | ✅ **Complete** |
+| explanation/ (external) | ~4,600 | ~35 | 90% | ✅ Canonical `../explanation` |
+| profiling/ (external) | ~800 | ~6 | — | ✅ Canonical `../explanation` |
 
 ### Performance Benchmarks
 

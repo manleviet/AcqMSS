@@ -6,7 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets) — Python system for constraint acquisition from feature models. Two source packages: `conacq/` (acquisition algorithms) + `explanation/` (SAT solver infrastructure). Note: `acqmss` is the distribution name in `pyproject.toml`, not a directory.
+AcqMSS (Constraint Acquisition With Maximum Satisfiable Subsets) — Python system for constraint acquisition from feature models. In-repo source packages: `conacq/` (acquisition algorithms) + `apps/` (CLI applications). SAT solver infrastructure (`explanation/` + `profiling/`) is consumed from the canonical `../explanation` package (installed editable). Note: `acqmss` is the distribution name in `pyproject.toml`, not a directory.
+
+### External Dependencies
+
+**Canonical `../explanation` package**: AcqMSS requires the flamapy-plugin `explanation/` package (SAT solver infrastructure + profiling) checked out beside the repo and installed editable:
+```bash
+# From AcqMSS root:
+pip install -e ../explanation
+```
+It is intentionally **NOT** pinned in `pyproject.toml` (canonical is not on PyPI yet) — a local two-repo dev convention. See `../explanation/README.md` for setup details.
 
 **Key references** (read on-demand, not duplicated here):
 - `README.md` — Quick start, code examples, project structure

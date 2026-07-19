@@ -1,6 +1,6 @@
 # AcqMSS System Architecture
 
-**Last Updated**: 2026-02-28 (QueryProvider + ConsistencyChecker refactor: injected checker/model, unified SAT interface, get_model() extraction)
+**Last Updated**: 2026-07-20 (docs: externalize explanation/ and profiling/ to canonical ../explanation package)
 
 ## High-Level Overview
 
@@ -28,11 +28,12 @@ AcqMSS is organized in a **two-layer architecture** with clear separation of con
                   │ Dependencies
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ SAT Infrastructure (explanation/)                           │
-│ ├─ Diagnosis Algorithms (FastDiag, QuickXPlain, etc.)       │
+│ SAT Infrastructure (canonical ../explanation package)       │
+│ ├─ explanation/: Diagnosis Algorithms (FastDiag, etc.)      │
 │ ├─ HSDAG: Tree search optimization (10x speedup)            │
 │ ├─ Solver Abstraction (Incremental, NonIncremental, SAT4J)  │
-│ └─ Model Transformation (FM → SAT, DIMACS conversion)       │
+│ ├─ Model Transformation (FM → SAT, DIMACS conversion)       │
+│ └─ profiling/: Neutral measurement infrastructure           │
 └─────────────────┬───────────────────────────────────────────┘
                   │ SAT Solvers
                   ▼
@@ -310,7 +311,9 @@ F1        = 2 * P * R / (P + R)
 - **clause** — Compare CNF clauses exactly (structural)
 - **semantic** — SAT-based bidirectional entailment (KB ≡ C_T equivalence)
 
-### explanation/ — SAT Solver Infrastructure
+### explanation/ — SAT Solver Infrastructure (External Package)
+
+*Consumed from canonical `../explanation` package*
 
 **Purpose**: Provide diagnosis algorithms and solver abstractions for constraint acquisition.
 
@@ -864,10 +867,10 @@ Result: QuAcqResult with assumption IDs + query history
 
 ## Integration Points
 
-conacq/ uses explanation/ components:
-- **ACQMSS**: Uses KBDiag from explanation.operations.algorithms
-- **Consistency Checking**: Pluggable ConsistencyChecker abstraction (Incremental, NonIncremental, SAT4J)
-- **Profiling**: Optional global profiler pattern (minimal overhead when disabled). Lives in the top-level `profiling/` package (neutral infra imported directly by both `explanation` and `conacq`); consumers type-annotate against the `ProfilerProtocol` @runtime_checkable Protocol.
+conacq/ uses components from the external `../explanation` package:
+- **ACQMSS**: Uses KBDiag from explanation.operations.algorithms (in canonical `../explanation`)
+- **Consistency Checking**: Pluggable ConsistencyChecker abstraction (Incremental, NonIncremental, SAT4J) via `explanation.api`
+- **Profiling**: Optional global profiler pattern (minimal overhead when disabled). Lives in the top-level `profiling/` package (in canonical `../explanation`, neutral infra imported directly by both `explanation` and `conacq`); consumers type-annotate against the `ProfilerProtocol` @runtime_checkable Protocol.
 - **CNF Format**: Unified list[list[int]] representation across all components
 
 **Feature ID Consistency (CRITICAL)**:

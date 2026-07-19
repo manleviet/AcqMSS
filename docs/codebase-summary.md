@@ -1,8 +1,9 @@
 # AcqMSS Codebase Summary
 
-**Total Python Code**: ~21,800 lines across ~102 files
-**Main Packages**: conacq (~10,000 LOC) + explanation (~5,000 LOC) + apps (~3,025 LOC) + tests (~3,745 LOC)
-**Last Updated**: 2026-07-18 (T18 docs-coherence: CheckerFactory removal, prepare_task unification, executor deferred to canonical repo)
+**Total Python Code (in-repo)**: ~20,500 lines across ~102 files
+**In-Repo Packages**: conacq (~10,000 LOC) + apps (~3,025 LOC) + tests (~3,745 LOC)
+**External Packages**: explanation (~5,000 LOC) + profiling (~800 LOC) — consumed from canonical `../explanation` package
+**Last Updated**: 2026-07-20 (docs: externalize explanation/ and profiling/ to canonical ../explanation package)
 
 ## Package Structure
 
@@ -195,7 +196,9 @@ Cross-validation, accuracy metrics, unified CV output, and QuAcq->ConGen progres
 | `progressive_evaluation.py` | 211 | ProgressiveEvaluator engine: run ConGen at query-budget checkpoints, compare vs ground truth |
 | `__init__.py` | 143 | Package exports |
 
-### explanation/ — SAT Solver Infrastructure (~6,100 LOC, ~35 files)
+### explanation/ — SAT Solver Infrastructure (External, ~6,100 LOC, ~35 files)
+
+*Consumed from canonical `../explanation` package*
 
 Diagnosis algorithms and SAT model abstraction:
 
@@ -273,7 +276,9 @@ Feature model to SAT conversion:
 | `dimacs_to_configuration.py` | 59 | DIMACS variable assignments → Configuration |
 | `testsuite_reader.py` | 42 | Read test suites from files |
 
-### profiling/ — Profiling Infrastructure (top-level package)
+### profiling/ — Profiling Infrastructure (External, top-level in canonical package)
+
+*Consumed from canonical `../explanation` package*
 
 Neutral infrastructure imported directly by **both** `explanation` and `conacq` (not nested under either). Split by concern from the former 1,220-LOC `explanation/operations/algorithms/profiler.py`:
 
@@ -455,10 +460,11 @@ CONGEN and QuAcq learning results:
 | Component | LOC | Files | Avg File Size | Status |
 |-----------|-----|-------|---------------|--------|
 | conacq/ | ~10,170 | ~53 | ~192 | ✅ Core algorithms (QuAcq unified + eval pipeline + builder) |
-| explanation/ | ~4,600 | ~35 | ~131 | ✅ SAT infrastructure |
 | apps/ | ~3,300 | 12 | ~275 | ✅ CLI applications (+ run_evaluation.py) |
 | tests/ | ~8,000 | ~40 | ~200 | ✅ Comprehensive coverage |
-| **Total** | **~26,000** | **~140** | **~186** | ✅ **Production ready** |
+| **In-Repo Total** | **~21,470** | **~105** | **~204** | ✅ **Production ready** |
+| explanation/ (external) | ~4,600 | ~35 | ~131 | ✅ SAT infrastructure (canonical `../explanation`) |
+| profiling/ (external) | ~800 | ~6 | ~133 | ✅ Profiling infra (canonical `../explanation`) |
 
 **Task Family** (immutable pure data — `@dataclass(frozen=True)`, no methods):
 - **Task(ABC)** → Base holding intrinsic solve fields (single source of truth): `set_c`, `set_b`, `set_kb`, `negation_map`, `assumptions`. No methods — derived quantities are free functions (`cf(task)` = `set_b + set_c`).
@@ -615,8 +621,7 @@ python -m apps.run_evaluation apps/conf/run_evaluation_config.toml -v
 ## File Size Analysis
 
 Largest files (by line count):
-- `profiling/` — top-level package (split from the former 1,220-LOC `explanation/operations/algorithms/profiler.py`); neutral infra imported directly by both `explanation` and `conacq`
-- `explanation/models/task_preparation.py` — 952 LOC (SAT task setup)
+- `explanation/models/task_preparation.py` — 952 LOC (SAT task setup, in canonical `../explanation`)
 - `tests/test_diagnosis.py` — 1,416 LOC (diagnosis tests)
 - `apps/extract_results.py` — 621 LOC (result processing, DRY-refactored from 1,139 LOC)
 
