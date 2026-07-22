@@ -25,6 +25,10 @@ from conacq.algorithms import (
     ConMinModelBuilder, ConMinTaskInput,
     ConGenModelBuilder, ConGenTaskInput,
 )
+from conacq.algorithms.conmin import AcqMinCover, NegEncoding
+from conacq.algorithms.conmin.min_cover import (
+    connected_components, exact_cover, greedy_cover, irredundant,
+)
 from conacq.oracle import FMOracle
 from conacq.examples import ExampleIO
 from explanation.checker.backend import build_checker, SolverBackend
@@ -310,6 +314,124 @@ class TestConMinStage1:
         result = _acquire(prepared.task, is_incremental=True)
         assert result.n_mss == GOLDEN_MSS_RS_1N_N
         assert _mss_names_sha(result.mss_ids, prepared.describe) == GOLDEN_MSS_RS_1N_SHA
+
+
+# --------------------------------------------------------------------------- #
+# P2 — AcqMinCover engine (design brief §3, AcqMinCover v2 worked example)
+# --------------------------------------------------------------------------- #
+
+# Worked-example constraint IDs (v2 note §3-§6); names in comments.
+_ID_DB = 1      # id->db
+_ID_GA = 2      # id->¬ga
+_N1_N2 = 11     # n1->n2
+_N3_N4 = 13     # n3->n4
+_N5_N6 = 15     # n5->n6  (admissible-but-spurious over-fit)
+_T_U = 21       # t->u
+_U_V = 22       # u->¬v
+
+
+class TestMinCover:
+    """Pure cover-solver on hand-built maps from the v2 worked example (no checker)."""
+
+    @staticmethod
+    def _g3():
+        """Block-B component G3: mb1..mb6 = 1..6 (v2 example §5)."""
+        fs = frozenset
+        return {fs([_N1_N2]): {1, 2, 3},
+                fs([_N3_N4]): {4, 5, 6},
+                fs([_N5_N6]): {2, 3, 4, 5}}
+
+    def test_exact_beats_greedy_on_G3(self):
+        """The payoff: exact cover = the 2 true constraints; greedy keeps 3 (over-fit)."""
+        cover = self._g3()
+        negs = {1, 2, 3, 4, 5, 6}
+        exact = exact_cover(set(cover), negs, cover)
+        greedy = greedy_cover(set(cover), negs, cover)
+        assert exact == {frozenset([_N1_N2]), frozenset([_N3_N4])}
+        assert frozenset([_N5_N6]) in greedy and len(greedy) == 3
+
+    def test_irredundant_recovers_exact_from_greedy(self):
+        """The post-pass rescues even the greedy result down to the 2-cover."""
+        cover = self._g3()
+        negs = {1, 2, 3, 4, 5, 6}
+        greedy = greedy_cover(set(cover), negs, cover)
+        assert irredundant(greedy, negs, cover) == {frozenset([_N1_N2]), frozenset([_N3_N4])}
+
+    def test_connected_components_separates(self):
+        """One coverage graph fragments into 3 independent components (G1,G2,G3)."""
+        fs = frozenset
+        # eA1=101 rejected by id->db; eA2=102 by id->¬ga; mb1..6 by the block-B trio.
+        cover = {fs([_ID_DB]): {101}, fs([_ID_GA]): {102},
+                 fs([_N1_N2]): {1, 2, 3}, fs([_N3_N4]): {4, 5, 6}, fs([_N5_N6]): {2, 3, 4, 5}}
+        comps = connected_components(cover)
+        assert len(comps) == 3
+        assert sorted(len(elems) for elems, _ in comps) == [1, 1, 3]
+        selected = set()
+        for elems_i, negs_i in comps:
+            selected |= exact_cover(elems_i, negs_i, cover)
+        assert selected == {frozenset([_ID_DB]), frozenset([_ID_GA]),
+                            frozenset([_N1_N2]), frozenset([_N3_N4])}
+
+    def test_weight_tiebreak_prefers_lighter_element(self):
+        """w≡1: among equal-cardinality covers, the lower-Σweight one wins (compound
+        weighs its size, so a singleton is preferred)."""
+        fs = frozenset
+        cover = {fs([_T_U, _U_V]): {900}, fs([_ID_DB]): {900}}
+        assert exact_cover(set(cover), {900}, cover) == {frozenset([_ID_DB])}
+
+
+class TestAcqMinCover:
+    """Phase A (checker-driven) with rule-based stub checkers (no solver)."""
+
+    def test_compound_branch_places_Sx(self):
+        """pc- (t=1,v=1) rejected only by the PAIR {t->u, u->¬v} -> one compound element.
+
+        Neither constraint alone rejects pc- (cand=∅), so QuickXplain finds the minimal
+        conflict {t->u, u->¬v} and it enters the cover as a single compound element.
+        """
+        class _BlockC:
+            PC = {201, 202}   # t=1, v=1 assignment assumptions
+
+            def is_consistent(self, test_set):
+                s = set(test_set)
+                both = _T_U in s and _U_V in s
+                return not (bool(self.PC & s) and both)
+
+        pc = NegEncoding(neg_id=900, assumption_ids=(201, 202))
+        res = AcqMinCover(_BlockC()).cover(
+            admissible=[_T_U, _U_V], neg_encodings=[pc], bg=[1])
+        assert res.cover_elements == [frozenset([_T_U, _U_V])]
+        assert res.uncoverable == []
+        assert res.n_components == 1
+
+    def test_uncoverable_goes_to_U(self):
+        """A negative no element rejects (cand=∅, no conflict) is memorised in U."""
+        class _AllConsistent:
+            def is_consistent(self, test_set):
+                return True
+
+        u = NegEncoding(neg_id=777, assumption_ids=(301,))
+        res = AcqMinCover(_AllConsistent()).cover(
+            admissible=[_ID_DB, _ID_GA], neg_encodings=[u], bg=[1])
+        assert res.cover_elements == []
+        assert res.uncoverable == [777]
+
+    def test_singletons_end_to_end(self):
+        """Each e- rejected by exactly one constraint -> singleton cover, 2 components."""
+        class _RejectsMatching:
+            REJECT = {(_ID_DB, 501), (_ID_GA, 502)}  # (constraint, e- aid) pairs
+
+            def is_consistent(self, test_set):
+                s = set(test_set)
+                return not any(c in s and aid in s for c, aid in self.REJECT)
+
+        negs = [NegEncoding(neg_id=1, assumption_ids=(501,)),
+                NegEncoding(neg_id=2, assumption_ids=(502,))]
+        res = AcqMinCover(_RejectsMatching()).cover(
+            admissible=[_ID_DB, _ID_GA], neg_encodings=negs, bg=[9])
+        assert set(res.cover_elements) == {frozenset([_ID_DB]), frozenset([_ID_GA])}
+        assert res.uncoverable == []
+        assert res.n_components == 2
 
 
 if __name__ == '__main__':

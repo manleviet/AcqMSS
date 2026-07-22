@@ -16,6 +16,7 @@ from .task_preparation import (
     ConMinTaskInput,
     ConMinTaskPreparation,
 )
+from .acqmincover import AcqMinCover, CoverResult, NegEncoding
 
 __all__ = [
     'ConMin',
@@ -25,4 +26,8 @@ __all__ = [
     'ConMinTask',
     'ConMinTaskInput',
     'ConMinTaskPreparation',
+    # P2 — cover engine
+    'AcqMinCover',
+    'CoverResult',
+    'NegEncoding',
 ]
