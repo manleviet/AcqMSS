@@ -317,6 +317,54 @@ class TestConMinStage1:
 
 
 # --------------------------------------------------------------------------- #
+# P3 — de-delegation on real data (ff, 3 negatives), REAL checker
+# --------------------------------------------------------------------------- #
+
+class TestConMinDeDelegation:
+    """The P3 de-delegation: real per-e- neg_encodings + per-e- negation registration.
+
+    NOT a cover-correctness test — the ff negatives violate the FM root, so
+    `is_consistent(root ∪ e-)` is UNSAT for some and `cand` degenerates (the
+    rejection-test-BG-on-real-FMs question is a deferred P4 decision). This gate
+    asserts the invariants that hold regardless: neg_encodings captured, the
+    Critical fix (per-e- negations registered), and that the rejection test
+    *discriminates* on a BG-consistent negative (a proper, non-saturated subset).
+    """
+
+    def test_ff_dedelegation_invariants(self):
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_FF_PATH)
+        _oracle, prepared = _prepare_conmin(EXAMPLES_FF_PATH)
+        task = prepared.task
+
+        # (1) one NegEncoding per e-, each with a non-empty full-config aid set.
+        assert len(task.neg_encodings) == 3
+        assert all(len(ne.assumption_ids) > 0 for ne in task.neg_encodings)
+
+        # (2) Critical fix: every per-e- ne_id has a negation_map entry, so a ¬e-
+        # fallback is Reduce-able (before the fix the combined-NE prep left these
+        # unregistered → reduce.py silently skipped them). Masked by 1-neg fixtures.
+        assert all(ne.neg_id in task.negation_map for ne in task.neg_encodings)
+
+        # (3) the rejection test discriminates on a BG-consistent negative: its cand
+        # is a proper, non-empty subset of A (not saturated to all-of-A).
+        checker = _checker(task, is_incremental=True)
+        try:
+            bg = list(task.set_b)
+            admissible = AcqMSS(checker, m=1, profiler_instance=get_global_profiler()).find_mss(
+                delta=[], set_b=list(task.set_c), set_neg_tv=list(task.set_neg_tv),
+                set_tc=list(task.set_tc), set_bg=bg)
+            bg_consistent = [ne for ne in task.neg_encodings
+                             if checker.is_consistent(bg + list(ne.assumption_ids))]
+            assert bg_consistent, "expected >=1 BG-consistent negative in the ff fixture"
+            ne = bg_consistent[0]
+            cand = [c for c in admissible
+                    if not checker.is_consistent([c] + bg + list(ne.assumption_ids))]
+            assert 0 < len(cand) < len(admissible)  # discriminates (not saturated)
+        finally:
+            checker.cleanup()
+
+
+# --------------------------------------------------------------------------- #
 # P2 — AcqMinCover engine (design brief §3, AcqMinCover v2 worked example)
 # --------------------------------------------------------------------------- #
 
