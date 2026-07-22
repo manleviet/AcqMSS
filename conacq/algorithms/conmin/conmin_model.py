@@ -3,9 +3,11 @@
 An immutable KB: bias ``constraint_map`` + name↔id catalog (inherited from KBModel).
 ``prepare_task`` delegates to ``ConMinTaskPreparation`` (pure, repeatable per fold).
 
-``resolve_result`` (P4b) mirrors ``ConGenModel.resolve_result``'s 4-tuple, mapping
-from ``ConMinResult`` (``kb_assumption_ids`` + ``redundant_ids``, added in P3). It is
-a mirror in ``conmin/`` — ConGen's resolver is not touched or shared.
+``resolve_result`` (P4b) returns a 5-part DECOMPOSITION of a ``ConMinResult``,
+DELIBERATELY DIVERGING from ``ConGenModel.resolve_result``'s 4-tuple: it adds a
+``fallback_clauses`` slice (¬e⁻ memorized rejections, which ConGen has no analogue
+for) and FM-filters the names. NOT drop-in substitutable for ConGen's resolver
+(different arity + return shape); it lives in ``conmin/`` and ConGen's is untouched.
 """
 
 from __future__ import annotations
@@ -51,7 +53,7 @@ class ConMinModel(KBModel):
             set_kb: Sequence[Sequence[int]] = (),
             negation_map: Optional[Dict[int, int]] = None,
     ) -> Tuple[List[List[int]], List[List[int]], List[str], List[List[int]], List[str]]:
-        """Resolve a ConMinResult into a clean 5-part DECOMPOSITION (drops nothing).
+        """Resolve a ConMinResult into a 5-part DECOMPOSITION.
 
         The delivered theory = LEARNED FM ∪ {¬e⁻ fallbacks} ∪ {root}. Each part is
         returned SEPARATELY so downstream metrics choose what to use — the policy of
@@ -63,11 +65,22 @@ class ConMinModel(KBModel):
           the ``kb_assumption_ids`` whose name is a bias constraint. The view for
           semantic P/R/F1 (which runs over the bias-constraint vocabulary; ¬e⁻ and
           root are not in it, so they are out — not cherry-picking).
-        - ``fallback_clauses`` — the ¬e⁻ memorized rejections of uncoverable negatives,
-          resolved from the task ``set_kb`` (NOT ``constraint_map``). Needed for
+        - ``fallback_clauses`` — the memorized rejections of uncoverable negatives,
+          resolved from the task ``set_kb`` (NOT ``constraint_map``). Each is the
+          negation of the oracle-entailed MINIMAL CONFLICT (strictly ⊇ ¬(full e⁻
+          assignment) — the correct, non-over-rejecting fallback). Needed for
           exact-equivalence (dropping them understates it when a negative is not
           rejectable by any bias constraint). Usually empty (ConMin expects U=∅).
-        - ``redundant_names`` — the learned-FM constraints Reduce dropped.
+        - ``redundant_names`` — the learned-FM constraints Reduce dropped. FM-FILTERED
+          by design: a ¬e⁻ Reduce dropped (rare — it was entailed, so exact-equivalence
+          is unaffected) is NOT reported here; only its accounting is lost (see §9c).
+
+        Every NON-FM kb id IS a ¬e⁻ fallback and MUST resolve to a clause; if one
+        cannot (empty/mismatched ``set_kb`` or missing ``negation_map`` entry) this
+        RAISES rather than silently dropping it — a fallback lost from the delivered
+        theory would understate exact-equivalence with no signal (foot-gun #5). The
+        defaults ``set_kb=()`` / ``negation_map=None`` are safe ONLY for U=∅ callers
+        (no non-FM ids ⇒ no resolution attempted ⇒ no raise).
 
         ``set_kb`` + ``negation_map`` come from the prepared ConMinTask (stateless —
         passed in, never stored). Returns:
@@ -78,13 +91,21 @@ class ConMinModel(KBModel):
         kb_clauses, kb_names = self._resolve_fm(describe, result.kb_assumption_ids)
 
         # ¬e⁻ fallbacks = the kb ids that are NOT bias constraints (memorized
-        # negatives); resolve each one's clause from the task KB.
+        # negatives). support/cover ids are bias constraints, so a non-FM kb id is
+        # ALWAYS a fallback and must resolve — else it vanishes from the theory.
         fallback_clauses: List[List[int]] = []
         for aid in result.kb_assumption_ids:
             if describe.get_description(aid) not in self.constraint_map:
                 clause = self._resolve_fallback_clause(aid, set_kb, negation_map)
-                if clause is not None:
-                    fallback_clauses.append(clause)
+                if not clause:  # None (no match) or [] (degenerate empty ⇒ UNSAT)
+                    raise ValueError(
+                        f"ConMin kb id {aid} is a ¬e⁻ fallback (name not a bias "
+                        f"constraint) but its clause could not be resolved: "
+                        f"set_kb has {len(set_kb)} clauses, negation_map "
+                        f"{'has' if aid in negation_map else 'MISSING'} id {aid}. "
+                        f"Pass the prepared task's set_kb + negation_map; a fallback "
+                        f"must not be silently dropped from the delivered theory.")
+                fallback_clauses.append(clause)
 
         _, redundant_names = self._resolve_fm(describe, result.redundant_ids)
         return bg_clauses, kb_clauses, kb_names, fallback_clauses, redundant_names
@@ -112,12 +133,27 @@ class ConMinModel(KBModel):
             set_kb: Sequence[Sequence[int]],
             negation_map: Dict[int, int],
     ) -> Optional[List[int]]:
-        """The ¬e⁻ clause for a fallback NE id, from the task KB. Its blocking clause
-        is ``[-l1,…,-lk, -ne_id]``; distinguish it from the NE's negation clause
-        ``[-ne_id, -negation_map[ne_id]]`` by the ABSENCE of ``-negation_map[ne_id]``,
-        then strip the ``-ne_id`` guard to recover the feature-level ¬e⁻."""
+        """The fallback clause for a NE id, from the task KB. Its blocking clause is
+        ``[-l1,…,-lk, -ne_id]`` (the l_i are the minimal-conflict feature literals);
+        distinguish it from the NE's negation clause ``[-ne_id, -negation_map[ne_id]]``
+        by the ABSENCE of ``-negation_map[ne_id]`` (the combine clause ``[+ne_id, …]``
+        never matches ``-ne_id``), then strip the ``-ne_id`` guard — returns the
+        negation of the minimal conflict.
+
+        Returns None (⇒ the caller fails loud) when no clause matches OR when ``ne_id``
+        has no ``negation_map`` entry: without it the ne-clause cannot be safely told
+        apart from the negation clause, so guessing the first ``-ne_id`` clause (which
+        could return a wrong remainder — the P3-Critical bug class) is REFUSED, not
+        silently attempted.
+
+        NOTE on the FM/fallback split at the call site: multi-negative per-e⁻ ids are
+        left UNREGISTERED in ``describe`` (only the combined id is), so their
+        ``get_description`` returns ``str(id)`` — never a bias name (which are
+        ``c``-prefixed), so they classify as fallbacks correctly."""
         neg = negation_map.get(ne_id)
+        if neg is None:
+            return None  # cannot safely disambiguate ne-clause vs negation clause
         for clause in set_kb:
-            if -ne_id in clause and (neg is None or -neg not in clause):
+            if -ne_id in clause and -neg not in clause:
                 return [lit for lit in clause if lit != -ne_id]
         return None

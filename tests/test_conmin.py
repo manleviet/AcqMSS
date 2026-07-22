@@ -376,13 +376,14 @@ class TestConMinRootBG:
 
 
 # --------------------------------------------------------------------------- #
-# P4b — resolve_result (4-tuple) + root axiom re-append
+# P4b — resolve_result (5-part decomposition) + root axiom re-append
 # --------------------------------------------------------------------------- #
 
 class TestConMinResolveResult:
-    """ConMinModel.resolve_result → (bg_clauses, kb_clauses, kb_names, redundant_names),
-    mirroring ConGen. The root axiom is re-appended as bg_clauses, delivered SEPARATELY
-    from the acquired kb_clauses so metrics never count it as learned."""
+    """ConMinModel.resolve_result → (bg_clauses, kb_clauses, kb_names, fallback_clauses,
+    redundant_names). Learned FM (kb) / ¬e⁻ fallbacks / root are separated; the root
+    axiom is re-appended as bg_clauses so metrics never count it as learned. A non-FM
+    kb id that cannot resolve RAISES (foot-gun #5) rather than silently dropping."""
 
     def test_resolve_maps_kb_and_reappends_root_separately(self):
         _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
@@ -464,7 +465,93 @@ class TestConMinResolveResult:
         assert kb_clauses == [[1, -2]]
         assert 'NOT(db=lite & ide=pro)' not in kb_names
         assert fallback_clauses == [[-5, -7]]               # (ii) ¬e⁻ clause, guard stripped
-        assert list(result.fallback_ids) == [900]           # (iii) fallback id present
+        # (iii) fallback_clauses corresponds to the NON-FM kb ids resolve produced
+        # (NOT result.fallback_ids, which resolve never reads — that would be a tautology).
+        non_fm = [a for a in result.kb_assumption_ids
+                  if describe.get_description(a) not in model.constraint_map]
+        assert non_fm == [900]
+        assert len(fallback_clauses) == len(non_fm)
+
+    def test_fallback_multi_negative_layout(self):
+        """Multi-negative layout (the real shape, not covered by the single-negative
+        synthetic): TUPLE set_kb, an UNREGISTERED per-e⁻ id, and the combine clause
+        [+id, -combined] present. The ne-clause must still be disambiguated from the
+        per-e⁻ negation clause and the combine clause."""
+        from explanation.api import DescriptionProvider
+        from conacq.algorithms.conmin import ConMinModel, ConMinResult
+
+        model = ConMinModel()
+        model.constraint_map = {'c6': [[3, -4]]}
+        describe = DescriptionProvider()
+        describe.add_constraint_description(50, 'c6')
+        describe.add_test_case_description(800, 'NOT(e1- & e2-)')  # only the COMBINED id
+        # per-e⁻ id 101 left UNREGISTERED → describe.get_description(101) == '101'.
+
+        # Real prep shape: frozen tuples; ne-clause, combine clause, per-e⁻ negation.
+        set_kb = (
+            (3, -4),                # a bias clause
+            (-5, -7, -101),         # e1⁻ ne-clause (minimal conflict on vars 5,7)
+            (-8, -102),             # e2⁻ ne-clause
+            (101, -800), (102, -800),   # combine clauses [+id, -combined]
+            (-101, -901), (-102, -902), # per-e⁻ negation clauses
+        )
+        negation_map = {101: 901, 102: 902, 800: 900}
+        result = ConMinResult(
+            mss_ids=[], n_bias=1, n_mss=0,
+            kb_assumption_ids=[50, 101],   # bias c6 + uncoverable e1⁻ fallback survived Reduce
+            fallback_ids=[101], uncoverable=[101], redundant_ids=[])
+
+        _, kb_clauses, kb_names, fallback_clauses, _ = model.resolve_result(
+            result, describe, [[1]], set_kb, negation_map)
+
+        assert kb_names == ['c6']                # unregistered '101' not classified as FM
+        assert kb_clauses == [[3, -4]]
+        assert fallback_clauses == [[-5, -7]]    # ne-clause, NOT the negation/combine clause
+
+    def test_unresolvable_fallback_raises_not_silent(self):
+        """Foot-gun #5 for resolve: a non-FM kb id (¬e⁻ fallback) that cannot be
+        resolved (empty set_kb) must RAISE, never silently vanish from the theory."""
+        import pytest
+        from explanation.api import DescriptionProvider
+        from conacq.algorithms.conmin import ConMinModel, ConMinResult
+
+        model = ConMinModel()
+        model.constraint_map = {'c_x': [[1, -2]]}
+        describe = DescriptionProvider()
+        describe.add_constraint_description(50, 'c_x')
+        describe.add_test_case_description(900, 'NOT(...)')
+        result = ConMinResult(
+            mss_ids=[], n_bias=1, n_mss=0,
+            kb_assumption_ids=[50, 900],   # 900 is a fallback but set_kb is empty
+            fallback_ids=[900], uncoverable=[900], redundant_ids=[])
+
+        with pytest.raises(ValueError, match=r"900.*silently dropped"):
+            model.resolve_result(result, describe, [[1]])   # 3-arg call → set_kb=()
+
+    def test_fallback_missing_negation_map_entry_raises(self):
+        """Defense-in-depth (P3-Critical bug class): a fallback id ABSENT from
+        negation_map cannot be disambiguated. Even though set_kb HAS a -id clause,
+        resolve must fail-loud — NOT silently return the wrong remainder [-201] from
+        the negation clause that happens to come first."""
+        import pytest
+        from explanation.api import DescriptionProvider
+        from conacq.algorithms.conmin import ConMinModel, ConMinResult
+
+        model = ConMinModel()
+        model.constraint_map = {'c_x': [[1, -2]]}
+        describe = DescriptionProvider()
+        describe.add_constraint_description(50, 'c_x')
+        describe.add_test_case_description(200, 'NOT(...)')
+        # Negation clause [-200,-201] comes BEFORE the ne-clause [-5,-6,-200]; with
+        # neg=None the old code would strip -200 from the first match → wrong [-201].
+        set_kb = [[1, -2], [-200, -201], [-5, -6, -200]]
+        result = ConMinResult(
+            mss_ids=[], n_bias=1, n_mss=0,
+            kb_assumption_ids=[50, 200],
+            fallback_ids=[200], uncoverable=[200], redundant_ids=[])
+
+        with pytest.raises(ValueError, match=r"MISSING id 200"):
+            model.resolve_result(result, describe, [[1]], set_kb, negation_map={})
 
 
 # --------------------------------------------------------------------------- #
