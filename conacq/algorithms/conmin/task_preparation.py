@@ -62,10 +62,15 @@ class ConMinTaskInput:
 class ConMinTask(TestCaseTask):
     """Immutable ConMin task. Adds ``neg_encodings`` (one per ``e⁻``, each carrying
     that ``e⁻``'s full-config assignment-assumption IDs for AcqMinCover's rejection
-    test) and ``support_count`` (bias-aid → support⁺ over E⁺, precomputed at prep)."""
+    test) and ``support_count`` (bias-aid → support⁺ over E⁺, precomputed at prep).
+
+    ``root_axiom`` is the FM root non-emptiness fact, kept OUT of the acquisition BG
+    (``set_b`` is domain-only) and re-appended to the delivered theory post-acquisition
+    (design note "Root-constraint BG semantics")."""
 
     neg_encodings: Tuple[NegEncoding, ...] = ()
     support_count: Mapping[int, int] = field(default_factory=dict)
+    root_axiom: Tuple[int, ...] = ()
 
 
 class ConMinTaskPreparation(ConGenTaskPreparation):
@@ -83,7 +88,19 @@ class ConMinTaskPreparation(ConGenTaskPreparation):
         support_count = build_support_count(
             task.set_c, prepared.describe, model.constraint_map,
             model.name_to_id, task_input.positive_test_cases)
-        task = replace(task, support_count=support_count)
+
+        # Root non-emptiness (root feature = true) is a POST-acquisition axiom, not
+        # runtime BG: keeping it in BG makes Reduce entailment-drop every `X → root`
+        # constraint and degenerates the cover on root-absent negatives. Drop it from
+        # the acquisition BG (keep any genuine domain axioms — ∅ for boolean FMs) and
+        # record it in `root_axiom` for re-appending at delivery (note "Root-constraint
+        # BG semantics"). Generic: derive by dropping the root id, never hardcode ∅.
+        root_id = task_input.oracle_data.get_bg_data().assumptions[0]
+        domain_bg = tuple(a for a in task.set_b if a != root_id)
+        root_axiom = tuple(a for a in task.set_b if a == root_id)
+
+        task = replace(task, support_count=support_count,
+                       set_b=domain_bg, root_axiom=root_axiom)
         return PreparedTask(task, prepared.describe)
 
     def _prepare_negative_examples(

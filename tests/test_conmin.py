@@ -289,14 +289,20 @@ class TestConMinStage1:
         _om, conmin = _prepare_conmin(EXAMPLES_RS_1N_PATH)
         ct, mt = congen.task, conmin.task
 
-        # Prep field parity (teeth: preparation divergence between the pipelines).
+        # Prep field parity, EXCEPT set_b: ConMin's acquisition BG is domain-only
+        # (root non-emptiness is a post-acquisition axiom, note "Root-constraint BG
+        # semantics"), so it legitimately diverges from ConGen's root BG. Everything
+        # else — and, crucially, the resulting MSS — still matches because Stage-1 is
+        # inert to the root for complete positives.
         assert list(mt.set_c) == list(ct.set_c)
-        assert list(mt.set_b) == list(ct.set_b)
+        assert list(mt.set_b) == []                 # domain-only (∅ for boolean FM)
+        assert list(ct.set_b) == list(mt.root_axiom)  # ConGen's BG == ConMin's root axiom
         assert list(mt.set_tc) == list(ct.set_tc)
         assert list(mt.set_neg_tv) == list(ct.set_neg_tv)
         assert mt.negation_map == ct.negation_map
 
-        # ConMin's MSS equals AcqMSS run on the ConGen task (exact set).
+        # ConMin's MSS (domain-only BG) equals AcqMSS on the ConGen task (root BG) —
+        # inert-to-root, so exact-set match despite the BG divergence.
         result = _acquire(mt, is_incremental=True)
         checker = _checker(ct, is_incremental=True)
         try:
@@ -310,12 +316,63 @@ class TestConMinStage1:
     def test_stage1_characterization_golden(self):
         """Absolute anchor beyond the near-tautological mss==find_mss: the set of
         constraints Stage-1 selects on REAL-FM-7 + RS-1n is pinned by name-sha.
+
+        The golden `d13274bc…` is UNCHANGED by the P4a root-BG refactor: Stage-1 is
+        inert to the root fact for complete positives (a complete positive already
+        selects the root), verified byte-identical for set_bg=[root] and set_bg=[].
+        This test staying green under domain-only BG IS the loud confirmation that
+        Stage-1 was not perturbed — no re-pin (note "Root-constraint BG semantics").
         """
         _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
         _oracle, prepared = _prepare_conmin(EXAMPLES_RS_1N_PATH)
+        assert list(prepared.task.set_b) == []  # P4a: domain-only acquisition BG
         result = _acquire(prepared.task, is_incremental=True)
         assert result.n_mss == GOLDEN_MSS_RS_1N_N
         assert _mss_names_sha(result.mss_ids, prepared.describe) == GOLDEN_MSS_RS_1N_SHA
+
+
+# --------------------------------------------------------------------------- #
+# P4a — root-constraint BG (root = post-acquisition axiom, BG domain-only)
+# --------------------------------------------------------------------------- #
+
+class TestConMinRootBG:
+    """P4a: the root non-emptiness fact is a post-acquisition axiom, out of the
+    acquisition BG. Consequence: Reduce no longer entailment-drops `X → root`
+    constraints, so they become acquirable (the recall fix)."""
+
+    def test_x_to_root_kept_by_domain_bg_dropped_by_root_bg(self):
+        """`X→root` (root's optional children c6/c14/c18) is acquired under domain-only
+        BG but Reduce-dropped when the root fact is in BG — showing both fix and bug."""
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
+        model = (ConMinModelBuilder
+                 .from_bias(str(BIAS_PATH))
+                 .with_oracle_data(oracle.oracle_data)
+                 .build())
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        prepared = model.prepare_task(
+            ConMinTaskInput.from_examples(oracle.oracle_data, pos, neg))
+        task = prepared.task
+        assert task.root_axiom != () and list(task.set_b) == []  # root out, BG domain-only
+
+        def kb_names(set_bg):
+            checker = _checker(task, is_incremental=True)
+            try:
+                r = ConMin(checker, get_global_profiler()).acquire(
+                    set_b=task.set_c, set_bg=set_bg, set_tc=task.set_tc,
+                    set_neg_tv=task.set_neg_tv, negation_map=task.negation_map,
+                    neg_encodings=task.neg_encodings, support_count=task.support_count, k=1)
+                return {prepared.describe.get_description(a) for a in r.kb_assumption_ids}
+            finally:
+                checker.cleanup()
+
+        x_to_root = {'c6', 'c14', 'c18'}                 # optional children X→jplug
+        under_domain = kb_names(list(task.set_b))         # P4a: domain-only ([])
+        under_root = kb_names(list(task.root_axiom))      # old: root in BG
+        assert x_to_root & under_domain, "X→root must be acquirable under domain-only BG"
+        assert not (x_to_root & under_root), "X→root is Reduce-dropped when root is in BG (the bug)"
 
 
 # --------------------------------------------------------------------------- #
@@ -323,14 +380,11 @@ class TestConMinStage1:
 # --------------------------------------------------------------------------- #
 
 class TestConMinDeDelegation:
-    """The P3 de-delegation: real per-e- neg_encodings + per-e- negation registration.
-
-    NOT a cover-correctness test — the ff negatives violate the FM root, so
-    `is_consistent(root ∪ e-)` is UNSAT for some and `cand` degenerates (the
-    rejection-test-BG-on-real-FMs question is a deferred P4 decision). This gate
-    asserts the invariants that hold regardless: neg_encodings captured, the
-    Critical fix (per-e- negations registered), and that the rejection test
-    *discriminates* on a BG-consistent negative (a proper, non-saturated subset).
+    """The P3 de-delegation (real per-e- neg_encodings + per-e- negation registration)
+    AND the P4a cover-correctness fix: with ConMin's acquisition BG now domain-only
+    (root non-emptiness is a post-acquisition axiom, note "Root-constraint BG
+    semantics"), `is_consistent([c] + domain_bg + e-)` no longer degenerates — the
+    rejection test discriminates for EVERY negative, root-present or not.
     """
 
     def test_ff_dedelegation_invariants(self):
@@ -347,21 +401,20 @@ class TestConMinDeDelegation:
         # unregistered → reduce.py silently skipped them). Masked by 1-neg fixtures.
         assert all(ne.neg_id in task.negation_map for ne in task.neg_encodings)
 
-        # (3) the rejection test discriminates on a BG-consistent negative: its cand
-        # is a proper, non-empty subset of A (not saturated to all-of-A).
+        # (3) P4a: acquisition BG is domain-only (∅ for boolean FM), so the rejection
+        # test discriminates on ALL negatives — cand is a proper, non-empty subset of
+        # A (no saturation to all-of-A on FM-root-violating negatives).
         checker = _checker(task, is_incremental=True)
         try:
             bg = list(task.set_b)
+            assert bg == []  # domain-only for a boolean FM (root dropped)
             admissible = AcqMSS(checker, m=1, profiler_instance=get_global_profiler()).find_mss(
                 delta=[], set_b=list(task.set_c), set_neg_tv=list(task.set_neg_tv),
                 set_tc=list(task.set_tc), set_bg=bg)
-            bg_consistent = [ne for ne in task.neg_encodings
-                             if checker.is_consistent(bg + list(ne.assumption_ids))]
-            assert bg_consistent, "expected >=1 BG-consistent negative in the ff fixture"
-            ne = bg_consistent[0]
-            cand = [c for c in admissible
-                    if not checker.is_consistent([c] + bg + list(ne.assumption_ids))]
-            assert 0 < len(cand) < len(admissible)  # discriminates (not saturated)
+            for ne in task.neg_encodings:
+                cand = [c for c in admissible
+                        if not checker.is_consistent([c] + bg + list(ne.assumption_ids))]
+                assert 0 < len(cand) < len(admissible)  # non-degenerate for every e-
         finally:
             checker.cleanup()
 
