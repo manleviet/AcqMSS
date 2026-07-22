@@ -15,8 +15,8 @@ assumption-ID allocation → Stage-1 golden unchanged), overriding just two hook
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Tuple
 
 from explanation.api import (
     AssumptionIdAllocator,
@@ -29,6 +29,7 @@ from conacq.algorithms.acqmss import ConGenTaskInput, ConGenTaskPreparation
 from conacq.algorithms.acqmss.generate_ne import GenerateNE
 
 from .acqmincover import NegEncoding
+from .support import build_support_count
 
 if TYPE_CHECKING:
     from conacq.oracle import OracleData
@@ -61,13 +62,25 @@ class ConMinTaskInput:
 class ConMinTask(TestCaseTask):
     """Immutable ConMin task. Adds ``neg_encodings`` (one per ``e⁻``, each carrying
     that ``e⁻``'s full-config assignment-assumption IDs for AcqMinCover's rejection
-    test). ``support_count`` lands in the next commit (support⁺)."""
+    test) and ``support_count`` (bias-aid → support⁺ over E⁺, precomputed at prep)."""
 
     neg_encodings: Tuple[NegEncoding, ...] = ()
+    support_count: Mapping[int, int] = field(default_factory=dict)
 
 
 class ConMinTaskPreparation(ConGenTaskPreparation):
     """Prepare a ConMin task; subclass of ConGen's prep (byte-identical Stage-1 IDs)."""
+
+    def prepare(self, model: "ConMinModel", task_input: ConMinTaskInput) -> PreparedTask:
+        """Reuse ConGen's Stage-1 prep, then attach the precomputed support⁺ counts
+        (structural, solver-free) over the bias against this fold's E⁺."""
+        prepared = super().prepare(model, task_input)
+        task = prepared.task
+        support_count = build_support_count(
+            task.set_c, prepared.describe, model.constraint_map,
+            model.name_to_id, task_input.positive_test_cases)
+        task = replace(task, support_count=support_count)
+        return PreparedTask(task, prepared.describe)
 
     def _prepare_negative_examples(
             self,

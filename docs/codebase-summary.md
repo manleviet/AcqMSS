@@ -27,17 +27,20 @@ Primary constraint discovery algorithms:
 | (Total: 1,331 LOC for main algorithms) |
 | (Subtotal: 1,439 LOC including both paradigm-specific builders) |
 
-**ConMin Sub-package** (`conmin/`, 7 files, ~670 LOC) — passive **maximally-general** acquisition (AAAI). P1 (Stage-1 scaffold) + P2 (AcqMinCover engine) done; support⁺ + Reduce assembly + `ConMin.acquire` wiring land in P3.
+**ConMin Sub-package** (`conmin/`, 8 files, ~837 LOC) — passive **maximally-general** acquisition (AAAI). P1 (Stage-1) + P2 (AcqMinCover) + P3 (de-delegation + support⁺ + full pipeline) done. Reuses ConGen's `AcqMSS`/`GenerateNE`/`Reduce`/`ConGenTaskPreparation` (the last two via small additive hooks — see below). **Deferred to P4:** rejection-test BG semantics on real FMs (ff negatives violate the FM root → `cand` degenerates; brief §2 block).
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `conmin/conmin.py` | 148 | ConMin + ConMinResult; `acquire` = paper Algorithm 1 lines 1–4 (consistency gate + `AcqMSS.find_mss`), returns the maximally-specific pool `A` (unreduced). Reuses sibling `AcqMSS` by import. ConMinResult exposes the three eval slices (mss/cover/support + fallback/uncoverable/kb), P1-filled for `mss_ids` only. |
-| `conmin/min_cover.py` | 179 | **Pure** combinatorial minimum-cover solver (no checker/solver import): `weight`, `connected_components` (union-find), `exact_cover` (min-cardinality-first, generality-weighted), `greedy_cover` (H(d) fallback), `irredundant` post-pass. Deterministic. |
-| `conmin/acqmincover.py` | 144 | `AcqMinCover` engine + `NegEncoding` / `CoverResult`. Phase A builds the coverage map via `checker.is_consistent` + `QuickXPlain` (compound branch for partial negatives); Phases B–D via `min_cover`. `tau=15` (brief §8), `w≡1`. Not yet wired into `ConMin.acquire` (P3). |
-| `conmin/task_preparation.py` | 95 | ConMinTaskInput / ConMinTask / ConMinTaskPreparation; P1 delegates to `ConGenTaskPreparation` (byte-identical Stage-1 IDs → parity by construction). P3 re-decides the seam for `neg_encodings`. |
-| `conmin/conmin_model.py` | 41 | ConMinModel(KBModel); `prepare_task` only (resolve_result deferred to P3/P4). |
+| `conmin/conmin.py` | 204 | ConMin + ConMinResult; `acquire` = paper Algorithm 1: gate + `AcqMSS` (A) then `_cover_support_reduce` (lines 5–8: AcqMinCover → flatten → `S={c∈A\C:support≥k}` → `¬e⁻` fallbacks → assemble F→S→C → Reduce). ConMinResult fills all slices incl. `redundant_ids`. |
+| `conmin/min_cover.py` | 179 | **Pure** combinatorial minimum-cover solver (no checker import): `weight`, `connected_components` (union-find), `exact_cover` (min-cardinality-first), `greedy_cover` (H(d) fallback), `irredundant`. Deterministic. |
+| `conmin/acqmincover.py` | 144 | `AcqMinCover` engine + `NegEncoding`/`CoverResult`. Phase A: coverage map via `is_consistent` + `QuickXPlain`; B–D via `min_cover`. `tau=15`, `w≡1`. |
+| `conmin/support.py` | 74 | support⁺ (solver-free, brief §4 unified 6-operator): `support(clauses, present)` = min over clauses of (min over the clause's negative-literal counts); `build_support_count` over the bias vs E⁺. Reproduces the paper table (excludes = min of both sides observed; strict-zero on unobserved triggers). |
+| `conmin/task_preparation.py` | 127 | ConMinTaskInput / ConMinTask (adds `neg_encodings` + `support_count`) / ConMinTaskPreparation — **subclasses** `ConGenTaskPreparation`; overrides `_prepare_negative_examples` (capture per-`e⁻` aids + **register per-`e⁻` negations** so `¬e⁻` fallbacks are Reduce-able) + `_make_task` + `prepare` (attach `support_count`). Byte-identical Stage-1 IDs (golden preserved). |
+| `conmin/conmin_model.py` | 41 | ConMinModel(KBModel); `prepare_task` (resolve_result deferred to P4). |
 | `conmin/conmin_model_builder.py` | 31 | ConMinModelBuilder: one-method subclass of `OracleBiasModelBuilder`. |
-| `conmin/__init__.py` | 33 | Package exports. |
+| `conmin/__init__.py` | 37 | Package exports. |
+
+*Shared-code hooks (additive, default-preserving, ConGen tripwires green):* `acqmss/generate_ne.py` gained a `capture_assignments` flag + `assignment_aids` field on `NEPerTestcase`; `acqmss/task_preparation.py` gained a `_make_task` factory + a `per_e_negations_out` out-param on `_create_negated_ne`.
 
 **QuAcq Sub-package** (`quacq/`, 9 files, ~1,066 LOC):
 

@@ -18,13 +18,15 @@ decides the solver lifecycle.
 
 import logging
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Sequence
+from typing import List, Dict, Mapping, Optional, Sequence
 
-from conacq.algorithms.acqmss import AcqMSS
+from conacq.algorithms.acqmss import AcqMSS, Reduce
 from explanation.api import ConsistencyChecker
 from profiling import (
     get_global_profiler, measure_time, count_calls, AbstractProfiler
 )
+
+from .acqmincover import AcqMinCover, NegEncoding
 
 
 @dataclass
@@ -48,6 +50,7 @@ class ConMinResult:
     fallback_ids: List[int] = field(default_factory=list)       # not(e-) for e- in U (P3)
     uncoverable: List[int] = field(default_factory=list)        # U   (P2/P3)
     kb_assumption_ids: List[int] = field(default_factory=list)  # ConMin final post-Reduce (P3)
+    redundant_ids: List[int] = field(default_factory=list)      # dropped by Reduce (P3)
     n_kb: int = 0
     n_components: int = 0
     largest_component: int = 0
@@ -77,6 +80,9 @@ class ConMin:
             set_tc: Sequence[int],
             set_neg_tv: Optional[List[int]] = None,
             negation_map: Optional[Dict[int, int]] = None,
+            neg_encodings: Sequence[NegEncoding] = (),
+            support_count: Optional[Mapping[int, int]] = None,
+            k: int = 1,
     ) -> ConMinResult:
         """Acquire the maximally-specific admissible pool A (Stage 1).
 
@@ -97,6 +103,7 @@ class ConMin:
         """
         set_neg_tv = set_neg_tv or []
         negation_map = negation_map or {}
+        support_count = support_count or {}
         # Task solve-fields arrive as immutable tuples; work on lists.
         set_b, set_bg, set_tc, set_neg_tv = (
             list(set_b), list(set_bg), list(set_tc), list(set_neg_tv))
@@ -133,16 +140,65 @@ class ConMin:
         )
         logging.debug('AcqMSS: MSS size = %d', len(mss))
 
-        self.result = ConMinResult(
-            mss_ids=mss,
+        # Lines 5-8: cover → support → fallbacks → assemble → Reduce.
+        self.result = self._cover_support_reduce(
+            mss, neg_encodings, support_count, k, set_bg, negation_map,
             n_bias=len(set_b),
-            n_mss=len(mss),
-            metadata={
-                'n_neg_tv': len(set_neg_tv),
-                'n_e_pos': len(set_tc),
-                'stage': 'P1-stage1-only',
-            }
-        )
-
-        logging.debug('<<< ConMin return MSS=%d', len(mss))
+            metadata={'n_neg_tv': len(set_neg_tv), 'n_e_pos': len(set_tc), 'k': k})
         return self.result
+
+    def _cover_support_reduce(
+            self,
+            mss: Sequence[int],
+            neg_encodings: Sequence[NegEncoding],
+            support_count: Mapping[int, int],
+            k: int,
+            set_bg: Sequence[int],
+            negation_map: Dict[int, int],
+            n_bias: int,
+            metadata: Optional[Dict] = None,
+    ) -> ConMinResult:
+        """Paper Algorithm 1 lines 5-8 over a given admissible pool ``mss`` (= A).
+
+        Factored out so the assembly + Reduce can be driven directly (design-brief
+        strategy B) with a hand-built cover/support and a stub checker.
+        """
+        # Line 5: <C, U> <- AcqMinCover(A, E-, BG) ; flatten compounds to constraints.
+        cover = AcqMinCover(self.checker, profiler_instance=self.profiler).cover(
+            mss, neg_encodings, set_bg)
+        cover_ids = sorted(set().union(*(set(e) for e in cover.cover_elements))
+                           if cover.cover_elements else set())
+        cover_set = set(cover_ids)
+
+        # Line 6: S <- { c ∈ A \ Cflat : support⁺(c) ≥ k }
+        support_ids = [c for c in mss
+                       if c not in cover_set and support_count.get(c, 0) >= k]
+
+        # Line 7: KB <- Cflat ∪ S ∪ { ¬e⁻ : e⁻ ∈ U } ; assemble in F → S → C order.
+        fallback_ids = list(cover.uncoverable)
+        assembled = fallback_ids + support_ids + cover_ids
+
+        # Line 8: Reduce(KB, BG). set_neg_tv=[] — coverable NEs are redundant (entailed
+        # by the cover) so omitting them from the Reduce input is equivalent.
+        redundant, kb = Reduce(self.checker, self.profiler).reduce(
+            assembled, [], set_bg, negation_map)
+
+        logging.debug('<<< ConMin KB=%d (mss=%d, cover=%d, S=%d, U=%d)',
+                      len(kb), len(mss), len(cover_ids), len(support_ids),
+                      len(fallback_ids))
+        return ConMinResult(
+            mss_ids=list(mss),
+            cover_ids=cover_ids,
+            support_ids=support_ids,
+            fallback_ids=fallback_ids,
+            uncoverable=list(cover.uncoverable),
+            kb_assumption_ids=kb,
+            redundant_ids=redundant,
+            n_bias=n_bias,
+            n_mss=len(mss),
+            n_kb=len(kb),
+            n_components=cover.n_components,
+            largest_component=cover.largest_component,
+            n_greedy_fallback=cover.n_greedy_fallback,
+            metadata=metadata or {},
+        )

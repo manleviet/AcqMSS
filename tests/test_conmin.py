@@ -25,7 +25,7 @@ from conacq.algorithms import (
     ConMinModelBuilder, ConMinTaskInput,
     ConGenModelBuilder, ConGenTaskInput,
 )
-from conacq.algorithms.conmin import AcqMinCover, NegEncoding
+from conacq.algorithms.conmin import AcqMinCover, NegEncoding, support
 from conacq.algorithms.conmin.min_cover import (
     connected_components, exact_cover, greedy_cover, irredundant,
 )
@@ -480,6 +480,114 @@ class TestAcqMinCover:
         assert set(res.cover_elements) == {frozenset([_ID_DB]), frozenset([_ID_GA])}
         assert res.uncoverable == []
         assert res.n_components == 2
+
+
+# --------------------------------------------------------------------------- #
+# P3 — support⁺ (design brief §4 unified 6-operator; CNF-direct, no checker)
+# --------------------------------------------------------------------------- #
+
+class TestSupport:
+    """support⁺ on hand-built CNF. Var ids + counts from the multi-valued working
+    example: lin=1 win=2 mac=3 lite=4 srv=5 std=6 pro=7 ;
+    #lin=4 #win=2 #mac=0 #lite=3 #srv=2 #std=2 #pro=1."""
+
+    PRESENT = {1: 4, 2: 2, 3: 0, 4: 3, 5: 2, 6: 2, 7: 1}
+
+    def test_requires_is_antecedent_count(self):
+        assert support([[-7, 5]], self.PRESENT) == 1   # c48 pro->srv  = #pro
+        assert support([[-5, 1]], self.PRESENT) == 2   # c32 srv->lin  = #srv
+
+    def test_excludes_is_min_of_both_sides(self):
+        assert support([[-2, -7]], self.PRESENT) == 1  # c16 excl(win,pro) min(2,1)
+        assert support([[-5, -6]], self.PRESENT) == 2  # c36 excl(srv,std) min(2,2)
+
+    def test_optional_is_antecedent_count(self):
+        assert support([[-4, 6]], self.PRESENT) == 3   # optional lite->std = #lite
+
+    def test_mandatory_is_min_parent_child(self):
+        # P<->C = [[-P,C],[-C,P]], P=lin(1) C=win(2)
+        assert support([[-1, 2], [-2, 1]], self.PRESENT) == 2   # min(#lin=4,#win=2)
+
+    def test_or_is_min_parent_children(self):
+        # P<->(C1 v C2), P=lin(1) C1=lite(4) C2=srv(5)
+        assert support([[-1, 4, 5], [-4, 1], [-5, 1]], self.PRESENT) == 2  # min(4,3,2)
+
+    def test_alternative_equals_or(self):
+        or_cnf = [[-1, 4, 5], [-4, 1], [-5, 1]]
+        alt_cnf = or_cnf + [[-4, -5]]  # + pairwise exclude (dominated → no change)
+        assert support(alt_cnf, self.PRESENT) == support(or_cnf, self.PRESENT) == 2
+
+    def test_strict_zero_on_unobserved_trigger(self):
+        # #mac = 0 → any constraint whose violation needs mac present gets support 0
+        assert support([[-3, 4]], self.PRESENT) == 0    # c17 mac->lite
+        assert support([[-3, -4]], self.PRESENT) == 0   # c18 excl(mac,lite) min(0,3)
+
+
+class _WorkingExampleStub:
+    """Stub checker reproducing the multi-valued working example's SAT behaviour for
+    AcqMinCover (`cand`) and Reduce (entailment). Aid ranges are disjoint: constraint
+    aids = c-numbers (<100), BG root = 500, e- markers = 501-503, ¬c = c+1000.
+
+    cand(e-) and the Reduce entailments are taken verbatim from the hand-verified
+    Appendix A (A.4-A.7)."""
+
+    CAND = {501: {31, 48}, 502: {48}, 503: {12, 32}}     # e- marker -> rejecting c's
+    ENTAILERS = {16: set(), 44: set(), 31: {48}, 36: {42}, 12: {32}}  # c -> min entailer (∅ = BG)
+    KEPT = {32, 42, 48}                                   # never redundant (C_τ)
+
+    def is_consistent(self, test_set):
+        s = set(test_set)
+        negated = [a - 1000 for a in s if a >= 1000]
+        if negated:                                      # Reduce: BG ∪ (KB∖{c}) ∪ {¬c}
+            c = negated[0]
+            if c in self.KEPT:
+                return True                              # not redundant
+            active = {a for a in s if a < 100}           # KB∖{c} constraint aids
+            return not self.ENTAILERS.get(c, set()).issubset(active)
+        markers = [a for a in s if a in self.CAND]
+        if markers:                                      # AcqMinCover: is_consistent([c]+BG+e-)
+            constraints = {a for a in s if a < 100}
+            return not any(c in self.CAND[markers[0]] for c in constraints)
+        return True
+
+    def find_model(self, *args, **kwargs):
+        return None
+
+    def cleanup(self):
+        pass
+
+
+class TestConMinReducesToWorkingExample:
+    """The paper headline: ConMin's final KB = C_τ for k∈{1,2}, min-cover for k≥3
+    (multi-valued working example, hand-verified Appendix A). Drives lines 5-8
+    directly with a hand-built A / support_count and the working-example stub."""
+
+    A = [12, 16, 17, 18, 19, 20, 21, 22, 23, 24, 31, 32, 36, 42, 44, 48]  # |A|=16
+    NEG = [NegEncoding(501, (501,)), NegEncoding(502, (502,)), NegEncoding(503, (503,))]
+    SUPPORT = {16: 1, 31: 1, 32: 2, 36: 2, 42: 2, 44: 1,
+               17: 0, 18: 0, 19: 0, 20: 0, 21: 0, 22: 0, 23: 0, 24: 0}
+    NEGMAP = {c: c + 1000 for c in A}
+    BG = [500]
+
+    def _run(self, k):
+        return ConMin(_WorkingExampleStub())._cover_support_reduce(
+            self.A, self.NEG, self.SUPPORT, k, self.BG, self.NEGMAP, n_bias=48)
+
+    def test_cover_is_c48_c12(self):
+        r = self._run(k=1)
+        assert set(r.cover_ids) == {12, 48}   # greedy c48 (2) + tie-break c12 over c32
+        assert r.uncoverable == []
+
+    @pytest.mark.parametrize("k", [1, 2])
+    def test_kb_equals_c_tau_for_small_k(self, k):
+        r = self._run(k)
+        assert set(r.kb_assumption_ids) == {32, 42, 48}  # C_τ = {srv→lin, std→lite, pro→srv}
+
+    @pytest.mark.parametrize("k", [3, 4])
+    def test_kb_is_pure_min_cover_for_large_k(self, k):
+        r = self._run(k)
+        assert r.support_ids == []                        # S empties
+        assert set(r.kb_assumption_ids) == {12, 48}       # maximally-general boundary
 
 
 if __name__ == '__main__':

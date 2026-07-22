@@ -17,6 +17,7 @@ from .task_preparation import (
     ConMinTaskPreparation,
 )
 from .acqmincover import AcqMinCover, CoverResult, NegEncoding
+from .support import support, build_support_count
 
 __all__ = [
     'ConMin',
@@ -30,4 +31,7 @@ __all__ = [
     'AcqMinCover',
     'CoverResult',
     'NegEncoding',
+    # P3 — support⁺
+    'support',
+    'build_support_count',
 ]
