@@ -177,12 +177,17 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
         logging.debug('<<< ConGenTaskPreparation: set_c=%d, set_tc=%d, set_tv=%d',
                       len(set_c), len(set_tc), len(set_tv))
 
-        task = ConGenTask(
+        task = self._make_task(
             set_c=set_c, set_b=set_b, set_kb=set_kb,
             negation_map=negation_map, assumptions=assumptions,
             set_tc=set_tc, set_tv=set_tv,
             set_neg_tv=set_neg_tv, set_neg_tc=set_neg_tc)
         return PreparedTask(task, provider)
+
+    def _make_task(self, **fields) -> TestCaseTask:
+        """Construct the task object. Factory hook so a subclass (ConMin) can return
+        its own task type with extra fields while reusing all of ``prepare``."""
+        return ConGenTask(**fields)
 
     def _prepare_negative_examples(
             self,
@@ -253,12 +258,19 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
             provider: DescriptionProvider,
             ne_id: int,
             neg_tv_ids: List[int],
-            alloc: AssumptionIdAllocator
+            alloc: AssumptionIdAllocator,
+            per_e_negations_out: Optional[Dict[int, int]] = None
     ) -> int:
         """Create negated form of NE for REDUCE.
 
         not(not(e1) and not(e2) and ...) = (e1 or e2 or ...)
         Returns: negated_ne_id
+
+        ``per_e_negations_out`` (optional): when a dict is supplied, it is filled with
+        ``{per-e⁻ ne_id: its already-built negated form}``. ConGen passes nothing (the
+        per-e⁻ negations exist in the KB but are unused); ConMin passes a dict so it can
+        register per-e⁻ ``negation_map`` entries for the ¬e⁻ fallbacks WITHOUT allocating
+        any new ids (Stage-1 golden unchanged).
         """
         if len(neg_tv_ids) > 1:
             negated_ne_ids = []
@@ -266,11 +278,15 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
                 negated_ne_id = alloc.allocate()
                 set_kb.append([-neg_tv_id, -negated_ne_id])
                 negated_ne_ids.append(negated_ne_id)
+                if per_e_negations_out is not None:
+                    per_e_negations_out[neg_tv_id] = negated_ne_id
             negated_ne_id = alloc.allocate()
             set_kb.append(negated_ne_ids + [-negated_ne_id])
         else:
             negated_ne_id = alloc.allocate()
             set_kb.append([-ne_id, -negated_ne_id])
+            if per_e_negations_out is not None:
+                per_e_negations_out[neg_tv_ids[0]] = negated_ne_id
 
         assumptions.append(negated_ne_id)
         provider.add_test_case_description(negated_ne_id, f"NOT({provider.get_description(ne_id)})")

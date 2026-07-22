@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Sequence
+from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple
 
 from explanation.api import QuickXPlain
 from explanation.api import build_checker, SolverBackend, DiagnosisTask
@@ -29,6 +29,10 @@ class NEPerTestcase:
     ne_id: int  # assumption ID for this NE
     ne_clause: List[int]  # blocking clause with assumption literal
     desc: str  # description string
+    # Full-config assignment-assumption IDs for this e-, captured ONLY when a caller
+    # (ConMin) asks via capture_assignments. Empty for ConGen (default) — additive,
+    # so the return shape and every existing caller are unchanged.
+    assignment_aids: Tuple[int, ...] = ()
 
 
 class GenerateNE:
@@ -50,7 +54,8 @@ class GenerateNE:
             variables: Dict[str, int],
             result_set_kb: List[List[int]],
             result_assumptions: List[int],
-            alloc: "AssumptionIdAllocator"
+            alloc: "AssumptionIdAllocator",
+            capture_assignments: bool = False
     ) -> List[NEPerTestcase]:
         """Generate NE from negative examples using QuickXPlain.
 
@@ -63,6 +68,10 @@ class GenerateNE:
             result_set_kb: Task KB (mutated: NE clauses appended)
             result_assumptions: Task assumptions (read-only snapshot per iteration)
             alloc: assumption-id allocator (ids for the per-testcase probes + NE)
+            capture_assignments: when True (ConMin), persist each e-'s per-assignment
+                guard clause into result_set_kb and return its full-config assignment
+                aids on NEPerTestcase (for AcqMinCover's rejection test). Default False
+                keeps ConGen's behaviour and result_set_kb byte-identical.
 
         Returns:
             per_testcase_results
@@ -76,7 +85,7 @@ class GenerateNE:
         for testcase in testsuite.testcases:
             results.append(self._process_testcase(
                 testcase, variables, result_set_kb, result_assumptions,
-                set_bg, alloc))
+                set_bg, alloc, capture_assignments))
 
         logging.debug('<<< GenerateNE: %d NE constraints', len(results))
         return results
@@ -88,7 +97,8 @@ class GenerateNE:
             result_set_kb: List[List[int]],
             result_assumptions: List[int],
             set_bg: Sequence[int],
-            alloc: "AssumptionIdAllocator"
+            alloc: "AssumptionIdAllocator",
+            capture_assignments: bool = False
     ) -> NEPerTestcase:
         """Process single testcase: merge KBs, QuickXPlain, create NE clause."""
         # Merge oracle KB with current result KB (creates new list)
@@ -108,8 +118,17 @@ class GenerateNE:
             set_tv.append(aid)
             assumptions.append(aid)
             set_kb.append([var, -1 * aid])
+            if capture_assignments:
+                # Persist the guard clause (aid ⇒ var) into the TASK KB so ConMin's
+                # checker can activate this e-'s assignment for the rejection test.
+                # Vacuous when aid is inactive (¬aid ∨ var), so Stage-1 MSS is unchanged.
+                result_set_kb.append([var, -1 * aid])
             assumption_to_var[aid] = var
             assumption_to_desc[aid] = desc
+
+        # Full-config assignment aids, captured BEFORE QuickXplain overwrites set_tv
+        # with the minimal conflict — the rejection test needs the whole assignment.
+        full_assignment_aids = tuple(assumption_to_var.keys()) if capture_assignments else ()
 
         # QuickXPlain for minimal conflict. The per-testcase subproblem is itself
         # a Task (set_c = test-value assumptions, set_b = background), so the
@@ -138,5 +157,6 @@ class GenerateNE:
 
         return NEPerTestcase(
             ne_id=ne_id, ne_clause=ne_clause,
-            desc=f"NOT({' & '.join(desc_parts)})"
+            desc=f"NOT({' & '.join(desc_parts)})",
+            assignment_aids=full_assignment_aids
         )
