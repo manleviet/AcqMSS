@@ -356,6 +356,51 @@ def n_fold_cross_validation(
         runner.cleanup()
 
 
+def n_fold_cross_validation_conmin(
+        positive_examples: List[Dict[str, bool]],
+        negative_examples: List[Dict[str, bool]],
+        n_folds: int,
+        bias_path: str,
+        fm_path: str,
+        seed: int,
+        solver_name: str = 'glucose4',
+        use_incremental: bool = True,
+        shuffle_each_fold: bool = True,
+        fold_data: Optional[FoldData] = None,
+        shuffle_bias: bool = False,
+        k: int = 1
+) -> CrossValidationResult:
+    """Standard n-fold cross validation using ConMin (passive maximally-general).
+
+    Same generic CV loop as ConGen (``_run_cv_loop`` accepts any ``BaseRunner``);
+    only the runner differs. ``k`` is ConMin's support⁺ threshold (Algorithm 1 line 6).
+
+    Returns:
+        CrossValidationResult with mean accuracy +/- std and KB data
+    """
+    from conacq.runners import ConMinRunner
+
+    runner = ConMinRunner(
+        bias_path=bias_path,
+        fm_path=fm_path,
+        solver_name=solver_name,
+        use_incremental=use_incremental,
+        k=k
+    )
+    try:
+        return _run_cv_loop(
+            runner=runner,
+            positive_examples=positive_examples,
+            negative_examples=negative_examples,
+            n_folds=n_folds, seed=seed,
+            solver_name=solver_name, label='ConMin',
+            shuffle_each_fold=shuffle_each_fold,
+            fold_data=fold_data, shuffle_bias=shuffle_bias
+        )
+    finally:
+        runner.cleanup()
+
+
 def n_fold_cross_validation_interactive(
         positive_examples: List[Dict[str, bool]],
         negative_examples: List[Dict[str, bool]],

@@ -1,0 +1,18 @@
+# ConMin Configuration
+# Run with: python -m apps.run_conmin apps/conf/run_conmin_config.toml
+
+[general]
+seed = 82
+output_dir = "data/results"
+verbose = true
+
+# support+ threshold for the S set (paper Algorithm 1 line 6); override with --k
+[conmin]
+k = 1
+
+# Feature models to process
+[[models]]
+name = "REAL-FM-7_rs_1n"
+oracle = "data/fms/REAL-FM-7.uvl"
+bias = "data/bias/REAL-FM-7-bias.json"
+examples = "data/examples/REAL-FM-7_rs_1n.json"

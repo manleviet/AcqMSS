@@ -49,6 +49,7 @@ from conacq.runners import QuAcqRunner, QuAcqRunResult
 # Cross-validation
 from .cross_validation import (
     n_fold_cross_validation,
+    n_fold_cross_validation_conmin,
     n_fold_cross_validation_interactive,
     CrossValidationResult,
     CrossValidationFoldResult
@@ -108,6 +109,7 @@ __all__ = [
 
     # Cross-validation
     'n_fold_cross_validation',
+    'n_fold_cross_validation_conmin',
     'n_fold_cross_validation_interactive',
     'CrossValidationResult',
     'CrossValidationFoldResult',

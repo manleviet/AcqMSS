@@ -21,6 +21,7 @@ from apps._harness import build_parser, setup_logging
 
 from conacq.eval import (
     n_fold_cross_validation,
+    n_fold_cross_validation_conmin,
     n_fold_cross_validation_interactive,
     generate_cv_report,
     generate_unified_cv_dict,
@@ -83,6 +84,10 @@ Example:
     interactive_config = eval_config.get('interactive', {})
     max_queries = interactive_config.get('max_queries', 1000)
     query_mode = interactive_config.get('query_mode', 'example_only')
+
+    # ConMin-specific settings
+    conmin_config = eval_config.get('conmin', {})
+    conmin_k = conmin_config.get('k', 1)
 
     models = parse_models(config)
     if not models:
@@ -157,6 +162,20 @@ Example:
                         use_incremental=is_incremental,
                         fold_data=fold_data,
                         shuffle_bias=shuffle_bias
+                    )
+                elif algorithm == 'conmin':
+                    cv_result = n_fold_cross_validation_conmin(
+                        positive_examples=pos,
+                        negative_examples=neg,
+                        n_folds=actual_n_folds,
+                        bias_path=model_config.bias,
+                        fm_path=model_config.oracle,
+                        seed=seed,
+                        solver_name=solver_name,
+                        use_incremental=is_incremental,
+                        fold_data=fold_data,
+                        shuffle_bias=shuffle_bias,
+                        k=conmin_k
                     )
                 elif algorithm == 'interactive':
                     cv_result = n_fold_cross_validation_interactive(

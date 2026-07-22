@@ -848,5 +848,172 @@ class TestConMinReducesToWorkingExample:
         assert set(r.kb_assumption_ids) == {12, 48}       # maximally-general boundary
 
 
+# --------------------------------------------------------------------------- #
+# P4c — ConMinRunner (build-once → per-fold acquire → collect → resolve)
+# --------------------------------------------------------------------------- #
+
+class TestConMinRunner:
+    """ConMinRunner mirrors ConGenRunner: it wires the full lines-5-8 inputs into
+    acquire, guards the silent-empty-KB foot-gun, collects CONMIN_METRICS, and
+    exposes the 5-part decomposition for the P4d eval."""
+
+    def test_e2e_produces_nonempty_kb_with_x_to_root(self):
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        from conacq.runners import ConMinRunner
+        from conacq.runners.metrics import CONMIN_METRICS
+
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        runner = ConMinRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=True, k=1)
+        try:
+            res = runner.run(pos, neg)
+        finally:
+            runner.cleanup()
+
+        # A real, non-empty KB with the recall-fixed X→root constraints (P4a).
+        assert res.n_kb > 0
+        assert {'c6', 'c14', 'c18'} <= set(res.kb_constraints)
+        # Root axiom delivered as bg, SEPARATE from the acquired kb.
+        assert [list(c) for c in res.bg_clauses] == [[1]]
+        assert [1] not in [list(c) for c in res.kb_clauses]
+        # rs_1n has no uncoverable negatives → no ¬e⁻ fallbacks.
+        assert res.n_uncoverable == 0 and res.fallback_clauses == []
+        # Decomposition slices present + consistent.
+        assert len(res.mss_ids) == res.n_mss
+        assert len(res.kb_assumption_ids) == res.n_kb
+        assert res.n_kb == len(res.kb_constraints)
+
+        # Metrics are the CONMIN spec; no phantom source (every non-extra source is a
+        # profiler key the run actually emitted).
+        assert res.metrics.spec == CONMIN_METRICS
+        _EXTRA = {'memory_peak_mb', 'n_mss', 'n_kb',
+                  'n_components', 'largest_component', 'n_greedy_fallback', 'n_uncoverable'}
+        sources = {m.source for m in CONMIN_METRICS} - _EXTRA
+        phantom = sources - set(res.profiler_data.keys())
+        assert not phantom, f"CONMIN_METRICS points at profiler keys a run never emits: {sorted(phantom)}"
+
+        # to_dict keeps the base schema + nests the decomposition under `conmin`.
+        d = res.to_dict()
+        assert {'kb_constraints', 'bg_clauses', 'n_bias', 'n_kb', 'performance'} <= d.keys()
+        assert d['conmin']['slices']['kb_assumption_ids'] == res.kb_assumption_ids
+        assert d['conmin']['cover']['n_uncoverable'] == 0
+
+    def test_assert_fires_on_neg_present_but_no_encodings(self, monkeypatch):
+        """Foot-gun #5: E⁻ present but the prepared task has empty neg_encodings must
+        RAISE (the cover step would silently yield an empty KB), not emit A-only."""
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        from dataclasses import replace
+        from explanation.api import PreparedTask
+        from conacq.runners import ConMinRunner
+        from conacq.algorithms.conmin import ConMinModel
+
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        assert neg, "fixture must have negatives to exercise the guard"
+
+        runner = ConMinRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=True)
+        orig = ConMinModel.prepare_task
+
+        def stripped(self_model, task_input):  # strip neg_encodings post-prepare
+            prepared = orig(self_model, task_input)
+            return PreparedTask(replace(prepared.task, neg_encodings=()), prepared.describe)
+
+        monkeypatch.setattr(ConMinModel, 'prepare_task', stripped)
+        try:
+            with pytest.raises(ValueError, match=r"no neg_encodings"):
+                runner.run(pos, neg)
+        finally:
+            runner.cleanup()
+
+    def test_metrics_table_disjoint_from_congen_and_quacq(self):
+        """CONMIN∩CONGEN ⊆ core + the declared MSS-shared keys; CONMIN∩QUACQ ⊆ the
+        narrow core only. COMMON_KEYS stays narrow so the separate ConGen∩QuAcq guard
+        still trips if QuAcq ever grows an MSS key."""
+        from conacq.runners.metrics import (
+            CONMIN_METRICS, CONGEN_METRICS, QUACQ_METRICS, COMMON_KEYS, _MSS_SHARED)
+        cm = {m.key for m in CONMIN_METRICS}
+        # ConMin shares the core + the MSS-based keys (n_mss/n_kb/acqmss_*) with ConGen.
+        assert (cm & {m.key for m in CONGEN_METRICS}) <= (COMMON_KEYS | _MSS_SHARED)
+        # ConMin shares ONLY the narrow core with QuAcq (QuAcq has no MSS keys).
+        assert (cm & {m.key for m in QUACQ_METRICS}) <= COMMON_KEYS
+        assert not (_MSS_SHARED & COMMON_KEYS)   # MSS keys deliberately kept out of core
+        # keys are unique within the table (no accidental dup MetricSpec)
+        assert len(cm) == len(CONMIN_METRICS)
+
+    def test_shuffle_seed_is_honored_not_ignored(self, monkeypatch):
+        """ConMin's FINAL KB is order-dependent (AcqMinCover + Reduce walk A in bias
+        order), so the runner must APPLY shuffle_seed like ConGenRunner — not silently
+        ignore it (which would confound a shuffle_bias head-to-head vs ConGen)."""
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        from conacq.runners import ConMinRunner
+        from conacq.algorithms.conmin import ConMin
+
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+
+        captured = []
+        orig = ConMin.acquire
+
+        def capture(self_cm, **kw):            # record the bias order acquire receives
+            captured.append(list(kw['set_b']))
+            return orig(self_cm, **kw)
+
+        monkeypatch.setattr(ConMin, 'acquire', capture)
+        runner = ConMinRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=True)
+        try:
+            runner.run(pos, neg, shuffle_seed=None)   # base bias order
+            runner.run(pos, neg, shuffle_seed=7)      # shuffled bias order
+        finally:
+            runner.cleanup()
+
+        assert len(captured) == 2
+        assert sorted(captured[0]) == sorted(captured[1])   # same bias set
+        assert captured[0] != captured[1]                    # different order ⇒ seed applied
+
+    def test_cv_function_trains_per_fold_and_aggregates(self):
+        """n_fold_cross_validation_conmin (the run_cv entry point) trains a KB per
+        fold and aggregates the CONMIN metrics — guards the CV wiring the runner unit
+        tests don't reach (multi-fold prepare→acquire→resolve + cleanup)."""
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        from conacq.eval import n_fold_cross_validation_conmin, CrossValidationResult
+
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        cv = n_fold_cross_validation_conmin(
+            pos, neg, n_folds=2, bias_path=str(BIAS_PATH), fm_path=str(FM_PATH),
+            seed=82, use_incremental=True, k=1)
+
+        assert isinstance(cv, CrossValidationResult)
+        assert cv.n_folds == 2 and len(cv.fold_results) == 2
+        assert all(fr.n_kb > 0 for fr in cv.fold_results)   # each fold learned a KB
+        # CONMIN-specific aggregated groups are present in the on-disk block.
+        assert 'conmin_cover' in cv.performance
+        assert 'n_kb_mean' in cv.performance['kb_size']
+
+    def test_run_conmin_cli_writes_kb_json_with_decomposition(self, tmp_path):
+        """apps.run_conmin.process_model writes a KB JSON: the base schema
+        (run_compare / extract_results compatible) + the ConMin decomposition nested
+        under metadata.conmin (non-breaking)."""
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        import json
+        from conacq.config import ModelConfig
+        from apps.run_conmin import process_model
+
+        mc = ModelConfig(name='REAL-FM-7', oracle=str(FM_PATH), bias=str(BIAS_PATH),
+                         examples=str(EXAMPLES_RS_1N_PATH), folds_path=None, kb_dir=None)
+        assert process_model(mc, tmp_path, use_incremental=True, k=1)
+
+        out = json.loads((tmp_path / 'REAL-FM-7_rs_1n_kb.json').read_text())
+        assert {'kb_constraints', 'bg_clauses', 'redundant_constraints',
+                'statistics'} <= out.keys()
+        assert out['statistics']['n_kb'] > 0
+        assert set(out['metadata']['conmin']['slices']) == {
+            'mss_ids', 'cover_ids', 'kb_assumption_ids'}
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

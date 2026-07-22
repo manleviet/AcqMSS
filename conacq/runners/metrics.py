@@ -75,6 +75,15 @@ _CORE: Tuple[MetricSpec, ...] = (
                'redundancy_consistency_checks'),
 )
 
+# Keys the MSS-based passive algorithms (ConGen + ConMin) both emit — each builds an
+# admissible MSS, calls AcqMSS, and reports a final KB size — so they are shared by
+# meaning. Kept OUT of COMMON_KEYS on purpose: COMMON_KEYS stays the NARROW core so
+# the ConGen∩QuAcq guard still trips if QuAcq ever grows an MSS key; the ConMin
+# disjointness test allows these via ``COMMON_KEYS | _MSS_SHARED`` instead.
+_MSS_SHARED: frozenset = frozenset(
+    {'n_mss', 'n_kb', 'acqmss_runtime_ms', 'acqmss_calls'}
+)
+
 # Keys allowed to appear in more than one algorithm table (the declared common
 # core). ``runtime_ms`` is here too: both algorithms emit it, from *different*
 # timers (congen_total_time vs quacq_total_time), so it is a shared output key.
@@ -125,6 +134,29 @@ QUACQ_METRICS: Tuple[MetricSpec, ...] = (
     MetricSpec('dis_gen_consistency_checks', 'dis_gen_consistency_checks', Kind.COUNTER, 'dis_gen_checks'),
     MetricSpec('reduce_calls', 'reduce_calls', Kind.COUNTER, 'reduce_calls'),
     _CORE[6],  # redundancy_consistency_checks
+)
+
+
+CONMIN_METRICS: Tuple[MetricSpec, ...] = (
+    MetricSpec('runtime_ms', 'conmin_total_time', Kind.TIMER_SEC, 'runtime', '_ms'),
+    _CORE[0],  # consistency_checks
+    _CORE[1],  # memory
+    MetricSpec('n_mss', 'n_mss', Kind.GAUGE, 'kb_size', '', stats=('mean',)),
+    MetricSpec('n_kb', 'n_kb', Kind.GAUGE, 'kb_size', '', stats=('mean',)),
+    MetricSpec('conmin_runtime_ms', 'conmin_runtime', Kind.TIMER_SEC, 'conmin_runtime', '_ms'),
+    MetricSpec('acqmss_runtime_ms', 'acqmss_runtime', Kind.TIMER_SEC, 'acqmss_runtime', '_ms'),
+    MetricSpec('acqmss_calls', 'acqmss_calls', Kind.COUNTER, 'acqmss_calls'),
+    _CORE[2],  # reduce_runtime
+    _CORE[3],  # solver_time
+    _CORE[4],  # is_consistent_calls
+    _CORE[5],  # is_consistent_test_cases_calls
+    _CORE[6],  # redundancy_consistency_checks
+    # AcqMinCover diagnostics from ConMinResult (via ``extra``) — coarse counts,
+    # mean only. NOT the §9c per-phase check taxonomy (that is P4e).
+    MetricSpec('n_components', 'n_components', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
+    MetricSpec('largest_component', 'largest_component', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
+    MetricSpec('n_greedy_fallback', 'n_greedy_fallback', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
+    MetricSpec('n_uncoverable', 'n_uncoverable', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
 )
 
 

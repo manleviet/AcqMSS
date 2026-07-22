@@ -1,7 +1,7 @@
 """
 Base classes for constraint acquisition runners.
 
-BaseRunResult: Shared result dataclass (9 fields common to ConGen and Interactive).
+BaseRunResult: Shared result dataclass (common to ConGen, ConMin, and Interactive).
 BaseRunner: ABC defining build-once/run-many/cleanup-once lifecycle.
 """
 
