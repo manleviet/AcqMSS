@@ -1,19 +1,23 @@
 """ConMin: passive maximally-general constraint acquisition.
 
-P1 runs paper Algorithm 1 lines 1-4 only: the consistency gate plus AcqMSS Stage-1,
-returning the admissible pool A (maximally specific, UNREDUCED). The cover +
-support + Reduce steps (lines 5-8) land in P2-P3.
+`acquire` runs paper Algorithm 1 in full: the consistency gate + AcqMSS Stage-1
+(the admissible pool A, maximally specific), then AcqMinCover + support⁺ + Reduce.
 
-Reference: Paper Algorithm 1 (Stage 1, NE pre-computed by the caller)
-    ConMin(E+, NE, B, BG) -> A          # P1 = lines 1-4 (this file)
+Reference: Paper Algorithm 1 (NE pre-computed by the caller)
+    ConMin(E+, NE, B, BG) -> KB
     1: A <- Phi
     2: if IsConsistent(E+, NE, BG) then
-    3:   A <- AdmPoolMSS(Phi, B, NE, E+, BG)   # == AcqMSS.find_mss
+    3:   A <- AdmPoolMSS(Phi, B, NE, E+, BG)      # == AcqMSS.find_mss (Stage 1)
     4: end if
-    ...   (lines 5-8: AcqMinCover + support + Reduce -> P2/P3)
+    5: <C, U> <- AcqMinCover(A, E-, BG)           # min cover of the negatives
+    6: S <- { c in A \\ Cflat : support+(c) >= k }  # positively-supported survivors
+    7: KB <- Cflat u S u { not(e-) : e- in U }
+    8: return Reduce(KB, BG)                       # lines 5-8 in _cover_support_reduce
 
-Mode-agnostic: all data is assumption-based (List[int]); the checker implementation
-decides the solver lifecycle.
+Callers that want Stage-1 only (the maximally-specific A) simply omit
+`neg_encodings`/`support_count`: the lines 5-8 tail then reduces to an empty KB while
+`ConMinResult.mss_ids` still carries A. Mode-agnostic: all data is assumption-based
+(List[int]); the checker implementation decides the solver lifecycle.
 """
 
 import logging
@@ -59,7 +63,7 @@ class ConMinResult:
 
 
 class ConMin:
-    """ConMin constraint acquisition algorithm (P1: Stage-1 only).
+    """ConMin constraint acquisition algorithm (full Algorithm 1).
 
     Mode-agnostic: all data is assumption-based (List[int]). The checker
     implementation determines the solver lifecycle.
@@ -84,22 +88,26 @@ class ConMin:
             support_count: Optional[Mapping[int, int]] = None,
             k: int = 1,
     ) -> ConMinResult:
-        """Acquire the maximally-specific admissible pool A (Stage 1).
+        """Acquire the ConMin knowledge base (paper Algorithm 1, lines 1-8).
 
-        Paper Algorithm 1 lines 1-4:
-        2. if IsConsistent(E+, NE, BG) then A <- AcqMSS(Phi, B, NE, E+, BG)
+        Gate (line 2) + AcqMSS (line 3) give the admissible pool A; lines 5-8
+        (AcqMinCover + support⁺ + Reduce) run in ``_cover_support_reduce``.
 
         Args:
             set_b: Bias constraint assumption IDs (B)
             set_bg: Background knowledge assumption IDs (BG)
             set_tc: Positive example assumption IDs (E+)
-            set_neg_tv: Negated example assumption IDs (NE)
-            negation_map: Reserved for the P3 Reduce step; unused in P1 (kept for
-                signature symmetry with ConGen and forward-compat)
+            set_neg_tv: Negated example assumption IDs (NE) — Stage-1 context
+            negation_map: assumption ID -> negated ID, used by the Reduce step (line 8)
+            neg_encodings: per-e- full-config assignment aids for AcqMinCover's
+                rejection test (line 5). Omit ((), the default) for a Stage-1-only run.
+            support_count: bias aid -> support⁺; drives S (line 6). Omitted -> S = ∅.
+            k: support threshold for S (line 6).
 
         Returns:
-            ConMinResult with ``mss_ids`` = A (unreduced). Empty when E+ is
-            inconsistent with NE union BG.
+            ConMinResult: ``mss_ids`` = A; ``kb_assumption_ids`` = the final KB
+            (Cflat ∪ S ∪ fallbacks, post-Reduce). All empty when E+ is inconsistent
+            with NE ∪ BG; the KB is empty (A only) when ``neg_encodings`` is omitted.
         """
         set_neg_tv = set_neg_tv or []
         negation_map = negation_map or {}

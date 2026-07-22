@@ -25,7 +25,9 @@ from conacq.algorithms import (
     ConMinModelBuilder, ConMinTaskInput,
     ConGenModelBuilder, ConGenTaskInput,
 )
-from conacq.algorithms.conmin import AcqMinCover, NegEncoding, support
+from conacq.algorithms.conmin import (
+    AcqMinCover, NegEncoding, support, ConMinTaskPreparation,
+)
 from conacq.algorithms.conmin.min_cover import (
     connected_components, exact_cover, greedy_cover, irredundant,
 )
@@ -362,6 +364,30 @@ class TestConMinDeDelegation:
             assert 0 < len(cand) < len(admissible)  # discriminates (not saturated)
         finally:
             checker.cleanup()
+
+    def test_reused_prep_instance_no_cross_fold_leak(self):
+        """A REUSED ConMinTaskPreparation must not leak one fold's neg_encodings into
+        a later zero-negative fold. A zero-negative fold skips _prepare_negative_examples,
+        so without the per-call reset in prepare() the stale encodings would survive.
+        """
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_FF_PATH)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
+        model = (ConMinModelBuilder
+                 .from_bias(str(BIAS_PATH))
+                 .with_oracle_data(oracle.oracle_data)
+                 .build())
+        examples = ExampleIO.load_json(str(EXAMPLES_FF_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+
+        prep = ConMinTaskPreparation()  # ONE instance, reused across folds
+        t_neg = prep.prepare(
+            model, ConMinTaskInput.from_examples(oracle.oracle_data, pos, neg)).task
+        assert len(t_neg.neg_encodings) == 3            # fold WITH negatives
+
+        t_zero = prep.prepare(
+            model, ConMinTaskInput.from_examples(oracle.oracle_data, pos, [])).task
+        assert t_zero.neg_encodings == ()               # zero-neg fold: no leak
 
 
 # --------------------------------------------------------------------------- #

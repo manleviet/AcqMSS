@@ -3,11 +3,12 @@
 An immutable KB: bias ``constraint_map`` + name↔id catalog (inherited from KBModel).
 ``prepare_task`` delegates to ``ConMinTaskPreparation`` (pure, repeatable per fold).
 
-``resolve_result`` is DEFERRED to P3/P4 — additive, no rework: ``KBModel`` is
-concrete and ``BaseRunner`` declares no resolve, so a ``ConMinModel`` carrying only
+``resolve_result`` is DEFERRED to P4 — additive, no rework: ``KBModel`` is concrete
+and ``BaseRunner`` declares no resolve, so a ``ConMinModel`` carrying only
 ``prepare_task`` is valid. When added it mirrors ``ConGenModel.resolve_result``'s
-4-tuple (ConMin Reduces, like ConGen) but maps ``ConMinResult``'s slices — ConMin's
-result has no ``redundant_ids`` field, so ConGen's resolver cannot be copied verbatim.
+4-tuple (ConMin Reduces, like ConGen), mapping from ``ConMinResult`` — which now
+carries ``kb_assumption_ids`` + ``redundant_ids`` (added in P3), the two the 4-tuple
+resolver needs.
 """
 
 from __future__ import annotations

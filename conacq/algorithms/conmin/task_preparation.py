@@ -74,6 +74,10 @@ class ConMinTaskPreparation(ConGenTaskPreparation):
     def prepare(self, model: "ConMinModel", task_input: ConMinTaskInput) -> PreparedTask:
         """Reuse ConGen's Stage-1 prep, then attach the precomputed support⁺ counts
         (structural, solver-free) over the bias against this fold's E⁺."""
+        # Reset the per-call neg_encodings hand-off (defensive: a fold with zero
+        # negatives skips _prepare_negative_examples, so without this a reused prep
+        # instance could leak the previous fold's encodings into _make_task).
+        self._neg_encodings: Tuple[NegEncoding, ...] = ()
         prepared = super().prepare(model, task_input)
         task = prepared.task
         support_count = build_support_count(
