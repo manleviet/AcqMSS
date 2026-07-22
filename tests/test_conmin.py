@@ -376,6 +376,98 @@ class TestConMinRootBG:
 
 
 # --------------------------------------------------------------------------- #
+# P4b — resolve_result (4-tuple) + root axiom re-append
+# --------------------------------------------------------------------------- #
+
+class TestConMinResolveResult:
+    """ConMinModel.resolve_result → (bg_clauses, kb_clauses, kb_names, redundant_names),
+    mirroring ConGen. The root axiom is re-appended as bg_clauses, delivered SEPARATELY
+    from the acquired kb_clauses so metrics never count it as learned."""
+
+    def test_resolve_maps_kb_and_reappends_root_separately(self):
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
+        model = (ConMinModelBuilder
+                 .from_bias(str(BIAS_PATH))
+                 .with_oracle_data(oracle.oracle_data)
+                 .build())
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        prepared = model.prepare_task(
+            ConMinTaskInput.from_examples(oracle.oracle_data, pos, neg))
+        task, describe = prepared.task, prepared.describe
+
+        checker = _checker(task, is_incremental=True)
+        try:
+            result = ConMin(checker, get_global_profiler()).acquire(
+                set_b=task.set_c, set_bg=task.set_b, set_tc=task.set_tc,
+                set_neg_tv=task.set_neg_tv, negation_map=task.negation_map,
+                neg_encodings=task.neg_encodings, support_count=task.support_count, k=1)
+        finally:
+            checker.cleanup()
+
+        root_clauses = oracle.oracle_data.get_root_clauses()
+        bg_clauses, kb_clauses, kb_names, fallback_clauses, redundant_names = \
+            model.resolve_result(result, describe, root_clauses,
+                                 task.set_kb, task.negation_map)
+
+        # kb_names/kb_clauses = LEARNED FM constraints only (incl. the recall-fixed
+        # X→root); an id whose name is not a bias constraint is excluded (independent
+        # oracle via describe + constraint_map, not the impl's _resolve_fm).
+        fm_ids = [a for a in result.kb_assumption_ids
+                  if describe.get_description(a) in model.constraint_map]
+        assert kb_names == [describe.get_description(a) for a in fm_ids]
+        assert {'c6', 'c14', 'c18'} <= set(kb_names)          # X→root acquired (P4a)
+        expected_clauses = []
+        for a in fm_ids:
+            expected_clauses.extend(model.constraint_map[describe.get_description(a)])
+        assert kb_clauses == expected_clauses
+
+        # Root axiom re-appended as bg_clauses, SEPARATE from the acquired kb.
+        assert [list(c) for c in bg_clauses] == [[1]]         # jplug=true (root)
+        assert list(task.root_axiom) != []                     # P4a recorded the root
+        assert [1] not in [list(c) for c in kb_clauses]        # root NOT in acquired
+
+        # ConMin expects U=∅ on this fixture → no ¬e⁻ fallbacks in the KB.
+        assert fallback_clauses == []
+
+        # redundant_names = the dropped LEARNED-FM ids' names.
+        assert redundant_names == [describe.get_description(a) for a in result.redundant_ids
+                                   if describe.get_description(a) in model.constraint_map]
+
+    def test_fallback_decomposition_forced_uncoverable(self):
+        """Force U>0 synthetically: a ¬e⁻ fallback in the KB must NOT appear in
+        kb_names/kb_clauses (learned FM), but its clause MUST appear in
+        fallback_clauses (resolved from set_kb, guard stripped)."""
+        from explanation.api import DescriptionProvider
+        from conacq.algorithms.conmin import ConMinModel, ConMinResult
+
+        model = ConMinModel()
+        model.constraint_map = {'c_x': [[1, -2]]}          # one learned FM constraint
+        describe = DescriptionProvider()
+        describe.add_constraint_description(50, 'c_x')      # bias id → FM constraint
+        describe.add_test_case_description(900, 'NOT(db=lite & ide=pro)')  # ¬e⁻ fallback
+
+        # e⁻ blocked on feature vars 5,7: ne_clause [-5,-7,-900]; negation [-900,-901].
+        set_kb = [[1, -2], [-5, -7, -900], [-900, -901]]
+        negation_map = {900: 901}
+        result = ConMinResult(
+            mss_ids=[], n_bias=1, n_mss=0,
+            kb_assumption_ids=[50, 900],   # one FM constraint + one ¬e⁻ fallback (survived Reduce)
+            fallback_ids=[900], uncoverable=[900], redundant_ids=[])
+
+        bg, kb_clauses, kb_names, fallback_clauses, redundant_names = \
+            model.resolve_result(result, describe, [[1]], set_kb, negation_map)
+
+        assert kb_names == ['c_x']                          # (i) ¬e⁻ NOT in learned FM
+        assert kb_clauses == [[1, -2]]
+        assert 'NOT(db=lite & ide=pro)' not in kb_names
+        assert fallback_clauses == [[-5, -7]]               # (ii) ¬e⁻ clause, guard stripped
+        assert list(result.fallback_ids) == [900]           # (iii) fallback id present
+
+
+# --------------------------------------------------------------------------- #
 # P3 — de-delegation on real data (ff, 3 negatives), REAL checker
 # --------------------------------------------------------------------------- #
 
