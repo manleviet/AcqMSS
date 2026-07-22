@@ -27,6 +27,16 @@ Primary constraint discovery algorithms:
 | (Total: 1,331 LOC for main algorithms) |
 | (Subtotal: 1,439 LOC including both paradigm-specific builders) |
 
+**ConMin Sub-package** (`conmin/`, 5 files, ~343 LOC) — passive **maximally-general** acquisition (AAAI). P1 = Stage-1 scaffold only; the cover engine (AcqMinCover), support⁺, and Reduce assembly land in P2–P3.
+
+| File | LOC | Purpose |
+|------|-----|---------|
+| `conmin/conmin.py` | 148 | ConMin + ConMinResult; `acquire` = paper Algorithm 1 lines 1–4 (consistency gate + `AcqMSS.find_mss`), returns the maximally-specific pool `A` (unreduced). Reuses sibling `AcqMSS` by import. ConMinResult exposes the three eval slices (mss/cover/support + fallback/uncoverable/kb), P1-filled for `mss_ids` only. |
+| `conmin/task_preparation.py` | 95 | ConMinTaskInput / ConMinTask / ConMinTaskPreparation; P1 delegates to `ConGenTaskPreparation` (byte-identical Stage-1 IDs → parity by construction). P3 re-decides the seam for `neg_encodings`. |
+| `conmin/conmin_model.py` | 41 | ConMinModel(KBModel); `prepare_task` only (resolve_result deferred to P3/P4). |
+| `conmin/conmin_model_builder.py` | 31 | ConMinModelBuilder: one-method subclass of `OracleBiasModelBuilder`. |
+| `conmin/__init__.py` | 28 | Package exports. |
+
 **QuAcq Sub-package** (`quacq/`, 9 files, ~1,066 LOC):
 
 **Assumption-Based Learning (Unified with ConGen, Paper-Aligned Queries, DI Pattern)**:

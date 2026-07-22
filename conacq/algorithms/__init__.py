@@ -27,6 +27,15 @@ from .acqmss import (
     ConGenTaskInput,
 )
 
+# Passive learning (ConMin) - maximally-general acquisition (reuses AcqMSS Stage 1)
+from .conmin import (
+    ConMin,
+    ConMinResult,
+    ConMinModel,
+    ConMinModelBuilder,
+    ConMinTaskInput,
+)
+
 # Interactive learning (QuAcq)
 from .quacq import (
     QuAcq,
@@ -52,6 +61,12 @@ __all__ = [
     'ConGenModel',
     'ConGenModelBuilder',
     'ConGenTaskInput',
+    # ConMin (passive maximally-general learning)
+    'ConMin',
+    'ConMinResult',
+    'ConMinModel',
+    'ConMinModelBuilder',
+    'ConMinTaskInput',
     # Interactive learning (QuAcq)
     'QuAcq',
     'QuAcqModel',
