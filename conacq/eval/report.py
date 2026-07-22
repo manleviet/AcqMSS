@@ -124,7 +124,14 @@ def generate_cv_report(
     Returns:
         Formatted report string
     """
+    # ``performance`` is the aggregate() dict {group: {stat: value}} (post-T9 metrics
+    # refactor) — NOT an attribute object. Read defensively: QuAcq has no kb_size
+    # group, and per-algorithm tables differ.
     p = result.performance
+    rt = p.get('runtime', {})
+    cc = p.get('consistency_checks', {})
+    kb = p.get('kb_size', {})
+    mem = p.get('memory', {})
 
     # Format per-fold results
     fold_details = []
@@ -153,20 +160,20 @@ Intersected KB: {len(result.intersected_kb)} constraints
 Performance:
   Total CV Runtime: {result.total_runtime_ms:.2f} ms
 
-  ConGen Runtime (per fold):
-    Mean:  {p.runtime_mean_ms:.2f} ms
-    Std:   {p.runtime_std_ms:.2f} ms
-    Range: [{p.runtime_min_ms:.2f}, {p.runtime_max_ms:.2f}] ms
+  Runtime (per fold):
+    Mean:  {rt.get('mean_ms', 0.0):.2f} ms
+    Std:   {rt.get('std_ms', 0.0):.2f} ms
+    Range: [{rt.get('min_ms', 0.0):.2f}, {rt.get('max_ms', 0.0):.2f}] ms
 
   Consistency Checks:
-    Mean:  {p.checks_mean:.1f}
-    Range: [{p.checks_min}, {p.checks_max}]
+    Mean:  {cc.get('mean', 0.0):.1f}
+    Range: [{cc.get('min', 0)}, {cc.get('max', 0)}]
 
   KB Size:
-    Mean:  {p.n_kb_mean:.1f}
+    Mean:  {kb.get('n_kb_mean', 0.0):.1f}
 
   Memory:
-    Max:   {p.memory_max_mb:.2f} MB
+    Max:   {mem.get('max_mb', 0.0):.2f} MB
 """
 
     if output_path:
@@ -259,7 +266,9 @@ def generate_unified_cv_dict(
             'evaluation': None,
         },
         'folds': folds,
-        'performance': cv_result.performance.to_dict(),
+        # performance is already the aggregate() dict {group: {stat: value}} — emit
+        # it directly (it has no .to_dict(); it IS the dict).
+        'performance': cv_result.performance,
         'summary': None,
     }
 

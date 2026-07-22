@@ -441,6 +441,72 @@ class TestReportGeneration:
         assert 'KB Accuracy Report' in report
         assert 'Formula 1' in report
 
+    def test_cv_report_and_unified_dict_read_dict_performance(self):
+        """Regression (report.py:157 + :262): since the T9 metrics refactor,
+        CrossValidationResult.performance is the aggregate() DICT — generate_cv_report
+        must NOT attribute-access it (`p.runtime_mean_ms`) and generate_unified_cv_dict
+        must NOT call `.to_dict()` on it. Both crashed for every algorithm's CV CLI."""
+        from conacq.eval import generate_cv_report, generate_unified_cv_dict
+        from conacq.eval.cross_validation import (
+            CrossValidationResult, CrossValidationFoldResult)
+        from conacq.runners.metrics import aggregate
+
+        perf = aggregate([_congen(runtime_ms=100, consistency_checks=50,
+                                  memory_peak_mb=10, n_mss=20, n_kb=5)])
+        assert isinstance(perf, dict)          # the shape both functions must handle
+
+        fr = CrossValidationFoldResult(
+            fold_index=0, accuracy=0.9,
+            metrics=EvaluationMetrics(true_positives=4, true_negatives=3,
+                                      false_positives=1, false_negatives=0),
+            performance=_congen(runtime_ms=100, n_kb=5),
+            kb_constraints=['c1', 'c2'], bg_clauses=[[1]], redundant_constraints=[],
+            n_bias=10, n_kb=5, n_train_pos=8, n_train_neg=2, n_test_pos=2,
+            n_test_neg=1, n_mss=20)
+        cv = CrossValidationResult(
+            n_folds=1, fold_accuracies=[0.9], mean_accuracy=0.9, std_accuracy=0.0,
+            fold_results=[fr], performance=perf, intersected_kb=['c1'],
+            bg_clauses=[[1]], total_runtime_ms=123.0)
+
+        # :157 — reads the dict, no AttributeError, and shows the real aggregated numbers.
+        report = generate_cv_report(cv)
+        assert 'Runtime (per fold)' in report
+        assert f"{perf['runtime']['mean_ms']:.2f} ms" in report
+        assert f"{perf['kb_size']['n_kb_mean']:.1f}" in report
+
+        # :262 — emits the dict directly (no .to_dict()).
+        class _FakeBias:
+            def has_constraint(self, cid): return False
+            def get_description(self, cid): return cid
+
+        unified = generate_unified_cv_dict(cv, _FakeBias())
+        assert unified['performance'] == perf
+        assert unified['performance']['consistency_checks']['mean'] == 50
+
+    def test_cv_report_tolerates_missing_kb_size_group(self):
+        """QuAcq's aggregate() has no kb_size group; generate_cv_report must not
+        KeyError on it (defensive dict reads)."""
+        from conacq.eval import generate_cv_report
+        from conacq.eval.cross_validation import (
+            CrossValidationResult, CrossValidationFoldResult)
+        from conacq.runners.metrics import aggregate
+
+        perf = aggregate([_quacq(runtime_ms=100)])   # no kb_size group
+        assert 'kb_size' not in perf
+        fr = CrossValidationFoldResult(
+            fold_index=0, accuracy=1.0,
+            metrics=EvaluationMetrics(true_positives=1, true_negatives=1,
+                                      false_positives=0, false_negatives=0),
+            performance=_quacq(runtime_ms=100), kb_constraints=[], bg_clauses=[[1]],
+            redundant_constraints=[], n_bias=1, n_kb=0, n_train_pos=1, n_train_neg=1,
+            n_test_pos=1, n_test_neg=1)
+        cv = CrossValidationResult(
+            n_folds=1, fold_accuracies=[1.0], mean_accuracy=1.0, std_accuracy=0.0,
+            fold_results=[fr], performance=perf, intersected_kb=[], bg_clauses=[[1]],
+            total_runtime_ms=1.0)
+        report = generate_cv_report(cv)          # must not raise
+        assert 'KB Size' in report and '0.0' in report
+
 
 class TestIntegration:
     """Integration tests with actual data files."""
