@@ -76,6 +76,14 @@ class ConMinTask(TestCaseTask):
 class ConMinTaskPreparation(ConGenTaskPreparation):
     """Prepare a ConMin task; subclass of ConGen's prep (byte-identical Stage-1 IDs)."""
 
+    def __init__(self, minimize: bool = True) -> None:
+        """``minimize`` = negative encoding (P4d raw/reduced): True (default) = reduced
+        (per-e⁻ subset-minimal conflict via QuickXplain); False = raw (negate the full
+        assignment). Set at construction — NOT mutable instance state set externally —
+        so a reused prep instance can never leak a previous call's mode."""
+        super().__init__()
+        self._minimize = minimize
+
     def prepare(self, model: "ConMinModel", task_input: ConMinTaskInput) -> PreparedTask:
         """Reuse ConGen's Stage-1 prep, then attach the precomputed support⁺ counts
         (structural, solver-free) over the bias against this fold's E⁺."""
@@ -120,7 +128,7 @@ class ConMinTaskPreparation(ConGenTaskPreparation):
         generate_ne = GenerateNE(oracle_data)
         ne_results = generate_ne.generate(
             testsuite, model.name_to_id, set_kb, assumptions, alloc,
-            capture_assignments=True, minimize=getattr(self, '_minimize', True))
+            capture_assignments=True, minimize=self._minimize)
 
         neg_tv_ids = [ne.ne_id for ne in ne_results]
         descs = [ne.desc for ne in ne_results]

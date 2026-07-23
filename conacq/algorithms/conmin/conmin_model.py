@@ -49,9 +49,7 @@ class ConMinModel(KBModel):
         (default) = REDUCED (each ¬e⁻ = subset-minimal conflict via QuickXplain);
         False = RAW (negate the full assignment, no oracle QuickXplain). Assumption
         IDs are identical either way, so the Stage-1 golden is preserved."""
-        prep = ConMinTaskPreparation()
-        prep._minimize = minimize
-        return prep.prepare(self, task_input)
+        return ConMinTaskPreparation(minimize=minimize).prepare(self, task_input)
 
     def resolve_result(
             self,

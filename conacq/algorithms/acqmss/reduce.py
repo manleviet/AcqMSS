@@ -59,6 +59,11 @@ class Reduce:
         """
         logging.debug('REDUCE [B\'=%s, NE=%s, BG=%s]', set_b_prime, set_neg_tv, set_bg)
 
+        # Normalize set_bg to a list: it is concatenated with lists below, and callers
+        # may pass a frozen tuple (QuAcq passes the task's tuple set_b). ConGen/ConMin
+        # already pass lists, so list(list) is a no-op → their numbers stay identical.
+        set_bg = list(set_bg)
+
         # KB ← B' ∪ NE, preserving AcqMSS's gamma1+gamma2 appearance order.
         # dict.fromkeys dedups (first occurrence wins) without going through set(),
         # which would iterate in hash order and make the surviving representative of

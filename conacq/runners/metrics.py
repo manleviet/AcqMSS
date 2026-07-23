@@ -139,7 +139,11 @@ QUACQ_METRICS: Tuple[MetricSpec, ...] = (
 
 CONMIN_METRICS: Tuple[MetricSpec, ...] = (
     MetricSpec('runtime_ms', 'conmin_total_time', Kind.TIMER_SEC, 'runtime', '_ms'),
-    _CORE[0],  # consistency_checks
+    # ONE canonical consistency-check total = the SUM of the §9c classified counters
+    # (batch granularity, R1-Q4 complete: gate + admpool + cover + redundancy). The
+    # ambiguous bare `consistency_checks` (paper_consistency_checks, which omits
+    # cover+Reduce) is deliberately NOT exported for ConMin — computed in the runner.
+    MetricSpec('consistency_checks_total', 'consistency_checks_total', Kind.COUNTER, 'consistency_checks'),
     _CORE[1],  # memory
     MetricSpec('n_mss', 'n_mss', Kind.GAUGE, 'kb_size', '', stats=('mean',)),
     MetricSpec('n_kb', 'n_kb', Kind.GAUGE, 'kb_size', '', stats=('mean',)),

@@ -224,17 +224,24 @@ class ConMinRunner(BaseRunner):
                         checker.cleanup()
 
             memory_peak_mb = peak / (1024 * 1024)
+            # §9c reported total = SUM of the classified counters (batch, R1-Q4
+            # complete). Not the bare paper_consistency_checks (which omits cover+Reduce).
+            consistency_checks_total = sum(profiler.get_metric(c, 0) for c in (
+                'conmin_admpool_gate_checks', 'shared_admpool_checks',
+                'conmin_cover_rejection_checks', 'conmin_cover_quickxplain_checks',
+                'redundancy_consistency_checks'))
             run_metrics = collect(profiler, CONMIN_METRICS, extra={
                 'memory_peak_mb': memory_peak_mb,
                 'n_mss': result.n_mss,
                 'n_kb': result.n_kb,
+                'consistency_checks_total': consistency_checks_total,
                 'n_components': result.n_components,
                 'largest_component': result.largest_component,
                 'n_greedy_fallback': result.n_greedy_fallback,
                 'n_uncoverable': len(result.uncoverable),
             })
             runtime_ms = run_metrics.values['runtime_ms']
-            consistency_checks = run_metrics.values['consistency_checks']
+            consistency_checks = consistency_checks_total
             profiler_snapshot = profiler.to_dict()
 
             # Resolve assumption IDs -> the 5-part decomposition (stateless): describe

@@ -169,10 +169,10 @@ class ConMin:
             stop_at_first_violation=True
         )
         self.profiler.increment("paper_consistency_checks")
-        # §9c classified counter for the ConMin Stage-0 gate (line 2), at per-e⁺
-        # granularity (one CONSISTENT test per e⁺, not per batch call). ConMin-only
-        # (conmin_ prefix, ADR-0018); additive alongside the paper total.
-        self.profiler.increment("conmin_admpool_gate_checks", len(set_tc))
+        # §9c classified counter for the ConMin Stage-0 gate (line 2), at BATCH
+        # granularity (+1 per IsConsistent call) to stay comparable with ConGen's
+        # paper_consistency_checks (also +1/call). ConMin-only (ADR-0018).
+        self.profiler.increment("conmin_admpool_gate_checks")
 
         if len(inconsistent) > 0:
             logging.debug('<<< ConMin return Phi (E+ inconsistent with NE union BG)')
@@ -232,9 +232,11 @@ class ConMin:
         k-invariant; only S / assemble / Reduce depend on k. Reduce is re-run per k."""
         support_count = support_count or {}
         negation_map = negation_map or {}
-        set_bg = list(set_bg)   # Reduce concatenates it with lists — normalize (tasks pass tuples)
         mss, cover = state.mss, state.cover
-        cover_ids, cover_set = state.cover_ids, state.cover_set
+        # Copy cover_ids: each per-k ConMinResult gets its own list (siblings mss_ids /
+        # uncoverable are copied too), so a consumer mutating one k's result can't
+        # corrupt the shared cover the k-sweep relies on.
+        cover_ids, cover_set = list(state.cover_ids), state.cover_set
 
         # Line 6: S <- { c ∈ A \ Cflat : support⁺(c) ≥ k }
         support_ids = [c for c in mss

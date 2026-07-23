@@ -77,10 +77,10 @@ class AcqMSS:
                 set_b + set_neg_tv + set_bg, set_tc, False
             )
             self.profiler.increment("paper_consistency_checks")
-            # §9c per-e⁺ granularity for AdmPoolMSS: one CONSISTENT test per e⁺, not
-            # per batch call. shared_ prefix — ConGen also runs AcqMSS (ADR-0018);
-            # additive, so ConGen's existing counters stay byte-identical.
-            self.profiler.increment("shared_admpool_checks", len(set_tc))
+            # §9c AdmPoolMSS check at BATCH granularity (+1 per IsConsistent call, to
+            # match ConGen's paper_consistency_checks). shared_ prefix — ConGen also
+            # runs AcqMSS (ADR-0018); additive, so ConGen's counters stay byte-identical.
+            self.profiler.increment("shared_admpool_checks")
             # if E'+ = Φ then return B (all E+ are consistent with current B)
             if len(set_tcp) == 0:
                 logging.debug('<<< return %s', set_b)

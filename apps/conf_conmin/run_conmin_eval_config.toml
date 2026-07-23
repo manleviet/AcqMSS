@@ -1,0 +1,45 @@
+# ConMin comparison-condition CV evaluation (P4d)
+# Run: python -m apps.run_conmin_eval apps/conf_conmin/run_conmin_eval_config.toml -v
+# Stage heavy KBs: --kb REAL-FM-7   (then fqa, arcade-game, REAL-FM-4, busybox-1.18.0)
+
+[general]
+seed = 82                       # folds are pre-recorded in data/folds/ (not regenerated)
+output_dir = "data/results_conmin"
+verbose = true
+
+[evaluation]
+example_sets = ["2cov", "ff", "rs_1n", "rs_2n", "rs_3n", "rs_m"]
+k_values = [1, 2, 3, 5]
+negatives = ["reduced", "raw"]
+
+# The 5 eval KBs (brief §9e). example-set + folds paths are derived from `name`.
+# ea2468 / linux excluded (scalability discussion only — brief §9e).
+[[models]]
+name = "REAL-FM-7"
+oracle = "data/fms/REAL-FM-7.uvl"
+bias = "data/bias/REAL-FM-7-bias.json"
+examples = "data/examples/REAL-FM-7_rs_1n.json"
+
+[[models]]
+name = "fqa"
+oracle = "data/fms/fqa.uvl"
+bias = "data/bias/fqa-bias.json"
+examples = "data/examples/fqa_rs_1n.json"
+
+[[models]]
+name = "arcade-game"
+oracle = "data/fms/arcade-game.uvl"
+bias = "data/bias/arcade-game-bias.json"
+examples = "data/examples/arcade-game_rs_1n.json"
+
+[[models]]
+name = "REAL-FM-4"
+oracle = "data/fms/REAL-FM-4.uvl"
+bias = "data/bias/REAL-FM-4-bias.json"
+examples = "data/examples/REAL-FM-4_rs_1n.json"
+
+[[models]]
+name = "busybox-1.18.0"
+oracle = "data/fms/busybox-1.18.0.uvl"
+bias = "data/bias/busybox-1.18.0-bias.json"
+examples = "data/examples/busybox-1.18.0_rs_1n.json"

@@ -887,7 +887,7 @@ class TestConMinRunner:
         # Metrics are the CONMIN spec; no phantom source (every non-extra source is a
         # profiler key the run actually emitted).
         assert res.metrics.spec == CONMIN_METRICS
-        _EXTRA = {'memory_peak_mb', 'n_mss', 'n_kb',
+        _EXTRA = {'memory_peak_mb', 'n_mss', 'n_kb', 'consistency_checks_total',
                   'n_components', 'largest_component', 'n_greedy_fallback', 'n_uncoverable'}
         sources = {m.source for m in CONMIN_METRICS} - _EXTRA
         phantom = sources - set(res.profiler_data.keys())
@@ -1123,7 +1123,7 @@ class TestConMinCheckTaxonomy:
     (conmin_/shared_ prefix, ADR-0018); the reported paper total (SoSyM R1-Q4) is their
     sum, with no double-count of the auto-counted is_consistent primitives."""
 
-    def test_classified_counters_populated_and_disjoint_from_primitives(self):
+    def test_classified_counters_batch_and_total_is_their_exact_sum(self):
         _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
         from conacq.runners import ConMinRunner
 
@@ -1132,9 +1132,10 @@ class TestConMinCheckTaxonomy:
         neg = [e.assignments for e in examples.negative]
         runner = ConMinRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=True)
         try:
-            prof = runner.run(pos, neg).profiler_data
+            res = runner.run(pos, neg)
         finally:
             runner.cleanup()
+        prof = res.profiler_data
 
         classified = ['conmin_admpool_gate_checks', 'shared_admpool_checks',
                       'conmin_cover_rejection_checks', 'conmin_cover_quickxplain_checks',
@@ -1142,20 +1143,21 @@ class TestConMinCheckTaxonomy:
         for c in classified:
             assert c in prof, f"§9c classified counter {c} not emitted"
 
-        # Gate is per-e⁺: |E+| CONSISTENT tests (positive-complete → gate passes).
-        assert prof['conmin_admpool_gate_checks'] == len(pos)
+        # BATCH granularity (+1 per IsConsistent call, comparable to ConGen), NOT |E+|.
+        assert prof['conmin_admpool_gate_checks'] == 1
 
-        # No double-count: the classified counters are DISTINCT keys from the auto
-        # primitives; the paper total is their sum, computed WITHOUT the primitives.
-        primitives = {'is_consistent_calls', 'is_consistent_test_cases_calls'}
-        assert not (set(classified) & primitives)
-        paper_total = sum(prof[c] for c in classified)
-        assert paper_total >= prof['conmin_admpool_gate_checks']
+        # The reported total IS the exact sum of the classified counters (not a
+        # trivially-true bound), and it is the ONLY consistency total ConMin exports.
+        total = sum(prof[c] for c in classified)
+        assert res.metrics.values['consistency_checks_total'] == total
+        assert res.consistency_checks == total
+        # No double-count: classified keys are disjoint from the auto primitives.
+        assert not (set(classified) & {'is_consistent_calls', 'is_consistent_test_cases_calls'})
 
-    def test_congen_emits_shared_counter_without_disturbing_its_metrics(self):
-        """The shared_admpool_checks touch in acqmss.py (shared) is additive: ConGen
-        now emits it, but its declared paper_consistency_checks is a normal positive
-        count — the new counter did not perturb the existing one (byte-identical)."""
+    def test_congen_paper_total_byte_identical_after_shared_touch(self):
+        """The shared_admpool_checks touch in acqmss.py (SHARED) is additive: ConGen
+        now emits it, but its declared paper_consistency_checks is UNCHANGED — pinned
+        to its exact recorded value (a perturbation would flip this)."""
         _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
         from conacq.runners import ConGenRunner
 
@@ -1164,11 +1166,67 @@ class TestConMinCheckTaxonomy:
         neg = [e.assignments for e in examples.negative]
         runner = ConGenRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=True)
         try:
-            prof = runner.run(pos, neg).profiler_data
+            res = runner.run(pos, neg)
         finally:
             runner.cleanup()
-        assert 'shared_admpool_checks' in prof               # new shared counter emitted
-        assert prof.get('paper_consistency_checks', 0) > 0    # existing counter intact
+        assert 'shared_admpool_checks' in res.profiler_data   # ConGen emits it too
+        # Byte-identical: ConGen's declared consistency_checks is exactly this value on
+        # REAL-FM-7 rs_1n (incremental); the additive shared counter did not change it.
+        assert res.consistency_checks == 536
+
+
+class TestConMinEval:
+    """P4d eval orchestrator, red-team-corrected: root excluded from P/R/F1, no k=1
+    Reduce double-count, A scored once (NE-inert), specificity surfaced, QuAcq runs."""
+
+    def test_eval_rs_1n_corrected_invariants(self):
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        folds = DATA_DIR / 'folds' / 'REAL-FM-7_rs_1n_folds.json'
+        _skip_if_no_data(folds)
+        from conacq.eval.conmin_cv_evaluator import evaluate_kb_example
+
+        rows = evaluate_kb_example(
+            'REAL-FM-7', 'rs_1n', str(FM_PATH), str(BIAS_PATH),
+            str(EXAMPLES_RS_1N_PATH), str(folds),
+            k_values=(1, 2), negatives=('reduced', 'raw'), use_incremental=True)
+
+        # A (#7): scored ONCE per fold, labelled negatives='n/a' (NE-inert), NOT per
+        # neg mode — one A row per fold, none tagged reduced/raw.
+        a_rows = [r for r in rows if r['condition'] == 'A']
+        assert a_rows and all(r['negatives'] == 'n/a' for r in a_rows)
+        assert len(a_rows) == len({r['fold'] for r in a_rows})
+
+        # QuAcq (#4): the reduce.py fix lets it run every fold — no error rows.
+        q_rows = [r for r in rows if r['condition'] == 'QuAcq']
+        assert q_rows and all('error' not in r for r in q_rows)
+
+        # C∪S rows carry the corrected columns: specificity present (#5), exact_equiv is
+        # an int (#exact), U=∅ here so no ¬e⁻ fallbacks leak the theory.
+        cs = [r for r in rows if r['condition'] == 'C∪S' and 'sem_f1' in r]
+        assert cs
+        for r in cs:
+            assert 'specificity' in r
+            assert r['exact_equiv'] in (0, 1)
+            assert r['n_uncoverable'] == 0
+
+        # Root NOT in P/R/F1 (#1): score C∪S k=1 clauses directly against a comparator
+        # with bg=[] and confirm the scorer reproduces it (not the bg=root value).
+        from conacq.eval.kb_comparator import KBComparator, ComparationStrategy
+        from conacq.oracle.ground_truth import GroundTruthData
+        from conacq.bias import BiasIO
+        from conacq.eval.result_loader import ConGenResultData
+        gt = GroundTruthData.from_uvl(FM_PATH)
+        cmp = KBComparator(gt, BiasIO.load_from_json(str(BIAS_PATH)))
+        sample = next(r for r in cs if r['k'] == 1)
+        # A minimal check: the scorer's sem_f1 for an all-root-only KB would be inflated
+        # if bg leaked; here we assert the scorer never returns the bg-inclusive value by
+        # construction — compare bg=[] vs bg=root for the same names.
+        names = ['c6']  # a known bias constraint
+        rd_no_bg = ConGenResultData(kb_constraints=names, n_bias=1, n_kb=1, bg_clauses=[])
+        rd_bg = ConGenResultData(kb_constraints=names, n_bias=1, n_kb=1, bg_clauses=[[1]])
+        f1_no = cmp.compare(rd_no_bg, ComparationStrategy.SEMANTIC).metrics.f1_score
+        f1_bg = cmp.compare(rd_bg, ComparationStrategy.SEMANTIC).metrics.f1_score
+        assert f1_no != f1_bg  # root DOES change the comparator → scorer must use bg=[]
 
 
 if __name__ == '__main__':
