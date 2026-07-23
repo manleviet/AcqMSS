@@ -14,6 +14,7 @@ Usage:
 """
 import argparse
 import csv
+import json
 import logging
 import sys
 from pathlib import Path
@@ -42,28 +43,37 @@ def _write_csv(rows: list, path: Path) -> None:
     logger.info("wrote %d rows -> %s", len(rows), path)
 
 
-_MERGED = ('conmin_eval_long.csv', 'conmin_eval_cv.csv')
-
-
 def _merge_per_kb(output_dir: Path) -> None:
-    """Concatenate the per-KB {kb}_{long,cv}.csv into conmin_eval_{long,cv}.csv.
+    """Consolidate the per-(KB,example-set) JSONs into conmin_eval_{long,cv}.csv.
 
-    Staging-safe: separate --kb runs each write their own {kb}_*.csv (never the shared
-    file), so nothing is clobbered; this step gathers them once at the end. The merged
-    outputs are excluded from the glob so re-merging is idempotent.
+    Reads ``{kb}_{es}_eval.json['rows']`` — the ATOMIC unit, written once per
+    example-set and never clobbered. This is deliberately NOT the per-KB CSVs: a KB
+    re-run with a DISJOINT --example-sets subset overwrites its {kb}_long.csv (mode 'w')
+    and would drop the earlier subset, whereas each example-set keeps its own JSON. So
+    every example-set that ever ran survives the merge, however the sweep was staged.
+    (The per-KB CSVs remain for convenient per-KB inspection.)
     """
-    for pattern, out_name in (('*_long.csv', 'conmin_eval_long.csv'),
-                              ('*_cv.csv', 'conmin_eval_cv.csv')):
-        rows: list = []
-        for f in sorted(output_dir.glob(pattern)):
-            if f.name in _MERGED:
-                continue
-            with open(f, newline='') as fh:
-                rows.extend(dict(r) for r in csv.DictReader(fh))
-        if not rows:
-            logger.warning("--merge: no %s files found in %s", pattern, output_dir)
-            continue
-        _write_csv(rows, output_dir / out_name)
+    files = sorted(output_dir.glob('*_eval.json'))
+    if not files:
+        logger.warning("--merge: NO *_eval.json in %s — did the sweep run? Any existing "
+                       "conmin_eval_*.csv is left UNCHANGED and may be STALE.", output_dir)
+        return
+    rows: list = []
+    for f in files:
+        with open(f) as fh:
+            rows.extend(json.load(fh).get('rows', []))
+    if not rows:
+        logger.warning("--merge: %d JSON file(s) but 0 rows", len(files))
+        return
+    schemas = {tuple(sorted(r.keys())) for r in rows}
+    if len(schemas) > 1:
+        logger.warning("--merge: rows have %d DIFFERENT column schemas — likely a mix of "
+                       "stale (pre-fix) and fresh JSONs. Re-run the affected KB(s) fully.",
+                       len(schemas))
+    _write_csv(rows, output_dir / 'conmin_eval_long.csv')
+    _write_csv(aggregate_cv(rows), output_dir / 'conmin_eval_cv.csv')
+    logger.info("--merge: consolidated %d rows from %d example-set JSON(s)",
+                len(rows), len(files))
 
 
 def main():

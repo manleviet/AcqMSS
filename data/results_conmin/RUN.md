@@ -1,14 +1,18 @@
 # ConMin comparison eval — sweep runbook
 
-Staging-safe: each `--kb X` run writes **`X_long.csv` + `X_cv.csv`** (per-KB), never the
-shared file, so KBs run in any order / in parallel without clobbering. Consolidate at the
-end with `--merge`. Config: `apps/conf_conmin/run_conmin_eval_config.toml`. Folds are
-pre-recorded (`data/folds/`) — seed is fixed; nothing is regenerated.
+Staging-safe: each `--kb X` run writes **`X_long.csv` + `X_cv.csv`** (per-KB) plus a
+per-example-set **`X_{es}_eval.json`**, never the shared file, so KBs run in any order /
+in parallel without clobbering. `--merge` consolidates from the **per-example-set JSONs**
+(the atomic unit — never clobbered), so a KB re-run with a *different* `--example-sets`
+subset still keeps its earlier sets in the merge. Config:
+`apps/conf_conmin/run_conmin_eval_config.toml`. Folds pre-recorded (`data/folds/`); seed
+fixed; nothing regenerated.
 
-> ⚠ Stale artifacts: any `conmin_eval_{long,cv}.csv` already in this dir is from a
-> pre-fix schema (older columns). Re-run REAL-FM-7 (fast) with the current code, then
-> `--merge` overwrites them. `--merge` ignores `conmin_eval_*.csv` in its glob, so it is
-> idempotent and never folds a stale merged file back in.
+> ⚠ Stale artifacts: `data/results_conmin/` currently holds pre-fix-schema
+> `conmin_eval_*.csv` + `REAL-FM-7_*_eval.json` (older columns). **Re-run REAL-FM-7 fully**
+> (fast) to overwrite its stale JSONs, then `--merge`. `--merge` warns if it sees mixed
+> column schemas (stale + fresh); if so, re-run the affected KB(s) fully. Best: delete the
+> stale `conmin_eval_*.csv` + `REAL-FM-7_*_eval.json` before the sweep.
 
 ## Per-KB runs (light → heavy; nice + nohup + log)
 
@@ -37,8 +41,9 @@ example-sets × |B|; ConMin's own A/C/C∪S k-sweep is comparatively cheap):
 | REAL-FM-4 | 291 | 2,079 | ~1–3 h |
 | busybox-1.18.0 | 854 | 6,635 | **many hours** — run last, alone |
 
-Subset a heavy KB for a first pass if needed, e.g. `--example-sets rs_1n rs_3n 2cov ff`
-(flag the deferred example-sets in the run report).
+Subset a heavy KB for a first pass if needed, e.g. `--example-sets rs_1n rs_3n 2cov ff`,
+then a deferred pass `--example-sets rs_2n rs_m` — **safe**: each example-set keeps its own
+JSON, so `--merge` picks up both passes (flag the deferral in the run report anyway).
 
 ## Consolidate (after all KBs finish)
 
