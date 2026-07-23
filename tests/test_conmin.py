@@ -916,8 +916,8 @@ class TestConMinRunner:
         runner = ConMinRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=True)
         orig = ConMinModel.prepare_task
 
-        def stripped(self_model, task_input):  # strip neg_encodings post-prepare
-            prepared = orig(self_model, task_input)
+        def stripped(self_model, task_input, **kwargs):  # strip neg_encodings post-prepare
+            prepared = orig(self_model, task_input, **kwargs)
             return PreparedTask(replace(prepared.task, neg_encodings=()), prepared.describe)
 
         monkeypatch.setattr(ConMinModel, 'prepare_task', stripped)
@@ -1207,6 +1207,32 @@ class TestConMinCheckTaxonomy:
         # Byte-identical: ConGen's declared consistency_checks is exactly this value on
         # REAL-FM-7 rs_1n (incremental); the additive shared counter did not change it.
         assert res.consistency_checks == 536
+
+    def test_compound_quickxplain_counts_internal_checks_gap_a(self):
+        """GAP A: on a COMPOUND cover (no single constraint rejects e⁻), the QuickXplain
+        counter = its INTERNAL is_consistent solves (a delta > 1), NOT +1/invocation.
+        REAL-FM-7 has no compound cover (counter 0), so this synthetic counting stub is
+        the only coverage of the nonzero GAP A path."""
+        from profiling import profiler_session, ProfilerPreset
+        from conacq.algorithms.conmin import AcqMinCover, NegEncoding
+
+        class _CompoundCountingChecker:
+            """No single constraint rejects e⁻; only {101,102} together do — forces the
+            compound QuickXplain branch. Counts is_consistent on the profiler."""
+            def __init__(self, profiler):
+                self.profiler = profiler
+
+            def is_consistent(self, assumptions):
+                self.profiler.increment('is_consistent_calls')
+                return not ({101, 102} <= set(assumptions))
+
+        with profiler_session(ProfilerPreset.BENCHMARK) as prof:
+            cover = AcqMinCover(_CompoundCountingChecker(prof),
+                                profiler_instance=prof).cover(
+                [101, 102], [NegEncoding(neg_id=900, assumption_ids=())], [])
+            qx = prof.get_metric('conmin_cover_quickxplain_checks', 0)
+        assert cover.cover_elements   # a compound element was found (no single rejects)
+        assert qx > 1                 # QX's internal solves counted, not the old +1
 
 
 class TestConMinEval:

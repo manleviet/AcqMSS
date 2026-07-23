@@ -163,7 +163,8 @@ class ConMinRunner(BaseRunner):
                             self.oracle.oracle_data,
                             positive_examples,
                             negative_examples,
-                        )
+                        ),
+                        profiler=profiler,   # count GenerateNE preprocessing (GAP B)
                     )
                     task = prepared.task
                     describe = prepared.describe
