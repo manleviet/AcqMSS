@@ -120,7 +120,7 @@ class ConMinTaskPreparation(ConGenTaskPreparation):
         generate_ne = GenerateNE(oracle_data)
         ne_results = generate_ne.generate(
             testsuite, model.name_to_id, set_kb, assumptions, alloc,
-            capture_assignments=True)
+            capture_assignments=True, minimize=getattr(self, '_minimize', True))
 
         neg_tv_ids = [ne.ne_id for ne in ne_results]
         descs = [ne.desc for ne in ne_results]

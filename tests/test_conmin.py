@@ -1063,6 +1063,61 @@ class TestConMinKSweep:
         assert s_sizes == sorted(s_sizes, reverse=True)
 
 
+class TestConMinRawReduced:
+    """minimize flag (P4d raw/reduced sweep): reduced (default) = per-e⁻ subset-minimal
+    conflict via QuickXplain; raw = negate the full assignment. Assumption IDs are
+    identical either way (golden preserved); only the ¬e⁻ clause content differs."""
+
+    def test_raw_and_reduced_share_ids_differ_in_ne_clause(self):
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
+        model = (ConMinModelBuilder.from_bias(str(BIAS_PATH))
+                 .with_oracle_data(oracle.oracle_data).build())
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        ti = ConMinTaskInput.from_examples(oracle.oracle_data, pos, neg)
+        try:
+            red = model.prepare_task(ti, minimize=True).task    # default = reduced
+            raw = model.prepare_task(ti, minimize=False).task    # raw
+            # Assumption IDs identical (id allocation is minimize-invariant → golden safe).
+            assert red.set_c == raw.set_c
+            assert red.set_neg_tv == raw.set_neg_tv
+            assert red.negation_map == raw.negation_map
+            assert red.set_tc == raw.set_tc and red.set_b == raw.set_b
+            # The ¬e⁻ encoding differs — raw negates the full assignment (more literals).
+            assert red.set_kb != raw.set_kb
+        finally:
+            oracle.cleanup()
+
+    def test_resolve_slice_resolves_each_slice_to_fm_names(self):
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
+        model = (ConMinModelBuilder.from_bias(str(BIAS_PATH))
+                 .with_oracle_data(oracle.oracle_data).build())
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        prepared = model.prepare_task(
+            ConMinTaskInput.from_examples(oracle.oracle_data, pos, neg))
+        task, describe = prepared.task, prepared.describe
+        ck = _checker(task, is_incremental=False)
+        try:
+            r = ConMin(ck, get_global_profiler()).acquire(
+                set_b=task.set_c, set_bg=task.set_b, set_tc=task.set_tc,
+                set_neg_tv=task.set_neg_tv, negation_map=task.negation_map,
+                neg_encodings=task.neg_encodings, support_count=task.support_count, k=1)
+        finally:
+            ck.cleanup()
+            oracle.cleanup()
+        _, a_names = model.resolve_slice(describe, r.mss_ids)
+        _, c_names = model.resolve_slice(describe, r.cover_ids)
+        _, cs_names = model.resolve_slice(describe, r.kb_assumption_ids)
+        assert len(a_names) == r.n_mss              # A = bias constraints, all resolve
+        assert len(cs_names) == r.n_kb
+        assert {'c6', 'c14', 'c18'} <= set(cs_names)  # X→root in C∪S
+
+
 class TestConMinCheckTaxonomy:
     """§9c: each ConMin phase's consistency checks land in its own classified counter
     (conmin_/shared_ prefix, ADR-0018); the reported paper total (SoSyM R1-Q4) is their

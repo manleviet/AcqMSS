@@ -55,7 +55,8 @@ class GenerateNE:
             result_set_kb: List[List[int]],
             result_assumptions: List[int],
             alloc: "AssumptionIdAllocator",
-            capture_assignments: bool = False
+            capture_assignments: bool = False,
+            minimize: bool = True
     ) -> List[NEPerTestcase]:
         """Generate NE from negative examples using QuickXPlain.
 
@@ -85,7 +86,7 @@ class GenerateNE:
         for testcase in testsuite.testcases:
             results.append(self._process_testcase(
                 testcase, variables, result_set_kb, result_assumptions,
-                set_bg, alloc, capture_assignments))
+                set_bg, alloc, capture_assignments, minimize))
 
         logging.debug('<<< GenerateNE: %d NE constraints', len(results))
         return results
@@ -98,7 +99,8 @@ class GenerateNE:
             result_assumptions: List[int],
             set_bg: Sequence[int],
             alloc: "AssumptionIdAllocator",
-            capture_assignments: bool = False
+            capture_assignments: bool = False,
+            minimize: bool = True
     ) -> NEPerTestcase:
         """Process single testcase: merge KBs, QuickXPlain, create NE clause."""
         # Merge oracle KB with current result KB (creates new list)
@@ -135,12 +137,17 @@ class GenerateNE:
         # checker is built through the port like everywhere else.
         task = DiagnosisTask(set_c=set_tv, set_b=set_bg,
                              set_kb=set_kb, assumptions=assumptions)
-        # One checker per testcase — release its solver before the next iteration.
-        with build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL) as checker:
-            quickxplain = QuickXPlain(checker)
-            minimal_conflict = quickxplain.find_conflict(task.set_c, task.set_b)
-        if len(minimal_conflict) > 0:
-            set_tv = minimal_conflict
+        # minimize=True (reduced, DEFAULT): QuickXplain reduces e⁻ to a subset-minimal
+        # conflict, so ¬e⁻ generalizes. minimize=False (raw): negate the FULL assignment
+        # (skip the oracle QuickXplain) — a more specific ¬e⁻. Id allocation is identical
+        # either way (QuickXplain allocates nothing), so the golden IDs are unchanged.
+        if minimize:
+            # One checker per testcase — release its solver before the next iteration.
+            with build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL) as checker:
+                quickxplain = QuickXPlain(checker)
+                minimal_conflict = quickxplain.find_conflict(task.set_c, task.set_b)
+            if len(minimal_conflict) > 0:
+                set_tv = minimal_conflict
 
         # Filter literals from minimal conflict
         literals, desc_parts = [], []

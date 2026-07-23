@@ -41,9 +41,17 @@ class ConMinModel(KBModel):
         task = prepared.task  # ConMinTask with assumption IDs
     """
 
-    def prepare_task(self, task_input: ConMinTaskInput) -> PreparedTask:
-        """Assign assumption IDs and build a fresh ConMinTask (pure, repeatable)."""
-        return ConMinTaskPreparation().prepare(self, task_input)
+    def prepare_task(self, task_input: ConMinTaskInput,
+                     minimize: bool = True) -> PreparedTask:
+        """Assign assumption IDs and build a fresh ConMinTask (pure, repeatable).
+
+        ``minimize`` selects the negative encoding (P4d raw/reduced sweep): True
+        (default) = REDUCED (each ¬e⁻ = subset-minimal conflict via QuickXplain);
+        False = RAW (negate the full assignment, no oracle QuickXplain). Assumption
+        IDs are identical either way, so the Stage-1 golden is preserved."""
+        prep = ConMinTaskPreparation()
+        prep._minimize = minimize
+        return prep.prepare(self, task_input)
 
     def resolve_result(
             self,
@@ -109,6 +117,18 @@ class ConMinModel(KBModel):
 
         _, redundant_names = self._resolve_fm(describe, result.redundant_ids)
         return bg_clauses, kb_clauses, kb_names, fallback_clauses, redundant_names
+
+    def resolve_slice(
+            self,
+            describe: DescriptionProvider,
+            assumption_ids: Sequence[int],
+    ) -> Tuple[List[List[int]], List[str]]:
+        """Resolve a passive-strategy slice (A=``mss_ids`` / C=``cover_ids`` / C∪S) to
+        its LEARNED-FM (clauses, names) — the same bias-constraint filter as
+        ``kb_names``, so P/R/F1 for every slice ranges over the same FM/bias vocabulary
+        (¬e⁻/root excluded). Public entry for the P4d eval (§9a: three slices of one
+        run, resolved + compared separately)."""
+        return self._resolve_fm(describe, assumption_ids)
 
     def _resolve_fm(
             self,
