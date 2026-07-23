@@ -146,6 +146,7 @@ CONMIN_METRICS: Tuple[MetricSpec, ...] = (
     MetricSpec('conmin_runtime_ms', 'conmin_runtime', Kind.TIMER_SEC, 'conmin_runtime', '_ms'),
     MetricSpec('acqmss_runtime_ms', 'acqmss_runtime', Kind.TIMER_SEC, 'acqmss_runtime', '_ms'),
     MetricSpec('acqmss_calls', 'acqmss_calls', Kind.COUNTER, 'acqmss_calls'),
+    MetricSpec('acqmincover_runtime_ms', 'acqmincover_runtime', Kind.TIMER_SEC, 'acqmincover_runtime', '_ms'),
     _CORE[2],  # reduce_runtime
     _CORE[3],  # solver_time
     _CORE[4],  # is_consistent_calls

@@ -6,8 +6,8 @@ No evaluation, no CV, no enrichment. Use run_cv.py for CV
 and run_compare.py for evaluation.
 
 Usage:
-    python -m apps.run_conmin apps/conf/run_conmin_config.toml
-    python -m apps.run_conmin apps/conf/run_conmin_config.toml --non-incremental --k 2
+    python -m apps.run_conmin apps/conf_conmin/run_conmin_config.toml
+    python -m apps.run_conmin apps/conf_conmin/run_conmin_config.toml --non-incremental --k 2
 """
 
 import argparse
@@ -129,8 +129,8 @@ def main():
         verbose_help="Verbose output (overrides config)",
         epilog="""
 Example:
-    python -m apps.run_conmin apps/conf/run_conmin_config.toml -v
-    python -m apps.run_conmin apps/conf/run_conmin_config.toml -v --non-incremental --k 2
+    python -m apps.run_conmin apps/conf_conmin/run_conmin_config.toml -v
+    python -m apps.run_conmin apps/conf_conmin/run_conmin_config.toml -v --non-incremental --k 2
         """
     )
     parser.add_argument('-o', '--output-dir', help='Output directory (overrides config)')

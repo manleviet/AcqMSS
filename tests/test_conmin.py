@@ -1015,5 +1015,53 @@ class TestConMinRunner:
             'mss_ids', 'cover_ids', 'kb_assumption_ids'}
 
 
+class TestConMinKSweep:
+    """The acquire split (acquire_pool_and_cover + finish_kb) is the eval's efficient
+    k-sweep: build checker + pool + cover ONCE, then finish_kb per k. Each result must
+    be bit-identical to a fresh acquire(k), and A/C must be k-invariant."""
+
+    def test_ksweep_reuses_pool_cover_bit_identical(self):
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        oracle, prepared = _prepare_conmin(EXAMPLES_RS_1N_PATH)
+        task = prepared.task
+
+        # Eval pattern: ONE checker, ONE pool+cover, finish_kb per k.
+        ck = _checker(task, is_incremental=False)
+        try:
+            cm = ConMin(ck, get_global_profiler())
+            state = cm.acquire_pool_and_cover(
+                task.set_c, task.set_b, task.set_tc, task.set_neg_tv,
+                task.negation_map, task.neg_encodings)
+            swept = {k: cm.finish_kb(state, task.support_count, k, task.set_b,
+                                     task.negation_map) for k in (1, 2, 3, 5)}
+        finally:
+            ck.cleanup()
+
+        # Reference: a fresh acquire per k (fresh checker each) must match exactly.
+        try:
+            for k in (1, 2, 3, 5):
+                ck2 = _checker(task, is_incremental=False)
+                try:
+                    fresh = ConMin(ck2, get_global_profiler()).acquire(
+                        set_b=task.set_c, set_bg=task.set_b, set_tc=task.set_tc,
+                        set_neg_tv=task.set_neg_tv, negation_map=task.negation_map,
+                        neg_encodings=task.neg_encodings,
+                        support_count=task.support_count, k=k)
+                finally:
+                    ck2.cleanup()
+                assert sorted(swept[k].kb_assumption_ids) == sorted(fresh.kb_assumption_ids)
+                assert swept[k].mss_ids == fresh.mss_ids           # A k-invariant
+                assert swept[k].cover_ids == fresh.cover_ids        # C k-invariant
+                assert sorted(swept[k].support_ids) == sorted(fresh.support_ids)
+        finally:
+            oracle.cleanup()
+
+        # A/C identical across the sweep; |S| non-increasing as k rises.
+        assert len({tuple(swept[k].mss_ids) for k in swept}) == 1
+        assert len({tuple(swept[k].cover_ids) for k in swept}) == 1
+        s_sizes = [len(swept[k].support_ids) for k in (1, 2, 3, 5)]
+        assert s_sizes == sorted(s_sizes, reverse=True)
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
