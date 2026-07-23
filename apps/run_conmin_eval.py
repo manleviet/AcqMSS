@@ -42,6 +42,30 @@ def _write_csv(rows: list, path: Path) -> None:
     logger.info("wrote %d rows -> %s", len(rows), path)
 
 
+_MERGED = ('conmin_eval_long.csv', 'conmin_eval_cv.csv')
+
+
+def _merge_per_kb(output_dir: Path) -> None:
+    """Concatenate the per-KB {kb}_{long,cv}.csv into conmin_eval_{long,cv}.csv.
+
+    Staging-safe: separate --kb runs each write their own {kb}_*.csv (never the shared
+    file), so nothing is clobbered; this step gathers them once at the end. The merged
+    outputs are excluded from the glob so re-merging is idempotent.
+    """
+    for pattern, out_name in (('*_long.csv', 'conmin_eval_long.csv'),
+                              ('*_cv.csv', 'conmin_eval_cv.csv')):
+        rows: list = []
+        for f in sorted(output_dir.glob(pattern)):
+            if f.name in _MERGED:
+                continue
+            with open(f, newline='') as fh:
+                rows.extend(dict(r) for r in csv.DictReader(fh))
+        if not rows:
+            logger.warning("--merge: no %s files found in %s", pattern, output_dir)
+            continue
+        _write_csv(rows, output_dir / out_name)
+
+
 def main():
     parser = build_parser(
         "Run ConMin comparison-condition CV evaluation",
@@ -50,6 +74,9 @@ def main():
                "apps/conf_conmin/run_conmin_eval_config.toml -v")
     parser.add_argument('-o', '--output-dir', help='Output dir (overrides config)')
     parser.add_argument('--kb', nargs='*', help='Subset of KB names to run (staging)')
+    parser.add_argument('--merge', action='store_true',
+                        help='Merge per-KB {kb}_{long,cv}.csv into conmin_eval_{long,cv}.csv '
+                             '(run once after all KBs finish; no acquisition)')
     parser.add_argument('--example-sets', nargs='*', help='Subset of example-sets to run')
     parser.add_argument('--k', nargs='*', type=int, help='k-sweep values (overrides config)')
     parser.add_argument('--negatives', nargs='*', choices=['reduced', 'raw'],
@@ -68,6 +95,10 @@ def main():
     ev = config.get('evaluation', {})
     output_dir = Path(args.output_dir or general.get('output_dir', 'data/results_conmin'))
     output_dir.mkdir(parents=True, exist_ok=True)
+    if args.merge:
+        logger.info("Merging per-KB CSVs in %s", output_dir)
+        _merge_per_kb(output_dir)
+        return
     example_sets = args.example_sets or ev.get('example_sets', DEFAULT_EXAMPLE_SETS)
     k_values = tuple(args.k) if args.k else tuple(ev.get('k_values', K_VALUES))
     negatives = args.negatives or ev.get('negatives', list(NEG_MODES))
@@ -88,9 +119,10 @@ def main():
     logger.info("Output: %s", output_dir)
     logger.info("=" * 60)
 
-    all_rows: list = []
+    total = 0
     for model in models:
         kb = model.name
+        kb_rows: list = []               # per-KB: staging-safe, never clobbers other KBs
         for es in example_sets:
             examples_path = f'data/examples/{kb}_{es}.json'
             folds_path = f'data/folds/{kb}_{es}_folds.json'
@@ -101,16 +133,22 @@ def main():
             rows = evaluate_kb_example(
                 kb, es, model.oracle, model.bias, examples_path, folds_path,
                 k_values=k_values, negatives=negatives, use_incremental=use_incremental)
-            all_rows.extend(rows)
+            kb_rows.extend(rows)
             write_json_atomic(output_dir / f'{kb}_{es}_eval.json', {
                 'kb': kb, 'example_set': es, 'seed': seed,
                 'note': 'folds are pre-recorded (data/folds/); the acquired named KB is '
                         'bias-order dependent — CV-averaged, seed fixed (threat-to-validity)',
                 'rows': rows, 'aggregated': aggregate_cv(rows)})
+        # Per-KB CSVs (NOT the shared conmin_eval_*.csv) so concurrent/sequential --kb
+        # runs don't overwrite each other. Run `--merge` once at the end to consolidate.
+        if kb_rows:
+            _write_csv(kb_rows, output_dir / f'{kb}_long.csv')
+            _write_csv(aggregate_cv(kb_rows), output_dir / f'{kb}_cv.csv')
+        total += len(kb_rows)
 
-    _write_csv(all_rows, output_dir / 'conmin_eval_long.csv')
-    _write_csv(aggregate_cv(all_rows), output_dir / 'conmin_eval_cv.csv')
-    logger.info("Done: %d long rows across %d KB(s).", len(all_rows), len(models))
+    logger.info("Done: %d rows across %d KB(s). Per-KB CSVs written; "
+                "run `--merge` to consolidate into conmin_eval_{long,cv}.csv.",
+                total, len(models))
 
 
 if __name__ == '__main__':
