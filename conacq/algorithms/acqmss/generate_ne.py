@@ -56,9 +56,15 @@ class GenerateNE:
             result_assumptions: List[int],
             alloc: "AssumptionIdAllocator",
             capture_assignments: bool = False,
-            minimize: bool = True
+            minimize: bool = True,
+            profiler=None
     ) -> List[NEPerTestcase]:
         """Generate NE from negative examples using QuickXPlain.
+
+        ``profiler`` (optional): when given, this PREPROCESSING QuickXplain (paper
+        l.299 — reduction outside the acquisition procedure) is counted separately into
+        ``shared_preprocessing_quickxplain_checks`` / ``shared_preprocessing_runtime``.
+        ConGen omits it (profiler=None) → its behaviour + counters are unchanged.
 
         Per testcase: merges oracle KB with result KB, creates assignment
         clauses, runs QuickXPlain for minimal conflict, creates blocking clause.
@@ -86,7 +92,7 @@ class GenerateNE:
         for testcase in testsuite.testcases:
             results.append(self._process_testcase(
                 testcase, variables, result_set_kb, result_assumptions,
-                set_bg, alloc, capture_assignments, minimize))
+                set_bg, alloc, capture_assignments, minimize, profiler))
 
         logging.debug('<<< GenerateNE: %d NE constraints', len(results))
         return results
@@ -100,7 +106,8 @@ class GenerateNE:
             set_bg: Sequence[int],
             alloc: "AssumptionIdAllocator",
             capture_assignments: bool = False,
-            minimize: bool = True
+            minimize: bool = True,
+            profiler=None
     ) -> NEPerTestcase:
         """Process single testcase: merge KBs, QuickXPlain, create NE clause."""
         # Merge oracle KB with current result KB (creates new list)
@@ -143,9 +150,24 @@ class GenerateNE:
         # either way (QuickXplain allocates nothing), so the golden IDs are unchanged.
         if minimize:
             # One checker per testcase — release its solver before the next iteration.
-            with build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL) as checker:
-                quickxplain = QuickXPlain(checker)
-                minimal_conflict = quickxplain.find_conflict(task.set_c, task.set_b)
+            # Thread the profiler so this preprocessing QuickXplain is counted apart
+            # from acquisition (GAP B): the is_consistent_calls DELTA + runtime go to
+            # shared_preprocessing_* (the checker is built WITH the profiler so its
+            # solves land there). profiler=None (ConGen) → unchanged behaviour.
+            with build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL,
+                               profiler=profiler) as checker:
+                quickxplain = QuickXPlain(checker, profiler)
+                if profiler is not None:
+                    _pp_before = profiler.get_metric("is_consistent_calls", 0)
+                    with profiler.timer("shared_preprocessing_runtime"):
+                        minimal_conflict = quickxplain.find_conflict(
+                            task.set_c, task.set_b)
+                    profiler.increment(
+                        "shared_preprocessing_quickxplain_checks",
+                        profiler.get_metric("is_consistent_calls", 0) - _pp_before)
+                else:
+                    minimal_conflict = quickxplain.find_conflict(
+                        task.set_c, task.set_b)
             if len(minimal_conflict) > 0:
                 set_tv = minimal_conflict
 

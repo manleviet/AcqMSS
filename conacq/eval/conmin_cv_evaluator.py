@@ -118,8 +118,12 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
         with profiler_session(ProfilerPreset.BENCHMARK) as prof:
             prepared = model.prepare_task(
                 ConMinTaskInput.from_examples(oracle.oracle_data, tr_pos, tr_neg),
-                minimize=minimize)
+                minimize=minimize, profiler=prof)
             task, describe = prepared.task, prepared.describe
+            # GAP B: GenerateNE preprocessing QuickXplain (k-invariant; reduced only —
+            # raw skips QuickXplain via minimize=False). Captured right after prep.
+            prep_qx = _counter(prof, 'shared_preprocessing_quickxplain_checks')
+            prep_ms = _timer_ms(prof, 'shared_preprocessing_runtime')
             checker = build_checker(
                 task, SolverBackend.from_flags(use_incremental=use_incremental),
                 solver_name, prof)
@@ -140,6 +144,10 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
                 admp = _counter(prof, 'shared_admpool_checks')
                 crej = _counter(prof, 'conmin_cover_rejection_checks')
                 cqx = _counter(prof, 'conmin_cover_quickxplain_checks')
+                # §4 batch/atomic check totals cumulative through Stage-1 + cover
+                # (A and C stop here; C∪S re-reads after each Reduce below).
+                batch0 = _counter(prof, 'paper_consistency_checks')
+                atomic0 = _counter(prof, 'is_consistent_calls')
                 n_bias = state.n_bias
 
                 # C∪S per k FIRST — clean Reduce deltas (prev_* baselines start at 0
@@ -166,7 +174,9 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
                                len(rk.uncoverable), rk.n_components,
                                rk.largest_component, rk.n_greedy_fallback),
                         _cost(stage1_ms, cover_ms, reduce_ms, gate, admp, crej, cqx,
-                              redund, mem)))
+                              redund, mem, prep_qx_checks=prep_qx, prep_ms=prep_ms,
+                              checks_batch=_counter(prof, 'paper_consistency_checks'),
+                              checks_atomic=_counter(prof, 'is_consistent_calls'))))
 
                 # A = maximally specific (mss). NE-inert (pool unchanged by raw/reduced)
                 # → scored ONCE, labelled negatives='n/a'. Cost = Stage-1. fallback = ().
@@ -176,7 +186,9 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
                         meta, 'n/a', 'A', None, a_nm, a_cl, (), comparator,
                         ground_truth, variables, te_pos, te_neg, root_clauses, n_bias,
                         _sizes(len(state.mss), 0, 0, len(state.mss), 0, 0, 0, 0),
-                        _cost(stage1_ms, 0.0, 0.0, gate, admp, 0, 0, 0, mem)))
+                        _cost(stage1_ms, 0.0, 0.0, gate, admp, 0, 0, 0, mem,
+                              prep_qx_checks=prep_qx, prep_ms=prep_ms,
+                              checks_batch=batch0, checks_atomic=atomic0)))
 
                 # C = minimum cover (per neg mode). Cost = Stage-1 + cover; fallback =
                 # ¬e⁻ of U (the first k's, U being k-invariant).
@@ -187,7 +199,9 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
                     _sizes(len(state.mss), len(state.cover_ids), 0, len(state.cover_ids),
                            len(state.cover.uncoverable), state.cover.n_components,
                            state.cover.largest_component, state.cover.n_greedy_fallback),
-                    _cost(stage1_ms, cover_ms, 0.0, gate, admp, crej, cqx, 0, mem)))
+                    _cost(stage1_ms, cover_ms, 0.0, gate, admp, crej, cqx, 0, mem,
+                          prep_qx_checks=prep_qx, prep_ms=prep_ms,
+                          checks_batch=batch0, checks_atomic=atomic0)))
                 rows.extend(cs_rows)
             finally:
                 checker.cleanup()
@@ -216,12 +230,15 @@ def _eval_quacq_fold(bias_path, fm_path, comparator, ground_truth, variables,
                  'error': str(exc)}]
 
     runtime_ms = res.metrics.values.get('runtime_ms', res.runtime_ms) if res.metrics else res.runtime_ms
+    qprof = res.profiler_data or {}
     return [_score_row(
         meta, 'n/a', 'QuAcq', None, res.kb_constraints, res.kb_clauses, (),
         comparator, ground_truth, variables, te_pos, te_neg, root_clauses, res.n_bias,
         _sizes(0, 0, 0, res.n_kb, 0, 0, 0, 0),
         _cost(runtime_ms, 0.0, 0.0, 0, 0, 0, 0, 0, res.memory_peak_mb,
-              n_queries=getattr(res, 'n_queries', None)))]
+              n_queries=getattr(res, 'n_queries', None),
+              checks_batch=qprof.get('paper_consistency_checks', 0),
+              checks_atomic=qprof.get('is_consistent_calls', 0)))]
 
 
 def _sizes(n_mss, n_cover, n_support, n_kb, n_uncoverable, n_components,
@@ -232,14 +249,27 @@ def _sizes(n_mss, n_cover, n_support, n_kb, n_uncoverable, n_components,
 
 
 def _cost(stage1_ms, cover_ms, reduce_ms, gate, admpool, cover_rej, cover_qx,
-          redundancy, memory_mb, n_queries=None) -> dict:
+          redundancy, memory_mb, n_queries=None, prep_qx_checks=0, prep_ms=0.0,
+          checks_batch=0, checks_atomic=0) -> dict:
     total_ms = stage1_ms + cover_ms + reduce_ms
+    # §9c R1-Q4-complete acquisition total (Stage-1 + cover + Reduce).
     checks_total = gate + admpool + cover_rej + cover_qx + redundancy
     return {'stage1_ms': stage1_ms, 'cover_ms': cover_ms, 'reduce_ms': reduce_ms,
-            'total_ms': total_ms, 'checks_gate': gate, 'checks_admpool': admpool,
+            'total_ms': total_ms,
+            # §4 reporting policy — the three UNLUMPED slots:
+            #  runtime (above, the cost metric) · #queries (ConMin 0, QuAcq N) ·
+            #  #checks reported BOTH ways, labelled (structural, NOT cost):
+            'n_queries': n_queries,
+            'checks_batch': checks_batch,          # paper_consistency_checks (+1/call)
+            'checks_atomic': checks_atomic,        # is_consistent_calls (atomic solves)
+            'checks_total': checks_total,          # §9c classified sum
+            'checks_gate': gate, 'checks_admpool': admpool,
             'checks_cover_rej': cover_rej, 'checks_cover_qx': cover_qx,
-            'checks_redundancy': redundancy, 'checks_total': checks_total,
-            'memory_mb': memory_mb, 'n_queries': n_queries}
+            'checks_redundancy': redundancy,
+            # GAP B — preprocessing (GenerateNE QuickXplain, outside acquire; reduced
+            # pays it, raw skips it). Reported SEPARATELY from the acquisition totals.
+            'preprocessing_checks': prep_qx_checks, 'preprocessing_ms': prep_ms,
+            'memory_mb': memory_mb}
 
 
 # Aggregation column set: numeric metric columns that get CV mean±std.
@@ -249,8 +279,9 @@ _AGG_COLS = (
     'tp', 'tn', 'fp', 'fn', 'n_test_neg',
     'n_mss', 'n_cover', 'n_support', 'n_kb', 'n_uncoverable', 'n_components',
     'largest_component', 'n_greedy_fallback', 'stage1_ms', 'cover_ms', 'reduce_ms',
-    'total_ms', 'checks_gate', 'checks_admpool', 'checks_cover_rej', 'checks_cover_qx',
-    'checks_redundancy', 'checks_total', 'memory_mb',
+    'total_ms', 'preprocessing_ms', 'preprocessing_checks', 'n_queries',
+    'checks_batch', 'checks_atomic', 'checks_total', 'checks_gate', 'checks_admpool',
+    'checks_cover_rej', 'checks_cover_qx', 'checks_redundancy', 'memory_mb',
 )
 
 

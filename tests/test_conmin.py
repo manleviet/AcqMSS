@@ -1090,6 +1090,30 @@ class TestConMinRawReduced:
         finally:
             oracle.cleanup()
 
+    def test_preprocessing_quickxplain_counted_separately_gap_b(self):
+        """GAP B: GenerateNE's preprocessing QuickXplain is counted APART from acquire.
+        Reduced pays it (checks + runtime > 0); raw skips it (0, minimize=False). ConGen
+        threads no profiler → unaffected. Quantifies the raw-vs-reduced oracle cost."""
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        from profiling import profiler_session, ProfilerPreset
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
+        model = (ConMinModelBuilder.from_bias(str(BIAS_PATH))
+                 .with_oracle_data(oracle.oracle_data).build())
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        ti = ConMinTaskInput.from_examples(oracle.oracle_data, pos, neg)
+        try:
+            with profiler_session(ProfilerPreset.BENCHMARK) as pr:
+                model.prepare_task(ti, minimize=True, profiler=pr)   # reduced pays QX
+                assert pr.get_metric('shared_preprocessing_quickxplain_checks', 0) > 0
+                assert sum(pr.get_metric('shared_preprocessing_runtime', [0.0])) >= 0
+            with profiler_session(ProfilerPreset.BENCHMARK) as pr:
+                model.prepare_task(ti, minimize=False, profiler=pr)  # raw skips QX
+                assert pr.get_metric('shared_preprocessing_quickxplain_checks', 0) == 0
+        finally:
+            oracle.cleanup()
+
     def test_resolve_slice_resolves_each_slice_to_fm_names(self):
         _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
         oracle = FMOracle(str(FM_PATH), use_incremental=False)

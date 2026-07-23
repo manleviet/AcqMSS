@@ -42,14 +42,16 @@ class ConMinModel(KBModel):
     """
 
     def prepare_task(self, task_input: ConMinTaskInput,
-                     minimize: bool = True) -> PreparedTask:
+                     minimize: bool = True, profiler=None) -> PreparedTask:
         """Assign assumption IDs and build a fresh ConMinTask (pure, repeatable).
 
         ``minimize`` selects the negative encoding (P4d raw/reduced sweep): True
         (default) = REDUCED (each ¬e⁻ = subset-minimal conflict via QuickXplain);
         False = RAW (negate the full assignment, no oracle QuickXplain). Assumption
-        IDs are identical either way, so the Stage-1 golden is preserved."""
-        return ConMinTaskPreparation(minimize=minimize).prepare(self, task_input)
+        IDs are identical either way, so the Stage-1 golden is preserved. ``profiler``
+        (optional) counts GenerateNE's preprocessing QuickXplain separately (GAP B)."""
+        return ConMinTaskPreparation(
+            minimize=minimize, profiler=profiler).prepare(self, task_input)
 
     def resolve_result(
             self,
