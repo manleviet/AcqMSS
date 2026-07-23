@@ -144,11 +144,11 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
                 admp = _counter(prof, 'shared_admpool_checks')
                 crej = _counter(prof, 'conmin_cover_rejection_checks')
                 cqx = _counter(prof, 'conmin_cover_quickxplain_checks')
-                # sat_checks = batch consistency-check count = paper_consistency_checks
-                # (gate + AdmPoolMSS). Cover/Reduce use their own classified counters and
-                # do NOT touch paper_consistency_checks, so this is k-invariant and shared
-                # by all three ConMin slices (the ConGen-comparable Stage-1 batch number).
-                sat_checks = _counter(prof, 'paper_consistency_checks')
+                # stage1_batch = paper_consistency_checks (gate + AdmPoolMSS). Cover/Reduce
+                # use their own classified counters and do NOT touch it, so it is
+                # k-invariant and shared by all three ConMin slices (the ConGen
+                # tab:AcqMssruntime-comparable Stage-1 batch number).
+                stage1_batch = _counter(prof, 'paper_consistency_checks')
                 n_bias = state.n_bias
 
                 # C∪S per k FIRST — clean Reduce deltas (prev_* baselines start at 0
@@ -175,7 +175,7 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
                                len(rk.uncoverable), rk.n_components,
                                rk.largest_component, rk.n_greedy_fallback),
                         _cost(stage1_ms, cover_ms, reduce_ms, gate, admp, crej, cqx,
-                              redund, mem, oracle_queries=0, sat_checks=sat_checks,
+                              redund, mem, oracle_queries=0, stage1_batch_checks=stage1_batch,
                               prep_qx_checks=prep_qx, prep_ms=prep_ms)))
 
                 # A = maximally specific (mss). NE-inert (pool unchanged by raw/reduced)
@@ -189,7 +189,7 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
                         # A is NE-inert → 0 preprocessing (it never consumes the reduced
                         # negatives the prep QuickXplain produces). Stage-1 only.
                         _cost(stage1_ms, 0.0, 0.0, gate, admp, 0, 0, 0, mem,
-                              oracle_queries=0, sat_checks=sat_checks,
+                              oracle_queries=0, stage1_batch_checks=stage1_batch,
                               prep_qx_checks=0, prep_ms=0.0)))
 
                 # C = minimum cover (per neg mode). Cost = Stage-1 + cover; fallback =
@@ -202,7 +202,7 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
                            len(state.cover.uncoverable), state.cover.n_components,
                            state.cover.largest_component, state.cover.n_greedy_fallback),
                     _cost(stage1_ms, cover_ms, 0.0, gate, admp, crej, cqx, 0, mem,
-                          oracle_queries=0, sat_checks=sat_checks,
+                          oracle_queries=0, stage1_batch_checks=stage1_batch,
                           prep_qx_checks=prep_qx, prep_ms=prep_ms)))
                 rows.extend(cs_rows)
             finally:
@@ -233,14 +233,14 @@ def _eval_quacq_fold(bias_path, fm_path, comparator, ground_truth, variables,
 
     runtime_ms = res.metrics.values.get('runtime_ms', res.runtime_ms) if res.metrics else res.runtime_ms
     # QuAcq's cost is oracle_queries (its paper_consistency_checks counts oracle
-    # membership queries, NOT SAT consistency checks) → sat_checks stays blank so it is
-    # never compared against ConMin's SAT-check column.
+    # membership queries, NOT SAT consistency checks) → stage1_batch_checks stays blank
+    # so it is never compared against ConMin's Stage-1 batch column.
     return [_score_row(
         meta, 'n/a', 'QuAcq', None, res.kb_constraints, res.kb_clauses, (),
         comparator, ground_truth, variables, te_pos, te_neg, root_clauses, res.n_bias,
         _sizes(0, 0, 0, res.n_kb, 0, 0, 0, 0),
         _cost(runtime_ms, 0.0, 0.0, 0, 0, 0, 0, 0, res.memory_peak_mb,
-              oracle_queries=getattr(res, 'n_queries', 0) or 0, sat_checks=None))]
+              oracle_queries=getattr(res, 'n_queries', 0) or 0, stage1_batch_checks=None))]
 
 
 def _sizes(n_mss, n_cover, n_support, n_kb, n_uncoverable, n_components,
@@ -251,7 +251,7 @@ def _sizes(n_mss, n_cover, n_support, n_kb, n_uncoverable, n_components,
 
 
 def _cost(stage1_ms, cover_ms, reduce_ms, gate, admpool, cover_rej, cover_qx,
-          redundancy, memory_mb, oracle_queries=0, sat_checks=None,
+          redundancy, memory_mb, oracle_queries=0, stage1_batch_checks=None,
           prep_qx_checks=0, prep_ms=0.0) -> dict:
     total_ms = stage1_ms + cover_ms + reduce_ms
     # §9c R1-Q4-complete acquisition total (Stage-1 + cover + Reduce), classified sum.
@@ -261,14 +261,15 @@ def _cost(stage1_ms, cover_ms, reduce_ms, gate, admpool, cover_rej, cover_qx,
             # §4 UNLUMPED, explicit-name columns (no ambiguous "#checks", no atomic —
             # the papers define "checking all E⁺ = ONE consistency check", ConMin l.535
             # = ConGen SoSyM l.549, and the 2γ·log₂(n/γ)+2γ bound is batch):
-            'oracle_queries': oracle_queries,     # ConMin 0 · QuAcq N (the scarce cost)
-            'sat_checks': sat_checks,             # Stage-1 AdmPoolMSS BATCH SAT checks
-                                                  # (paper_consistency_checks; ConGen-
-                                                  # comparable, k-invariant). NOT the
-                                                  # per-condition SAT total — cover +
-                                                  # Reduce SAT checks live in checks_total.
-                                                  # Never an oracle query.
-            'checks_total': checks_total,         # §9c classified sum (R1-Q4 complete)
+            'oracle_queries': oracle_queries,        # ConMin 0 · QuAcq N (the scarce cost)
+            'stage1_batch_checks': stage1_batch_checks,  # Stage-1 AdmPoolMSS BATCH SAT
+                                                  # checks (paper_consistency_checks;
+                                                  # ConGen tab:AcqMssruntime-comparable,
+                                                  # k-invariant). NOT the per-condition
+                                                  # total — cover + Reduce SAT checks are
+                                                  # in checks_total. Never an oracle query.
+            'checks_total': checks_total,         # §9c classified sum, R1-Q4 (Stage-1 +
+                                                  # cover + Reduce) — the TOTAL-table column
             'checks_gate': gate, 'checks_admpool': admpool,
             'checks_cover_rej': cover_rej, 'checks_cover_qx': cover_qx,
             'checks_redundancy': redundancy,
@@ -286,7 +287,7 @@ _AGG_COLS = (
     'n_mss', 'n_cover', 'n_support', 'n_kb', 'n_uncoverable', 'n_components',
     'largest_component', 'n_greedy_fallback', 'stage1_ms', 'cover_ms', 'reduce_ms',
     'total_ms', 'preprocessing_ms', 'preprocessing_checks', 'oracle_queries',
-    'sat_checks', 'checks_total', 'checks_gate', 'checks_admpool',
+    'stage1_batch_checks', 'checks_total', 'checks_gate', 'checks_admpool',
     'checks_cover_rej', 'checks_cover_qx', 'checks_redundancy', 'memory_mb',
 )
 
