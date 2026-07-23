@@ -94,7 +94,8 @@ class AcqMinCover:
 
         # Register the §9c cover counters at 0 so they always appear in the snapshot
         # (the QuickXplain path only runs for compound cover elements — else it would
-        # be a missing key the eval's per-phase cost has to special-case).
+        # be a missing key the eval's per-phase cost has to special-case). The `, 0`
+        # increment adds nothing to the value; it only creates the key.
         self.profiler.increment("conmin_cover_rejection_checks", 0)
         self.profiler.increment("conmin_cover_quickxplain_checks", 0)
 
@@ -114,9 +115,16 @@ class AcqMinCover:
                     cover.setdefault(frozenset([c]), set()).add(ne.neg_id)
             else:
                 # No single constraint rejects e⁻ (partial negatives only, v2 §5).
-                self.profiler.increment("conmin_cover_quickxplain_checks")
+                # Count the ACTUAL is_consistent solves QuickXplain makes internally
+                # (the is_consistent_calls delta), not +1 per invocation — one QX runs
+                # many atomic solves (red-team GAP A). Keeps this phase's checks in the
+                # §9c total at the same atomic granularity as the rejection check above.
+                _qx_before = self.profiler.get_metric("is_consistent_calls", 0)
                 conflict = QuickXPlain(self.checker, self.profiler).find_conflict(
                     admissible, bg + aids)
+                self.profiler.increment(
+                    "conmin_cover_quickxplain_checks",
+                    self.profiler.get_metric("is_consistent_calls", 0) - _qx_before)
                 if conflict:
                     cover.setdefault(frozenset(conflict), set()).add(ne.neg_id)
                 else:

@@ -18,6 +18,17 @@ Callers that want Stage-1 only (the maximally-specific A) simply omit
 `neg_encodings`/`support_count`: the lines 5-8 tail then reduces to an empty KB while
 `ConMinResult.mss_ids` still carries A. Mode-agnostic: all data is assumption-based
 (List[int]); the checker implementation decides the solver lifecycle.
+
+Paper ↔ code name map (the AAAI paper is self-contained; some routines are shared with
+SoSyM/ConGen and keep their repo names — no renames):
+    AdmPoolMSS (paper Stage 1) = `AcqMSS.find_mss`  — same routine as SoSyM's AcqMss,
+        shared with ConGen (do NOT rename the shared class).
+    AcqMinCover (paper line 5)  = `AcqMinCover.cover` (invoked from `_compute_cover`).
+    support⁺ (paper line 6)     = `support_count` (precomputed) + the `>= k` filter in
+        `finish_kb` (structural, 0 solver calls).
+    Reduce / GenerateNE / Split = same-named repo routines (kept).
+    `acquire_pool_and_cover` / `finish_kb` are an IMPLEMENTATION split of lines 1-5 /
+        6-8 for k-sweep reuse — not paper routines.
 """
 
 import logging

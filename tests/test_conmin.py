@@ -1146,9 +1146,19 @@ class TestConMinCheckTaxonomy:
         # BATCH granularity (+1 per IsConsistent call, comparable to ConGen), NOT |E+|.
         assert prof['conmin_admpool_gate_checks'] == 1
 
-        # The reported total IS the exact sum of the classified counters (not a
-        # trivially-true bound), and it is the ONLY consistency total ConMin exports.
+        # §9c invariant 1: Stage-1 paper total = gate + AdmPoolMSS recursion. This is
+        # the ConGen-comparable number (paper_consistency_checks is +1/call there too).
+        assert prof['paper_consistency_checks'] == (
+            prof['conmin_admpool_gate_checks'] + prof['shared_admpool_checks'])
+
+        # §9c invariant 2 (R1-Q4 complete): the reported total = Stage-1 + cover +
+        # Reduce — the EXACT sum of the classified counters (not a trivial bound), and
+        # the ONLY consistency total ConMin exports.
         total = sum(prof[c] for c in classified)
+        assert total == (prof['paper_consistency_checks']
+                         + prof['conmin_cover_rejection_checks']
+                         + prof['conmin_cover_quickxplain_checks']
+                         + prof['redundancy_consistency_checks'])
         assert res.metrics.values['consistency_checks_total'] == total
         assert res.consistency_checks == total
         # No double-count: classified keys are disjoint from the auto primitives.
