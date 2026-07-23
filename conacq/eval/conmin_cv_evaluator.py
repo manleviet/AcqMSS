@@ -262,8 +262,12 @@ def _cost(stage1_ms, cover_ms, reduce_ms, gate, admpool, cover_rej, cover_qx,
             # the papers define "checking all E⁺ = ONE consistency check", ConMin l.535
             # = ConGen SoSyM l.549, and the 2γ·log₂(n/γ)+2γ bound is batch):
             'oracle_queries': oracle_queries,     # ConMin 0 · QuAcq N (the scarce cost)
-            'sat_checks': sat_checks,             # batch SAT consistency checks (ConGen-
-                                                  # comparable); NEVER an oracle query
+            'sat_checks': sat_checks,             # Stage-1 AdmPoolMSS BATCH SAT checks
+                                                  # (paper_consistency_checks; ConGen-
+                                                  # comparable, k-invariant). NOT the
+                                                  # per-condition SAT total — cover +
+                                                  # Reduce SAT checks live in checks_total.
+                                                  # Never an oracle query.
             'checks_total': checks_total,         # §9c classified sum (R1-Q4 complete)
             'checks_gate': gate, 'checks_admpool': admpool,
             'checks_cover_rej': cover_rej, 'checks_cover_qx': cover_qx,
