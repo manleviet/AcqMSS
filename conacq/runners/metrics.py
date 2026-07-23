@@ -146,12 +146,20 @@ CONMIN_METRICS: Tuple[MetricSpec, ...] = (
     MetricSpec('conmin_runtime_ms', 'conmin_runtime', Kind.TIMER_SEC, 'conmin_runtime', '_ms'),
     MetricSpec('acqmss_runtime_ms', 'acqmss_runtime', Kind.TIMER_SEC, 'acqmss_runtime', '_ms'),
     MetricSpec('acqmss_calls', 'acqmss_calls', Kind.COUNTER, 'acqmss_calls'),
-    MetricSpec('acqmincover_runtime_ms', 'acqmincover_runtime', Kind.TIMER_SEC, 'acqmincover_runtime', '_ms'),
+    MetricSpec('conmin_acqmincover_runtime_ms', 'conmin_acqmincover_runtime', Kind.TIMER_SEC, 'conmin_acqmincover_runtime', '_ms'),
     _CORE[2],  # reduce_runtime
     _CORE[3],  # solver_time
     _CORE[4],  # is_consistent_calls
     _CORE[5],  # is_consistent_test_cases_calls
     _CORE[6],  # redundancy_consistency_checks
+    # §9c per-phase consistency-check taxonomy (classified counters; the reported
+    # paper total per SoSyM R1-Q4 is their sum). conmin_ = ConMin-only call-sites;
+    # shared_ = AcqMSS Stage-1 (ConGen also emits it — ADR-0018). Reduce's checks
+    # are redundancy_consistency_checks above.
+    MetricSpec('conmin_admpool_gate_checks', 'conmin_admpool_gate_checks', Kind.COUNTER, 'conmin_admpool_gate_checks'),
+    MetricSpec('shared_admpool_checks', 'shared_admpool_checks', Kind.COUNTER, 'shared_admpool_checks'),
+    MetricSpec('conmin_cover_rejection_checks', 'conmin_cover_rejection_checks', Kind.COUNTER, 'conmin_cover_rejection_checks'),
+    MetricSpec('conmin_cover_quickxplain_checks', 'conmin_cover_quickxplain_checks', Kind.COUNTER, 'conmin_cover_quickxplain_checks'),
     # AcqMinCover diagnostics from ConMinResult (via ``extra``) — coarse counts,
     # mean only. NOT the §9c per-phase check taxonomy (that is P4e).
     MetricSpec('n_components', 'n_components', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),

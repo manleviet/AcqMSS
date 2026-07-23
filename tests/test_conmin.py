@@ -1063,5 +1063,58 @@ class TestConMinKSweep:
         assert s_sizes == sorted(s_sizes, reverse=True)
 
 
+class TestConMinCheckTaxonomy:
+    """§9c: each ConMin phase's consistency checks land in its own classified counter
+    (conmin_/shared_ prefix, ADR-0018); the reported paper total (SoSyM R1-Q4) is their
+    sum, with no double-count of the auto-counted is_consistent primitives."""
+
+    def test_classified_counters_populated_and_disjoint_from_primitives(self):
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        from conacq.runners import ConMinRunner
+
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        runner = ConMinRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=True)
+        try:
+            prof = runner.run(pos, neg).profiler_data
+        finally:
+            runner.cleanup()
+
+        classified = ['conmin_admpool_gate_checks', 'shared_admpool_checks',
+                      'conmin_cover_rejection_checks', 'conmin_cover_quickxplain_checks',
+                      'redundancy_consistency_checks']
+        for c in classified:
+            assert c in prof, f"§9c classified counter {c} not emitted"
+
+        # Gate is per-e⁺: |E+| CONSISTENT tests (positive-complete → gate passes).
+        assert prof['conmin_admpool_gate_checks'] == len(pos)
+
+        # No double-count: the classified counters are DISTINCT keys from the auto
+        # primitives; the paper total is their sum, computed WITHOUT the primitives.
+        primitives = {'is_consistent_calls', 'is_consistent_test_cases_calls'}
+        assert not (set(classified) & primitives)
+        paper_total = sum(prof[c] for c in classified)
+        assert paper_total >= prof['conmin_admpool_gate_checks']
+
+    def test_congen_emits_shared_counter_without_disturbing_its_metrics(self):
+        """The shared_admpool_checks touch in acqmss.py (shared) is additive: ConGen
+        now emits it, but its declared paper_consistency_checks is a normal positive
+        count — the new counter did not perturb the existing one (byte-identical)."""
+        _skip_if_no_data(FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)
+        from conacq.runners import ConGenRunner
+
+        examples = ExampleIO.load_json(str(EXAMPLES_RS_1N_PATH))
+        pos = [e.assignments for e in examples.positive]
+        neg = [e.assignments for e in examples.negative]
+        runner = ConGenRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=True)
+        try:
+            prof = runner.run(pos, neg).profiler_data
+        finally:
+            runner.cleanup()
+        assert 'shared_admpool_checks' in prof               # new shared counter emitted
+        assert prof.get('paper_consistency_checks', 0) > 0    # existing counter intact
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

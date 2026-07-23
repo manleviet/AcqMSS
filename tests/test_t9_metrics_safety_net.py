@@ -190,7 +190,11 @@ def test_congen_metric_map_is_complete():
     _EXTRA = {"memory_peak_mb", "n_mss", "n_kb"}  # come from `extra`, not the profiler
     profiler_sources = {m.source for m in CONGEN_METRICS} - _EXTRA
 
-    undeclared = emitted - profiler_sources - CONGEN_IGNORED
+    # shared_* counters (e.g. shared_admpool_checks, ADR-0018) are cross-algorithm:
+    # AcqMSS emits them for ConGen too. They are always-allowed in any algorithm's
+    # completeness check — a shared counter is never an "undeclared ConGen metric".
+    undeclared = {k for k in (emitted - profiler_sources - CONGEN_IGNORED)
+                  if not k.startswith('shared_')}
     assert not undeclared, f"ConGen emits profiler keys neither mapped nor ignored: {sorted(undeclared)}"
 
     phantom = profiler_sources - emitted

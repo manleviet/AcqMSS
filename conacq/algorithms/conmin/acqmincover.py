@@ -92,6 +92,12 @@ class AcqMinCover:
         admissible = list(admissible)
         bg = list(bg)
 
+        # Register the §9c cover counters at 0 so they always appear in the snapshot
+        # (the QuickXplain path only runs for compound cover elements — else it would
+        # be a missing key the eval's per-phase cost has to special-case).
+        self.profiler.increment("conmin_cover_rejection_checks", 0)
+        self.profiler.increment("conmin_cover_quickxplain_checks", 0)
+
         cover: Dict[FrozenSet[int], Set[int]] = {}
         uncoverable: List[int] = []
 
@@ -100,7 +106,7 @@ class AcqMinCover:
             aids = list(ne.assumption_ids)
             cand: List[int] = []
             for c in admissible:
-                self.profiler.increment("cover_rejection_checks")
+                self.profiler.increment("conmin_cover_rejection_checks")
                 if not self.checker.is_consistent([c] + bg + aids):
                     cand.append(c)
             if cand:
@@ -108,7 +114,7 @@ class AcqMinCover:
                     cover.setdefault(frozenset([c]), set()).add(ne.neg_id)
             else:
                 # No single constraint rejects e⁻ (partial negatives only, v2 §5).
-                self.profiler.increment("cover_quickxplain_checks")
+                self.profiler.increment("conmin_cover_quickxplain_checks")
                 conflict = QuickXPlain(self.checker, self.profiler).find_conflict(
                     admissible, bg + aids)
                 if conflict:

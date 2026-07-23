@@ -169,6 +169,10 @@ class ConMin:
             stop_at_first_violation=True
         )
         self.profiler.increment("paper_consistency_checks")
+        # §9c classified counter for the ConMin Stage-0 gate (line 2), at per-e⁺
+        # granularity (one CONSISTENT test per e⁺, not per batch call). ConMin-only
+        # (conmin_ prefix, ADR-0018); additive alongside the paper total.
+        self.profiler.increment("conmin_admpool_gate_checks", len(set_tc))
 
         if len(inconsistent) > 0:
             logging.debug('<<< ConMin return Phi (E+ inconsistent with NE union BG)')
@@ -192,7 +196,7 @@ class ConMin:
             mss, neg_encodings, set_bg,
             n_bias=len(set_b), n_neg_tv=len(set_neg_tv), n_e_pos=len(set_tc))
 
-    @measure_time('acqmincover_runtime')
+    @measure_time('conmin_acqmincover_runtime')
     def _compute_cover(
             self,
             mss: Sequence[int],
@@ -203,7 +207,7 @@ class ConMin:
             n_e_pos: int,
     ) -> _CoverState:
         """Paper Algorithm 1 line 5: <C, U> <- AcqMinCover(A, E-, BG); flatten compounds
-        to constraint IDs. Timed as its own phase (``acqmincover_runtime``) so the eval
+        to constraint IDs. Timed as its own phase (``conmin_acqmincover_runtime``) so the eval
         attributes cover cost separately from Stage-1 / Reduce (§9b)."""
         cover = AcqMinCover(self.checker, profiler_instance=self.profiler).cover(
             mss, neg_encodings, set_bg)
