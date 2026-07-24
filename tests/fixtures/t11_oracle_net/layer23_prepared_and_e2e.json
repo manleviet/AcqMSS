@@ -4183,6 +4183,30 @@
       "interface": false,
       "java": false
      },
+     true,
+     "findscope"
+    ],
+    [
+     {
+      "compiler": false,
+      "diagram_builder": false,
+      "gui_builder": false,
+      "interface": false,
+      "java": false,
+      "javac": false
+     },
+     true,
+     "findscope"
+    ],
+    [
+     {
+      "compiler": false,
+      "diagram_builder": false,
+      "gui_builder": false,
+      "interface": false,
+      "java": false,
+      "jplug": true
+     },
      false,
      "findscope"
     ],
@@ -4191,14 +4215,26 @@
       "compiler": false,
       "diagram_builder": false,
       "gui_builder": false,
-      "interface": false
+      "jplug": true
+     },
+     true,
+     "findscope"
+    ],
+    [
+     {
+      "compiler": false,
+      "diagram_builder": false,
+      "gui_builder": false,
+      "interface": false,
+      "jplug": true
      },
      false,
      "findscope"
     ],
     [
      {
-      "interface": false
+      "interface": false,
+      "jplug": true
      },
      false,
      "findscope"
@@ -4212,7 +4248,7 @@
       "java": false,
       "javac": false,
       "jplug": true,
-      "mdi": false,
+      "mdi": true,
       "model_code_synch": false,
       "mvc": false,
       "petri_net": false,
@@ -4253,24 +4289,7 @@
       "interface": false,
       "java": false
      },
-     false,
-     "findscope"
-    ],
-    [
-     {
-      "compiler": false,
-      "diagram_builder": false,
-      "gui_builder": false,
-      "interface": false
-     },
-     false,
-     "findscope"
-    ],
-    [
-     {
-      "interface": false
-     },
-     false,
+     true,
      "findscope"
     ],
     [
@@ -4280,18 +4299,10 @@
       "gui_builder": false,
       "interface": false,
       "java": false,
-      "javac": false,
-      "jplug": true,
-      "mdi": false,
-      "model_code_synch": false,
-      "mvc": false,
-      "petri_net": false,
-      "qt": false,
-      "sdi": false,
-      "uml": false
+      "javac": false
      },
-     false,
-     "main"
+     true,
+     "findscope"
     ],
     [
      {
@@ -4300,19 +4311,9 @@
       "gui_builder": false,
       "interface": false,
       "java": false,
-      "javac": false,
       "jplug": true
      },
      false,
-     "findscope"
-    ],
-    [
-     {
-      "compiler": false,
-      "diagram_builder": false,
-      "gui_builder": false
-     },
-     true,
      "findscope"
     ]
    ]

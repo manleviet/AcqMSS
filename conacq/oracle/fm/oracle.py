@@ -95,14 +95,41 @@ class FMOracle(MembershipOracle, CompletableOracle, CatalogProvider):
         if any(name not in name_to_id for name in assignments):
             raise KeyError(f"Unknown features in assignment: {set(assignments) - set(name_to_id)}")
 
-        # FM-constraint assumptions (the frozen task's set_c, always active) plus
-        # this query's feature-assignment assumptions. Both come from the immutable
-        # OracleData: a query reads a frozen value, never a live actor's shiftable
-        # state, so the background it hands the checker cannot drift.
-        set_c = list(self.oracle_data.task.set_c) + config_to_assignment_assumptions(
-            assignments, self.oracle_data.assignment_map)
+        # COMPLETE assignment (covers every catalog feature): keep the exact prior behaviour.
+        # For a full config, is_consistent(FM constraints + all-feature assumptions) ==
+        # "no FM constraint is violated" == extension-SAT — the three coincide, so this path is
+        # byte-identical for every complete-config caller (examples, generators, main query,
+        # FindC discriminating configs). FM-constraint assumptions come from the immutable
+        # OracleData's frozen set_c; the background handed to the checker cannot drift.
+        if len(assignments) == len(name_to_id):
+            set_c = list(self.oracle_data.task.set_c) + config_to_assignment_assumptions(
+                assignments, self.oracle_data.assignment_map)
+            return self._checker.is_consistent(set_c)
 
-        return self._checker.is_consistent(set_c)
+        # PARTIAL query (only FindScope, conacq/algorithms/quacq/findscope.py:64): the QuAcq
+        # paper (Bessiere et al., IJCAI 2013) answers a partial query e_Y as NEGATIVE iff it
+        # violates some target constraint whose scope ⊆ Y (all variables assigned). Constraints
+        # with any unassigned variable are untestable and ignored. This is NOT extension-SAT:
+        # extension-SAT over-rejects when the partial merely cannot be completed, which drove
+        # FindScope's scope under-localisation (audit RC-1).
+        return not self._partial_violates_fully_assigned_clause(assignments)
+
+    def _partial_violates_fully_assigned_clause(self, assignments: Dict[str, bool]) -> bool:
+        """Paper partial-query test: does the partial violate a target constraint whose
+        variables are ALL assigned? Iterates the FM's raw CNF (self._fm_clauses, over feature
+        ids — verified aux/Tseitin-free). A clause is *testable* iff every variable in it is
+        assigned; it is *violated* iff all its literals are false. Returns True on the first
+        violated testable clause (⇒ negative), False if none (⇒ positive)."""
+        id_to_name = self._oracle_model.id_to_name
+        for clause in self._fm_clauses:
+            names = [id_to_name[abs(lit)] for lit in clause]
+            if any(n not in assignments for n in names):
+                continue  # not fully assigned ⇒ untestable ⇒ ignore
+            # satisfied iff any literal is true: +id true when feature selected, -id when not
+            if not any(assignments[n] if lit > 0 else not assignments[n]
+                       for lit, n in zip(clause, names)):
+                return True
+        return False
 
     # --- Catalog role (CatalogProvider) ---
 
