@@ -12,6 +12,16 @@ example_sets = ["2cov", "ff", "rs_1n", "rs_2n", "rs_3n", "rs_m"]
 k_values = [1, 2, 3, 5]
 negatives = ["reduced", "raw"]
 
+# QuAcq-active (oracle-mode) condition — 5th column beside A/C/C∪S/QuAcq. Learned ONCE per KB
+# (fold/example-independent). max_queries is the DETERMINISTIC rail; timeout_s a wall-clock
+# SAFETY NET only (a timeout truncates non-reproducibly → reported non-converged). Size big KBs
+# via the per-KB map so max_queries fires before the timeout (busybox |B|=6635; the query
+# counter is shared with FindScope/FindC, so learned constraints ≪ budget).
+quacq_active = true
+quacq_active_max_queries = 5000
+quacq_active_timeout_s = 400
+quacq_active_max_queries_per_kb = { "busybox-1.18.0" = 20000 }
+
 # The 5 eval KBs (brief §9e). example-set + folds paths are derived from `name`.
 # ea2468 / linux excluded (scalability discussion only — brief §9e).
 [[models]]

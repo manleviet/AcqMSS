@@ -8,6 +8,20 @@ subset still keeps its earlier sets in the merge. Config:
 `apps/conf_conmin/run_conmin_eval_config.toml`. Folds pre-recorded (`data/folds/`); seed
 fixed; nothing regenerated.
 
+**5 conditions now** — A / C / C∪S / **QuAcq** (passive, example-only) / **QuAcq-active**
+(oracle-mode, self-generated queries vs the FM oracle). QuAcq-active is learned **once per KB**
+(fold/example-independent) with a query budget (`quacq_active_max_queries`, deterministic rail)
+and a wall-clock `quacq_active_timeout_s` safety net. New row columns: `convergence_reason`
+(empty_bias/no_query/max_queries/timeout — blank for A/C/C∪S) and provenance `qa_max_queries`
+/`qa_timeout_s`. A QuAcq-active fold whose reason is `timeout`/`max_queries` is **non-converged**
+(partial theory) — `aggregate_cv` counts it (`n_timeout`/`n_maxq`/`n_nonconverged`) and excludes
+it from the mean; report it "did not converge", never as a clean number. Disable with
+`--no-quacq-active`; size a big KB with the config per-KB map or `--quacq-active-max-queries N`
+(e.g. busybox needs a budget ≫ |B|=6635 to reach `empty_bias` rather than `max_queries`).
+`--merge` tolerates the additive columns (won't false-warn against pre-column committed JSONs)
+but warns on QuAcq-active **provenance conflicts** (a KB merged across passes with different
+budget/timeout).
+
 > ⚠ Stale artifacts: `data/results_conmin/` currently holds pre-fix-schema
 > `conmin_eval_*.csv` + `REAL-FM-7_*_eval.json` (older columns). **Re-run REAL-FM-7 fully**
 > (fast) to overwrite its stale JSONs, then `--merge`. `--merge` warns if it sees mixed
@@ -42,8 +56,11 @@ example-sets × |B|; ConMin's own A/C/C∪S k-sweep is comparatively cheap):
 | busybox-1.18.0 | 854 | 6,635 | **many hours** — run last, alone |
 
 Subset a heavy KB for a first pass if needed, e.g. `--example-sets rs_1n rs_3n 2cov ff`,
-then a deferred pass `--example-sets rs_2n rs_m` — **safe**: each example-set keeps its own
-JSON, so `--merge` picks up both passes (flag the deferral in the run report anyway).
+then a deferred pass `--example-sets rs_2n rs_m` — each example-set keeps its own JSON, so
+`--merge` picks up both passes (flag the deferral in the run report anyway). **Safe only if the
+QuAcq-active budget is consistent across the passes** for that KB (same `quacq_active_max_queries`
+/`quacq_active_timeout_s`) — else `--merge` warns on a provenance conflict (the two passes learned
+different theories under one `QuAcq-active` label). Keep the per-KB budget fixed for a KB.
 
 ## Consolidate (after all KBs finish)
 

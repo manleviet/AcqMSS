@@ -5,6 +5,8 @@ Uses REAL-FM-7 feature model with generated bias.
 Tests core components: QueryProvider, QuAcq, QuAcqTask, QuAcqModel.
 """
 
+import time
+
 import pytest
 from pathlib import Path
 
@@ -301,6 +303,74 @@ class TestIntegration:
 
         finally:
             profiler.stop()
+
+
+class TestQuAcqTimeout:
+    """Phase-1 wall-clock timeout rail (deadline) for oracle-mode learning."""
+
+    def _oracle_learn(self, *, deadline=None, max_queries=1000):
+        """Build the REAL-FM-7 oracle-mode learn stack and run it once."""
+        profiler = use_global_profiler(ProfilerPreset.BENCHMARK)
+        profiler.start()
+        try:
+            oracle = FMOracle(str(FM_PATH))
+            model = (QuAcqModelBuilder.from_bias(str(BIAS_PATH))
+                     .with_oracle_data(oracle.oracle_data).build())
+            prepared = model.prepare_task(QuAcqTaskInput(oracle.oracle_data))
+            task = prepared.task
+            checker = build_checker(task, SolverBackend.from_flags(use_incremental=True))
+            qp = QueryProvider(checker=checker, model=model,
+                               assignment_map=prepared.assignment_map)
+            dg = DiscriminatingGenerator(checker=checker, model=model,
+                                         profiler=get_global_profiler(),
+                                         root_assumption=task.set_b[0], task=task)
+            quacq = QuAcq.for_oracle(checker, oracle, qp, dg, model=model,
+                                     task=task, assignment_map=prepared.assignment_map)
+            return quacq.learn(**_learn_params_from_task(task), mode='oracle',
+                               max_queries=max_queries, deadline=deadline)
+        finally:
+            profiler.stop()
+
+    def test_past_deadline_halts_with_timeout(self):
+        """A deadline already in the past halts before any query → 'timeout' + valid KB list."""
+        if not FM_PATH.exists() or not BIAS_PATH.exists():
+            pytest.skip("Test data files not found")
+        result = self._oracle_learn(deadline=time.monotonic() - 1.0)
+        assert result.convergence_reason == 'timeout'
+        assert result.n_queries == 0
+        assert isinstance(result.kb_assumption_ids, list)  # valid result, no exception
+
+    def test_timeout_mid_learn_preserves_partial_kb(self, monkeypatch):
+        """Timeout firing AFTER learning has started → 'timeout' with n_queries>0 (partial KB
+        preserved). Deterministic via a monkeypatched clock that crosses the deadline on the
+        3rd outer-loop check, so iterations 1–2 issue real queries first."""
+        if not FM_PATH.exists() or not BIAS_PATH.exists():
+            pytest.skip("Test data files not found")
+        import conacq.algorithms.quacq.quacq as q
+        calls = {'n': 0}
+
+        def fake_monotonic():
+            calls['n'] += 1
+            return 0.0 if calls['n'] <= 2 else 1000.0  # trip on the 3rd top-of-loop check
+
+        monkeypatch.setattr(q.time, 'monotonic', fake_monotonic)
+        result = self._oracle_learn(deadline=100.0, max_queries=5000)
+        assert result.convergence_reason == 'timeout'
+        assert result.n_queries > 0  # queries were issued before the deadline tripped
+
+    def test_none_deadline_is_noop(self):
+        """deadline=None (default) never yields 'timeout' — existing behaviour unchanged."""
+        if not FM_PATH.exists() or not BIAS_PATH.exists():
+            pytest.skip("Test data files not found")
+        result = self._oracle_learn(deadline=None, max_queries=30)
+        assert result.convergence_reason in ('empty_bias', 'max_queries', 'no_query')
+
+    def test_generous_deadline_does_not_fire(self):
+        """A far-future deadline + small max_queries stops on the query rail, not the timeout."""
+        if not FM_PATH.exists() or not BIAS_PATH.exists():
+            pytest.skip("Test data files not found")
+        result = self._oracle_learn(deadline=time.monotonic() + 3600, max_queries=30)
+        assert result.convergence_reason in ('empty_bias', 'max_queries', 'no_query')
 
 
 # =========================================================================

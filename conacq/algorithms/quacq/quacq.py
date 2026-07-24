@@ -11,6 +11,7 @@ Also contains QuAcqResult (co-located: algorithm produces its own result type).
 """
 
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import List, Dict, Mapping, Optional, Sequence, Tuple, Literal
 
@@ -117,6 +118,7 @@ class QuAcq:
               negation_map: Mapping[int, int],
               mode: Literal['oracle', 'example_only', 'example_first'] = 'oracle',
               max_queries: int = 1000,
+              deadline: Optional[float] = None,
               ) -> QuAcqResult:
         """
         Run QuAcq learning with specified mode.
@@ -126,7 +128,12 @@ class QuAcq:
             set_b: BG assumption IDs
             negation_map: {assumption_id -> negated_assumption_id}
             mode: 'oracle', 'example_only', or 'example_first'
-            max_queries: Maximum queries before stopping
+            max_queries: Maximum queries before stopping (primary, deterministic rail)
+            deadline: Optional ``time.monotonic()`` timestamp; when reached, oracle learning
+                stops and returns the partial KB with convergence_reason='timeout'. A
+                machine-load-dependent safety net, checked between outer iterations only, so
+                an in-flight FindScope/FindC may overrun it — max_queries is the reproducible
+                bound. ``None`` (default) disables it (existing callers unchanged).
 
         Returns:
             QuAcqResult with learned KB
@@ -160,6 +167,14 @@ class QuAcq:
             if n_queries >= max_queries:
                 convergence_reason = 'max_queries'
                 logging.info('Reached max queries limit: %d', max_queries)
+                break
+
+            # Wall-clock safety net (oracle mode). Checked between outer iterations only:
+            # an in-flight FindScope/FindC finishes first, so this is a soft ceiling. The
+            # deterministic bound is max_queries above; deadline is None for existing callers.
+            if deadline is not None and time.monotonic() >= deadline:
+                convergence_reason = 'timeout'
+                logging.info('QuAcq wall-clock timeout hit (deadline reached)')
                 break
 
             # Step 1: Get next query (mode-dependent)

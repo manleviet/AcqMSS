@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from conacq.eval.conmin_cv_evaluator import (
-    evaluate_kb_example, aggregate_cv, K_VALUES, NEG_MODES)
+    evaluate_kb_example, aggregate_cv, _learn_quacq_active, K_VALUES, NEG_MODES)
 from conacq.config import load_pipeline_config, parse_models
 from conacq.atomic_io import write_json_atomic
 from apps._harness import build_parser, setup_logging
@@ -65,11 +65,45 @@ def _merge_per_kb(output_dir: Path) -> None:
     if not rows:
         logger.warning("--merge: %d JSON file(s) but 0 rows", len(files))
         return
-    schemas = {tuple(sorted(r.keys())) for r in rows}
-    if len(schemas) > 1:
-        logger.warning("--merge: rows have %d DIFFERENT column schemas — likely a mix of "
-                       "stale (pre-fix) and fresh JSONs. Re-run the affected KB(s) fully.",
-                       len(schemas))
+    # Failure-marker rows ({**meta, condition, k, flag}) are sparse BY DESIGN (B2/B3, plus
+    # QuAcq/QuAcq-active learn errors) — they carry no metric columns and an 'error'/'gate_tripped'
+    # flag. They must stay sparse: blank-filling their flag into healthy rows would make
+    # aggregate_cv's presence-test classify every fold as failed (voiding all means), and their
+    # missing metric columns are not a "stale schema". So partition, and only align SCORED rows.
+    def _is_fail(r):
+        return 'error' in r or 'gate_tripped' in r
+    scored = [r for r in rows if not _is_fail(r)]
+    fails = [r for r in rows if _is_fail(r)]
+
+    # H-5: union + blank-fill SCORED rows so a purely-ADDITIVE column delta (the new
+    # convergence_reason/qa_* columns absent from pre-fix committed JSONs) merges cleanly.
+    # Warn ONLY if a NON-additive column is missing from some scored row (a genuine stale mix).
+    ADDITIVE = {'convergence_reason', 'qa_max_queries', 'qa_timeout_s'}
+    skeys = list(dict.fromkeys(k for r in scored for k in r.keys()))
+    stale = sorted(k for k in skeys if k not in ADDITIVE
+                   and any(k not in r for r in scored) and any(k in r for r in scored))
+    if stale:
+        logger.warning("--merge: %d non-additive column(s) %s missing from some rows — likely a "
+                       "stale (pre-fix) schema mix. Re-run the affected KB(s) fully.",
+                       len(stale), stale)
+    # Blank-fill with None (not ''): aggregate_cv skips None for numeric _AGG_COLS; '' would slip
+    # past its `is not None` filter and blow up statistics.mean. Failure rows are appended
+    # UNCHANGED (sparse) so aggregate_cv still classifies them via the flag key presence.
+    rows = [{k: r.get(k, None) for k in skeys} for r in scored] + fails
+
+    # C-4: refuse to silently blend QuAcq-active rows that disagree on provenance (a KB re-run
+    # under a different budget/timeout mixes two theories under one label). Warn per conflict.
+    prov: dict = {}
+    for r in scored:
+        if r.get('condition') == 'QuAcq-active':
+            prov.setdefault((r.get('kb'), r.get('example_set')), set()).add(
+                (r.get('qa_max_queries'), r.get('qa_timeout_s')))
+    conflicts = sorted(k for k, sigs in prov.items() if len(sigs) > 1)
+    if conflicts:
+        logger.warning("--merge: QuAcq-active provenance conflict in %d (kb,es) %s — mixed "
+                       "max_queries/timeout_s across passes; re-run those KB(s) consistently.",
+                       len(conflicts), conflicts)
+
     _write_csv(rows, output_dir / 'conmin_eval_long.csv')
     _write_csv(aggregate_cv(rows), output_dir / 'conmin_eval_cv.csv')
     logger.info("--merge: consolidated %d rows from %d example-set JSON(s)",
@@ -91,6 +125,12 @@ def main():
     parser.add_argument('--k', nargs='*', type=int, help='k-sweep values (overrides config)')
     parser.add_argument('--negatives', nargs='*', choices=['reduced', 'raw'],
                         help='Negative encodings to sweep (default both)')
+    parser.add_argument('--no-quacq-active', action='store_true',
+                        help='Skip the QuAcq-active (oracle-mode) condition')
+    parser.add_argument('--quacq-active-timeout', type=float,
+                        help='Wall-clock cap (s) for the QuAcq-active learn (overrides config)')
+    parser.add_argument('--quacq-active-max-queries', type=int,
+                        help='Query budget for the QuAcq-active learn (overrides config/per-KB)')
     parser.add_argument('--non-incremental', action='store_true')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
@@ -115,6 +155,15 @@ def main():
     use_incremental = not args.non_incremental
     seed = general.get('seed', 82)
 
+    # QuAcq-active knobs: CLI > per-KB map (in the loop) > [evaluation] default > hardcoded.
+    run_quacq_active = (not args.no_quacq_active) and ev.get('quacq_active', True)
+    qa_timeout = (args.quacq_active_timeout if args.quacq_active_timeout is not None
+                  else ev.get('quacq_active_timeout_s', 400.0))
+    qa_maxq_default = (args.quacq_active_max_queries if args.quacq_active_max_queries is not None
+                       else ev.get('quacq_active_max_queries', 5000))
+    qa_maxq_per_kb = {} if args.quacq_active_max_queries is not None \
+        else ev.get('quacq_active_max_queries_per_kb', {})
+
     models = parse_models(config)
     if args.kb:
         models = [m for m in models if m.name in args.kb]
@@ -126,6 +175,8 @@ def main():
     logger.info("ConMin comparison-condition CV evaluation")
     logger.info("KBs=%d  example-sets=%s  k=%s  negatives=%s  seed=%d (folds pre-recorded)",
                 len(models), example_sets, k_values, negatives, seed)
+    logger.info("QuAcq-active=%s  max_queries=%s (per-KB=%s)  timeout_s=%s",
+                run_quacq_active, qa_maxq_default, qa_maxq_per_kb or '{}', qa_timeout)
     logger.info("Output: %s", output_dir)
     logger.info("=" * 60)
 
@@ -133,6 +184,28 @@ def main():
     for model in models:
         kb = model.name
         kb_rows: list = []               # per-KB: staging-safe, never clobbers other KBs
+
+        # QuAcq-active (H-6): learn ONCE per KB (oracle mode is fold/example-independent) and
+        # reuse across every example-set. Done here, before the es-loop, so the runner's own
+        # FMOracle is released before evaluate_kb_example opens its own (M-3, avoids a 2× live
+        # 854-var solver peak on busybox). max_queries is the deterministic rail; timeout a
+        # safety net (C-4) — size max_queries per KB so it fires first on big models (H-4).
+        active_res, quacq_active_error = None, None
+        qa_max_queries = qa_maxq_per_kb.get(kb, qa_maxq_default)
+        if run_quacq_active:
+            logger.info("QuAcq-active learn (once/KB): %s  max_queries=%s  timeout_s=%s",
+                        kb, qa_max_queries, qa_timeout)
+            try:
+                active_res = _learn_quacq_active(
+                    model.bias, model.oracle, 'glucose4', use_incremental,
+                    qa_max_queries, qa_timeout)
+                logger.info("  QuAcq-active %s -> KB=%d queries=%d reason=%s", kb,
+                            active_res.n_kb, active_res.n_queries,
+                            active_res.convergence_reason)
+            except Exception as exc:  # a per-KB learn failure must not void the KB's rows
+                logger.exception("QuAcq-active learn FAILED: %s", kb)
+                quacq_active_error = str(exc)
+
         for es in example_sets:
             examples_path = f'data/examples/{kb}_{es}.json'
             folds_path = f'data/folds/{kb}_{es}_folds.json'
@@ -142,10 +215,16 @@ def main():
             logger.info("--- %s / %s ---", kb, es)
             rows = evaluate_kb_example(
                 kb, es, model.oracle, model.bias, examples_path, folds_path,
-                k_values=k_values, negatives=negatives, use_incremental=use_incremental)
+                k_values=k_values, negatives=negatives, use_incremental=use_incremental,
+                active_res=active_res, quacq_active_error=quacq_active_error,
+                qa_max_queries=qa_max_queries, qa_timeout_s=qa_timeout)
             kb_rows.extend(rows)
             write_json_atomic(output_dir / f'{kb}_{es}_eval.json', {
                 'kb': kb, 'example_set': es, 'seed': seed,
+                # C-4 provenance: which QuAcq-active budget/timeout produced these rows, so a
+                # timed row is traceable and --merge can refuse to blend mismatched passes.
+                'quacq_active_max_queries': qa_max_queries if run_quacq_active else None,
+                'quacq_active_timeout_s': qa_timeout if run_quacq_active else None,
                 'note': 'folds are pre-recorded (data/folds/); the acquired named KB is '
                         'bias-order dependent — CV-averaged, seed fixed (threat-to-validity)',
                 'rows': rows, 'aggregated': aggregate_cv(rows)})

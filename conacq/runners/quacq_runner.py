@@ -10,6 +10,7 @@ Builds model once in __init__(), re-prepares per run() for fresh task.
 
 import logging
 import random
+import time
 import tracemalloc
 from dataclasses import dataclass, field, replace
 from typing import List, Dict, Optional, Tuple
@@ -82,7 +83,8 @@ class QuAcqRunner(BaseRunner):
             solver_name: str = 'glucose4',
             max_queries: int = 1000,
             query_mode: str = 'example_only',
-            use_incremental: bool = True
+            use_incremental: bool = True,
+            timeout_s: Optional[float] = None
     ):
         """
         Initialize runner with file paths. Builds model once (expensive negation here).
@@ -94,6 +96,10 @@ class QuAcqRunner(BaseRunner):
             max_queries: Maximum membership queries per run
             query_mode: Default query mode for example-based learning
             use_incremental: Use incremental solver mode for Oracle
+            timeout_s: Optional wall-clock cap (seconds) for oracle-mode learning. A soft
+                safety net (checked between outer iterations) that halts with
+                convergence_reason='timeout'; ``None`` (default) disables it. Example modes
+                ignore it. Prefer sizing max_queries so it fires first (deterministic).
         """
         super().__init__(bias_path, fm_path, solver_name, use_incremental=use_incremental)
 
@@ -105,6 +111,7 @@ class QuAcqRunner(BaseRunner):
                       .build())
         self.max_queries = max_queries
         self.query_mode = query_mode
+        self.timeout_s = timeout_s
 
     @property
     def feature_ids(self) -> Dict[str, int]:
@@ -262,9 +269,13 @@ class QuAcqRunner(BaseRunner):
                                  model=self.model, profiler=profiler,
                                  task=task, assignment_map=assignment_map)
 
+        # Wall-clock deadline computed at the call boundary so model-build/checker setup
+        # (already done in __init__/run) is not counted against it. None → disabled.
+        deadline = (time.monotonic() + self.timeout_s
+                    if self.timeout_s is not None else None)
         return quacq.learn(
             **task_data, mode='oracle',
-            max_queries=self.max_queries)
+            max_queries=self.max_queries, deadline=deadline)
 
     def _run_example_mode(self, checker, task, assignment_map, task_data, profiler,
                           positive_examples, negative_examples,
