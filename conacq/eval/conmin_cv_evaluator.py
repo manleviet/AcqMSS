@@ -46,18 +46,32 @@ def _counter(prof, key: str) -> int:
     return prof.get_metric(key, 0)
 
 
+CONMIN_CONDITIONS = frozenset({'A', 'C', 'C∪S'})
+
+
 def evaluate_kb_example(
         kb: str, example_set: str, fm_path: str, bias_path: str, examples_path: str,
         folds_path: str, *, k_values=K_VALUES, negatives=NEG_MODES,
         solver_name: str = 'glucose4', use_incremental: bool = True,
         active_res=None, quacq_active_error: Optional[str] = None,
-        qa_max_queries=None, qa_timeout_s=None) -> List[dict]:
-    """Evaluate all 5 conditions for one (KB, example-set). Returns per-fold rows.
+        qa_max_queries=None, qa_timeout_s=None,
+        conditions=None, quacq_query_mode: str = 'example_only') -> List[dict]:
+    """Evaluate the requested conditions for one (KB, example-set). Returns per-fold rows.
+
+    ``conditions``: optional set of condition labels to compute (None ⇒ all 5). A subset lets a
+    caller recompute e.g. only ``{'QuAcq'}`` WITHOUT re-running the expensive ConMin Stage-1
+    (the A/C/C∪S ``acquire_pool_and_cover``). The ConMin fold runs only if a ConMin condition
+    (A/C/C∪S) is selected; QuAcq / QuAcq-active run only if selected. Rows are filtered to the
+    selected set on the way out. ``quacq_query_mode`` picks the QuAcq mode (example_only /
+    example_first) without a code edit; default preserves current behavior.
 
     QuAcq-active (H-6): the oracle-mode theory is learned ONCE per KB by the caller (apps layer)
     and passed in as ``active_res`` (a QuAcqRunResult), reused across every example-set/fold of
     that KB. ``quacq_active_error`` (set instead when the per-KB learn raised) emits a per-fold
     error row. Both None ⇒ QuAcq-active disabled (run_quacq_active=False)."""
+    def want(c):
+        return conditions is None or c in conditions
+    run_conmin = conditions is None or bool(conditions & CONMIN_CONDITIONS)
     oracle = FMOracle(fm_path, solver_name=solver_name, use_incremental=use_incremental)
     model = (ConMinModelBuilder.from_bias(bias_path)
              .with_oracle_data(oracle.oracle_data).build())
@@ -80,24 +94,32 @@ def evaluate_kb_example(
                         n_train_pos=len(tr_pos), n_train_neg=len(tr_neg),
                         n_test_pos=len(te_pos), n_test_neg=len(te_neg),
                         n_test_total=len(te_pos) + len(te_neg))
-            for i, neg_mode in enumerate(negatives):
-                rows.extend(_eval_conmin_fold(
-                    model, oracle, comparator, ground_truth, variables, root_clauses,
-                    tr_pos, tr_neg, te_pos, te_neg, k_values, neg_mode, meta,
-                    solver_name, use_incremental, emit_a=(i == 0)))
-            rows.extend(_eval_quacq_fold(
-                bias_path, fm_path, comparator, ground_truth, variables, root_clauses,
-                tr_pos, tr_neg, te_pos, te_neg, meta, solver_name, use_incremental))
+            if run_conmin:  # the expensive Stage-1 path — skipped for QuAcq-only recompute
+                for i, neg_mode in enumerate(negatives):
+                    rows.extend(_eval_conmin_fold(
+                        model, oracle, comparator, ground_truth, variables, root_clauses,
+                        tr_pos, tr_neg, te_pos, te_neg, k_values, neg_mode, meta,
+                        solver_name, use_incremental, emit_a=(i == 0)))
+            if want('QuAcq'):
+                rows.extend(_eval_quacq_fold(
+                    bias_path, fm_path, comparator, ground_truth, variables, root_clauses,
+                    tr_pos, tr_neg, te_pos, te_neg, meta, solver_name, use_incremental,
+                    query_mode=quacq_query_mode))
             # QuAcq-active (H-6): score the per-KB oracle-mode theory on THIS fold's test set.
-            if quacq_active_error is not None:
-                rows.append({**meta, 'negatives': 'n/a', 'condition': 'QuAcq-active',
-                             'k': None, 'error': quacq_active_error})
-            elif active_res is not None:
-                rows.append(_score_quacq_active_row(
-                    active_res, meta, comparator, ground_truth, variables,
-                    te_pos, te_neg, root_clauses, qa_max_queries, qa_timeout_s))
+            if want('QuAcq-active'):
+                if quacq_active_error is not None:
+                    rows.append({**meta, 'negatives': 'n/a', 'condition': 'QuAcq-active',
+                                 'k': None, 'error': quacq_active_error})
+                elif active_res is not None:
+                    rows.append(_score_quacq_active_row(
+                        active_res, meta, comparator, ground_truth, variables,
+                        te_pos, te_neg, root_clauses, qa_max_queries, qa_timeout_s))
     finally:
         oracle.cleanup()
+    # Subset selection may emit sibling rows (e.g. ConMin fold yields A/C/C∪S together) —
+    # keep only the requested conditions so the caller's surgical merge replaces exactly them.
+    if conditions is not None:
+        rows = [r for r in rows if r.get('condition') in conditions]
     return rows
 
 
@@ -233,11 +255,13 @@ def _eval_conmin_fold(model, oracle, comparator, ground_truth, variables, root_c
 
 def _eval_quacq_fold(bias_path, fm_path, comparator, ground_truth, variables,
                      root_clauses, tr_pos, tr_neg, te_pos, te_neg, meta,
-                     solver_name, use_incremental) -> List[dict]:
-    """QuAcq active reference (k-invariant), scored with the SAME scorer/vocab."""
+                     solver_name, use_incremental,
+                     query_mode: str = 'example_only') -> List[dict]:
+    """QuAcq passive reference (k-invariant), scored with the SAME scorer/vocab. query_mode
+    selects example_only (default) or example_first without a code edit."""
     from conacq.runners import QuAcqRunner
     try:
-        runner = QuAcqRunner(bias_path, fm_path, solver_name,
+        runner = QuAcqRunner(bias_path, fm_path, solver_name, query_mode=query_mode,
                              use_incremental=use_incremental)
         try:
             # H-2: seed the pool shuffle by fold so example-only QuAcq is reproducible

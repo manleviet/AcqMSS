@@ -22,6 +22,10 @@ quacq_active_max_queries = 5000
 quacq_active_timeout_s = 400
 quacq_active_max_queries_per_kb = { "busybox-1.18.0" = 20000 }
 
+# QuAcq (passive) query mode: "example_only" (default) or "example_first". Lets us pick the
+# reportable mode without a code edit; use with --conditions quacq to recompute just QuAcq.
+quacq_query_mode = "example_only"
+
 # The 5 eval KBs (brief §9e). example-set + folds paths are derived from `name`.
 # ea2468 / linux excluded (scalability discussion only — brief §9e).
 [[models]]

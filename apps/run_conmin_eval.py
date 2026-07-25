@@ -29,6 +29,11 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_EXAMPLE_SETS = ['2cov', 'ff', 'rs_1n', 'rs_2n', 'rs_3n', 'rs_m']
 
+# --conditions CLI aliases → row condition labels. A subset recomputes only those conditions
+# and surgically merges into the existing per-set JSON (reusing the expensive ConMin Stage-1).
+_CONDITION_ALIASES = {'a': 'A', 'c': 'C', 'cus': 'C∪S', 'c∪s': 'C∪S',
+                      'quacq': 'QuAcq', 'quacq-active': 'QuAcq-active'}
+
 
 def _write_csv(rows: list, path: Path) -> None:
     """Write long/tidy rows to CSV (union of keys, stable first-seen order)."""
@@ -131,6 +136,11 @@ def main():
                         help='Wall-clock cap (s) for the QuAcq-active learn (overrides config)')
     parser.add_argument('--quacq-active-max-queries', type=int,
                         help='Query budget for the QuAcq-active learn (overrides config/per-KB)')
+    parser.add_argument('--conditions', nargs='+', metavar='COND',
+                        help='Recompute ONLY these conditions (a, c, cus, quacq, quacq-active; '
+                             'comma- or space-separated). Surgically merges into the existing '
+                             '{kb}_{es}_eval.json, preserving every other condition verbatim — '
+                             'reuses the expensive ConMin Stage-1. Default: all conditions.')
     parser.add_argument('--non-incremental', action='store_true')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
@@ -163,6 +173,17 @@ def main():
                        else ev.get('quacq_active_max_queries', 5000))
     qa_maxq_per_kb = {} if args.quacq_active_max_queries is not None \
         else ev.get('quacq_active_max_queries_per_kb', {})
+    quacq_query_mode = ev.get('quacq_query_mode', 'example_only')
+
+    # --conditions: resolve to a label set (None ⇒ full run). A subset triggers surgical merge.
+    selected_conditions = None
+    if args.conditions:
+        raw = [t.strip().lower() for item in args.conditions for t in item.split(',') if t.strip()]
+        bad = sorted(t for t in raw if t not in _CONDITION_ALIASES)
+        if bad:
+            logger.error("Unknown --conditions %s; valid: %s", bad, sorted(_CONDITION_ALIASES))
+            sys.exit(1)
+        selected_conditions = {_CONDITION_ALIASES[t] for t in raw}
 
     models = parse_models(config)
     if args.kb:
@@ -177,6 +198,8 @@ def main():
                 len(models), example_sets, k_values, negatives, seed)
     logger.info("QuAcq-active=%s  max_queries=%s (per-KB=%s)  timeout_s=%s",
                 run_quacq_active, qa_maxq_default, qa_maxq_per_kb or '{}', qa_timeout)
+    logger.info("conditions=%s  quacq_query_mode=%s",
+                sorted(selected_conditions) if selected_conditions else 'ALL', quacq_query_mode)
     logger.info("Output: %s", output_dir)
     logger.info("=" * 60)
 
@@ -192,7 +215,10 @@ def main():
         # safety net (C-4) — size max_queries per KB so it fires first on big models (H-4).
         active_res, quacq_active_error = None, None
         qa_max_queries = qa_maxq_per_kb.get(kb, qa_maxq_default)
-        if run_quacq_active:
+        # Only learn QuAcq-active when it is actually being computed (skip on a QuAcq-only recompute).
+        learn_active = run_quacq_active and (selected_conditions is None
+                                             or 'QuAcq-active' in selected_conditions)
+        if learn_active:
             logger.info("QuAcq-active learn (once/KB): %s  max_queries=%s  timeout_s=%s",
                         kb, qa_max_queries, qa_timeout)
             try:
@@ -213,21 +239,46 @@ def main():
                 logger.warning("skip %s/%s (missing examples or folds)", kb, es)
                 continue
             logger.info("--- %s / %s ---", kb, es)
+            target = output_dir / f'{kb}_{es}_eval.json'
+            # Subset recompute has nothing to reuse if the per-set JSON is absent → refuse (do
+            # NOT write a partial JSON that --merge would treat as a complete set).
+            if selected_conditions is not None and not target.exists():
+                logger.error("--conditions needs an existing %s to reuse — run a FULL eval for "
+                             "%s/%s first.", target, kb, es)
+                sys.exit(1)
             rows = evaluate_kb_example(
                 kb, es, model.oracle, model.bias, examples_path, folds_path,
                 k_values=k_values, negatives=negatives, use_incremental=use_incremental,
                 active_res=active_res, quacq_active_error=quacq_active_error,
-                qa_max_queries=qa_max_queries, qa_timeout_s=qa_timeout)
-            kb_rows.extend(rows)
-            write_json_atomic(output_dir / f'{kb}_{es}_eval.json', {
-                'kb': kb, 'example_set': es, 'seed': seed,
-                # C-4 provenance: which QuAcq-active budget/timeout produced these rows, so a
-                # timed row is traceable and --merge can refuse to blend mismatched passes.
-                'quacq_active_max_queries': qa_max_queries if run_quacq_active else None,
-                'quacq_active_timeout_s': qa_timeout if run_quacq_active else None,
-                'note': 'folds are pre-recorded (data/folds/); the acquired named KB is '
-                        'bias-order dependent — CV-averaged, seed fixed (threat-to-validity)',
-                'rows': rows, 'aggregated': aggregate_cv(rows)})
+                qa_max_queries=qa_max_queries, qa_timeout_s=qa_timeout,
+                conditions=selected_conditions, quacq_query_mode=quacq_query_mode)
+            if selected_conditions is None:
+                merged_rows = rows
+                payload = {
+                    'kb': kb, 'example_set': es, 'seed': seed,
+                    # C-4 provenance: which QuAcq-active budget/timeout produced these rows, so a
+                    # timed row is traceable and --merge can refuse to blend mismatched passes.
+                    'quacq_active_max_queries': qa_max_queries if run_quacq_active else None,
+                    'quacq_active_timeout_s': qa_timeout if run_quacq_active else None,
+                    'note': 'folds are pre-recorded (data/folds/); the acquired named KB is '
+                            'bias-order dependent — CV-averaged, seed fixed (threat-to-validity)',
+                    'rows': merged_rows, 'aggregated': aggregate_cv(merged_rows)}
+            else:
+                # Surgical merge: replace ONLY the selected conditions' rows; every other
+                # condition's rows are preserved verbatim (byte-identical). Recompute aggregated.
+                with open(target) as fh:
+                    existing = json.load(fh)
+                preserved = [r for r in existing.get('rows', [])
+                             if r.get('condition') not in selected_conditions]
+                merged_rows = preserved + rows
+                payload = dict(existing)  # keep seed/note/provenance of non-recomputed conditions
+                payload['rows'] = merged_rows
+                payload['aggregated'] = aggregate_cv(merged_rows)
+                if 'QuAcq-active' in selected_conditions:  # refresh provenance only if recomputed
+                    payload['quacq_active_max_queries'] = qa_max_queries if run_quacq_active else None
+                    payload['quacq_active_timeout_s'] = qa_timeout if run_quacq_active else None
+            write_json_atomic(target, payload)
+            kb_rows.extend(merged_rows)
         # Per-KB CSVs (NOT the shared conmin_eval_*.csv) so concurrent/sequential --kb
         # runs don't overwrite each other. Run `--merge` once at the end to consolidate.
         if kb_rows:
