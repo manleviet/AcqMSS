@@ -390,7 +390,11 @@ class TestQuAcqOracleProgress:
         finally:
             runner.cleanup()
         assert res.convergence_reason in ('no_query', 'empty_bias')  # converged, NOT max_queries
-        assert res.n_kb > 0                    # learned constraints (pre-fix this was 0)
+        # Learns a substantial KB (pre-fix this was 0). Floor, not exact: the learned count is
+        # hash-seed-dependent across processes (observed 6–10 under default PYTHONHASHSEED — a
+        # known nondeterminism in FindScope/FindC string-set iteration, out of this fix's scope);
+        # >=5 catches a spin/collapse regression without flaking on hash order.
+        assert res.n_kb >= 5
         assert res.n_queries < 2000            # converged well within the budget (no spin)
 
 

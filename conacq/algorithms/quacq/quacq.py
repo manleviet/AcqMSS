@@ -250,12 +250,15 @@ class QuAcq:
                         logging.debug('FindScope/FindC added constraint: %s', c_id)
                     else:
                         logging.warning('FindC returned no constraint for scope %s', scope)
-                        # Liveness (oracle mode only): the query was built to violate tested_c_id,
-                        # but FindC found no bias constraint for the localized scope — the violation
-                        # is un-representable in the binary bias (n-ary/structural target). Drop
-                        # tested_c_id so generate_from_sat advances to the next candidate instead of
-                        # deterministically re-proposing the identical query forever (the max_queries
-                        # spin → KB=0). Example modes advance through their finite pool → untouched.
+                        # Liveness (oracle mode only): FindC could not isolate a bias constraint for
+                        # the localized scope, so drop tested_c_id to force progress — else
+                        # generate_from_sat re-proposes the identical query forever (max_queries spin
+                        # → KB=0). This is a liveness BAND-AID, not a correctness fix: FindScope can
+                        # mislocalize a multi-violation query, so the dropped candidate may be a TRUE,
+                        # bias-representable constraint → a recall trade-off (the proper fix is
+                        # FindScope multi-violation localization). Scoped to oracle mode; example_only
+                        # never hits this (finite pool), but example_first's SAT fallback (generate())
+                        # shares the same spin and is NOT covered here — a separate, pre-existing issue.
                         if mode == 'oracle' and tested_c_id is not None:
                             remaining_bias.pop(tested_c_id, None)
                 else:
