@@ -373,6 +373,27 @@ class TestQuAcqTimeout:
         assert result.convergence_reason in ('empty_bias', 'max_queries', 'no_query')
 
 
+class TestQuAcqOracleProgress:
+    """Oracle-mode liveness (fix b): FindC=⊥ advances instead of re-proposing the same query, so
+    the learner makes progress and CONVERGES (does not spin to max_queries with KB=0)."""
+
+    def test_oracle_mode_converges_and_learns(self):
+        """On REAL-FM-7 (binary-acquirable target) oracle mode learns a non-empty KB and terminates
+        by CONVERGENCE (no_query/empty_bias), not by exhausting the budget."""
+        if not FM_PATH.exists() or not BIAS_PATH.exists():
+            pytest.skip("Test data files not found")
+        from conacq.runners import QuAcqRunner
+        runner = QuAcqRunner(str(BIAS_PATH), str(FM_PATH), 'glucose4',
+                             query_mode='automated', max_queries=2000)
+        try:
+            res = runner.run(mode='automated')
+        finally:
+            runner.cleanup()
+        assert res.convergence_reason in ('no_query', 'empty_bias')  # converged, NOT max_queries
+        assert res.n_kb > 0                    # learned constraints (pre-fix this was 0)
+        assert res.n_queries < 2000            # converged well within the budget (no spin)
+
+
 # =========================================================================
 # Assumption-ID-based tests (QuAcqTask, QuAcqModel)
 # =========================================================================

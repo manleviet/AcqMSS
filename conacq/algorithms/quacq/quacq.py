@@ -250,6 +250,14 @@ class QuAcq:
                         logging.debug('FindScope/FindC added constraint: %s', c_id)
                     else:
                         logging.warning('FindC returned no constraint for scope %s', scope)
+                        # Liveness (oracle mode only): the query was built to violate tested_c_id,
+                        # but FindC found no bias constraint for the localized scope — the violation
+                        # is un-representable in the binary bias (n-ary/structural target). Drop
+                        # tested_c_id so generate_from_sat advances to the next candidate instead of
+                        # deterministically re-proposing the identical query forever (the max_queries
+                        # spin → KB=0). Example modes advance through their finite pool → untouched.
+                        if mode == 'oracle' and tested_c_id is not None:
+                            remaining_bias.pop(tested_c_id, None)
                 else:
                     logging.warning('FindScope returned empty scope for negative example')
                     if mode == 'oracle' and tested_c_id:

@@ -9,10 +9,12 @@ oracle. It is trustworthy because the generators are now instance-seeded
 
 Note: neither result type exposes a ``diagnoses`` attribute; the pinnable
 learned-KB quantities are ``kb_assumption_ids`` (both), ``n_mss`` (ConGen only),
-and ``n_kb``. QuAcq learns an empty KB even at 500 queries on this FM/bias, so
-its arm pins the exact query TRAJECTORY (``query_history``) plus convergence — a
-deterministic, non-trivial signal that catches a QuAcq behaviour regression even
-with an empty learned KB.
+and ``n_kb``. At the golden's low budget (``_QUACQ_MAX_QUERIES``) QuAcq's oracle
+arm learns few/no constraints, so it pins the exact query TRAJECTORY
+(``query_history``) plus convergence — a deterministic regression tripwire.
+(Oracle-mode LEARNING at a generous budget — non-empty KB, converges via
+no_query — is asserted separately in tests/test_quacq.py::TestQuAcqOracleProgress,
+after the liveness fix that stopped the FindC=⊥ spin.)
 """
 import pytest
 
