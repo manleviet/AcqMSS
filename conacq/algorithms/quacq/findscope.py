@@ -59,7 +59,7 @@ class FindScope:
             Scope variables (feature names) as list
         """
         if ask_query:
-            partial = {k: e[k] for k in R if k in e}
+            partial = {k: e[k] for k in sorted(R) if k in e}  # canonical order (R is a set)
             self.profiler.increment("paper_consistency_checks")
             is_consistent = self.oracle.is_valid(partial)
             self.record_query(partial, is_consistent, 'findscope')

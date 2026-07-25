@@ -397,6 +397,34 @@ class TestQuAcqOracleProgress:
         assert res.n_kb >= 5
         assert res.n_queries < 2000            # converged well within the budget (no spin)
 
+    def test_oracle_learning_deterministic_across_hash_seeds(self):
+        """Regression for the FindScope canonical-order fix: oracle learning is IDENTICAL across
+        Python hash seeds (pre-fix it varied — KB∈{6,10}, queries∈{341,353,442,608,690} — because
+        FindScope iterated a hash-ordered set feeding the incremental solver's assumptions)."""
+        if not FM_PATH.exists() or not BIAS_PATH.exists():
+            pytest.skip("Test data files not found")
+        import os
+        import subprocess
+        import sys
+        repo_root = str(FM_PATH.parent.parent.parent)
+        script = (
+            "from conacq.runners import QuAcqRunner\n"
+            f"r=QuAcqRunner({str(BIAS_PATH)!r},{str(FM_PATH)!r},'glucose4',"
+            "query_mode='automated',max_queries=2000)\n"
+            "res=r.run(mode='automated'); r.cleanup()\n"
+            "print(res.n_kb, res.n_queries, res.convergence_reason, tuple(sorted(res.kb_constraints)))\n"
+        )
+
+        def run(seed):
+            env = dict(os.environ, PYTHONHASHSEED=str(seed), PYTHONPATH=repo_root)
+            out = subprocess.run([sys.executable, '-c', script], capture_output=True,
+                                 text=True, env=env, cwd=repo_root)
+            assert out.returncode == 0, out.stderr
+            return out.stdout.strip()
+
+        r0, r1, r7 = run(0), run(1), run(7)
+        assert r0 == r1 == r7, f"non-deterministic across hash seeds:\n{r0}\n{r1}\n{r7}"
+
 
 # =========================================================================
 # Assumption-ID-based tests (QuAcqTask, QuAcqModel)

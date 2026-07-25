@@ -54,6 +54,10 @@ speedup ~1.9–2.8× (bigger on large |B|).
 ```bash
 python -m apps.run_conmin_eval $CFG --kb REAL-FM-7 --conditions quacq
 ```
+**Determinism:** QuAcq (both example and oracle modes) is deterministic in the code — FindScope
+iterates in canonical (sorted) order, so results do NOT depend on `PYTHONHASHSEED` (verified across
+fixed seeds + unset). No env pin is required; ConMin/A/C/C∪S are hash-independent already.
+
 Rules: a full run must exist first (errors if `{kb}_{es}_eval.json` is missing — nothing to
 reuse); do NOT combine `--conditions` with narrower `--k`/`--negatives` (it refuses rather than
 drop existing rows); `quacq_query_mode` (config) selects example_only/example_first.
