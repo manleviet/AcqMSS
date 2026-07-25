@@ -174,6 +174,13 @@ def main():
     qa_maxq_per_kb = {} if args.quacq_active_max_queries is not None \
         else ev.get('quacq_active_max_queries_per_kb', {})
     quacq_query_mode = ev.get('quacq_query_mode', 'example_only')
+    # Validate: the QuAcq passive column must be an EXAMPLE mode. The oracle modes
+    # (automated/interactive) would silently mislabel oracle-mode output as passive QuAcq, or
+    # block the batch on stdin — reject them at the boundary.
+    if quacq_query_mode not in ('example_only', 'example_first'):
+        logger.error("quacq_query_mode=%r invalid; use 'example_only' or 'example_first'",
+                     quacq_query_mode)
+        sys.exit(1)
 
     # --conditions: resolve to a label set (None ⇒ full run). A subset triggers surgical merge.
     selected_conditions = None
@@ -184,6 +191,9 @@ def main():
             logger.error("Unknown --conditions %s; valid: %s", bad, sorted(_CONDITION_ALIASES))
             sys.exit(1)
         selected_conditions = {_CONDITION_ALIASES[t] for t in raw}
+        if not selected_conditions:  # e.g. --conditions '' / ',' → nothing to recompute
+            logger.error("--conditions parsed to no valid conditions (got %r)", args.conditions)
+            sys.exit(1)
 
     models = parse_models(config)
     if args.kb:
@@ -192,6 +202,19 @@ def main():
         logger.error("No models (KBs) in configuration")
         sys.exit(1)
 
+    # Pre-flight (subset mode): every target {kb}_{es}_eval.json a subset run will touch must
+    # already exist — abort BEFORE writing anything, so a later missing file can't leave earlier
+    # ones rewritten and the per-KB CSV stale (partial sweep).
+    if selected_conditions is not None:
+        missing = [f'{m.name}/{es}' for m in models for es in example_sets
+                   if Path(f'data/examples/{m.name}_{es}.json').exists()
+                   and Path(f'data/folds/{m.name}_{es}_folds.json').exists()
+                   and not (output_dir / f'{m.name}_{es}_eval.json').exists()]
+        if missing:
+            logger.error("--conditions needs an existing {kb}_{es}_eval.json to reuse; missing: %s. "
+                         "Run a FULL eval for those first.", missing)
+            sys.exit(1)
+
     logger.info("=" * 60)
     logger.info("ConMin comparison-condition CV evaluation")
     logger.info("KBs=%d  example-sets=%s  k=%s  negatives=%s  seed=%d (folds pre-recorded)",
@@ -199,7 +222,8 @@ def main():
     logger.info("QuAcq-active=%s  max_queries=%s (per-KB=%s)  timeout_s=%s",
                 run_quacq_active, qa_maxq_default, qa_maxq_per_kb or '{}', qa_timeout)
     logger.info("conditions=%s  quacq_query_mode=%s",
-                sorted(selected_conditions) if selected_conditions else 'ALL', quacq_query_mode)
+                sorted(selected_conditions) if selected_conditions is not None else 'ALL',
+                quacq_query_mode)
     logger.info("Output: %s", output_dir)
     logger.info("=" * 60)
 
@@ -265,9 +289,25 @@ def main():
                     'rows': merged_rows, 'aggregated': aggregate_cv(merged_rows)}
             else:
                 # Surgical merge: replace ONLY the selected conditions' rows; every other
-                # condition's rows are preserved verbatim (byte-identical). Recompute aggregated.
+                # condition's rows are preserved verbatim (row content unchanged; rows may be
+                # reordered). Recompute aggregated over the merged set.
                 with open(target) as fh:
                     existing = json.load(fh)
+                # Coverage guard: rows are keyed by (condition, k, negatives). The recompute MUST
+                # cover every such key the existing file has for the selected conditions, else those
+                # rows would be silently DELETED (narrower --k/--negatives, config drift, or a
+                # selected condition that produced no rows, e.g. quacq-active while it is disabled).
+                def _keys(rs):
+                    return {(r.get('condition'), r.get('k'), r.get('negatives')) for r in rs}
+                existing_sel = _keys(r for r in existing.get('rows', [])
+                                     if r.get('condition') in selected_conditions)
+                dropped = existing_sel - _keys(rows)
+                if dropped:
+                    logger.error("--conditions recompute for %s/%s would DROP %d existing "
+                                 "(condition,k,negatives) row-group(s) %s — refusing to merge. Match "
+                                 "the existing --k/--negatives and enable the selected condition(s).",
+                                 kb, es, len(dropped), sorted(map(str, dropped)))
+                    sys.exit(1)
                 preserved = [r for r in existing.get('rows', [])
                              if r.get('condition') not in selected_conditions]
                 merged_rows = preserved + rows

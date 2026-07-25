@@ -44,6 +44,23 @@ nohup nice -n 10 python -m apps.run_conmin_eval $CFG --kb REAL-FM-4      > $OUT/
 nohup nice -n 10 python -m apps.run_conmin_eval $CFG --kb busybox-1.18.0 > $OUT/busybox-1.18.0.log 2>&1 &
 ```
 
+## Recompute ONE condition (reuse Stage-1) — `--conditions`
+
+To update only the QuAcq column (e.g. after a QuAcq fix) without re-running the expensive
+ConMin Stage-1 (AdmPoolMSS): `--conditions quacq` (or `quacq,quacq-active`). It **surgically
+merges** into the existing `{kb}_{es}_eval.json` — recomputes only the selected condition(s),
+preserves every other condition's rows verbatim, recomputes `aggregated`. Measured Stage-1-skip
+speedup ~1.9–2.8× (bigger on large |B|).
+```bash
+python -m apps.run_conmin_eval $CFG --kb REAL-FM-7 --conditions quacq
+```
+Rules: a full run must exist first (errors if `{kb}_{es}_eval.json` is missing — nothing to
+reuse); do NOT combine `--conditions` with narrower `--k`/`--negatives` (it refuses rather than
+drop existing rows); `quacq_query_mode` (config) selects example_only/example_first.
+**Provenance caveat:** only recompute a condition onto a JSON produced by the SAME code version —
+recomputing QuAcq (post-`is_valid`-fix semantics) onto a pre-fix full-run JSON silently mixes
+semantics across conditions (no code-version guard). Safest: recompute onto a post-fix full run.
+
 Rough wall-clock (unmeasured; dominated by the **QuAcq** reference — 3 folds × 6
 example-sets × |B|; ConMin's own A/C/C∪S k-sweep is comparatively cheap):
 

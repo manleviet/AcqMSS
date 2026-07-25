@@ -56,6 +56,59 @@ def test_conditions_subset_without_existing_json_errors(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(not _HAVE, reason="REAL-FM-7 fixtures / config missing")
+def test_coverage_guard_rejects_narrowed_k(tmp_path, monkeypatch):
+    """A subset recompute that would DROP existing (condition,k,neg) rows must refuse + not write."""
+    out = str(tmp_path)
+    _run(monkeypatch, out)  # full run → C∪S k ∈ {1,2,3,5}
+    monkeypatch.setattr("sys.argv", ["run_conmin_eval", _CFG, "--kb", "REAL-FM-7",
+                                     "--no-quacq-active", "--example-sets", "ff",
+                                     "--conditions", "cus", "--k", "1", "-o", out])
+    with pytest.raises(SystemExit):
+        rce.main()
+    d = json.loads((tmp_path / "REAL-FM-7_ff_eval.json").read_text())
+    assert {1, 2, 3, 5} <= {r.get("k") for r in d["rows"] if r["condition"] == "C∪S"}  # untouched
+
+
+@pytest.mark.skipif(not _HAVE, reason="REAL-FM-7 fixtures / config missing")
+def test_quacq_active_selected_but_disabled_rejected(tmp_path, monkeypatch):
+    """--conditions quacq-active while QuAcq-active is disabled must NOT delete existing rows."""
+    j = tmp_path / "REAL-FM-7_ff_eval.json"
+    rows = [{"kb": "REAL-FM-7", "example_set": "ff", "condition": "QuAcq-active", "k": None,
+             "negatives": "n/a", "fold": f, "sem_f1": 0.0} for f in range(3)]
+    j.write_text(json.dumps({"kb": "REAL-FM-7", "example_set": "ff", "seed": 82,
+                             "quacq_active_max_queries": 5000, "quacq_active_timeout_s": 400,
+                             "note": "x", "rows": rows, "aggregated": []}))
+    monkeypatch.setattr("sys.argv", ["run_conmin_eval", _CFG, "--kb", "REAL-FM-7",
+                                     "--example-sets", "ff", "--conditions", "quacq-active",
+                                     "--no-quacq-active", "-o", str(tmp_path)])
+    with pytest.raises(SystemExit):
+        rce.main()
+    d = json.loads(j.read_text())  # unchanged
+    assert len([r for r in d["rows"] if r["condition"] == "QuAcq-active"]) == 3
+    assert d["quacq_active_max_queries"] == 5000
+
+
+@pytest.mark.skipif(not _HAVE, reason="REAL-FM-7 fixtures / config missing")
+def test_invalid_quacq_query_mode_rejected(tmp_path, monkeypatch):
+    """A config quacq_query_mode outside the example modes must be rejected (no oracle mislabel)."""
+    bad = tmp_path / "bad.toml"
+    bad.write_text(Path(_CFG).read_text().replace('quacq_query_mode = "example_only"',
+                                                  'quacq_query_mode = "automated"'))
+    monkeypatch.setattr("sys.argv", ["run_conmin_eval", str(bad), "--kb", "REAL-FM-7",
+                                     "-o", str(tmp_path)])
+    with pytest.raises(SystemExit):
+        rce.main()
+
+
+@pytest.mark.skipif(not _HAVE, reason="REAL-FM-7 fixtures / config missing")
+def test_empty_conditions_rejected(tmp_path, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["run_conmin_eval", _CFG, "--kb", "REAL-FM-7",
+                                     "--conditions", ",", "-o", str(tmp_path)])
+    with pytest.raises(SystemExit):
+        rce.main()
+
+
+@pytest.mark.skipif(not _HAVE, reason="REAL-FM-7 fixtures / config missing")
 def test_evaluate_kb_example_conditions_filter():
     """Evaluator computes only the requested conditions (no ConMin Stage-1 for QuAcq-only)."""
     args = ("REAL-FM-7", "ff", str(_DATA / "fms" / "REAL-FM-7.uvl"),
