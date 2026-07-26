@@ -108,25 +108,54 @@ def test_gate_empty_scope_trips_on_gate_kb():
 
 # ---- self-checks ---------------------------------------------------------------
 
-def test_selfcheck_anchor_pass_and_drift():
-    # RE7 C∪S sem_f1 anchor is 0.847; feed matching rows -> pass; shifted -> drift.
-    ok = [_row(kb="REAL-FM-7", condition="C∪S", sem_f1="0.847") for _ in range(3)]
-    passed, fails, _ = selfcheck.check_anchors({"REAL-FM-7": ok})
-    assert passed >= 1 and not any(t.endswith("C∪S/sem_f1") for t, *_ in fails)
-    bad = [_row(kb="REAL-FM-7", condition="C∪S", sem_f1="0.900") for _ in range(3)]
-    _, fails2, _ = selfcheck.check_anchors({"REAL-FM-7": bad})
+def _re7_fixture(cus_sem="0.847"):
+    """A REAL-FM-7 fixture covering every RE7 anchor (so none is 'broken')."""
+    rows = []
+
+    def add(cond, neg, k, **cols):
+        for fold in "012":
+            rows.append(_row(kb="REAL-FM-7", condition=cond, negatives=neg, k=k, fold=fold, **cols))
+
+    add("A", "n/a", "", sem_f1="0.605")
+    add("C∪S", "raw", "1", sem_f1=cus_sem, desc_f1="0.682")
+    add("QuAcq", "n/a", "", sem_f1="0.012")
+    add("QuAcq-active", "n/a", "", sem_f1="0.842", desc_f1="0.240", n_kb="12", oracle_queries="272")
+    return {"REAL-FM-7": rows}
+
+
+def test_selfcheck_anchor_pass_drift_and_broken():
+    # matching values -> all RE7 anchors pass; fqa/arcade/RE4 legitimately skip (KB not loaded)
+    passed, fails, skipped = selfcheck.check_anchors(_re7_fixture())
+    assert not fails and passed >= 8 and skipped > 0
+    # drift on one anchor -> failure
+    _, fails2, _ = selfcheck.check_anchors(_re7_fixture(cus_sem="0.900"))
     assert any("C∪S/sem_f1" in t for t, *_ in fails2)
+    # empty cell on a LOADED KB -> BROKEN (failure), not a silent skip (red-team C1)
+    broken = {"REAL-FM-7": [_row(kb="REAL-FM-7", condition="C∪S", sem_f1="") for _ in range(3)]}
+    _, fails3, _ = selfcheck.check_anchors(broken)
+    assert any("C∪S/sem_f1" in t for t, *_ in fails3)
 
 
 # ---- renderers -----------------------------------------------------------------
 
-def test_render_latex_booktabs_dagger_thousands():
-    grid = Grid("t", "cap", "lcc", ["KB", "F1", "checks"],
-                [BodyRow(["$KB_1$"], [Cell("0.03", True, False), Cell("7534", False, True)])])
+def test_render_latex_booktabs_dagger_thousands_bold():
+    grid = Grid("t", "cap", "lcccc", ["KB", "F1", "checks", "r", "big"],
+                [BodyRow(["$KB_1$"], [Cell("0.03", True, False), Cell("7534", False, True),
+                                      Cell("0.85", False, True), Cell("4729.8", False, False)])])
     out = latex(grid)
     assert "\\toprule" in out and "\\tabularnewline" in out and "\\hline" not in out
-    assert "$0.03^{\\dagger}$" in out and "$7{,}534$" in out and "\\textbf" in out
+    assert "$0.03^{\\dagger}$" in out          # dagger -> math
+    assert "$\\mathbf{7{,}534}$" in out         # bold thousands -> \mathbf (in-math bold), not \textbf
+    assert "\\textbf{0.85}" in out             # bold plain rate -> \textbf (text mode)
+    assert "$4{,}729.8$" in out                # >=1000 FLOAT grouped too (red-team M3)
     assert out.rstrip().endswith("\\end{table}")
+
+
+def test_render_latex_escapes_tex_specials():
+    grid = Grid("t", "cap", "lc", ["KB", "reason"],
+                [BodyRow(["$KB_1$"], [Cell("a_b&c%d", False, False)])])
+    out = latex(grid)
+    assert "a\\_b\\&c\\%d" in out               # _, &, % all escaped (red-team M5)
 
 
 def test_render_markdown_demacro_multirow():

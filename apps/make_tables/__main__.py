@@ -90,6 +90,17 @@ def main(argv=None) -> int:
 
     tables_dir.mkdir(parents=True, exist_ok=True)
 
+    # Self-check BEFORE emit — never leave a wrong/partial table set where a glob could consume it.
+    checks_ok, skipped = selfcheck.run_all(loaded)
+    if not checks_ok:
+        (tables_dir / "SELFCHECK-FAILED.md").write_text(
+            "# self-check FAILED — tables NOT emitted\n\n"
+            "Anchor drift / broken cell on a loaded KB / short KB. See stderr for the offending "
+            "anchor(s). The INPUT changed — do NOT re-fit the anchors.\n")
+        logger.error("self-check failed — tables NOT emitted")
+        print(f"make_tables: SELF-CHECK FAILED — no tables emitted -> {tables_dir}")
+        return 3
+
     # Emit every table as .tex (\input-ready float) + .md; a KB absent/stale -> '--' cells.
     grids = tables.build_all(loaded, exclude_2cov=args.exclude_2cov)
     for grid in grids:
@@ -102,16 +113,13 @@ def main(argv=None) -> int:
                               exclude_2cov=args.exclude_2cov)
     logger.info("emitted %d tables (.tex + .md) + exact-equiv.md -> %s", len(grids), tables_dir)
 
-    # Self-checks (anchors tol 5e-3, row counts, raw==reduced) — a drift means the INPUT changed.
-    anchors_ok = selfcheck.run_all(loaded)
-
     # Product on stdout (diagnostics went to stderr via logging).
-    print("make_tables (load + gates + emit + self-check)")
+    print("make_tables (load + gates + self-check + emit)")
     for kb in args.kbs:
         print(f"  {kb:16s} {status[kb]}")
     print(f"survivors: {', '.join(survivors)}  |  exclude_2cov={args.exclude_2cov}  "
-          f"|  {len(grids)} tables -> {tables_dir}  |  anchors={'OK' if anchors_ok else 'DRIFT'}")
-    return 0 if anchors_ok else 3
+          f"|  {len(grids)} tables -> {tables_dir}  |  anchors=OK  skipped={skipped}")
+    return 0
 
 
 if __name__ == "__main__":

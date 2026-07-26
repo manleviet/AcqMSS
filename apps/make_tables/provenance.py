@@ -74,6 +74,16 @@ def write_skeleton(path: Path, prov: dict, table_labels=(), exclude_2cov: bool =
                   "- appendix tables: " + ", ".join(f"`{t}`" for t in table_labels
                                                      if t != _MAIN_TABLE and t not in _APPENDIX_PRF) + "."]
     lines += [
+        "", "## Audit trail", "",
+        "- **exact-equivalence** figures are DERIVED FROM the committed `_long.csv`, not "
+        "negotiated: REAL-FM-7 ConMin attains it on **8/144 rows (6%)** but **0/48 "
+        "configurations** (never across all folds of any config); A 1/18; C and QuAcq "
+        "example-only 0; QuAcq-active is learned once/KB (one observation). Details in "
+        "`exact-equiv.md`. `exact_equiv` (delivered theory incl. BG, via "
+        "`SemanticEquivalenceChecker`) and `sem_*` (name-set only, `bg_clauses=[]`) measure "
+        "different objects — the earlier 'inconsistent with sem-F1' note was a metric misread, removed.",
+        "- **PROVISIONAL (not final)**: QuAcq-active on REAL-FM-4 + busybox — wall-clock-timeout / "
+        "absent until tonight's re-run; regenerate after sweep + `--merge`.",
         "", "## `\\input` contract (ruling 3 — NEVER write Overleaf/)", "",
         "- The generator writes ONLY to `data/results_conmin/tables/`. `Overleaf/AAAI/` is a "
         "separate git clone that only Viet-Man pushes (`./sync.sh AAAI push`); an auto-written "

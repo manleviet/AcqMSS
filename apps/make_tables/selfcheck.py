@@ -41,15 +41,21 @@ PENDING_QUACQ_ACTIVE = ("REAL-FM-4", "busybox-1.18.0")
 
 
 def check_anchors(data: dict):
-    """Return (passed, failures, skipped). Failure = drift > TOL on a final anchor."""
+    """Return (passed, failures, skipped). A cell that is EMPTY on a LOADED KB is a FAILURE
+    (broken metric), not a skip — only a KB absent/out-of-scope legitimately skips."""
     passed, failures, skipped = 0, [], 0
     for kb, strat, col, exp in ANCHORS:
         rows = data.get(kb)
-        got = cv_mean(select(rows, strat), col).value if rows else None
         tag = f"{kb}/{strat}/{col}"
-        if got is None:
-            logger.warning("anchor SKIP (no data): %s (expected %.3f)", tag, exp)
+        if not rows:                                   # KB absent / out of scope -> legit skip
+            logger.info("anchor skip (KB not loaded): %s", tag)
             skipped += 1
+            continue
+        got = cv_mean(select(rows, strat), col).value
+        if got is None:                                # KB loaded but cell empty -> BROKEN
+            failures.append((tag, exp, None))
+            logger.error("anchor BROKEN (empty cell on loaded KB %s): %s (expected %.3f)",
+                         kb, tag, exp)
         elif abs(got - exp) < TOL:
             passed += 1
         else:
@@ -89,13 +95,16 @@ def check_rawred(data: dict):
     return mismatches
 
 
-def run_all(data: dict) -> bool:
-    """Run every self-check; return True if OK to publish (no anchor drift)."""
+def run_all(data: dict):
+    """Run every self-check. Returns (ok, skipped): ok=True means safe to publish (no anchor
+    drift/broken cell AND no short-loaded KB). A short fresh KB gates emission (never emit a
+    partial mean as final)."""
     passed, failures, skipped = check_anchors(data)
-    check_rowcounts(data)
+    short = check_rowcounts(data)
     check_rawred(data)
-    logger.info("self-check: %d anchors passed, %d failed, %d skipped (no data)",
-                passed, len(failures), skipped)
+    ok = (not failures) and (not short)
+    logger.info("self-check: %d passed, %d failed, %d skipped, %d short-KB -> %s",
+                passed, len(failures), skipped, len(short), "OK" if ok else "BLOCK")
     logger.info("PENDING (finalize after overnight re-run, do NOT pin temp numbers): "
                 "QuAcq-active on %s", ", ".join(PENDING_QUACQ_ACTIVE))
-    return not failures
+    return ok, skipped

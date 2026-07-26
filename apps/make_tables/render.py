@@ -43,25 +43,48 @@ def _group3(digits: str) -> List[str]:
     return parts
 
 
+# The TeX specials that must be escaped in a free-text cell (e.g. a convergence reason).
+_TEX_ESC = {"&": r"\&", "%": r"\%", "#": r"\#", "_": r"\_", "$": r"\$",
+            "{": r"\{", "}": r"\}", "~": r"\textasciitilde{}", "^": r"\textasciicircum{}"}
+
+
+def _escape_tex(s: str) -> str:
+    return "".join(_TEX_ESC.get(ch, ch) for ch in s)
+
+
+def _int_frac(t: str):
+    """(int_part, frac_or_'') if ``t`` is a plain non-negative number, else None."""
+    if t.replace(".", "", 1).isdigit():
+        i, _, f = t.partition(".")
+        return i, f
+    return None
+
+
 def _latex_cell(c: Cell) -> str:
     t = c.text
     if t == MISSING:
         return "--"
-    if t.isdigit() and len(t) >= 4:                 # thousands grouping inside math
-        t = "$" + "{,}".join(_group3(t)) + "$"
-    elif c.dagger:
-        t = f"${t}^{{\\dagger}}$"
-    elif any(ch.isalpha() for ch in t):             # text label (e.g. a convergence reason)
-        t = t.replace("_", "\\_")
+    parts = _int_frac(t)
+    if parts and len(parts[0]) >= 4:                    # numeric >=1000 -> math + {,} grouping
+        body = "{,}".join(_group3(parts[0])) + (f".{parts[1]}" if parts[1] else "")
+        inner = f"\\mathbf{{{body}}}" if c.bold else body   # bold IN math (\\textbf won't bold math)
+        return f"${inner}^{{\\dagger}}$" if c.dagger else f"${inner}$"
+    if c.dagger:                                        # daggered numeric -> math (bold via \\mathbf)
+        inner = f"\\mathbf{{{t}}}" if c.bold else t
+        return f"${inner}^{{\\dagger}}$"
+    if any(ch.isalpha() for ch in t):                   # free-text label -> escape TeX specials
+        t = _escape_tex(t)
     return f"\\textbf{{{t}}}" if c.bold else t
 
 
 def _md_cell(c: Cell) -> str:
     t = c.text
-    if t != MISSING and t.isdigit() and len(t) >= 4:
-        t = ",".join(_group3(t))
-    elif c.dagger:
-        t = f"{t}†"
+    if t != MISSING:
+        parts = _int_frac(t)
+        if parts and len(parts[0]) >= 4:
+            t = ",".join(_group3(parts[0])) + (f".{parts[1]}" if parts[1] else "")
+        if c.dagger:
+            t = f"{t}†"
     return f"**{t}**" if c.bold else t
 
 

@@ -180,7 +180,8 @@ def build_all(data: dict, exclude_2cov: bool = True) -> List[Grid]:
     # Main eval-prf (Sem, 4 strategies, exactly 16 numeric cols, NO accuracy). Caption points to
     # where the 5th condition (QuAcq example-only) and accuracy are reported (CW Main).
     main_cap = ("Semantic precision / recall / F1 and $|\\KB|$ per KB (exclude-2COV means; "
-                "$^{\\dagger}$ = non-converged, budget \\texttt{max\\_queries}). The 5th condition "
+                "$^{\\dagger}$ = non-converged: \\texttt{max\\_queries} budget or wall-clock "
+                "timeout, per-KB reason in Table~\\ref{tab:app-quacq-diag}). The 5th condition "
                 "\\textsc{QuAcq} (example-only) is reported in Table~\\ref{tab:app-perset}; "
                 "accuracy/specificity in Table~\\ref{tab:app-accuracy}.")
     tier_cap = ("{tier}-tier precision / recall / F1 and $|\\KB|$ per KB — same exclude-2COV "
@@ -255,37 +256,56 @@ def _app_rawred(data, exclude_2cov) -> Grid:
 
 # ---- exact-equiv (Markdown reference only) ---------------------------------------
 
-def exact_equiv_md(data) -> str:
-    """Reference (v1): exact-equivalence per KB x strategy as the MAX per-sampling mean.
+_COND_NAME = {"A": "A", "C": "C", "C∪S": "ConMin",
+              "QuAcq": "QuAcq(exonly)", "QuAcq-active": "QuAcq-active"}
 
-    NOT a pooled mean (ruling 2): pooling a near-all-zero quantity gives a meaningless ~0.02.
-    The paper cites the specific cell in text; this table just locates the non-zero one.
+
+def exact_equiv_counts(rows: list, cond: str):
+    """(rows_attaining, rows_scored, configs_all_folds, n_configs) for one KB x condition.
+
+    A 'configuration' = (example_set, k, negatives); it 'attains' when ALL its folds do.
+    Returns None for QuAcq-active (learned once/KB → collapse, handled by the caller).
     """
-    header = ["KB"] + [DISPLAY[s].replace("\\textsc{", "").replace("}", "") for s in STRATS]
-    lines = ["# exact-equiv (reference — MAX per-sampling exact-equivalence; NOT pooled)", "",
-             "exact-equivalence is logical equivalence of the *delivered theory* "
-             "(slice ∪ ¬e⁻ fallbacks ∪ BG/root) via SemanticEquivalenceChecker; it does NOT "
-             "require the named-constraint P/R/F1 (name-set only, BG excluded) to be 1. "
-             "So QuAcq-active = 1.00 with sem-F1 0.842 is consistent by design "
-             "(cf. RE7 A/C∪S exact_equiv=1 at sem-F1 0.977).",
-             "QuAcq-active is learned once per KB, so its exact_equiv=1 is ONE observation "
-             "(not 18 independent).",
-             "Text sentence (v1): among the passive strategies, exact structural equivalence is "
-             "attained only on REAL-FM-7 / RS-3n (1 of 3 folds, 0.33); elsewhere 0.",
-             "",
-             "| " + " | ".join(header) + " |",
-             "|" + "|".join(["---"] * len(header)) + "|"]
+    sub = [r for r in rows if r.get("condition") == cond]
+    attain = sum(1 for r in sub if r.get("exact_equiv") == "1")
+    by_cfg: dict = {}
+    for r in sub:
+        by_cfg.setdefault((r.get("example_set"), r.get("k"), r.get("negatives")), []) \
+            .append(r.get("exact_equiv") == "1")
+    cfg_all = sum(1 for v in by_cfg.values() if v and all(v))
+    return attain, len(sub), cfg_all, len(by_cfg)
+
+
+def exact_equiv_md(data) -> str:
+    """Reference: exact-equivalence COUNTS per KB x condition (reproducible from `_long.csv`)."""
+    lines = ["# exact-equiv (reference — attainment counts per KB × condition)", "",
+             "exact-equivalence is logical equivalence of the delivered theory (including BG) via "
+             "`SemanticEquivalenceChecker`; it does NOT require the named-constraint P/R/F1 "
+             "(name-set only, BG excluded) to be 1.",
+             "Counts are reproducible from the committed `_long.csv` (same principle as the "
+             "band-aid counters). A *configuration* = (example_set, k, negatives); it attains only "
+             "when ALL its folds do.",
+             "> **QuAcq-active is learned once per KB and scored on every fold** — its 18 identical "
+             "rows are ONE observation, so the denominator is collapsed to 1, NOT 18.", "",
+             "| KB | condition | rows attaining / scored | configs (all-folds) / total |",
+             "|---|---|---|---|"]
     for kb in KBS:
-        cells = []
-        for s in STRATS:
-            by_set: dict = {}
-            for r in _sel(data, kb, s, exclude_2cov=False):     # all samplings; find the best
-                by_set.setdefault(r.get("example_set"), []).append(r)
-            best = None
-            for es_rows in by_set.values():
-                val = cv_mean(es_rows, "exact_equiv").value
-                if val is not None:
-                    best = val if best is None else max(best, val)
-            cells.append(f"{best:.2f}" if best is not None else "--")
-        lines.append(f"| {KB_LABEL[kb]} | " + " | ".join(cells) + " |")
+        rows = data.get(kb)
+        for cond in STRATS:
+            name = _COND_NAME[cond]
+            if not rows:
+                lines.append(f"| {KB_LABEL[kb]} | {name} | -- | -- |")
+                continue
+            if cond == "QuAcq-active":                       # collapse: one observation per KB
+                sub = [r for r in rows if r.get("condition") == cond]
+                attained = bool(sub) and all(r.get("exact_equiv") == "1" for r in sub)
+                lines.append(f"| {KB_LABEL[kb]} | {name} | "
+                             f"{1 if attained else 0} / 1 obs (learned once/KB) | n/a |")
+                continue
+            a, n, cfg_all, ncfg = exact_equiv_counts(rows, cond)
+            rowcell = f"{a} / {n} ({round(100 * a / n)}%)" if n else "--"
+            lines.append(f"| {KB_LABEL[kb]} | {name} | {rowcell} | {cfg_all} / {ncfg} |")
+    lines += ["", "Text sentence (v1): among the passive strategies, exact structural equivalence "
+              "is attained only on REAL-FM-7 (ConMin 8/144 rows = 6%, but 0/48 configurations "
+              "across all folds; A 1/18); elsewhere 0. (busybox pending its overnight run.)"]
     return "\n".join(lines) + "\n"
