@@ -54,9 +54,15 @@ speedup ~1.9–2.8× (bigger on large |B|).
 ```bash
 python -m apps.run_conmin_eval $CFG --kb REAL-FM-7 --conditions quacq
 ```
-**Determinism:** QuAcq (both example and oracle modes) is deterministic in the code — FindScope
-iterates in canonical (sorted) order, so results do NOT depend on `PYTHONHASHSEED` (verified across
-fixed seeds + unset). No env pin is required; ConMin/A/C/C∪S are hash-independent already.
+**Determinism:** QuAcq (both modes) is hash-seed-independent — FindScope iterates in canonical
+(sorted) order, so results do NOT depend on `PYTHONHASHSEED` (verified across fixed seeds + unset
+on REAL-FM-7/fqa/arcade-game/REAL-FM-4). No env pin needed; ConMin/A/C/C∪S are hash-independent.
+**Caveat — the numbers are conditioned on solver + order:** (a) SAT solver — the committed QuAcq
+numbers are `glucose4` (the eval default, `conmin_cv_evaluator.py`); a different solver changes the
+query count and can change the learned KB (minisat KB=9 vs glucose4 KB=10 on REAL-FM-7), so always
+report QuAcq with the solver noted; (b) canonical order — `n_queries` is order-dependent (342
+sorted-by-name vs 353 for other valid orders); the learned KB (hence F1) was reorder-invariant on
+REAL-FM-7 but is unverified on the larger KBs. Treat `oracle_queries` as solver+order-conditional.
 
 Rules: a full run must exist first (errors if `{kb}_{es}_eval.json` is missing — nothing to
 reuse); do NOT combine `--conditions` with narrower `--k`/`--negatives` (it refuses rather than
