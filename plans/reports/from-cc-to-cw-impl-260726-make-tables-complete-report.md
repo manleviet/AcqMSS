@@ -31,6 +31,6 @@ cp data/results_conmin/tables/*.tex Overleaf/AAAI/tables/   # then ./sync.sh AAA
 ```
 
 ## Unresolved (need CW attention)
-1. **exact_equiv DATA ANOMALY**: QuAcq-active `exact_equiv=1.0` on ALL REAL-FM-7 rows, inconsistent with its sem-F1 0.842. make_tables reports it faithfully + caveats it in `exact-equiv.md`; the paper must NOT cite QuAcq-active as exactly-equivalent. Upstream eval/scorer issue to investigate.
+1. **exact_equiv is NOT an anomaly** (CW-Impl clarified 2026-07-26; caveat removed): `exact_equiv` = logical equivalence of the *delivered theory* (slice ∪ ¬e⁻ fallbacks ∪ BG/root) via `SemanticEquivalenceChecker`; `sem_*` = name-set P/R/F1 only (BG excluded, root dropped) — two different objects **by design** (`conmin_slice_scorer.py:54-72`). QuAcq-active exact_equiv=1 with sem-F1 0.842 is consistent (cf. RE7 A/C∪S exact_equiv=1 at sem-F1 0.977). `exact-equiv.md` now carries a neutral note; QuAcq-active is learned once/KB → **one** observation, not 18. No action needed.
 2. **Official run pending tonight's sweep**: RE4/busybox anchors + official tables regenerate after sweep + `--merge`; then CW Main's independent cell audit.
 3. **Commit**: uncommitted (mid-sweep); commit `apps/make_tables/` + `tests/test_make_tables.py` + `plans/` scoped, EXCLUDING `data/results_conmin/*`.

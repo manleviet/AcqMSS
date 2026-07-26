@@ -263,10 +263,15 @@ def exact_equiv_md(data) -> str:
     """
     header = ["KB"] + [DISPLAY[s].replace("\\textsc{", "").replace("}", "") for s in STRATS]
     lines = ["# exact-equiv (reference — MAX per-sampling exact-equivalence; NOT pooled)", "",
-             "Text sentence (v1): exact structural equivalence attained only on "
-             "REAL-FM-7 / RS-3n (1 of 3 folds, 0.33) for ConMin/A; elsewhere 0.",
-             "> ANOMALY (report faithfully, do NOT cite as equivalence): QuAcq-active shows 1.00 "
-             "on REAL-FM-7 — an upstream `exact_equiv` data value inconsistent with its sem-F1 0.842.",
+             "exact-equivalence is logical equivalence of the *delivered theory* "
+             "(slice ∪ ¬e⁻ fallbacks ∪ BG/root) via SemanticEquivalenceChecker; it does NOT "
+             "require the named-constraint P/R/F1 (name-set only, BG excluded) to be 1. "
+             "So QuAcq-active = 1.00 with sem-F1 0.842 is consistent by design "
+             "(cf. RE7 A/C∪S exact_equiv=1 at sem-F1 0.977).",
+             "QuAcq-active is learned once per KB, so its exact_equiv=1 is ONE observation "
+             "(not 18 independent).",
+             "Text sentence (v1): among the passive strategies, exact structural equivalence is "
+             "attained only on REAL-FM-7 / RS-3n (1 of 3 folds, 0.33); elsewhere 0.",
              "",
              "| " + " | ".join(header) + " |",
              "|" + "|".join(["---"] * len(header)) + "|"]
