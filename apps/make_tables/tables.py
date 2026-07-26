@@ -56,6 +56,10 @@ def _seconds(rows: list) -> Cell:
 
 
 def _budget_ratio(rows: list) -> Cell:
+    # A timeout row is bounded by the WALL-CLOCK, not the query budget, so the query-budget/|B|
+    # ratio would misrepresent the constraint (5000 was never reached) — show '--' instead.
+    if rows and (rows[0].get("convergence_reason") or "") == "timeout":
+        return Cell(MISSING, False, False)
     b = cv_mean(rows, "qa_max_queries").value
     nb = cv_mean(rows, "n_bias").value
     return Cell(f"{b / nb:.1f}", False, False) if (b and nb) else Cell(MISSING, False, False)
@@ -139,8 +143,9 @@ def _eval_cost(data, exclude_2cov) -> Grid:
                  _seconds(qa), make_cell(cv_mean(qa, "oracle_queries"), "queries"), _budget_ratio(qa)]
         body.append(BodyRow([KB_LABEL[kb]], cells))
     cap = (r"Learning cost. \textsc{ConMin}(raw,$k{=}1$) sizes/checks/time; \textsc{QuAcq} "
-           r"time+queries. budget/$|B|$ = \texttt{max\_queries}$/|B|$ (busybox $<1$, i.e. below "
-           r"$|B|$). " + _note(exclude_2cov))
+           r"time+queries. budget/$|B|$ = \texttt{max\_queries}$/|B|$ (busybox $<1$, below $|B|$); "
+           r"a wall-clock-timeout run shows `--` (t(s) is the timeout wall, queries the count "
+           r"reached). " + _note(exclude_2cov))
     return Grid("eval-cost", cap, "lrrrrrr rr rr r", headers, body, full_width=True, tabcolsep="4pt")
 
 
@@ -159,6 +164,9 @@ def _app_quacq_diag(data) -> Grid:
             rows = _sel(data, kb, cond, exclude_2cov=False)   # all-6: disclosure keeps 2cov
             reasons = sorted({(r.get("convergence_reason") or "") for r in rows})
             reason = "--" if not reasons else (reasons[0] or "--") if len(reasons) == 1 else "mixed"
+            if reason == "timeout":            # wall-clock bound: show the ceiling, not the query budget
+                secs = cv_mean(rows, "qa_timeout_s").value
+                reason = f"timeout({secs:.0f}s)" if secs else "timeout"
             # counters + queries over ALL folds — a fairness disclosure must NOT drop capped folds.
             cells = [_diag_mean(rows, c) for _, c in _DIAG_COUNTERS]
             cells += [_diag_mean(rows, "oracle_queries"),

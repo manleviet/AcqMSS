@@ -36,8 +36,12 @@ ANCHORS = [
     ("arcade-game", "QuAcq-active", "sem_f1", 0.452), ("arcade-game", "QuAcq-active", "desc_f1", 0.495),
 ]
 
-# TODO: pin QuAcq-active anchors for these once the overnight re-run makes them deterministic.
-PENDING_QUACQ_ACTIVE = ("REAL-FM-4", "busybox-1.18.0")
+# REAL-FM-4 QuAcq-active ends on a WALL-CLOCK timeout, so it is NON-DETERMINISTIC (679 queries
+# at 400 s, 3220 at 7200 s) and can NEVER be a deterministic anchor — it deliberately has no
+# numeric anchor here. (Its Stage-1 A/C/C∪S anchors are unaffected — the sweep doesn't touch them.)
+NON_ANCHORABLE_QUACQ_ACTIVE = ("REAL-FM-4",)
+# busybox QuAcq-active is PENDING tonight's run (max_queries=5000 is the effective, deterministic cap).
+PENDING_QUACQ_ACTIVE = ("busybox-1.18.0",)
 
 
 def check_anchors(data: dict):
@@ -105,6 +109,7 @@ def run_all(data: dict):
     ok = (not failures) and (not short)
     logger.info("self-check: %d passed, %d failed, %d skipped, %d short-KB -> %s",
                 passed, len(failures), skipped, len(short), "OK" if ok else "BLOCK")
-    logger.info("PENDING (finalize after overnight re-run, do NOT pin temp numbers): "
-                "QuAcq-active on %s", ", ".join(PENDING_QUACQ_ACTIVE))
+    logger.info("QuAcq-active NON-ANCHORABLE (wall-clock timeout, non-deterministic): %s; "
+                "PENDING tonight's run: %s",
+                ", ".join(NON_ANCHORABLE_QUACQ_ACTIVE), ", ".join(PENDING_QUACQ_ACTIVE))
     return ok, skipped

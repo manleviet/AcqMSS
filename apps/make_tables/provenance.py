@@ -82,8 +82,11 @@ def write_skeleton(path: Path, prov: dict, table_labels=(), exclude_2cov: bool =
         "`exact-equiv.md`. `exact_equiv` (delivered theory incl. BG, via "
         "`SemanticEquivalenceChecker`) and `sem_*` (name-set only, `bg_clauses=[]`) measure "
         "different objects — the earlier 'inconsistent with sem-F1' note was a metric misread, removed.",
-        "- **PROVISIONAL (not final)**: QuAcq-active on REAL-FM-4 + busybox — wall-clock-timeout / "
-        "absent until tonight's re-run; regenerate after sweep + `--merge`.",
+        "- **QuAcq-active anchoring**: REAL-FM-4 is **NOT anchored** — it ends on a wall-clock "
+        "timeout (non-deterministic: 679 queries at 400 s, 3220 at 7200 s), so its cells are "
+        "reported (t(s) = timeout wall, queries = count reached, budget/$|B|$ = `--`) but carry no "
+        "deterministic numeric anchor. busybox QuAcq-active is **pending** tonight's run "
+        "(max_queries=5000 effective). Both regenerate after the sweep + `--merge`.",
         "", "## `\\input` contract (ruling 3 — NEVER write Overleaf/)", "",
         "- The generator writes ONLY to `data/results_conmin/tables/`. `Overleaf/AAAI/` is a "
         "separate git clone that only Viet-Man pushes (`./sync.sh AAAI push`); an auto-written "
