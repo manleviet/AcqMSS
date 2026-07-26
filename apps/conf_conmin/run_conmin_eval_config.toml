@@ -6,6 +6,12 @@
 seed = 82                       # folds are pre-recorded in data/folds/ (not regenerated)
 output_dir = "data/results_conmin"
 verbose = true
+# SAT solver of record — pinned explicitly (not an implicit default) so the reported numbers are
+# reproducible. The SAME solver feeds BOTH the ConMin checker (build_checker) and the QuAcq
+# oracle/runner — required for a fair A/C/C∪S vs QuAcq comparison (no solver confound). The QuAcq
+# figures are solver-conditional: glucose4 → KB=10 on REAL-FM-7; another solver may differ by ±1
+# constraint (threat-to-validity, disclosed in RUN.md).
+solver_name = "glucose4"
 
 [evaluation]
 example_sets = ["2cov", "ff", "rs_1n", "rs_2n", "rs_3n", "rs_m"]

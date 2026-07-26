@@ -164,6 +164,10 @@ def main():
     negatives = args.negatives or ev.get('negatives', list(NEG_MODES))
     use_incremental = not args.non_incremental
     seed = general.get('seed', 82)
+    # SAT solver of record: one value → BOTH the ConMin checker and the QuAcq oracle/runner, so
+    # the comparison is never confounded by a solver mismatch. Pinned in config (not an implicit
+    # per-call default); QuAcq numbers are solver-conditional (see RUN.md threat note).
+    solver_name = general.get('solver_name', 'glucose4')
 
     # QuAcq-active knobs: CLI > per-KB map (in the loop) > [evaluation] default > hardcoded.
     run_quacq_active = (not args.no_quacq_active) and ev.get('quacq_active', True)
@@ -219,6 +223,8 @@ def main():
     logger.info("ConMin comparison-condition CV evaluation")
     logger.info("KBs=%d  example-sets=%s  k=%s  negatives=%s  seed=%d (folds pre-recorded)",
                 len(models), example_sets, k_values, negatives, seed)
+    logger.info("solver=%s (checker + QuAcq oracle; QuAcq numbers are solver-conditional)",
+                solver_name)
     logger.info("QuAcq-active=%s  max_queries=%s (per-KB=%s)  timeout_s=%s",
                 run_quacq_active, qa_maxq_default, qa_maxq_per_kb or '{}', qa_timeout)
     logger.info("conditions=%s  quacq_query_mode=%s",
@@ -247,7 +253,7 @@ def main():
                         kb, qa_max_queries, qa_timeout)
             try:
                 active_res = _learn_quacq_active(
-                    model.bias, model.oracle, 'glucose4', use_incremental,
+                    model.bias, model.oracle, solver_name, use_incremental,
                     qa_max_queries, qa_timeout)
                 logger.info("  QuAcq-active %s -> KB=%d queries=%d reason=%s", kb,
                             active_res.n_kb, active_res.n_queries,
@@ -272,7 +278,8 @@ def main():
                 sys.exit(1)
             rows = evaluate_kb_example(
                 kb, es, model.oracle, model.bias, examples_path, folds_path,
-                k_values=k_values, negatives=negatives, use_incremental=use_incremental,
+                k_values=k_values, negatives=negatives,
+                solver_name=solver_name, use_incremental=use_incremental,
                 active_res=active_res, quacq_active_error=quacq_active_error,
                 qa_max_queries=qa_max_queries, qa_timeout_s=qa_timeout,
                 conditions=selected_conditions, quacq_query_mode=quacq_query_mode)

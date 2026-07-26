@@ -57,12 +57,17 @@ python -m apps.run_conmin_eval $CFG --kb REAL-FM-7 --conditions quacq
 **Determinism:** QuAcq (both modes) is hash-seed-independent — FindScope iterates in canonical
 (sorted) order, so results do NOT depend on `PYTHONHASHSEED` (verified across fixed seeds + unset
 on REAL-FM-7/fqa/arcade-game/REAL-FM-4). No env pin needed; ConMin/A/C/C∪S are hash-independent.
-**Caveat — the numbers are conditioned on solver + order:** (a) SAT solver — the committed QuAcq
-numbers are `glucose4` (the eval default, `conmin_cv_evaluator.py`); a different solver changes the
-query count and can change the learned KB (minisat KB=9 vs glucose4 KB=10 on REAL-FM-7), so always
-report QuAcq with the solver noted; (b) canonical order — `n_queries` is order-dependent (342
-sorted-by-name vs 353 for other valid orders); the learned KB (hence F1) was reorder-invariant on
-REAL-FM-7 but is unverified on the larger KBs. Treat `oracle_queries` as solver+order-conditional.
+**Canonical figures** (REAL-FM-7, glucose4): oracle-mode **KB=10, oracle_queries=342, no_query**.
+
+**Threats to validity (report QuAcq numbers WITH these caveats):**
+- *Solver-conditional.* The solver is pinned in config (`[general] solver_name = "glucose4"`) and
+  feeds BOTH the ConMin checker and the QuAcq oracle/runner (one value, no confound). QuAcq is
+  solver-sensitive: glucose4 → KB=10 on REAL-FM-7; another solver may differ by ±1 constraint
+  (e.g. minisat → KB=9). Always report QuAcq with the solver named.
+- *Order-dependent by design.* QuAcq's learned theory depends on the constraint-processing order —
+  a known property of the algorithm, not a defect. We fix ONE canonical order (sorted-by-name), so
+  `oracle_queries=342` is reproducible; a different canonical order would change the count. Handled
+  by fixed order + 3-fold CV averaging + this disclosure — NOT by claiming order-invariance.
 
 Rules: a full run must exist first (errors if `{kb}_{es}_eval.json` is missing — nothing to
 reuse); do NOT combine `--conditions` with narrower `--k`/`--negatives` (it refuses rather than
