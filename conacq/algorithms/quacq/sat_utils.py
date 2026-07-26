@@ -49,4 +49,7 @@ def prune_rejecting(
             pruned.append(c_id)
     for c_id in pruned:
         remaining_bias.pop(c_id, None)
+    if pruned:  # diagnostic counters: constraints pruned, split by call site (sound vs paper-faithful)
+        profiler.increment('quacq_prune_complete_pruned' if include_bg else 'quacq_prune_partial_pruned',
+                           len(pruned))
     return pruned

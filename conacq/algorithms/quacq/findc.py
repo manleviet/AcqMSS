@@ -105,6 +105,7 @@ class FindC:
         # Returning an unconfirmed guess (remaining[0]) can learn an OVER-STRONG constraint that
         # rejects e but is not in the target → precision <1.0. Learn nothing here; the caller's
         # band-aid advances progress. Soundness over recall.
+        self.profiler.increment('quacq_findc_unconfirmed')  # diagnostic counter (fix-iii decline)
         logging.debug('FindC: %d candidates, none confirmed by discrimination → None', len(remaining))
         return None
 

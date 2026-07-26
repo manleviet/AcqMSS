@@ -172,7 +172,14 @@ def test_evaluate_kb_example_emits_quacq_active_uniform_schema():
     active = [r for r in rows if r['condition'] == 'QuAcq-active']
     a_rows = [r for r in rows if r['condition'] == 'A']
     assert active and a_rows, "expected both A and QuAcq-active rows"
-    assert set(active[0]) == set(a_rows[0]), "QuAcq-active row schema must match A row schema"
+    # QuAcq-active carries ADDITIVE diagnostic counters (band-aid/findc-unconfirmed/empty-scope/
+    # prune-split) for the paper's fairness disclosure; A does not. So the QuAcq-active schema is
+    # the A schema PLUS exactly those diagnostic columns.
+    DIAG = {'quacq_bandaid_drops', 'quacq_findc_unconfirmed', 'quacq_empty_scope_appends',
+            'quacq_prune_partial_pruned', 'quacq_prune_complete_pruned'}
+    assert set(active[0]) - DIAG == set(a_rows[0]), \
+        "QuAcq-active row schema must match A row schema (plus additive diagnostic counters)"
+    assert DIAG <= set(active[0]), "QuAcq-active row must carry all diagnostic counters"
     assert 'convergence_reason' in active[0] and active[0]['convergence_reason']  # top-level
     assert active[0]['qa_max_queries'] == 50 and active[0]['qa_timeout_s'] == 600.0
     assert active[0]['oracle_queries'] == res.n_queries

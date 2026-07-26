@@ -83,7 +83,9 @@ def _merge_per_kb(output_dir: Path) -> None:
     # H-5: union + blank-fill SCORED rows so a purely-ADDITIVE column delta (the new
     # convergence_reason/qa_* columns absent from pre-fix committed JSONs) merges cleanly.
     # Warn ONLY if a NON-additive column is missing from some scored row (a genuine stale mix).
-    ADDITIVE = {'convergence_reason', 'qa_max_queries', 'qa_timeout_s'}
+    ADDITIVE = {'convergence_reason', 'qa_max_queries', 'qa_timeout_s',
+                'quacq_bandaid_drops', 'quacq_findc_unconfirmed', 'quacq_empty_scope_appends',
+                'quacq_prune_partial_pruned', 'quacq_prune_complete_pruned'}
     skeys = list(dict.fromkeys(k for r in scored for k in r.keys()))
     stale = sorted(k for k in skeys if k not in ADDITIVE
                    and any(k not in r for r in scored) and any(k in r for r in scored))

@@ -36,6 +36,12 @@ class QuAcqRunResult(BaseRunResult):
     n_queries: int = 0
     convergence_reason: str = ''
 
+    # Diagnostic counters for the paper's fairness disclosure (band-aid drops, FindC-unconfirmed
+    # declines, empty-scope appends, prune split by call-site). Plain dict, NOT in QUACQ_METRICS:
+    # adding them to the CV aggregate would break the frozen on-disk ConGen schema test against
+    # un-regenerable recorded data. Surfaced in the per-row CSV; not serialized in to_dict.
+    diagnostics: Dict[str, int] = field(default_factory=dict)
+
     # The extended profiler metrics live in the inherited ``metrics`` RunMetrics
     # bundle (built via ``collect(profiler, QUACQ_METRICS)``), not hand-listed here.
 
@@ -220,6 +226,11 @@ class QuAcqRunner(BaseRunner):
 
             profiler_snapshot = profiler.to_dict()
 
+            # Diagnostic counters (cheap; read straight off the profiler, no extra SAT calls).
+            diagnostics = {k: profiler.get_metric(k, 0) for k in (
+                'quacq_bandaid_drops', 'quacq_findc_unconfirmed', 'quacq_empty_scope_appends',
+                'quacq_prune_partial_pruned', 'quacq_prune_complete_pruned')}
+
             # Resolve KB names and clauses, get BG clauses
             kb_names, kb_clauses = self.model.resolve_kb(prepared.describe, result.kb_assumption_ids)
             bg_clauses = self.oracle.oracle_data.get_root_clauses()
@@ -237,7 +248,8 @@ class QuAcqRunner(BaseRunner):
                 memory_peak_mb=memory_peak_mb,
                 metrics=run_metrics,
                 profiler_data=profiler_snapshot,
-                query_history=result.query_history
+                query_history=result.query_history,
+                diagnostics=diagnostics,
             )
 
             logging.debug('<<< QuAcqRunner: KB=%d, queries=%d, runtime=%.2fms',

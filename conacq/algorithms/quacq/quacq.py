@@ -260,11 +260,13 @@ class QuAcq:
                         # never hits this (finite pool), but example_first's SAT fallback (generate())
                         # shares the same spin and is NOT covered here — a separate, pre-existing issue.
                         if mode == 'oracle' and tested_c_id is not None:
+                            self.profiler.increment('quacq_bandaid_drops')  # diagnostic counter
                             remaining_bias.pop(tested_c_id, None)
                 else:
                     logging.warning('FindScope returned empty scope for negative example')
                     if mode == 'oracle' and tested_c_id:
                         if tested_c_id not in learned_kb:
+                            self.profiler.increment('quacq_empty_scope_appends')  # diagnostic counter
                             learned_kb.append(tested_c_id)
                         remaining_bias.pop(tested_c_id, None)
 

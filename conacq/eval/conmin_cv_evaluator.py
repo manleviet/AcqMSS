@@ -278,7 +278,7 @@ def _eval_quacq_fold(bias_path, fm_path, comparator, ground_truth, variables,
     # QuAcq's cost is oracle_queries (its paper_consistency_checks counts oracle
     # membership queries, NOT SAT consistency checks) → stage1_batch_checks stays blank
     # so it is never compared against ConMin's Stage-1 batch column.
-    return [_score_row(
+    return [{**_score_row(
         meta, 'n/a', 'QuAcq', None, res.kb_constraints, res.kb_clauses, (),
         comparator, ground_truth, variables, te_pos, te_neg, root_clauses, res.n_bias,
         _sizes(0, 0, 0, res.n_kb, 0, 0, 0, 0),
@@ -286,7 +286,8 @@ def _eval_quacq_fold(bias_path, fm_path, comparator, ground_truth, variables,
               oracle_queries=getattr(res, 'n_queries', 0) or 0, stage1_batch_checks=None,
               # Record the real example-only stop (usually 'pool_exhausted') — the direct
               # evidence for WHY passive QuAcq is near-empty. Provenance stays None (passive).
-              convergence_reason=getattr(res, 'convergence_reason', '') or ''))]
+              convergence_reason=getattr(res, 'convergence_reason', '') or '')),
+        **getattr(res, 'diagnostics', {})}]  # diagnostic counters (additive columns)
 
 
 def _learn_quacq_active(bias_path, fm_path, solver_name, use_incremental,
@@ -315,14 +316,15 @@ def _score_quacq_active_row(res, meta, comparator, ground_truth, variables,
     report presents structural metrics as a single value (H-1/H-3), not a mean±0.000 CV."""
     runtime_ms = (res.metrics.values.get('runtime_ms', res.runtime_ms)
                   if res.metrics else res.runtime_ms)
-    return _score_row(
+    return {**_score_row(
         meta, 'n/a', 'QuAcq-active', None, res.kb_constraints, res.kb_clauses, (),
         comparator, ground_truth, variables, te_pos, te_neg, root_clauses, res.n_bias,
         _sizes(0, 0, 0, res.n_kb, 0, 0, 0, 0),
         _cost(runtime_ms, 0.0, 0.0, 0, 0, 0, 0, 0, res.memory_peak_mb,
               oracle_queries=getattr(res, 'n_queries', 0) or 0, stage1_batch_checks=None,
               convergence_reason=getattr(res, 'convergence_reason', '') or '',
-              qa_max_queries=max_queries, qa_timeout_s=timeout_s))
+              qa_max_queries=max_queries, qa_timeout_s=timeout_s)),
+        **getattr(res, 'diagnostics', {})}  # diagnostic counters (additive columns)
 
 
 def _sizes(n_mss, n_cover, n_support, n_kb, n_uncoverable, n_components,
