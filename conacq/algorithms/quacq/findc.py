@@ -101,9 +101,12 @@ class FindC:
             if result is not None:
                 return result
 
-        # If we can't discriminate further, return first remaining candidate
-        logging.debug('FindC: returning first of %d candidates', len(remaining))
-        return remaining[0]
+        # Conservative (paper-faithful): discrimination could not confirm a SINGLE constraint.
+        # Returning an unconfirmed guess (remaining[0]) can learn an OVER-STRONG constraint that
+        # rejects e but is not in the target → precision <1.0. Learn nothing here; the caller's
+        # band-aid advances progress. Soundness over recall.
+        logging.debug('FindC: %d candidates, none confirmed by discrimination → None', len(remaining))
+        return None
 
     def _narrow_with_generator(
             self,
@@ -141,4 +144,6 @@ class FindC:
                     return candidates[0]
             i += 1
 
-        return candidates[0] if candidates else None
+        # Only a SINGLE surviving candidate is a confirmed match; >1 means discrimination was
+        # inconclusive → return None (unconfirmed), never guess the first (precision guard).
+        return candidates[0] if len(candidates) == 1 else None

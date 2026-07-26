@@ -66,7 +66,13 @@ class FindScope:
 
             if is_consistent:
                 if partial:
-                    pruned = prune_rejecting(self.checker, self.assignment_map, remaining_bias, partial, self.root_assumption, self.profiler)
+                    # PARTIAL assignment → paper's fully-assigned-clause rule (include_bg=False):
+                    # only condemn a candidate the partial fully assigns and falsifies. Extension-SAT
+                    # (with BG) here wrongly pruned FM-entailed candidates whose scope the partial
+                    # does not fully assign — the driver of the QuAcq recall loss.
+                    pruned = prune_rejecting(self.checker, self.assignment_map, remaining_bias,
+                                             partial, self.root_assumption, self.profiler,
+                                             include_bg=False)
                     if pruned:
                         logging.debug('FindScope pruned %d constraints from partial query', len(pruned))
             else:

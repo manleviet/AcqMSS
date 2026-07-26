@@ -4244,11 +4244,11 @@
       "compiler": false,
       "diagram_builder": false,
       "gui_builder": false,
-      "interface": false,
+      "interface": true,
       "java": false,
       "javac": false,
       "jplug": true,
-      "mdi": true,
+      "mdi": false,
       "model_code_synch": false,
       "mvc": false,
       "petri_net": false,
@@ -4264,10 +4264,63 @@
       "compiler": false,
       "diagram_builder": false,
       "gui_builder": false,
-      "interface": false,
+      "interface": true,
       "java": false,
       "javac": false,
       "jplug": true
+     },
+     true,
+     "findscope"
+    ],
+    [
+     {
+      "compiler": false,
+      "diagram_builder": false,
+      "gui_builder": false,
+      "interface": true,
+      "java": false,
+      "javac": false,
+      "jplug": true,
+      "mdi": false,
+      "model_code_synch": false,
+      "mvc": false
+     },
+     true,
+     "findscope"
+    ],
+    [
+     {
+      "compiler": false,
+      "diagram_builder": false,
+      "gui_builder": false,
+      "interface": true,
+      "java": false,
+      "javac": false,
+      "jplug": true,
+      "mdi": false,
+      "model_code_synch": false,
+      "mvc": false,
+      "petri_net": false,
+      "qt": false
+     },
+     true,
+     "findscope"
+    ],
+    [
+     {
+      "compiler": false,
+      "diagram_builder": false,
+      "gui_builder": false,
+      "interface": true,
+      "java": false,
+      "javac": false,
+      "jplug": true,
+      "mdi": false,
+      "model_code_synch": false,
+      "mvc": false,
+      "petri_net": false,
+      "qt": false,
+      "sdi": false
      },
      false,
      "findscope"
@@ -4276,42 +4329,15 @@
      {
       "compiler": false,
       "diagram_builder": false,
-      "gui_builder": false
-     },
-     true,
-     "findscope"
-    ],
-    [
-     {
-      "compiler": false,
-      "diagram_builder": false,
       "gui_builder": false,
-      "interface": false,
-      "java": false
-     },
-     true,
-     "findscope"
-    ],
-    [
-     {
-      "compiler": false,
-      "diagram_builder": false,
-      "gui_builder": false,
-      "interface": false,
+      "interface": true,
       "java": false,
-      "javac": false
-     },
-     true,
-     "findscope"
-    ],
-    [
-     {
-      "compiler": false,
-      "diagram_builder": false,
-      "gui_builder": false,
-      "interface": false,
-      "java": false,
-      "jplug": true
+      "javac": false,
+      "jplug": true,
+      "mdi": false,
+      "model_code_synch": false,
+      "mvc": false,
+      "sdi": false
      },
      false,
      "findscope"
