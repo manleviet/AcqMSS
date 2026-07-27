@@ -41,7 +41,8 @@ ANCHORS = [
 # reached only 679) and can NEVER be a deterministic anchor — it deliberately has no numeric anchor
 # here. (Its Stage-1 A/C/C∪S anchors are unaffected — the sweep doesn't touch them.)
 NON_ANCHORABLE_QUACQ_ACTIVE = ("REAL-FM-4",)
-# busybox QuAcq-active is PENDING tonight's run (max_queries=5000 is the effective, deterministic cap).
+# KBs whose QuAcq-active anchor is not yet pinned (no deterministic cell to anchor until their
+# `_long.csv` is merged); the log reports each one's actual load state at generation time, not a plan.
 PENDING_QUACQ_ACTIVE = ("busybox-1.18.0",)
 
 
@@ -110,7 +111,9 @@ def run_all(data: dict):
     ok = (not failures) and (not short)
     logger.info("self-check: %d passed, %d failed, %d skipped, %d short-KB -> %s",
                 passed, len(failures), skipped, len(short), "OK" if ok else "BLOCK")
+    pending = ", ".join(f"{kb} ({'loaded' if data.get(kb) else 'absent'} at generation time)"
+                        for kb in PENDING_QUACQ_ACTIVE)
     logger.info("QuAcq-active NON-ANCHORABLE (wall-clock timeout, non-deterministic): %s; "
-                "PENDING tonight's run: %s",
-                ", ".join(NON_ANCHORABLE_QUACQ_ACTIVE), ", ".join(PENDING_QUACQ_ACTIVE))
+                "QuAcq-active anchor not yet pinned for: %s",
+                ", ".join(NON_ANCHORABLE_QUACQ_ACTIVE), pending)
     return ok, skipped

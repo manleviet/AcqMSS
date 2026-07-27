@@ -49,23 +49,32 @@ _APPENDIX_PRF = ("app-prf-desc", "app-prf-clause")
 _ALL6_TABLES = ("app-quacq-diag", "app-perset", "app-confusion")
 
 # Genuine/over-strong/redundant (G/S/R) split of the QuAcq-active band-aid drops, from an OFFLINE
-# entailment classification run by the reviewer agent (NOT emitted by the runner). Versioned here
-# because the classification output was NEVER persisted -> unlike the 8/144 exact-equivalence
-# figures, it is NOT re-derivable from the committed `_long.csv`. Edit this constant (diffable) when
-# a re-measurement lands; do not hand-edit PROVENANCE.md (it is regenerated on every run).
+# entailment classification (NOT emitted by the runner). Versioned here because the classification
+# output was NEVER persisted -> unlike the 8/144 exact-equivalence figures, it is NOT re-derivable
+# from the committed `_long.csv`. SOURCE OF RECORD for the VALUES is the Cowork vault findings note
+# (`ConMin - Evaluation findings (for writing).md`, section A2, 2026-07-26) — NOT any committed
+# artifact; the classification commit was not recorded. The two committed reports are the PRE-FIX
+# probe (23 drops / 14 true on a superseded 342-query run, later found to overcount) and are cited
+# for the classification METHOD only. Edit this constant (diffable) when a re-measurement lands; do
+# not hand-edit PROVENANCE.md (it is regenerated on every run).
 _GENUINE_SPLIT = (
     "- **genuine-drop split (G/S/R)** — QuAcq-active band-aid drops classified genuine (G) / "
-    "over-strong (S) / redundant (R) by an OFFLINE entailment classification run by the reviewer "
-    "agent, NOT emitted by the runner: REAL-FM-7 **1 of 10**, fqa **150 of 354**, arcade-game "
-    "**35 of 56 — STALE** (superseded by the fair-budget re-run: raw is now 326; the per-query rate "
-    "56/863 = 0.0649 vs 326/5000 = 0.0652 confirms a longer re-run, not a counter-semantics change). "
-    "Measured **2026-07-26** against commit `28509ad`. **NOT re-derivable from the committed "
-    "`_long.csv`** (unlike the 8/144 exact-equivalence figures) — the classification output was never "
-    "persisted; re-measure by re-adding the env-gated `_FAIRNESS_PROBE` hook to `quacq.py` and "
-    "re-running the G/S/R entailment classification per the two committed reports under `plans/` "
+    "over-strong (S) / redundant (R) by an OFFLINE entailment classification, NOT emitted by the "
+    "runner: REAL-FM-7 **1 of 10**, fqa **150 of 354**, arcade-game **35 of 56 — STALE** (superseded "
+    "by the fair-budget re-run: raw is now 326; the per-query rate 56/863 = 0.0649 vs 326/5000 = "
+    "0.0652 confirms a longer re-run, not a counter-semantics change). **Source of record for these "
+    "values: the Cowork vault findings note** `ConMin - Evaluation findings (for writing).md` "
+    "(section A2, 2026-07-26) — NOT a committed artifact; **the classification commit was not "
+    "recorded**. The two committed fairness-measurement reports under `plans/` "
     "(`from-code-reviewer-to-cw-impl-260726-fairness-measurement-redteam.md`, "
-    "`from-code-reviewer-to-cw-impl-260726-quacq-active-fairness-measurement.md`); there is no "
-    "push-button script — the probe hook is reverted, not committed."
+    "`from-code-reviewer-to-cw-impl-260726-quacq-active-fairness-measurement.md`) are the **PRE-FIX "
+    "probe** (23 drops / 14 true on a superseded 342-query QuAcq-active run — the 14-true figure was "
+    "later found to overcount; the current post-fix run is 272 queries, `no_query`): cite them for "
+    "the classification **method only**, NOT for these values. **NOT re-derivable from the committed "
+    "`_long.csv`** (unlike the 8/144 exact-equivalence figures); re-measure by re-adding the "
+    "env-gated `_FAIRNESS_PROBE` hook to `quacq.py` and re-running the G/S/R entailment "
+    "classification per those reports' method — there is no push-button script (the probe hook is "
+    "reverted, not committed)."
 )
 
 
