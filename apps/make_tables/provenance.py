@@ -89,11 +89,18 @@ def write_skeleton(path: Path, prov: dict, table_labels=(), exclude_2cov: bool =
     #   2. Never imply a reproducibility the artifact does not have. If a figure is NOT
     #      re-derivable from the committed data, the entry says so and names the re-measure command
     #      (an overstated reproducibility is an unlabelled column one level up).
-    bb = prov["sources"].get("busybox-1.18.0", {})
-    busybox_state = (
-        f"busybox QuAcq-active: `busybox-1.18.0_long.csv` is {bb.get('status', 'absent')} at "
-        "generation time, so its cells are `--` (not yet merged into the loaded data)."
-    )
+    bb_status = prov["sources"].get("busybox-1.18.0", {}).get("status", "absent")
+    if bb_status == "loaded":
+        busybox_state = (
+            "busybox QuAcq-active is the **only un-anchored** KB — it ends on a wall-clock timeout "
+            "(non-deterministic / non-reproducible), so its cells are reported (t(s) = timeout wall, "
+            "queries = count reached) but carry no deterministic numeric anchor."
+        )
+    else:
+        busybox_state = (
+            f"busybox QuAcq-active: `busybox-1.18.0_long.csv` is {bb_status} at generation time, so "
+            "its cells are `--` (not in the loaded data)."
+        )
     lines = [
         "# PROVENANCE — make_tables",
         "",
@@ -128,10 +135,9 @@ def write_skeleton(path: Path, prov: dict, table_labels=(), exclude_2cov: bool =
         "`SemanticEquivalenceChecker`) and `sem_*` (name-set only, `bg_clauses=[]`) measure "
         "different objects — the earlier 'inconsistent with sem-F1' note was a metric misread, removed.",
         _GENUINE_SPLIT,
-        "- **QuAcq-active anchoring**: REAL-FM-4 is **NOT anchored** — it ends on a wall-clock "
-        "timeout (non-deterministic: 679 queries at 400 s, 3220 at 7200 s), so its cells are "
-        "reported (t(s) = timeout wall, queries = count reached, budget/$|B|$ = `--`) but carry no "
-        "deterministic numeric anchor. " + busybox_state,
+        "- **QuAcq-active anchoring**: REAL-FM-4 now lands on the **max_queries rail** (5000 queries "
+        "under a 20,000 s wall, all six samplings uniform), so it **is** anchored (deterministic "
+        "cells). " + busybox_state,
         "", "## `\\input` contract (ruling 3 — NEVER write Overleaf/)", "",
         "- The generator writes ONLY to `data/results_conmin/tables/`. `Overleaf/AAAI/` is a "
         "separate git clone that only Viet-Man pushes (`./sync.sh AAAI push`); an auto-written "

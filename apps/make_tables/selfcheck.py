@@ -34,16 +34,21 @@ ANCHORS = [
     ("REAL-FM-7", "QuAcq-active", "n_kb", 12.0), ("REAL-FM-7", "QuAcq-active", "oracle_queries", 272.0),
     ("fqa", "QuAcq-active", "sem_f1", 0.062), ("fqa", "QuAcq-active", "desc_f1", 0.056),
     ("arcade-game", "QuAcq-active", "sem_f1", 0.452), ("arcade-game", "QuAcq-active", "desc_f1", 0.495),
+    # REAL-FM-4 QuAcq-active — NOW anchorable: the re-run lands on the max_queries rail (5000 queries
+    # under a 20000 s wall, all six samplings uniform), a deterministic cell (was a wall-clock timeout).
+    ("REAL-FM-4", "QuAcq-active", "sem_f1", 0.183), ("REAL-FM-4", "QuAcq-active", "sem_p", 1.000),
+    ("REAL-FM-4", "QuAcq-active", "sem_r", 0.100), ("REAL-FM-4", "QuAcq-active", "n_kb", 26.0),
+    ("REAL-FM-4", "QuAcq-active", "oracle_queries", 5000.0),
 ]
 
-# REAL-FM-4 QuAcq-active ends on a WALL-CLOCK timeout, so it is NON-DETERMINISTIC across the
-# wall-clock cap (the current CSV reports 3220 queries at the 7200 s cap; an earlier 400 s cap
-# reached only 679) and can NEVER be a deterministic anchor — it deliberately has no numeric anchor
-# here. (Its Stage-1 A/C/C∪S anchors are unaffected — the sweep doesn't touch them.)
-NON_ANCHORABLE_QUACQ_ACTIVE = ("REAL-FM-4",)
-# KBs whose QuAcq-active anchor is not yet pinned (no deterministic cell to anchor until their
-# `_long.csv` is merged); the log reports each one's actual load state at generation time, not a plan.
-PENDING_QUACQ_ACTIVE = ("busybox-1.18.0",)
+# busybox-1.18.0 QuAcq-active ends on a WALL-CLOCK timeout (non-deterministic / non-reproducible), so
+# it can NEVER carry a deterministic numeric anchor — it is now the ONLY un-anchorable QuAcq-active
+# KB. (REAL-FM-4, formerly here, now lands on the max_queries rail and IS anchored above; every KB's
+# Stage-1 A/C/C∪S anchors were always unaffected — the sweep doesn't touch them.)
+NON_ANCHORABLE_QUACQ_ACTIVE = ("busybox-1.18.0",)
+# KBs whose QuAcq-active run has not yet landed — none: all five KBs' runs are in. The log reports
+# each pending KB's actual load state at generation time, not a plan.
+PENDING_QUACQ_ACTIVE = ()
 
 
 def check_anchors(data: dict):
@@ -112,7 +117,7 @@ def run_all(data: dict):
     logger.info("self-check: %d passed, %d failed, %d skipped, %d short-KB -> %s",
                 passed, len(failures), skipped, len(short), "OK" if ok else "BLOCK")
     pending = ", ".join(f"{kb} ({'loaded' if data.get(kb) else 'absent'} at generation time)"
-                        for kb in PENDING_QUACQ_ACTIVE)
+                        for kb in PENDING_QUACQ_ACTIVE) or "none"
     logger.info("QuAcq-active NON-ANCHORABLE (wall-clock timeout, non-deterministic): %s; "
                 "QuAcq-active anchor not yet pinned for: %s",
                 ", ".join(NON_ANCHORABLE_QUACQ_ACTIVE), pending)
