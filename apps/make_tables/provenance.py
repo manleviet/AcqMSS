@@ -48,9 +48,40 @@ _MAIN_TABLE = "eval-prf"
 _APPENDIX_PRF = ("app-prf-desc", "app-prf-clause")
 _ALL6_TABLES = ("app-quacq-diag", "app-perset", "app-confusion")
 
+# Genuine/over-strong/redundant (G/S/R) split of the QuAcq-active band-aid drops, from an OFFLINE
+# entailment classification run by the reviewer agent (NOT emitted by the runner). Versioned here
+# because the classification output was NEVER persisted -> unlike the 8/144 exact-equivalence
+# figures, it is NOT re-derivable from the committed `_long.csv`. Edit this constant (diffable) when
+# a re-measurement lands; do not hand-edit PROVENANCE.md (it is regenerated on every run).
+_GENUINE_SPLIT = (
+    "- **genuine-drop split (G/S/R)** — QuAcq-active band-aid drops classified genuine (G) / "
+    "over-strong (S) / redundant (R) by an OFFLINE entailment classification run by the reviewer "
+    "agent, NOT emitted by the runner: REAL-FM-7 **1 of 10**, fqa **150 of 354**, arcade-game "
+    "**35 of 56 — STALE** (superseded by the fair-budget re-run: raw is now 326; the per-query rate "
+    "56/863 = 0.0649 vs 326/5000 = 0.0652 confirms a longer re-run, not a counter-semantics change). "
+    "Measured **2026-07-26** against commit `28509ad`. **NOT re-derivable from the committed "
+    "`_long.csv`** (unlike the 8/144 exact-equivalence figures) — the classification output was never "
+    "persisted; re-measure by re-adding the env-gated `_FAIRNESS_PROBE` hook to `quacq.py` and "
+    "re-running the G/S/R entailment classification per the two committed reports under `plans/` "
+    "(`from-code-reviewer-to-cw-impl-260726-fairness-measurement-redteam.md`, "
+    "`from-code-reviewer-to-cw-impl-260726-quacq-active-fairness-measurement.md`); there is no "
+    "push-button script — the probe hook is reverted, not committed."
+)
+
 
 def write_skeleton(path: Path, prov: dict, table_labels=(), exclude_2cov: bool = True) -> None:
     """Write ``PROVENANCE.md``: sources, aggregation rules, table variants, and the copy step."""
+    # Two rules every string below must obey (each was violated by a line here once):
+    #   1. State the state AT GENERATION TIME — never a plan. A file whose job is provenance
+    #      cannot contain a prediction, so e.g. busybox status is read from `prov`, not hard-coded.
+    #   2. Never imply a reproducibility the artifact does not have. If a figure is NOT
+    #      re-derivable from the committed data, the entry says so and names the re-measure command
+    #      (an overstated reproducibility is an unlabelled column one level up).
+    bb = prov["sources"].get("busybox-1.18.0", {})
+    busybox_state = (
+        f"busybox QuAcq-active: `busybox-1.18.0_long.csv` is {bb.get('status', 'absent')} at "
+        "generation time, so its cells are `--` (not yet merged into the loaded data)."
+    )
     lines = [
         "# PROVENANCE — make_tables",
         "",
@@ -76,17 +107,19 @@ def write_skeleton(path: Path, prov: dict, table_labels=(), exclude_2cov: bool =
     lines += [
         "", "## Audit trail", "",
         "- **exact-equivalence** figures are DERIVED FROM the committed `_long.csv`, not "
-        "negotiated: REAL-FM-7 ConMin attains it on **8/144 rows (6%)** but **0/48 "
-        "configurations** (never across all folds of any config); A 1/18; C and QuAcq "
+        "negotiated: REAL-FM-7 ConMin attains it on **8/144 rows** but **0/48 "
+        "configurations** (never across all folds of any config) — all eight attaining rows are "
+        "**one fold** (RS-3n, fold 2, replicated over k in {1,2,3,5} x {raw, reduced}), which is the "
+        "entire reason 8/144 is kept. A 1/18; C and QuAcq "
         "example-only 0; QuAcq-active is learned once/KB (one observation). Details in "
         "`exact-equiv.md`. `exact_equiv` (delivered theory incl. BG, via "
         "`SemanticEquivalenceChecker`) and `sem_*` (name-set only, `bg_clauses=[]`) measure "
         "different objects — the earlier 'inconsistent with sem-F1' note was a metric misread, removed.",
+        _GENUINE_SPLIT,
         "- **QuAcq-active anchoring**: REAL-FM-4 is **NOT anchored** — it ends on a wall-clock "
         "timeout (non-deterministic: 679 queries at 400 s, 3220 at 7200 s), so its cells are "
         "reported (t(s) = timeout wall, queries = count reached, budget/$|B|$ = `--`) but carry no "
-        "deterministic numeric anchor. busybox QuAcq-active is **pending** tonight's run "
-        "(max_queries=5000 effective). Both regenerate after the sweep + `--merge`.",
+        "deterministic numeric anchor. " + busybox_state,
         "", "## `\\input` contract (ruling 3 — NEVER write Overleaf/)", "",
         "- The generator writes ONLY to `data/results_conmin/tables/`. `Overleaf/AAAI/` is a "
         "separate git clone that only Viet-Man pushes (`./sync.sh AAAI push`); an auto-written "

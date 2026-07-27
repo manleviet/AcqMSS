@@ -32,16 +32,27 @@ def _note(exclude_2cov: bool) -> str:
     return "Exclude-2COV means." if exclude_2cov else "All six samplings."
 
 
-def _diag_mean(rows: list, col: str) -> Cell:
-    """Mean over ALL folds (incl. budget-capped) — the fairness disclosure must not drop them."""
-    vals = []
-    for r in rows:
-        raw = (r.get(col) or "").strip()
-        if raw and raw.lower() != "nan":
-            try:
-                vals.append(float(raw))
-            except ValueError:
-                pass
+def _row_float(row: dict, col: str):
+    """Parsed float for one CSV cell, or None if blank/NaN/absent — never coerced to 0."""
+    raw = (row.get(col) or "").strip()
+    if not raw or raw.lower() == "nan":
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def _diag_mean(rows: list, extractor) -> Cell:
+    """Mean over ALL folds (incl. budget-capped) — the fairness disclosure must not drop them.
+
+    ``extractor`` is a CSV column name (a plain counter) or a callable ``row -> float | None``
+    (a derived column, e.g. ``unlocalized``). Derive per row THEN average: a row whose value is
+    None is skipped, so a single ragged row never coerces a blank to 0 (the KB-wide case is the
+    STALE gate's job).
+    """
+    getval = extractor if callable(extractor) else lambda r: _row_float(r, extractor)
+    vals = [v for v in (getval(r) for r in rows) if v is not None]
     return Cell(f"{statistics.mean(vals):.1f}", False, False) if vals else Cell(MISSING, False, False)
 
 
@@ -151,9 +162,59 @@ def _eval_cost(data, exclude_2cov) -> Grid:
 
 # ---- 10. app-quacq-diag (all-6, counters + budget/|B|) ---------------------------
 
-_DIAG_COUNTERS = [("drops", "quacq_bandaid_drops"), ("findc?", "quacq_findc_unconfirmed"),
-                  ("empty", "quacq_empty_scope_appends"), ("prunP", "quacq_prune_partial_pruned"),
-                  ("prunC", "quacq_prune_complete_pruned")]
+# The band-aid drop is ORACLE-ONLY (quacq.py:262 `mode=='oracle'` guard; example_only never fires
+# it — the pool is finite), so `unlocalized` = drops - declined is defined ONLY for QuAcq-active
+# rows. In example mode drops is always 0, so the subtraction would be a meaningless negative; those
+# rows resolve to '--' (see the caption and _assert_drops_ge_declined).
+def _unlocalized(row: dict):
+    """Per-row band-aid drops NOT attributable to a FindC decline (FindC paths 1+2), oracle-only.
+
+    Returns None (=> '--') for example-only rows, or when either counter is blank — the missing
+    value is skipped by _diag_mean, never coerced to 0.
+    """
+    if row.get("condition") != "QuAcq-active":
+        return None
+    drops = _row_float(row, "quacq_bandaid_drops")
+    declined = _row_float(row, "quacq_findc_unconfirmed")
+    return None if drops is None or declined is None else drops - declined
+
+
+# Header NAMES the population (readable); the caption NAMES the CSV counter (re-derivable). The
+# extractor is a CSV column name (plain counter) or a callable row -> float|None (derived column).
+_DIAG_COUNTERS = [
+    ("declined", "quacq_findc_unconfirmed"),
+    ("unlocalized", _unlocalized),                     # derived: drops - declined (oracle-only)
+    ("empty-scope", "quacq_empty_scope_appends"),
+    (r"pruned$_p$", "quacq_prune_partial_pruned"),
+    (r"pruned$_c$", "quacq_prune_complete_pruned"),
+]
+
+
+def _assert_drops_ge_declined(rows: list, kb: str) -> None:
+    """Pin the exactness of `unlocalized`: per oracle-mode row, quacq_bandaid_drops >=
+    quacq_findc_unconfirmed. The counted FindC path (path 3) is a SUBSET of the three FindC-`None`
+    paths that each trigger a band-aid drop, so the remainder can never be negative. A negative
+    remainder would falsify the structural argument the disclosure rests on, so ABORT with the
+    offending row's key rather than silently print it.
+
+    This pins the ARITHMETIC, not the SEMANTICS: it catches a negative remainder but would NOT catch
+    a future edit to the quacq.py:262 guard that lets `quacq_bandaid_drops` fire OUTSIDE the
+    FindC-`None` branch — the difference would stay >= 0 while ceasing to mean "FindC paths 1+2". The
+    derivation rests on three code facts; if you change one, MEET the others here:
+      1. `tested_c_id` is never None in oracle mode — query_provider.py:139 returns (config, c_id)
+         from inside the bias loop, so the quacq.py:262 guard never filters an oracle drop;
+      2. FindC runs only inside `if scope:` — quacq.py:235;
+      3. `quacq_findc_unconfirmed` increments at exactly one site — findc.py:108.
+    """
+    for r in rows:
+        drops = _row_float(r, "quacq_bandaid_drops")
+        declined = _row_float(r, "quacq_findc_unconfirmed")
+        if drops is not None and declined is not None and drops < declined:
+            key = (kb, r.get("example_set"), r.get("fold"), r.get("condition"),
+                   r.get("negatives"), r.get("k"))
+            raise AssertionError(
+                f"quacq_bandaid_drops ({drops}) < quacq_findc_unconfirmed ({declined}) at {key}: "
+                "the FindC-decline subset proof for `unlocalized` is violated")
 
 
 def _app_quacq_diag(data) -> Grid:
@@ -162,20 +223,33 @@ def _app_quacq_diag(data) -> Grid:
     for ki, kb in enumerate(KBS):
         for ci, cond in enumerate(("QuAcq", "QuAcq-active")):
             rows = _sel(data, kb, cond, exclude_2cov=False)   # all-6: disclosure keeps 2cov
+            if cond == "QuAcq-active":                        # `unlocalized` is oracle-only
+                _assert_drops_ge_declined(rows, kb)
             reasons = sorted({(r.get("convergence_reason") or "") for r in rows})
             reason = "--" if not reasons else (reasons[0] or "--") if len(reasons) == 1 else "mixed"
             if reason == "timeout":            # wall-clock bound: show the ceiling, not the query budget
                 secs = cv_mean(rows, "qa_timeout_s").value
                 reason = f"timeout({secs:.0f}s)" if secs else "timeout"
             # counters + queries over ALL folds — a fairness disclosure must NOT drop capped folds.
-            cells = [_diag_mean(rows, c) for _, c in _DIAG_COUNTERS]
+            cells = [_diag_mean(rows, ex) for _, ex in _DIAG_COUNTERS]
             cells += [_diag_mean(rows, "oracle_queries"),
                       Cell(reason, False, False),   # raw; _latex_cell escapes '_', md keeps it
                       _budget_ratio(rows) if cond == "QuAcq-active" else Cell(MISSING, False, False)]
             lead = [f"\\multirow{{2}}{{*}}{{{KB_LABEL[kb]}}}" if ci == 0 else "", DISPLAY[cond]]
             body.append(BodyRow(lead, cells, rule_before=(ci == 0 and ki > 0)))
-    cap = (r"QuAcq fairness diagnostics (all six samplings). empty $=$ empty-scope appends "
-           r"(0 $\Rightarrow$ precision claim holds). budget/$|B|$ shows the query budget.")
+    cap = (r"QuAcq fairness diagnostics (all six samplings). "
+           r"\texttt{declined} $=$ \texttt{quacq\_findc\_unconfirmed}; "
+           r"\texttt{unlocalized} $=$ \texttt{quacq\_bandaid\_drops} $-$ "
+           r"\texttt{quacq\_findc\_unconfirmed}; "
+           r"\texttt{empty-scope} $=$ \texttt{quacq\_empty\_scope\_appends} "
+           r"(0 $\Rightarrow$ the precision claim holds); "
+           r"\texttt{pruned}$_p$/\texttt{pruned}$_c$ $=$ "
+           r"\texttt{quacq\_prune\_partial\_pruned}/\texttt{quacq\_prune\_complete\_pruned}. "
+           r"budget/$|B|$ shows the query budget. "
+           r"Both \texttt{declined} and \texttt{unlocalized} depress the baseline's recall. "
+           r"\texttt{unlocalized} is oracle-only (the band-aid never fires in example mode, "
+           r"\texttt{quacq\_bandaid\_drops}${=}$0), so the \textsc{QuAcq} example-only row is "
+           r"not applicable.")
     return Grid("app-quacq-diag", cap, "ll" + "r" * len(_DIAG_COUNTERS) + "rlr",
                 headers, body, n_leading=2, full_width=True, tabcolsep="4pt")
 

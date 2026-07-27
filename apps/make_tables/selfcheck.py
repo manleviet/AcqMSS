@@ -36,9 +36,10 @@ ANCHORS = [
     ("arcade-game", "QuAcq-active", "sem_f1", 0.452), ("arcade-game", "QuAcq-active", "desc_f1", 0.495),
 ]
 
-# REAL-FM-4 QuAcq-active ends on a WALL-CLOCK timeout, so it is NON-DETERMINISTIC (679 queries
-# at 400 s, 3220 at 7200 s) and can NEVER be a deterministic anchor — it deliberately has no
-# numeric anchor here. (Its Stage-1 A/C/C∪S anchors are unaffected — the sweep doesn't touch them.)
+# REAL-FM-4 QuAcq-active ends on a WALL-CLOCK timeout, so it is NON-DETERMINISTIC across the
+# wall-clock cap (the current CSV reports 3220 queries at the 7200 s cap; an earlier 400 s cap
+# reached only 679) and can NEVER be a deterministic anchor — it deliberately has no numeric anchor
+# here. (Its Stage-1 A/C/C∪S anchors are unaffected — the sweep doesn't touch them.)
 NON_ANCHORABLE_QUACQ_ACTIVE = ("REAL-FM-4",)
 # busybox QuAcq-active is PENDING tonight's run (max_queries=5000 is the effective, deterministic cap).
 PENDING_QUACQ_ACTIVE = ("busybox-1.18.0",)
