@@ -1,0 +1,20 @@
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccccccc}
+\toprule
+ & \multicolumn{2}{c}{A} & \multicolumn{2}{c}{C} & \multicolumn{2}{c}{\textsc{ConMin}} & \multicolumn{2}{c}{\textsc{QuAcq}} & \multicolumn{2}{c}{\textsc{QuAcq}-a} \tabularnewline
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9} \cmidrule(lr){10-11}
+KB & acc & spec & acc & spec & acc & spec & acc & spec & acc & spec \tabularnewline
+\midrule
+$KB_{1}$ & 0.47 & 1.00 & 0.95 & 0.70 & 0.52 & 1.00 & 0.93 & 0.35 & \textbf{1.00} & 1.00 \tabularnewline
+$KB_{2}$ & 0.78 & 1.00 & \textbf{1.00} & 0.98 & 0.84 & 1.00 & 0.99 & 0.86 & $0.98^{\dagger}$ & $0.78^{\dagger}$ \tabularnewline
+$KB_{3}$ & 0.38 & 1.00 & 0.96 & 0.71 & 0.52 & 1.00 & 0.97 & 0.75 & $\mathbf{1.00}^{\dagger}$ & $1.00^{\dagger}$ \tabularnewline
+$KB_{4}$ & 0.71 & 1.00 & 0.98 & 0.88 & 0.83 & 1.00 & 0.98 & 0.72 & $\mathbf{1.00}^{\dagger}$ & $1.00^{\dagger}$ \tabularnewline
+$KB_{5}$ & 0.78 & 1.00 & 0.99 & 0.77 & 0.81 & 1.00 & 0.99 & 0.70 & $\mathbf{1.00}^{\dagger}$ & $1.00^{\dagger}$ \tabularnewline
+\bottomrule
+\end{tabular}
+\caption{Accuracy and specificity per KB and strategy. Exclude-2COV means.}
+\label{tab:app-accuracy}
+\end{table*}

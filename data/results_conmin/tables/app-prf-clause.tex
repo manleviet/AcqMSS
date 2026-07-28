@@ -1,0 +1,20 @@
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccccccccccccc}
+\toprule
+ & \multicolumn{4}{c}{A} & \multicolumn{4}{c}{C} & \multicolumn{4}{c}{\textsc{ConMin}} & \multicolumn{4}{c}{\textsc{QuAcq}-a} \tabularnewline
+\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13} \cmidrule(lr){14-17}
+KB & P & R & F1 & $|\KB|$ & P & R & F1 & $|\KB|$ & P & R & F1 & $|\KB|$ & P & R & F1 & $|\KB|$ \tabularnewline
+\midrule
+$KB_{1}$ & 0.28 & 0.95 & 0.43 & 99.3 & 0.87 & 0.11 & 0.19 & 0.9 & 0.78 & 0.79 & 0.78 & 14.9 & 1.00 & 0.73 & \textbf{0.84} & 12.0 \tabularnewline
+$KB_{2}$ & 0.77 & 1.00 & \textbf{0.87} & 252.9 & 0.91 & 0.05 & 0.09 & 1.2 & 0.89 & 0.75 & 0.78 & 108.5 & $1.00^{\dagger}$ & $0.03^{\dagger}$ & $0.06^{\dagger}$ & $6.0^{\dagger}$ \tabularnewline
+$KB_{3}$ & 0.23 & 0.99 & 0.37 & 641.9 & 0.88 & 0.02 & 0.05 & 1.3 & 0.50 & 0.71 & \textbf{0.55} & 162.0 & $1.00^{\dagger}$ & $0.29^{\dagger}$ & $0.45^{\dagger}$ & $27.0^{\dagger}$ \tabularnewline
+$KB_{4}$ & 0.47 & 1.00 & 0.62 & 822.5 & 0.46 & 0.02 & 0.03 & 1.3 & 0.78 & 0.77 & \textbf{0.75} & 223.4 & $1.00^{\dagger}$ & $0.10^{\dagger}$ & $0.18^{\dagger}$ & $26.0^{\dagger}$ \tabularnewline
+$KB_{5}$ & 0.33 & 0.99 & 0.49 & $3{,}047.7$ & 0.92 & 0.01 & 0.02 & 1.8 & 0.79 & 0.84 & \textbf{0.81} & 949.2 & $1.00^{\dagger}$ & $0.02^{\dagger}$ & $0.04^{\dagger}$ & $11.0^{\dagger}$ \tabularnewline
+\bottomrule
+\end{tabular}
+\caption{Clause-tier precision / recall / F1 and $|\KB|$ per KB — same exclude-2COV aggregation and $^{\dagger}$/budget convention as Table~\ref{tab:eval-prf}.}
+\label{tab:app-prf-clause}
+\end{table*}
