@@ -385,9 +385,18 @@ def exact_equiv_md(data) -> str:
                              f"{1 if attained else 0} / 1 obs (learned once/KB) | n/a |")
                 continue
             a, n, cfg_all, ncfg = exact_equiv_counts(rows, cond)
-            rowcell = f"{a} / {n} ({round(100 * a / n)}%)" if n else "--"
+            # Raw counts only — NO percentage: for ConMin's 8/144 the eight rows are one fold, and a
+            # '%' reads as scattered occasional success (the framing the data does not support).
+            rowcell = f"{a} / {n}" if n else "--"
             lines.append(f"| {KB_LABEL[kb]} | {name} | {rowcell} | {cfg_all} / {ncfg} |")
-    lines += ["", "Text sentence (v1): among the passive strategies, exact structural equivalence "
-              "is attained only on REAL-FM-7 (ConMin 8/144 rows = 6%, but 0/48 configurations "
-              "across all folds; A 1/18); elsewhere 0. (busybox pending its overnight run.)"]
+    lines += ["",
+              "**Note — ConMin on REAL-FM-7 (the 8/144 row):** all eight attaining rows are ONE fold "
+              "(RS-3n, fold 2, replicated over k in {1,2,3,5} x {raw, reduced}) — 0/48 configurations "
+              "across all folds, a per-fold artifact rather than scattered success. This one-fold "
+              "structure is the entire reason 8/144 is kept.",
+              "",
+              "Text sentence (v1): among the passive strategies, exact structural equivalence is "
+              "attained only on REAL-FM-7 (ConMin 8/144 rows — all one fold (RS-3n, fold 2, replicated "
+              "over k in {1,2,3,5} x {raw, reduced}), 0/48 configurations across all folds; A 1/18); "
+              "elsewhere 0."]
     return "\n".join(lines) + "\n"
