@@ -16,7 +16,6 @@ from .filters import select
 logger = logging.getLogger(__name__)
 
 TOL = 5e-3
-EXPECTED_ROWS_EXCL2COV = 15   # 5 samplings x 3 folds per (KB, strategy) with the pinned filter
 
 # (kb, strategy, column, expected) — exclude-2COV CV mean; ABORT-level regression guards.
 ANCHORS = [
@@ -76,18 +75,30 @@ def check_anchors(data: dict):
     return passed, failures, skipped
 
 
+def _expected_rows_excl2cov(rows: list) -> int:
+    """Rows a pinned per-strategy filter should select for THIS KB = (samplings minus 2cov) x 3
+    folds — DERIVED per KB, never a constant: busybox has 3 samplings (2 excl-2COV -> 6), a full KB
+    has 6 (5 excl-2COV -> 15). A hard-coded 15 is exactly why busybox had to be exempted; deriving
+    the expectation removes the need for the exemption."""
+    n_samp = len({r.get("example_set") for r in rows
+                  if r.get("example_set") and r.get("example_set") != "2cov"})
+    return n_samp * 3
+
+
 def check_rowcounts(data: dict):
-    """Per (KB, strategy) exclude-2COV count should be 15; warn if a fresh KB is short."""
+    """Per (KB, strategy) exclude-2COV count must equal the DERIVED expectation for that KB — every
+    loaded KB is checked (busybox against its own 6, not a global 15), and a strategy that loads
+    ZERO rows now FAILS instead of skipping silently (a gate must not certify an unchecked pair)."""
     short = []
     for kb, rows in data.items():
-        if not rows or kb == "busybox-1.18.0":           # busybox is intentionally partial
+        if not rows:
             continue
+        expected = _expected_rows_excl2cov(rows)
         for strat in ("A", "C", "C∪S", "QuAcq", "QuAcq-active"):
             n = len(select(rows, strat))
-            if n and n != EXPECTED_ROWS_EXCL2COV:
+            if n != expected:                    # includes n == 0: a loaded, expected pair with no rows
                 short.append((kb, strat, n))
-                logger.warning("row-count short: %s/%s = %d (expected %d)",
-                               kb, strat, n, EXPECTED_ROWS_EXCL2COV)
+                logger.warning("row-count off: %s/%s = %d (expected %d)", kb, strat, n, expected)
     return short
 
 

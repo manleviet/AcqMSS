@@ -1,8 +1,9 @@
 """Strategy -> exact (condition, negatives, k) row filter (v1 "Strategy -> CSV filter").
 
-Sentinels verified against ``REAL-FM-7_long.csv`` (2026-07-26): each pinned filter
-selects exactly 18 rows (six samplings x 3 folds) / 15 with exclude-2COV, and reproduces
-the CW-Main anchors. ``negatives`` and ``k`` are matched EXACTLY (``k == ''`` for the
+Sentinels verified against ``REAL-FM-7_long.csv`` (2026-07-26): on a FULL six-sampling KB each
+pinned filter selects 18 rows (six samplings x 3 folds) / 15 with exclude-2COV; the count is
+PER-KB, not an invariant — a partial KB selects fewer (busybox: 3 samplings -> 9 / 6). The filter
+reproduces the CW-Main anchors. ``negatives`` and ``k`` are matched EXACTLY (``k == ''`` for the
 blank strategies, ``k == '1'`` for ConMin) — never "any", which would sweep the k-sweep /
 reduced rows into one cell (C-union-S alone spans 144 rows across k x negatives).
 """
