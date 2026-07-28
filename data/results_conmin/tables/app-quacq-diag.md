@@ -1,6 +1,6 @@
 # app-quacq-diag
 
-QuAcq fairness diagnostics (all six samplings). \texttt{declined} $=$ \texttt{quacq\_findc\_unconfirmed}; \texttt{unlocalized} $=$ \texttt{quacq\_bandaid\_drops} $-$ \texttt{quacq\_findc\_unconfirmed}; \texttt{empty-scope} $=$ \texttt{quacq\_empty\_scope\_appends} (0 $\Rightarrow$ the precision claim holds); \texttt{pruned}$_p$/\texttt{pruned}$_c$ $=$ \texttt{quacq\_prune\_partial\_pruned}/\texttt{quacq\_prune\_complete\_pruned}. budget/$|B|$ shows the query budget. Both \texttt{declined} and \texttt{unlocalized} depress the baseline's recall. \texttt{unlocalized} is oracle-only (the band-aid never fires in example mode, \texttt{quacq\_bandaid\_drops}${=}$0), so the \textsc{QuAcq} example-only row is not applicable.
+QuAcq fairness diagnostics (all available samplings, six per KB except three on $KB_{5}$). \texttt{declined} $=$ \texttt{quacq\_findc\_unconfirmed}; \texttt{unlocalized} $=$ \texttt{quacq\_bandaid\_drops} $-$ \texttt{quacq\_findc\_unconfirmed}; \texttt{empty-scope} $=$ \texttt{quacq\_empty\_scope\_appends} (0 $\Rightarrow$ the precision claim holds); \texttt{pruned}$_p$/\texttt{pruned}$_c$ $=$ \texttt{quacq\_prune\_partial\_pruned}/\texttt{quacq\_prune\_complete\_pruned}. budget/$|B|$ shows the query budget. Both \texttt{declined} and \texttt{unlocalized} depress the baseline's recall. \texttt{unlocalized} is oracle-only (the band-aid never fires in example mode, \texttt{quacq\_bandaid\_drops}${=}$0), so the \textsc{QuAcq} example-only row is not applicable.
 
 | KB | cond | declined | unlocalized | empty-scope | pruned$_p$ | pruned$_c$ | q | reason | budget/$|B|$ |
 |---|---|---|---|---|---|---|---|---|---|
@@ -13,4 +13,4 @@ QuAcq fairness diagnostics (all six samplings). \texttt{declined} $=$ \texttt{qu
 | $KB_{4}$ | QuAcq | 1.3 | -- | 0.0 | 0.4 | 1,113.5 | 101.0 | pool_exhausted | -- |
 |   | QuAcq-a | 85.0 | 111.0 | 0.0 | 54.0 | 0.0 | 5,000.0 | max_queries | 2.4 |
 | $KB_{5}$ | QuAcq | 0.6 | -- | 0.0 | 11.2 | 2,390.4 | 209.3 | pool_exhausted | -- |
-|   | QuAcq-a | 69.0 | 0.0 | 0.0 | 221.0 | 0.0 | 1,901.0 | timeout(36000s) | -- |
+|   | QuAcq-a | 69.0 | 0.0 | 0.0 | 221.0 | 0.0 | 1,901.0 | timeout(36000s) | 0.75 |

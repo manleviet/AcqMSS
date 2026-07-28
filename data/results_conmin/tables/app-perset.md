@@ -1,6 +1,6 @@
 # app-perset
 
-Semantic F1 and $|\KB|$ per KB and strategy (all six samplings).
+Semantic F1 and $|\KB|$ per KB and strategy (all available samplings, six per KB except three on $KB_{5}$).
 
 groups: A (×2), C (×2), ConMin (×2), QuAcq (×2), QuAcq-a (×2)
 
