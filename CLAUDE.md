@@ -37,7 +37,16 @@ PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
 
 # Key apps pattern: python -m apps.<module> <toml-config> -v
 # See README.md for full workflow commands
+
+# Paper tables — one gated command, end to end (see data/results_conmin/RUN.md TL;DR)
+./reproduce_tables.sh            # from the committed CSVs (~1 min)
+./reproduce_tables.sh --full     # re-run the whole sweep first (~12+ h)
 ```
+
+> **Table pipeline**: `apps/make_tables/` is the current generator (11 `.tex`/`.md` +
+> `exact-equiv.md` + `PROVENANCE.md` → `data/results_conmin/tables/`). ⚠️
+> `docs/eval-pipeline.md` still documents an **older** path (`extract_results.py` →
+> `paper/tables/`) that did **not** produce the AAAI tables — that doc needs updating.
 
 ## Gotchas & Conventions
 
