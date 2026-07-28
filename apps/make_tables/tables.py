@@ -29,7 +29,32 @@ TIERS = (("Desc", "desc"), ("Clause", "clause"), ("Sem", "sem"))
 
 def _note(exclude_2cov: bool) -> str:
     """Caption scope note that matches the actual --exclude-2cov flag (never mis-state scope)."""
-    return "Exclude-2COV means." if exclude_2cov else "All six samplings."
+    return "Exclude-2COV means." if exclude_2cov else "All available samplings."
+
+
+_NUMWORD = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six"}
+
+
+def _num(n: int) -> str:
+    return _NUMWORD.get(n, str(n))
+
+
+def _samplings_note(data) -> str:
+    """Sampling-count note DERIVED from the data (never a constant): ``all six samplings`` when every
+    loaded KB has the same count, else ``all available samplings (six; three on $KB_5$)`` naming each
+    KB that differs from the majority. A caption that quantifies the data must come from the data,
+    or it silently lies the moment one KB (busybox: 3 samplings) departs from the rest (6)."""
+    counts = {kb: len({r.get("example_set") for r in rows if r.get("example_set")})
+              for kb in KBS if (rows := data.get(kb))}
+    if not counts:
+        return "all available samplings"
+    uniq = set(counts.values())
+    if len(uniq) == 1:
+        return f"all {_num(next(iter(uniq)))} samplings"
+    from collections import Counter
+    maj = Counter(counts.values()).most_common(1)[0][0]
+    exc = ", ".join(f"{_num(c)} on {KB_LABEL[kb]}" for kb, c in counts.items() if c != maj)
+    return f"all available samplings, {_num(maj)} per KB except {exc}"
 
 
 def _row_float(row: dict, col: str):
@@ -67,13 +92,17 @@ def _seconds(rows: list) -> Cell:
 
 
 def _budget_ratio(rows: list) -> Cell:
-    # A timeout row is bounded by the WALL-CLOCK, not the query budget, so the query-budget/|B|
-    # ratio would misrepresent the constraint (5000 was never reached) — show '--' instead.
-    if rows and (rows[0].get("convergence_reason") or "") == "timeout":
-        return Cell(MISSING, False, False)
+    # budget/|B| = the QUERY BUDGET (max_queries) per bias constraint — a design fact fixed BEFORE the
+    # run, independent of what stopped it. A timeout row still had this budget, so we do NOT suppress
+    # it (that hid the one ratio the paper leans on and created a text<->table mismatch); the `reason`
+    # column carries the stop cause. Precision matches the paper's quoting: 1 dp for >=1, but 2 dp for
+    # a sub-1 ratio so busybox reads 0.75 (its true starvation point), not a misleading 0.8.
     b = cv_mean(rows, "qa_max_queries").value
     nb = cv_mean(rows, "n_bias").value
-    return Cell(f"{b / nb:.1f}", False, False) if (b and nb) else Cell(MISSING, False, False)
+    if not (b and nb):
+        return Cell(MISSING, False, False)
+    ratio = b / nb
+    return Cell(f"{ratio:.2f}" if ratio < 1 else f"{ratio:.1f}", False, False)
 
 
 # ---- 1. eval-prf: KB x tier bands, strategy super-cols, P/R/F1/|KB| ---------------
@@ -154,9 +183,10 @@ def _eval_cost(data, exclude_2cov) -> Grid:
                  _seconds(qa), make_cell(cv_mean(qa, "oracle_queries"), "queries"), _budget_ratio(qa)]
         body.append(BodyRow([KB_LABEL[kb]], cells))
     cap = (r"Learning cost. \textsc{ConMin}(raw,$k{=}1$) sizes/checks/time; \textsc{QuAcq} "
-           r"time+queries. budget/$|B|$ = \texttt{max\_queries}$/|B|$ (busybox $<1$, below $|B|$); "
-           r"a wall-clock-timeout run shows `--` (t(s) is the timeout wall, queries the count "
-           r"reached). " + _note(exclude_2cov))
+           r"time+queries. budget/$|B|$ = \texttt{max\_queries}$/|B|$, the query budget fixed before "
+           r"the run (busybox $0.75<1$, below $|B|$) — independent of the stop reason; on a wall-clock "
+           r"timeout t(s) is the timeout wall and queries the count reached, but the budget was still "
+           r"\texttt{max\_queries}. " + _note(exclude_2cov))
     return Grid("eval-cost", cap, "lrrrrrr rr rr r", headers, body, full_width=True, tabcolsep="4pt")
 
 
@@ -237,7 +267,7 @@ def _app_quacq_diag(data) -> Grid:
                       _budget_ratio(rows) if cond == "QuAcq-active" else Cell(MISSING, False, False)]
             lead = [f"\\multirow{{2}}{{*}}{{{KB_LABEL[kb]}}}" if ci == 0 else "", DISPLAY[cond]]
             body.append(BodyRow(lead, cells, rule_before=(ci == 0 and ki > 0)))
-    cap = (r"QuAcq fairness diagnostics (all six samplings). "
+    cap = (r"QuAcq fairness diagnostics (" + _samplings_note(data) + r"). "
            r"\texttt{declined} $=$ \texttt{quacq\_findc\_unconfirmed}; "
            r"\texttt{unlocalized} $=$ \texttt{quacq\_bandaid\_drops} $-$ "
            r"\texttt{quacq\_findc\_unconfirmed}; "
@@ -277,7 +307,7 @@ def build_all(data: dict, exclude_2cov: bool = True) -> List[Grid]:
         _eval_cost(data, exclude_2cov),
         _app_quacq_diag(data),
         # app-perset (all-6): sem-F1 + |KB| per strategy
-        _kb_strat("app-perset", "Semantic F1 and $|\\KB|$ per KB and strategy (all six samplings).",
+        _kb_strat("app-perset", f"Semantic F1 and $|\\KB|$ per KB and strategy ({_samplings_note(data)}).",
                   data, [("F1", "sem_f1", RATE), (r"$|\KB|$", "n_kb", SIZE)],
                   exclude_2cov=False, bold_metric="sem_f1"),
         # app-accuracy: accuracy + specificity per strategy
@@ -285,7 +315,7 @@ def build_all(data: dict, exclude_2cov: bool = True) -> List[Grid]:
                   data, [("acc", "accuracy", RATE), ("spec", "specificity", RATE)],
                   exclude_2cov=exclude_2cov, bold_metric="accuracy"),
         # app-confusion (all-6): tp/tn/fp/fn per strategy
-        _kb_strat("app-confusion", "Confusion counts per KB and strategy (all six samplings).",
+        _kb_strat("app-confusion", f"Confusion counts per KB and strategy ({_samplings_note(data)}).",
                   data, [("tp", "tp", SIZE), ("tn", "tn", SIZE), ("fp", "fp", SIZE), ("fn", "fn", SIZE)],
                   exclude_2cov=False),
         # app-checks: ConMin per-phase checks

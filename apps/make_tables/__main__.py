@@ -41,7 +41,7 @@ def _build_cli():
     excl.add_argument("--exclude-2cov", dest="exclude_2cov", action="store_true", default=True,
                       help="Exclude example_set=2cov from headline tables (default)")
     excl.add_argument("--no-exclude-2cov", dest="exclude_2cov", action="store_false",
-                      help="Keep all six samplings")
+                      help="Keep all samplings (do not exclude 2cov)")
     return parser
 
 

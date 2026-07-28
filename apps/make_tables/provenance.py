@@ -15,11 +15,21 @@ logger = logging.getLogger(__name__)
 
 
 def _git_sha(repo: Path) -> str:
-    """Current HEAD SHA of the repo holding ``repo`` (``unknown`` if unavailable)."""
+    """HEAD SHA of the repo, marked ``-dirty`` when the GENERATOR CODE (this package) has uncommitted
+    changes — the failure that let a clean SHA name code it did NOT run (a clean SHA over uncommitted
+    code is a lie in the one field whose whole job is trust). The dirty check is SCOPED to the
+    generator package on purpose: ``make_tables`` writes ``tables/`` before this runs, so a
+    whole-tree check would see its own just-written output and report ``-dirty`` on every run; the
+    input CSVs' eol churn is likewise not the code being certified. ``unknown`` if git is absent."""
     try:
-        out = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"],
-                             capture_output=True, text=True, timeout=10, check=False)
-        return out.stdout.strip() or "unknown"
+        sha = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"],
+                             capture_output=True, text=True, timeout=10, check=False).stdout.strip()
+        if not sha:
+            return "unknown"
+        pkg = Path(__file__).resolve().parent            # apps/make_tables — the generator code
+        dirty = subprocess.run(["git", "-C", str(pkg), "status", "--porcelain", "."],
+                               capture_output=True, text=True, timeout=10, check=False).stdout.strip()
+        return f"{sha}-dirty" if dirty else sha
     except (OSError, subprocess.SubprocessError):
         return "unknown"
 
@@ -38,6 +48,7 @@ def collect(results_dir: Path, loaded: dict) -> dict:
             "mtime": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
             "n_rows": len(rows) if rows else 0,
             "n_cols": len(rows[0]) if rows else 0,
+            "n_samplings": len({r.get("example_set") for r in rows if r.get("example_set")}) if rows else 0,
             "status": "loaded" if rows else "not-ready",
         }
     return {"git_sha": _git_sha(results_dir), "sources": sources}
@@ -62,9 +73,13 @@ _ALL6_TABLES = ("app-quacq-diag", "app-perset", "app-confusion")
 _GENUINE_SPLIT = (
     "- **genuine-drop split (G/S/R)** — QuAcq-active band-aid drops classified genuine (G) / "
     "over-strong (S) / redundant (R) by an OFFLINE entailment classification, NOT emitted by the "
-    "runner: REAL-FM-7 **1 of 10**, fqa **150 of 354**, arcade-game **35 of 56 — STALE** (superseded "
-    "by the fair-budget re-run: raw is now 326; the per-query rate 56/863 = 0.0649 vs 326/5000 = "
-    "0.0652 confirms a longer re-run, not a counter-semantics change). Measured **2026-07-26**; the "
+    "runner. Genuine available on **$KB_1$ REAL-FM-7 (1 of 10)** and **$KB_2$ fqa (150 of 354)**; "
+    "**raw only (superseded, not re-classified)** on **$KB_3$ arcade-game** (recorded 35 of 56, "
+    "superseded by the fair-budget re-run — raw is now 326; per-query rate 56/863 = 0.0649 vs "
+    "326/5000 = 0.0652 confirms a longer re-run, not a counter-semantics change) and **$KB_4$ "
+    "REAL-FM-4** (recorded 18 of 29 under a 400 s timeout, |KB|=15 — that run no longer exists; the "
+    "current run is 196 drops at 5000 queries under a 20,000 s wall); **never measured** on **$KB_5$ "
+    "busybox** (69 drops, no classification was ever run). Measured **2026-07-26**; the "
     "classification commit was not recorded. **In-repo source of record: "
     "`data/results_conmin/genuine_split.md`** — committed so this citation resolves in-repo "
     "(**traceability only**); its upstream origin is the Cowork vault findings note "
@@ -101,12 +116,25 @@ def write_skeleton(path: Path, prov: dict, table_labels=(), exclude_2cov: bool =
             f"busybox QuAcq-active: `busybox-1.18.0_long.csv` is {bb_status} at generation time, so "
             "its cells are `--` (not in the loaded data)."
         )
+    # Sampling phrase DERIVED from the data (never a constant): the all-6 tables use every available
+    # sampling per KB, which is NOT uniformly six — busybox has three. A hard-coded "all-six" here
+    # would silently mis-state the run the moment a KB is partial.
+    loaded_samp = {kb: s["n_samplings"] for kb, s in prov["sources"].items()
+                   if s.get("status") == "loaded" and s.get("n_samplings")}
+    if not loaded_samp:
+        all6_note = "all available samplings"
+    elif len(set(loaded_samp.values())) == 1:
+        all6_note = f"all {next(iter(loaded_samp.values()))} samplings"
+    else:
+        maj = max(set(loaded_samp.values()), key=list(loaded_samp.values()).count)
+        exc = "; ".join(f"{c} on {kb}" for kb, c in loaded_samp.items() if c != maj)
+        all6_note = f"all available samplings ({maj} per KB; {exc})"
     lines = [
         "# PROVENANCE — make_tables",
         "",
         f"- git SHA: `{prov['git_sha']}`",
         f"- aggregation: exclude-2COV={'ON (headline tables)' if exclude_2cov else 'OFF'}; "
-        f"all-six samplings for {', '.join(_ALL6_TABLES)}. Non-converged "
+        f"{all6_note} for {', '.join(_ALL6_TABLES)}. Non-converged "
         "(`convergence_reason` in {timeout, max_queries}) excluded from the mean unless ALL "
         "folds are capped, then reported with a dagger.",
         "- sources (per-KB `_long.csv`, authoritative; the merged CSV is a stale subset, unused):",
