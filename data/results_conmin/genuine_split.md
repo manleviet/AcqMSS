@@ -14,7 +14,7 @@ repository that the AAAI reproducibility package does not ship.
 | $KB_1$ REAL-FM-7 | 1 | 10 | genuine available |
 | $KB_2$ fqa | 150 | 354 | genuine available |
 | $KB_3$ arcade-game | 35 | 56 | **STALE** — superseded by the fair-budget re-run (raw is now 326). Per-query rate 56/863 = 0.0649 vs 326/5000 = 0.0652 confirms a longer re-run, not a counter-semantics change. Not re-classified against the 326-drop run. |
-| $KB_4$ REAL-FM-4 | 18 | 29 | **SUPERSEDED** — this split (400 s timeout, \|KB\|=15) describes a run that no longer exists; the current run is **196 drops at 5000 queries under a 20,000 s wall**. Not re-classified. |
+| $KB_4$ REAL-FM-4 | 18 | 29 | **SUPERSEDED** — recorded in the Cowork vault `plan.md` §A2 (400 s timeout, \|KB\|=15, 2026-07-26); that run no longer exists — the current run is **196 drops at 5000 queries under a 20,000 s wall**. Not re-classified. |
 | $KB_5$ busybox-1.18.0 | — | 69 | **NEVER MEASURED** — 69 drops; no G/S/R classification was ever run. |
 
 - **Method:** offline G/S/R entailment classification (genuine recall lost / over-strong, correctly
