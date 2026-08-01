@@ -15,6 +15,14 @@ from __future__ import annotations
 # The five evaluation KBs in fixed paper order (KB1..KB5): row labels + iteration order.
 KBS = ("REAL-FM-7", "fqa", "arcade-game", "REAL-FM-4", "busybox-1.18.0")
 
+# |C_tau|, the target-theory size per KB. NOT present in any result CSV (the runner never emits it),
+# so it is carried here as a constant transcribed from the KB table in the paper
+# (main_short.tex, Table `tab:eval-fms`: #features / |C_tau| / |B| / domain). Used only as a row
+# label in eval-prf / app-prf-desc. If that table changes, change this with it — nothing downstream
+# can catch the drift, because there is no CSV column to check it against.
+KB_TARGET_SIZE = {"REAL-FM-7": 13, "fqa": 102, "arcade-game": 70,
+                  "REAL-FM-4": 219, "busybox-1.18.0": 905}
+
 # Only QuAcq conditions carry a convergence reason / the diagnostic counters, so the
 # STALE + empty-scope gates apply to these; A/C/C-union-S rows are blank by design.
 QUACQ_CONDITIONS = ("QuAcq", "QuAcq-active")

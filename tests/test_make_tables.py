@@ -5,7 +5,7 @@ from apps.make_tables import gates, selfcheck
 from apps.make_tables.aggregate import cv_mean
 from apps.make_tables.filters import select
 from apps.make_tables.formatting import Cell, bold_winners, fmt, make_cell
-from apps.make_tables.render import BodyRow, Grid, latex, markdown
+from apps.make_tables.render import BodyRow, Grid, latex, markdown, prf_compact
 from apps.make_tables.tiers import prf
 
 
@@ -163,3 +163,39 @@ def test_render_markdown_demacro_multirow():
                 [BodyRow(["\\multirow{2}{*}{$KB_{1}$}"], [Cell("0.5", False, False)])])
     md = markdown(grid)
     assert "$KB_{1}$" in md and "multirow" not in md
+
+
+# ---- compact / raw cells (paper layout) ----------------------------------------
+
+def test_prf_compact_drops_leading_zero_and_keeps_bold_and_dagger():
+    """`.p/.r/.f1` folding must survive both markers: a sub-1 rate loses its leading zero,
+    1.00 keeps its digit, \\textbf stays bold and a non-converged value stays daggered."""
+    cell = prf_compact([Cell("1.00", False, False), Cell("0.03", True, False),
+                        Cell("0.85", False, True)])
+    assert cell.raw is True
+    assert cell.text == "1.00/$.03^{\\dagger}$/\\textbf{.85}"
+
+
+def test_markdown_raw_cell_keeps_markers_but_row_label_keeps_dollars():
+    """Regression: the raw-cell Markdown path strips ``$`` and rewrites \\textbf, which is right for
+    a DATA cell and wrong for a row label — one shared de-macro helper broke ``$KB_{1}$``."""
+    grid = Grid("t", "cap", "ll", ["KB", "P/R/F1"],
+                [BodyRow(["$KB_{1}$"],
+                         [prf_compact([Cell("1.00", False, False), Cell("0.03", True, False),
+                                       Cell("0.85", False, True)])])])
+    md = markdown(grid)
+    assert "$KB_{1}$" in md                      # label untouched
+    assert "1.00/.03†/**.85**" in md             # data cell de-macroed
+
+
+def test_supercol_spacer_emits_blank_cells_and_no_rule():
+    """An empty super-column name is a spacer. The blank cells MUST be emitted: a short header row
+    silently shifts every later \\multicolumn left of the \\cmidrule meant to underline it."""
+    grid = Grid("t", "cap", "lcccc", ["KB", "a", "b", "c", "d"],
+                [BodyRow(["x"], [Cell("1", False, False)] * 4)],
+                supercols=[("first", 1), ("", 2), ("last", 1)])
+    head = [ln for ln in latex(grid).splitlines() if "multicolumn" in ln][0]
+    assert head.count("&") == 4                  # 1 leading + 1 + 2 spacers + 1 = 5 cells
+    rules = [ln for ln in latex(grid).splitlines() if "cmidrule" in ln][0]
+    assert rules.count("cmidrule") == 2          # spacer contributes no rule
+    assert "{5-5}" in rules                      # 'last' underlines col 5, not col 3

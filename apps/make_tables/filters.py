@@ -31,11 +31,15 @@ STRATEGIES: dict[str, Filter] = {
 
 
 def select(rows: list[dict], strategy: str, *, exclude_2cov: bool = True,
-           k: Optional[str] = None, negatives: Optional[str] = None) -> list[dict]:
+           k: Optional[str] = None, negatives: Optional[str] = None,
+           example_set: Optional[str] = None) -> list[dict]:
     """Rows matching ``strategy`` exactly.
 
-    ``k`` / ``negatives`` override the strategy defaults for the appendix tables that
-    sweep those axes (``k`` for app-ksweep, ``negatives`` for app-rawred).
+    ``k`` / ``negatives`` / ``example_set`` override the strategy defaults for the appendix tables
+    that sweep those axes (``k`` for app-ksweep, ``negatives`` for app-rawred, ``example_set`` for
+    app-sampling). Pinning ``example_set`` selects ONE sampling, so pass ``exclude_2cov=False``
+    with it — the two filters otherwise contradict each other for ``example_set='2cov'`` and
+    silently return nothing.
     """
     spec = STRATEGIES[strategy]
     want_k = spec.k if k is None else k
@@ -47,6 +51,8 @@ def select(rows: list[dict], strategy: str, *, exclude_2cov: bool = True,
         if row.get("negatives") != want_neg:
             continue
         if row.get("k") != want_k:
+            continue
+        if example_set is not None and row.get("example_set") != example_set:
             continue
         if exclude_2cov and row.get("example_set") == "2cov":
             continue

@@ -17,14 +17,21 @@ MISSING = "--"
 _DECIMALS = {"rate": 2, "size": 1, "runtime": 1, "queries": 1}
 
 # A render-ready cell: the rounded text + whether to dagger / bold it (renderer-agnostic).
-Cell = namedtuple("Cell", "text dagger bold")
+# ``raw`` marks text that is ALREADY rendered LaTeX (the compact "P/R/F1" cell, which carries
+# its own \textbf/\dagger markup): the renderer passes it through untouched instead of escaping
+# it. Defaulted so every existing 3-positional ``Cell(text, dagger, bold)`` call still works.
+Cell = namedtuple("Cell", "text dagger bold raw", defaults=(False,))
 
 
 def fmt(stat: Optional[CellStat], kind: str = "rate", *, dagger: str = "") -> str:
     """Format a cell value with fixed decimals; append ``dagger`` iff non-converged."""
     if stat is None or stat.value is None:
         return MISSING
-    if kind == "checks":
+    if kind == "checks" or (kind == "size" and abs(stat.value) >= 1000):
+        # A theory size in the thousands is reported to the unit: the tenth of a constraint that
+        # a fold-mean produces is below the resolution the quantity actually has, and the paper
+        # prints $3{,}048$ for it. Runtimes and query counts keep their decimal — there the
+        # fraction is a real measurement, not an artefact of averaging integers.
         text = str(int(round(stat.value)))
     else:
         text = f"{stat.value:.{_DECIMALS.get(kind, 2)}f}"

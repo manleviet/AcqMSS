@@ -8,6 +8,7 @@ markers, ``{,}`` thousands inside math. No new packages, no ``\\resizebox``/``si
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -62,6 +63,8 @@ def _int_frac(t: str):
 
 def _latex_cell(c: Cell) -> str:
     t = c.text
+    if c.raw:                                           # already-rendered LaTeX (compact P/R/F1)
+        return t
     if t == MISSING:
         return "--"
     parts = _int_frac(t)
@@ -77,8 +80,33 @@ def _latex_cell(c: Cell) -> str:
     return f"\\textbf{{{t}}}" if c.bold else t
 
 
+_STRIP_ZERO = re.compile(r"(?<![\d.])0\.")
+
+
+def strip_zero(c: Cell) -> Cell:
+    """One rate rendered without its leading zero (``0.80`` -> ``.80``), bold/dagger preserved.
+
+    Used where a table is all rates and the leading zeros are pure noise (app-sampling); ``1.00``
+    is untouched, so the reader can still tell a ceiling from a near-ceiling at a glance.
+    """
+    return Cell(_STRIP_ZERO.sub(".", _latex_cell(c)), False, False, True)
+
+
+def prf_compact(cells: List[Cell]) -> Cell:
+    """Fold P, R, F1 into ONE ``.p/.r/.f1`` cell, each sub-value keeping its own bold/dagger.
+
+    The paper's space-saving rendering: three rates joined by ``/`` with the leading zero of a
+    sub-1 value dropped (``0.85`` -> ``.85``), while ``1.00`` keeps its digit. Each sub-value is
+    rendered by ``_latex_cell`` FIRST, so bolding a winner (``\\textbf{.85}``) and the
+    non-converged dagger (``$.03^{\\dagger}$``) survive the fold untouched.
+    """
+    return Cell("/".join(_STRIP_ZERO.sub(".", _latex_cell(c)) for c in cells), False, False, True)
+
+
 def _md_cell(c: Cell) -> str:
     t = c.text
+    if c.raw:
+        return _md_raw(t)
     if t != MISSING:
         parts = _int_frac(t)
         if parts and len(parts[0]) >= 4:
@@ -95,13 +123,19 @@ def latex(grid: Grid) -> str:
         out.append(f"\\setlength{{\\tabcolsep}}{{{grid.tabcolsep}}}")
     out += [f"\\begin{{tabular}}{{{grid.colspec}}}", "\\toprule"]
     if grid.supercols:
-        head = [""] * grid.n_leading + [f"\\multicolumn{{{span}}}{{c}}{{{name}}}"
-                                        for name, span in grid.supercols]
+        # An entry with an EMPTY name is a spacer: it emits `span` blank cells and no cmidrule, so a
+        # banner row can skip columns (app-sampling groups only 2 of its 11 data columns, then 4).
+        # The blanks must be emitted — a short header row silently shifts every later \multicolumn
+        # left of the \cmidrule that is supposed to underline it.
+        head = [""] * grid.n_leading
+        for name, span in grid.supercols:
+            head += [""] * span if not name else [f"\\multicolumn{{{span}}}{{c}}{{{name}}}"]
         out.append(" & ".join(head) + " \\tabularnewline")
         col = grid.n_leading + 1
         rules = []
-        for _, span in grid.supercols:
-            rules.append(f"\\cmidrule(lr){{{col}-{col + span - 1}}}")
+        for name, span in grid.supercols:
+            if name:
+                rules.append(f"\\cmidrule(lr){{{col}-{col + span - 1}}}")
             col += span
         out.append(" ".join(rules))
     out.append(" & ".join(grid.headers) + " \\tabularnewline")
@@ -117,10 +151,19 @@ def latex(grid: Grid) -> str:
 
 def _demacro(text: str) -> str:
     """Best-effort strip of LaTeX leading-cell macros for the Markdown reading aid."""
-    import re
     text = re.sub(r"\\multirow\{[^}]*\}\{[^}]*\}\{(.*)\}", r"\1", text)   # greedy: KB label has nested braces
     text = re.sub(r"\\textsc\{([^}]*)\}", r"\1", text)
     return text.replace("\\", "").strip() or " "
+
+
+def _md_raw(text: str) -> str:
+    """Markdown for an ALREADY-typeset cell (the compact P/R/F1 and stripped-zero rates).
+
+    Kept separate from ``_demacro``: this one drops ``$`` and turns ``\\textbf`` into ``**``, which
+    is right for a data cell but wrong for a row label, where ``$KB_{1}$`` must survive intact.
+    """
+    text = re.sub(r"\\(?:textbf|mathbf)\{([^}]*)\}", r"**\1**", text)
+    return text.replace("^{\\dagger}", "†").replace("$", "").replace("\\", "")
 
 
 def markdown(grid: Grid) -> str:

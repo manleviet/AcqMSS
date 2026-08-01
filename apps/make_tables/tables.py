@@ -11,16 +11,24 @@ import statistics
 from dataclasses import replace
 from typing import List
 
-from . import KBS
+from . import KBS, KB_TARGET_SIZE
 from .aggregate import cv_mean
 from .filters import select
 from .formatting import Cell, MISSING, make_cell, bold_winners
-from .render import BodyRow, Grid
+from .render import BodyRow, Grid, prf_compact, strip_zero
 from .tiers import prf
 
 # Strategy display names (v3: system names in \textsc{}). ConMin == C-union-S.
+#
+# NOMENCLATURE (paper-facing, deliberately NOT the CSV `condition` value): the paper calls the
+# ACTIVE, oracle-querying baseline plain "QuAcq" (it is the published algorithm) and the passive,
+# example-only variant "QuAcq-ex". The CSV keeps the runner's names, where `QuAcq` is the
+# example-only run and `QuAcq-active` the oracle one. The mapping is therefore CROSSED on purpose:
+#   CSV `QuAcq`        -> \textsc{QuAcq}-ex   (example-only)
+#   CSV `QuAcq-active` -> \textsc{QuAcq}      (the baseline proper)
+# Do not "fix" this to look symmetric; renaming either side alone silently swaps two columns.
 DISPLAY = {"A": "A", "C": "C", "C∪S": r"\textsc{ConMin}",
-           "QuAcq": r"\textsc{QuAcq}", "QuAcq-active": r"\textsc{QuAcq}-a"}
+           "QuAcq": r"\textsc{QuAcq}-ex", "QuAcq-active": r"\textsc{QuAcq}"}
 STRATS = ("A", "C", "C∪S", "QuAcq", "QuAcq-active")
 CORE_STRATS = ("A", "C", "C∪S", "QuAcq-active")   # eval-prf-core: main-text Sem, 4 strategies (ruling 1)
 KB_LABEL = {kb: f"$KB_{{{i + 1}}}$" for i, kb in enumerate(KBS)}
@@ -107,17 +115,26 @@ def _budget_ratio(rows: list) -> Cell:
 
 # ---- 1. eval-prf: KB x tier bands, strategy super-cols, P/R/F1/|KB| ---------------
 
-def _eval_prf(data, exclude_2cov, tier_filter=None, strats=STRATS, label=None, caption=None) -> Grid:
+def _eval_prf(data, exclude_2cov, tier_filter=None, strats=STRATS, label=None, caption=None,
+              compact=False) -> Grid:
     """P/R/F1/|KB| per KB x strategy for one tier (tier_filter). NO accuracy column (CW Main).
 
-    ``strats``/``label``/``caption`` let the caller emit ``eval-prf`` (main, Sem, 4 strategies,
-    exactly 16 numeric cols) and the ``app-prf-desc``/``app-prf-clause`` appendix mirrors — same
-    aggregation, dagger, and budget footnote across tiers.
+    ``strats``/``label``/``caption`` let the caller emit ``eval-prf`` (main, Sem) and the
+    ``app-prf-desc``/``app-prf-clause`` appendix mirrors — same aggregation, dagger, and budget
+    footnote across tiers.
+
+    ``compact=True`` is the PAPER layout: P, R and F1 fold into one ``.p/.r/.f1`` cell so five
+    strategies fit the text width (2 columns per strategy instead of 4), and the row label carries
+    the target size, ``$KB_1$ (13)``. The numbers are identical either way — only the rendering
+    changes — so a reviewer diffing the wide form against the paper sees the same values.
     """
     tiers = TIERS if tier_filter is None else [t for t in TIERS if t[1] == tier_filter]
     banded = tier_filter is None
-    headers = (["KB", "tier"] if banded else ["KB"]) + \
-        [h for _ in strats for h in ("P", "R", "F1", r"$|\KB|$")]
+    per_strat = 2 if compact else 4
+    lead_head = ("KB ($|C_\\tau|$)" if compact else "KB")
+    headers = ([lead_head, "tier"] if banded else [lead_head]) + \
+        [h for _ in strats for h in (("P/R/F1", r"$|\KB|$") if compact
+                                     else ("P", "R", "F1", r"$|\KB|$"))]
     body: List[BodyRow] = []
     for ki, kb in enumerate(KBS):
         for ti, (tlabel, prefix) in enumerate(tiers):
@@ -125,27 +142,34 @@ def _eval_prf(data, exclude_2cov, tier_filter=None, strats=STRATS, label=None, c
             f1 = bold_winners([prfs[s]["f1"] for s in strats])
             cells: List[Cell] = []
             for i, s in enumerate(strats):
-                cells += [make_cell(prfs[s]["p"]), make_cell(prfs[s]["r"]), f1[i],
-                          make_cell(cv_mean(_sel(data, kb, s, exclude_2cov), "n_kb"), "size")]
+                size = make_cell(cv_mean(_sel(data, kb, s, exclude_2cov), "n_kb"), "size")
+                trio = [make_cell(prfs[s]["p"]), make_cell(prfs[s]["r"]), f1[i]]
+                cells += ([prf_compact(trio), size] if compact else trio + [size])
+            kb_label = (f"{KB_LABEL[kb]} ({KB_TARGET_SIZE[kb]})" if compact else KB_LABEL[kb])
             if banded:
-                lead = [f"\\multirow{{{len(tiers)}}}{{*}}{{{KB_LABEL[kb]}}}" if ti == 0 else "", tlabel]
+                lead = [f"\\multirow{{{len(tiers)}}}{{*}}{{{kb_label}}}" if ti == 0 else "", tlabel]
             else:
-                lead = [KB_LABEL[kb]]
+                lead = [kb_label]
             body.append(BodyRow(lead, cells, rule_before=(banded and ti == 0 and ki > 0)))
     if label is None:
         label = "eval-prf" if banded else f"eval-prf-{tier_filter}"
     cap = caption or f"Precision / recall / F1 and $|\\KB|$ per KB and strategy. {_note(exclude_2cov)}"
-    return Grid(label, cap, ("ll" if banded else "l") + "cccc" * len(strats),
-                headers, body, supercols=[(DISPLAY[s], 4) for s in strats],
+    return Grid(label, cap, ("ll" if banded else "l") + "c" * per_strat * len(strats),
+                headers, body, supercols=[(DISPLAY[s], per_strat) for s in strats],
                 n_leading=2 if banded else 1, full_width=True, tabcolsep="4pt")
 
 
 # ---- generic per-KB x strategy grid (single or multi metric) ---------------------
 
 def _kb_strat(label, caption, data, metrics, strats=STRATS, exclude_2cov=True,
-              bold_metric=None) -> Grid:
-    """metrics: list of (header, col, kind). Columns = strategy x metrics."""
-    headers = ["KB"] + [f"{h}" for _ in strats for (h, _c, _k) in metrics]
+              bold_metric=None, tabcolsep=None) -> Grid:
+    """metrics: list of (header, col, kind). Columns = strategy x metrics.
+
+    With a SINGLE metric there is no super-column row, so the metric name would repeat five times
+    with nothing naming the strategies; the header carries the strategy names instead.
+    """
+    headers = ["KB"] + ([DISPLAY[s] for s in strats] if len(metrics) == 1
+                        else [f"{h}" for _ in strats for (h, _c, _k) in metrics])
     body = []
     for ki, kb in enumerate(KBS):
         cells: List[Cell] = []
@@ -163,14 +187,15 @@ def _kb_strat(label, caption, data, metrics, strats=STRATS, exclude_2cov=True,
     supercols = [(DISPLAY[s], len(metrics)) for s in strats] if len(metrics) > 1 else None
     return Grid(label, caption, "l" + "c" * (len(strats) * len(metrics)),
                 headers, body, supercols=supercols, full_width=len(strats) * len(metrics) > 6,
-                tabcolsep="4pt" if len(strats) * len(metrics) > 6 else None)
+                tabcolsep=tabcolsep or ("4pt" if len(strats) * len(metrics) > 6 else None))
 
 
 # ---- 3. eval-cost (+ budget/|B|) -------------------------------------------------
 
 def _eval_cost(data, exclude_2cov) -> Grid:
     headers = ["KB", r"$|A|$", r"$|C|$", r"$\supp$", r"$|U|$", "checks", "t(s)",
-               r"\textsc{QuAcq} t(s)", "q", r"\textsc{QuAcq}-a t(s)", "q", r"budget/$|B|$"]
+               DISPLAY["QuAcq"] + " t(s)", "q", DISPLAY["QuAcq-active"] + " t(s)", "q",
+               r"budget/$|B|$"]
     body = []
     for kb in KBS:
         cs = _sel(data, kb, "C∪S", exclude_2cov)
@@ -182,10 +207,10 @@ def _eval_cost(data, exclude_2cov) -> Grid:
                  _seconds(q), make_cell(cv_mean(q, "oracle_queries"), "queries"),
                  _seconds(qa), make_cell(cv_mean(qa, "oracle_queries"), "queries"), _budget_ratio(qa)]
         body.append(BodyRow([KB_LABEL[kb]], cells))
-    cap = (r"Learning cost. \textsc{ConMin}(raw,$k{=}1$) sizes/checks/time; \textsc{QuAcq} "
-           r"time+queries. budget/$|B|$ = \texttt{max\_queries}$/|B|$, the query budget fixed before "
-           r"the run (busybox $0.75<1$, below $|B|$) — independent of the stop reason; on a wall-clock "
-           r"timeout t(s) is the timeout wall and queries the count reached, but the budget was still "
+    cap = (r"Learning cost. \textsc{ConMin}(raw,$k{=}1$) sizes, checks and time, with \textsc{QuAcq} "
+           r"time and queries. budget/$|B|$ = \texttt{max\_queries}$/|B|$, the query budget fixed before "
+           r"the run (busybox $0.75<1$, below $|B|$), independent of the stop reason. On a wall-clock "
+           r"timeout, t(s) is the timeout wall and queries the count reached, but the budget was still "
            r"\texttt{max\_queries}. " + _note(exclude_2cov))
     return Grid("eval-cost", cap, "lrrrrrr rr rr r", headers, body, full_width=True, tabcolsep="4pt")
 
@@ -278,7 +303,7 @@ def _app_quacq_diag(data) -> Grid:
            r"budget/$|B|$ shows the query budget. "
            r"Both \texttt{declined} and \texttt{unlocalized} depress the baseline's recall. "
            r"\texttt{unlocalized} is oracle-only (the band-aid never fires in example mode, "
-           r"\texttt{quacq\_bandaid\_drops}${=}$0), so the \textsc{QuAcq} example-only row is "
+           r"\texttt{quacq\_bandaid\_drops}${=}$0), so the " + DISPLAY["QuAcq"] + r" row is "
            r"not applicable.")
     return Grid("app-quacq-diag", cap, "ll" + "r" * len(_DIAG_COUNTERS) + "rlr",
                 headers, body, n_leading=2, full_width=True, tabcolsep="4pt")
@@ -291,29 +316,36 @@ def build_all(data: dict, exclude_2cov: bool = True) -> List[Grid]:
     RATE, SIZE = "rate", "size"
     # Main eval-prf (Sem, 4 strategies, exactly 16 numeric cols, NO accuracy). Caption points to
     # where the 5th condition (QuAcq example-only) and accuracy are reported (CW Main).
-    main_cap = ("Semantic precision / recall / F1 and $|\\KB|$ per KB (exclude-2COV means; "
-                "$^{\\dagger}$ = non-converged: \\texttt{max\\_queries} budget or wall-clock "
-                "timeout, per-KB reason in Table~\\ref{tab:app-quacq-diag}). The 5th condition "
-                "\\textsc{QuAcq} (example-only) is reported in Table~\\ref{tab:app-perset}; "
-                "accuracy/specificity in Table~\\ref{tab:app-accuracy}.")
-    tier_cap = ("{tier}-tier precision / recall / F1 and $|\\KB|$ per KB — same exclude-2COV "
-                "aggregation and $^{{\\dagger}}$/budget convention as Table~\\ref{{tab:eval-prf}}.")
+    main_cap = ("Semantic precision / recall / F1 and $|\\KB|$ per KB, all five conditions. Values "
+                "are means over the samplings other than 2-COV, five per knowledge base and two on "
+                "$KB_5$, and over the three folds. A dagger marks a run that did not converge, "
+                "stopped by the \\texttt{max\\_queries} budget or by the wall clock, whose figures "
+                "are therefore lower bounds.")
+    tier_cap = ("{tier}-tier precision / recall / F1 and $|\\KB|$ per KB, with the same conditions, "
+                "exclude-2COV aggregation and $^{{\\dagger}}$/budget convention as "
+                "Table~\\ref{{tab:eval-prf}}.")
     grids = [
-        _eval_prf(data, exclude_2cov, "sem", strats=CORE_STRATS, label="eval-prf", caption=main_cap),         # MAIN
-        _eval_prf(data, exclude_2cov, "desc", strats=CORE_STRATS, label="app-prf-desc",
-                  caption=tier_cap.format(tier="Description")),                                                # appendix
-        _eval_prf(data, exclude_2cov, "clause", strats=CORE_STRATS, label="app-prf-clause",
-                  caption=tier_cap.format(tier="Clause")),                                                     # appendix
+        # MAIN + the desc mirror use the compact paper layout over ALL FIVE conditions (STRATS).
+        # CORE_STRATS (4, wide) was the earlier main-text shape; the paper now prints QuAcq-ex too.
+        _eval_prf(data, exclude_2cov, "sem", strats=STRATS, label="eval-prf",
+                  caption=main_cap, compact=True),                                                             # MAIN
+        _eval_prf(data, exclude_2cov, "desc", strats=STRATS, label="app-prf-desc",
+                  caption=tier_cap.format(tier="Description"), compact=True),                                  # appendix
+        _eval_prf(data, exclude_2cov, "clause", strats=STRATS, label="app-prf-clause",
+                  caption=tier_cap.format(tier="Clause"), compact=True),                                       # appendix
         _eval_cost(data, exclude_2cov),
         _app_quacq_diag(data),
         # app-perset (all-6): sem-F1 + |KB| per strategy
         _kb_strat("app-perset", f"Semantic F1 and $|\\KB|$ per KB and strategy ({_samplings_note(data)}).",
                   data, [("F1", "sem_f1", RATE), (r"$|\KB|$", "n_kb", SIZE)],
                   exclude_2cov=False, bold_metric="sem_f1"),
-        # app-accuracy: accuracy + specificity per strategy
-        _kb_strat("app-accuracy", "Accuracy and specificity per KB and strategy. " + _note(exclude_2cov),
-                  data, [("acc", "accuracy", RATE), ("spec", "specificity", RATE)],
-                  exclude_2cov=exclude_2cov, bold_metric="accuracy"),
+        # app-accuracy: accuracy per strategy. Specificity was dropped from the paper — it is 1.00
+        # for A/C/ConMin on every KB by construction (a passive theory drawn from the bias rejects
+        # no valid configuration), so the column carried no information; it survives in
+        # app-confusion, where tn/fp make the same point from the raw counts.
+        _kb_strat("app-accuracy", "Accuracy per KB and strategy. " + _note(exclude_2cov),
+                  data, [("acc", "accuracy", RATE)],
+                  exclude_2cov=exclude_2cov, bold_metric="accuracy", tabcolsep="4pt"),
         # app-confusion (all-6): tp/tn/fp/fn per strategy
         _kb_strat("app-confusion", f"Confusion counts per KB and strategy ({_samplings_note(data)}).",
                   data, [("tp", "tp", SIZE), ("tn", "tn", SIZE), ("fp", "fp", SIZE), ("fn", "fn", SIZE)],
@@ -326,8 +358,82 @@ def build_all(data: dict, exclude_2cov: bool = True) -> List[Grid]:
                   strats=("C∪S",), exclude_2cov=exclude_2cov),
         _app_ksweep(data, exclude_2cov),
         _app_rawred(data, exclude_2cov),
+        _app_sampling(data),
     ]
     return grids
+
+
+# ---- 11. app-sampling: ConMin(raw, k=1) sensitivity to the example sampling ------
+
+# Sampling display names, in CSV order; the table is re-sorted by training positives below.
+_SAMPLINGS = {"2cov": "2-COV", "rs_m": r"RS-$m$", "ff": "FF",
+              "rs_1n": r"RS-$n$", "rs_2n": r"RS-$2n$", "rs_3n": r"RS-$3n$"}
+
+# KB5 (busybox) is EXCLUDED from this table: RS-2n, RS-3n and RS-m are infeasible on it, so a mean
+# over all five KBs would compare a 6-sampling average against a 3-sampling one row by row. Averaging
+# KB1..KB4 only keeps every row over the same four KBs.
+_SAMPLING_KBS = KBS[:4]
+
+
+def _app_sampling(data) -> Grid:
+    """Sensitivity of ConMin(raw, k=1) to the example sampling — one row per sampling.
+
+    The one table that aggregates ACROSS KBs (everything else is strictly per-KB), because the
+    question it answers is how the method responds to training-set size, not how it does on a given
+    KB. Rows are ordered by training positives, so the trend reads top to bottom; per-KB F1 columns
+    keep the aggregate honest by showing the spread it hides.
+    """
+    def rows_for(kb, es):
+        return _sel(data, kb, "C∪S", exclude_2cov=False, negatives="raw", k="1", example_set=es)
+
+    metrics = [(r"$|E^+|$", "n_train_pos", "size"), (r"$|E^-|$", "n_train_neg", "size"),
+               (r"$|\KB|$", "n_kb", "size"), ("P", "sem_p", "rate"), ("R", "sem_r", "rate"),
+               ("F1", "sem_f1", "rate")]
+    built = []
+    for es, disp in _SAMPLINGS.items():
+        pooled = [r for kb in _SAMPLING_KBS for r in rows_for(kb, es)]
+        if not pooled:
+            continue
+        # |A|/|B|: the retained fraction of the bias. Averaged as a RATIO PER ROW (then meaned), not
+        # mean(|A|)/mean(|B|) — the KBs have very different |B|, so the ratio of the means would be
+        # dominated by the largest bias instead of describing a typical run.
+        ratios = [a / b for r in pooled
+                  if (a := _row_float(r, "n_mss")) and (b := _row_float(r, "n_bias"))]
+        ab = Cell(f"{statistics.mean(ratios) * 100:.0f}\\%", False, False) if ratios \
+            else Cell(MISSING, False, False)
+        vals = {c: cv_mean(pooled, c) for _, c, _k in metrics}
+        per_kb = [cv_mean(rows_for(kb, es), "sem_f1") for kb in _SAMPLING_KBS]
+        built.append((vals["n_train_pos"].value, disp, vals, ab, per_kb))
+
+    built.sort(key=lambda t: (t[0] is None, t[0]))          # by training positives, ascending
+    # Bold the best value DOWN each column (the winner is a sampling, not a strategy) — the only
+    # table whose comparison runs vertically. Only F1 columns are bolded, aggregate and per-KB: the
+    # caption promises "the best F1 per column", and bolding P and R too would mark RS-$m$ (highest
+    # precision, because it learns almost nothing) as if it were a winner.
+    f1_bold = bold_winners([b[2]["sem_f1"] for b in built])
+    kb_bold = [bold_winners([b[4][i] for b in built]) for i in range(len(_SAMPLING_KBS))]
+
+    body = []
+    for i, (_pos, disp, vals, ab, _per_kb) in enumerate(built):
+        cells = [make_cell(vals["n_train_pos"], "size"), make_cell(vals["n_train_neg"], "size"), ab,
+                 make_cell(vals["n_kb"], "size")]
+        cells += [strip_zero(make_cell(vals["sem_p"])), strip_zero(make_cell(vals["sem_r"])),
+                  strip_zero(f1_bold[i])]
+        cells += [strip_zero(kb_bold[j][i]) for j in range(len(_SAMPLING_KBS))]
+        body.append(BodyRow([disp], cells))
+
+    headers = ["sampling", r"$|E^+|$", r"$|E^-|$", r"$|A|/|B|$", r"$|\KB|$", "P", "R", "F1"] + \
+        [KB_LABEL[kb] for kb in _SAMPLING_KBS]
+    span = f"{KB_LABEL[_SAMPLING_KBS[0]]} to {KB_LABEL[_SAMPLING_KBS[-1]]}"
+    cap = (r"Sensitivity of \textsc{ConMin} to the example sampling, at raw negatives and $k=1$, "
+           r"rows ordered by training positives. $|E^+|$ and $|E^-|$ are training examples per fold "
+           r"and $|A|/|B|$ is the fraction of the bias the pool retains, both averaged over "
+           f"{span}. {KB_LABEL[KBS[4]]} is excluded because the "
+           r"RS-$2n$, RS-$3n$ and RS-$m$ samplings are infeasible on it. Bold marks the best F1 "
+           r"per column.")
+    return Grid("app-sampling", cap, "lrrrcccc" + "c" * len(_SAMPLING_KBS), headers, body,
+                supercols=[("training set", 2), ("", 5), ("F1 per KB", len(_SAMPLING_KBS))],
+                full_width=True, tabcolsep="5pt")
 
 
 # ---- 6. app-ksweep: ConMin over k in {1,2,3,5} ----------------------------------
