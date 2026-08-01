@@ -253,7 +253,8 @@ If B' = ∅, ConGen returns only NE derived from E-. The learned KB contains onl
 
 ### Oracle-Based Evaluation
 
-Feature model knowledge bases (Heradio et al. 2022) serve as oracle:
+Feature model knowledge bases published on UVLHub (Romero-Organvidez et al. 2024, JSS 216:112150;
+see `data/fms/SOURCES.md`) serve as oracle:
 - Feature hierarchy → background knowledge BG
 - Component requirements/incompatibilities → bias B
 - FM solver validates configurations against target C_T

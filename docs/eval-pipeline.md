@@ -1,5 +1,12 @@
 # AcqMSS Pipeline — Scripts Explanation
 
+> **⚠ This document describes the ConGen pipeline, not the ConMin/AAAI one.**
+> The tables in the AAAI submission were produced by `apps/make_tables/`
+> (`./reproduce_tables.sh` → `data/results_conmin/tables/`), **not** by the
+> `extract_results.py` → `paper/tables/` path documented below. Steps [1]–[6] are
+> shared; step [7] is not the one that made the paper's tables. See
+> `data/results_conmin/RUN.md` and `data/results_conmin/tables/PROVENANCE.md`.
+
 ## Pipeline Overview
 
 ```
