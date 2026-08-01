@@ -1,6 +1,6 @@
 # PROVENANCE — make_tables
 
-- git SHA: `e10988abf8418b284a5ebcf9b22661a4da47c513`
+- git SHA: `d91e577855cda3d136c46aab56e63585097b9f02`
 - aggregation: exclude-2COV=ON (headline tables); all available samplings (6 per KB; 3 on busybox-1.18.0) for app-quacq-diag, app-perset, app-confusion. Non-converged (`convergence_reason` in {timeout, max_queries}) excluded from the mean unless ALL folds are capped, then reported with a dagger.
 - sources (per-KB `_long.csv`, authoritative; the merged CSV is a stale subset, unused):
 
@@ -14,7 +14,7 @@
 
 - **MAIN**: `eval-prf` (Semantic tier, A/C/C∪S/QuAcq-active — 16 numeric cols, NO accuracy). QuAcq example-only in `app-perset`; accuracy in `app-accuracy`.
 - **APPENDIX (tier mirrors)**: `app-prf-desc`, `app-prf-clause` (same 4 strategies + aggregation + `†`/budget convention as the main table).
-- appendix tables: `eval-cost`, `app-quacq-diag`, `app-perset`, `app-accuracy`, `app-confusion`, `app-checks`, `app-ksweep`, `app-rawred`.
+- appendix tables: `eval-cost`, `app-quacq-diag`, `app-perset`, `app-accuracy`, `app-confusion`, `app-checks`, `app-ksweep`, `app-rawred`, `app-sampling`.
 
 ## Audit trail
 

@@ -2,7 +2,7 @@
 
 Confusion counts per KB and strategy (all available samplings, six per KB except three on $KB_{5}$).
 
-groups: A (×4), C (×4), ConMin (×4), QuAcq (×4), QuAcq-a (×4)
+groups: A (×4), C (×4), ConMin (×4), QuAcq-ex (×4), QuAcq (×4)
 
 | KB | tp | tn | fp | fn | tp | tn | fp | fn | tp | tn | fp | fn | tp | tn | fp | fn | tp | tn | fp | fn |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|

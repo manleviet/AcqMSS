@@ -2,19 +2,19 @@
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{lcccccccccccccccc}
+\begin{tabular}{lcccccccccc}
 \toprule
- & \multicolumn{4}{c}{A} & \multicolumn{4}{c}{C} & \multicolumn{4}{c}{\textsc{ConMin}} & \multicolumn{4}{c}{\textsc{QuAcq}-a} \tabularnewline
-\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13} \cmidrule(lr){14-17}
-KB & P & R & F1 & $|\KB|$ & P & R & F1 & $|\KB|$ & P & R & F1 & $|\KB|$ & P & R & F1 & $|\KB|$ \tabularnewline
+ & \multicolumn{2}{c}{A} & \multicolumn{2}{c}{C} & \multicolumn{2}{c}{\textsc{ConMin}} & \multicolumn{2}{c}{\textsc{QuAcq}-ex} & \multicolumn{2}{c}{\textsc{QuAcq}} \tabularnewline
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9} \cmidrule(lr){10-11}
+KB ($|C_\tau|$) & P/R/F1 & $|\KB|$ & P/R/F1 & $|\KB|$ & P/R/F1 & $|\KB|$ & P/R/F1 & $|\KB|$ & P/R/F1 & $|\KB|$ \tabularnewline
 \midrule
-$KB_{1}$ & 0.15 & 1.00 & 0.25 & 99.3 & 0.87 & 0.07 & 0.13 & 0.9 & 0.64 & 0.73 & \textbf{0.68} & 14.9 & 0.25 & 0.23 & 0.24 & 12.0 \tabularnewline
-$KB_{2}$ & 0.39 & 0.92 & 0.54 & 252.9 & 0.90 & 0.01 & 0.02 & 1.2 & 0.70 & 0.73 & \textbf{0.70} & 108.5 & $0.50^{\dagger}$ & $0.03^{\dagger}$ & $0.06^{\dagger}$ & $6.0^{\dagger}$ \tabularnewline
-$KB_{3}$ & 0.13 & 0.96 & 0.23 & 641.9 & 0.83 & 0.02 & 0.03 & 1.3 & 0.33 & 0.63 & 0.41 & 162.0 & $0.89^{\dagger}$ & $0.34^{\dagger}$ & $\mathbf{0.49}^{\dagger}$ & $27.0^{\dagger}$ \tabularnewline
-$KB_{4}$ & 0.30 & 1.00 & 0.46 & 822.5 & 0.02 & 0.00 & 0.00 & 1.3 & 0.69 & 0.69 & \textbf{0.67} & 223.4 & $0.85^{\dagger}$ & $0.10^{\dagger}$ & $0.18^{\dagger}$ & $26.0^{\dagger}$ \tabularnewline
-$KB_{5}$ & 0.29 & 0.94 & 0.44 & $3{,}047.7$ & 0.83 & 0.00 & 0.00 & 1.8 & 0.74 & 0.78 & \textbf{0.76} & 949.2 & $0.91^{\dagger}$ & $0.01^{\dagger}$ & $0.02^{\dagger}$ & $11.0^{\dagger}$ \tabularnewline
+$KB_{1}$ (13) & .15/1.00/.25 & 99.3 & .87/.07/.13 & 0.9 & .64/.73/\textbf{.68} & 14.9 & .13/.01/.02 & 0.1 & .25/.23/.24 & 12.0 \tabularnewline
+$KB_{2}$ (102) & .39/.92/.54 & 252.9 & .90/.01/.02 & 1.2 & .70/.73/\textbf{.70} & 108.5 & .70/.02/.04 & 2.3 & $.50^{\dagger}$/$.03^{\dagger}$/$.06^{\dagger}$ & $6.0^{\dagger}$ \tabularnewline
+$KB_{3}$ (70) & .13/.96/.23 & 641.9 & .83/.02/.03 & 1.3 & .33/.63/.41 & 162.0 & .93/.02/.04 & 1.3 & $.89^{\dagger}$/$.34^{\dagger}$/$\mathbf{.49}^{\dagger}$ & $27.0^{\dagger}$ \tabularnewline
+$KB_{4}$ (219) & .30/1.00/.46 & 822.5 & .02/.00/.00 & 1.3 & .69/.69/\textbf{.67} & 223.4 & .87/.01/.02 & 2.6 & $.85^{\dagger}$/$.10^{\dagger}$/$.18^{\dagger}$ & $26.0^{\dagger}$ \tabularnewline
+$KB_{5}$ (905) & .29/.94/.44 & $3{,}048$ & .83/.00/.00 & 1.8 & .74/.78/\textbf{.76} & 949.2 & 1.00/.01/.01 & 5.0 & $.91^{\dagger}$/$.01^{\dagger}$/$.02^{\dagger}$ & $11.0^{\dagger}$ \tabularnewline
 \bottomrule
 \end{tabular}
-\caption{Description-tier precision / recall / F1 and $|\KB|$ per KB — same exclude-2COV aggregation and $^{\dagger}$/budget convention as Table~\ref{tab:eval-prf}.}
+\caption{Description-tier precision / recall / F1 and $|\KB|$ per KB, with the same conditions, exclude-2COV aggregation and $^{\dagger}$/budget convention as Table~\ref{tab:eval-prf}.}
 \label{tab:app-prf-desc}
 \end{table*}
