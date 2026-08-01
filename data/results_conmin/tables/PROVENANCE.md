@@ -1,6 +1,6 @@
 # PROVENANCE — make_tables
 
-- git SHA: `d91e577855cda3d136c46aab56e63585097b9f02`
+- git SHA: `90aa0de7756b77de2e9201b0faabc0f07a10c549-dirty`
 - aggregation: exclude-2COV=ON (headline tables); all available samplings (6 per KB; 3 on busybox-1.18.0) for app-quacq-diag, app-perset, app-confusion. Non-converged (`convergence_reason` in {timeout, max_queries}) excluded from the mean unless ALL folds are capped, then reported with a dagger.
 - sources (per-KB `_long.csv`, authoritative; the merged CSV is a stale subset, unused):
 

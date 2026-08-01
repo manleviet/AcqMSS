@@ -449,7 +449,9 @@ def _app_ksweep(data, exclude_2cov) -> Grid:
         for kj, k in enumerate(KVALS):
             rows = _sel(data, kb, "C∪S", exclude_2cov, k=k)
             cells = [make_cell(cv_mean(rows, c), kind) for _, c, kind in metrics]
-            lead = [f"\\multirow{{4}}{{*}}{{{KB_LABEL[kb]}}}" if kj == 0 else "", f"${k}$"]
+            # k in TEXT mode: the columns beside it are text-mode numerals, and aaai2027.sty
+            # has no math font, so a math-mode digit would arrive in Computer Modern.
+            lead = [f"\\multirow{{4}}{{*}}{{{KB_LABEL[kb]}}}" if kj == 0 else "", f"{k}"]
             body.append(BodyRow(lead, cells, rule_before=(kj == 0 and ki > 0)))
     return Grid("app-ksweep", "\\textsc{ConMin}(raw) $k$-sweep per KB. " + _note(exclude_2cov),
                 "ll" + "c" * len(metrics), headers, body, n_leading=2, full_width=True, tabcolsep="4pt")

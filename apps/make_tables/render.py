@@ -68,16 +68,17 @@ def _latex_cell(c: Cell) -> str:
     if t == MISSING:
         return "--"
     parts = _int_frac(t)
-    if parts and len(parts[0]) >= 4:                    # numeric >=1000 -> math + {,} grouping
-        body = "{,}".join(_group3(parts[0])) + (f".{parts[1]}" if parts[1] else "")
-        inner = f"\\mathbf{{{body}}}" if c.bold else body   # bold IN math (\\textbf won't bold math)
-        return f"${inner}^{{\\dagger}}$" if c.dagger else f"${inner}$"
-    if c.dagger:                                        # daggered numeric -> math (bold via \\mathbf)
-        inner = f"\\mathbf{{{t}}}" if c.bold else t
-        return f"${inner}^{{\\dagger}}$"
-    if any(ch.isalpha() for ch in t):                   # free-text label -> escape TeX specials
+    # Numbers stay in TEXT mode. aaai2027.sty loads newtxtext but no math font, so anything
+    # inside $...$ falls back to Computer Modern and clashes with the Times digits beside it.
+    # Only the dagger glyph itself stays in math (it has no text-mode equivalent here), which
+    # leaves it byte-for-byte the same symbol it always was.
+    if parts and len(parts[0]) >= 4:                    # numeric >=1000 -> text-mode thousands grouping
+        t = ",".join(_group3(parts[0])) + (f".{parts[1]}" if parts[1] else "")
+    elif any(ch.isalpha() for ch in t):                 # free-text label -> escape TeX specials
         t = _escape_tex(t)
-    return f"\\textbf{{{t}}}" if c.bold else t
+    if c.bold:
+        t = f"\\textbf{{{t}}}"
+    return f"{t}$^{{\\dagger}}$" if c.dagger else t
 
 
 _STRIP_ZERO = re.compile(r"(?<![\d.])0\.")
