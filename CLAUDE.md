@@ -57,6 +57,30 @@ PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
 - **Checker building**: Checker is built from a Task via `build_checker(task, backend=...)` (imported from `explanation.api`); models are pure KB containers with no checker protocol
 - **Test control**: `ENABLED_TESTS` and `ENABLED_PARAMS` dicts at top of test files toggle specific tests
 - **Known pytest warnings**: `TestSuiteReader` triggers PytestCollectionWarning (has `__init__`). The `slow` marker is registered in `pyproject.toml` `[tool.pytest.ini_options]`; shared fixtures/paths live in `tests/conftest.py` + `tests/resource_paths.py`.
+- **Suite baseline — `610 passed, 1 skipped`** (611 collected), measured at commit
+  `0540010` on 2026-08-22. `../explanation` is `275 passed, 0 skipped`.
+
+  **Record the commit and the environment whenever you move this number.** The
+  previous baseline (`507 passed + 1 skipped`) died precisely because neither was
+  written down: it was measured at `4b47c9b` on 2026-07-19, before `make_tables`
+  entered the repo at `2536385` (2026-07-26), so by August it described a tree
+  that no longer existed and could not tell an environment failure apart from a
+  real one. Both conditions matter:
+
+  1. canonical `../explanation` installed editable (`pip install -e ../explanation`)
+  2. `flamapy-fm` / `-fw` / `-sat` at `2.6.0.dev4` — the versions `pyproject.toml`
+     pins. `pip check` stays red on `flamapy-bdd 2.0.1`; that is the normal
+     working state, not a problem.
+
+  A total is the wrong gate anyway. Before changing anything, measure the set of
+  **red test names** under the environment you will use, then require the set
+  after your change to be exactly the tests your change should touch. Any other
+  red test means stop.
+- **The one skipped test**: `test_extraction_tables_are_byte_identical`
+  (`tests/test_t9_metrics_safety_net.py:37`). Owned by **C2**, not by whoever
+  trips over it — it compares stale against stale, so enabling it now proves
+  nothing. It is released when C2 regenerates `data/results/congen` and
+  re-baselines the t9 golden (B3 REDUCE regen; see ADR-0017).
 
 ## Effort plans (`plans/`) — what gets committed
 
