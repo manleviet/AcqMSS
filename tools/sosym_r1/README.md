@@ -84,6 +84,50 @@ configs updated with the ea2468 block; `.gitignore`; `measurements.jsonl`.
 Do not commit anything over 50 MB. `report` lists those files with their sizes
 and sha256 so they can be transferred separately and checked on arrival.
 
+## C11 — regenerating the FF sets
+
+Separate task, same tooling. `feature_frequency.py:59` built its `coverage` dict
+by iterating `self.features`, which is a **`set` of strings**, so the target that
+`_rng.shuffle(uncovered)` picked depended on Python's per-process string hashing.
+`random.Random(82).shuffle` is a fixed permutation *of positions, not of
+contents* — the seed fixes the permutation, the hash fixes what it permutes. So
+the committed `*_ff.json` are not re-derivable from seed 82. Line 62 sorts the
+same set three lines later, and every other generator sorts, which is why only FF
+is affected.
+
+```bash
+python3 tools/sosym_r1/gen_ea2468.py regen-ff
+```
+
+Refuses to run until the fix is in place, so a second irreproducible batch cannot
+be produced by accident. It regenerates the FF example sets and their fold files
+for all six knowledge bases in one config, and asserts that **only** `*_ff.json`
+and `*_ff_folds.json` changed.
+
+Order matters: run this **after** the ea2468 chain finishes, never concurrently —
+the two write into the same directories and each one's guard would (correctly)
+abort the other. `ea2468_ff` is simply regenerated along with the rest; the copy
+from the first pass is superseded, not in conflict.
+
+Two things the command cannot do for you:
+
+- **Re-baseline the goldens.** Six test files read `REAL-FM-7_ff.json`, and
+  `tests/test_t11_e2e_learned_kb.py:42` asserts `layer3_golden["congen_ff"]`.
+  Changing the input turns it red; that is the tripwire working.
+- **Close the test gap**, which is the part worth the most.
+  `tests/test_generator_characterization.py` parametrises `_make_ff` and claims to
+  lock *"the same generator, run twice with the same seed, yields byte-identical
+  examples"*. Both of its reproducibility tests run **inside one process**, where
+  `PYTHONHASHSEED` is constant, so FF passed throughout. The test is blind to
+  exactly the defect it advertises protection against. Add a case that runs a
+  generator in a **subprocess** under varied `PYTHONHASHSEED` and compares
+  fingerprints.
+
+⚠ The pre-regeneration data is tagged **`conmin-aaai-data`** (`fd84762`). ConMin's
+published numbers do not change and its camera-ready supplement ships the FF sets
+from that tag, not from the working tree. Recover them with
+`git show conmin-aaai-data:data/examples/<kb>_ff.json`. Do not delete the tag.
+
 ## Verification
 
 `verify_examples_bundle.py` imports nothing from this repo — stdlib only — so it

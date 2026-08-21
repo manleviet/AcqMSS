@@ -87,6 +87,35 @@ def assert_untouched(before: dict, after: dict, directory: Path) -> None:
         )
 
 
+def snapshot_all(directory: Path) -> dict[str, tuple[int, int]]:
+    """(size, mtime_ns) for every file in *directory*, ea2468 included."""
+    out = {}
+    if not directory.exists():
+        return out
+    for p in sorted(directory.iterdir()):
+        if p.is_file():
+            st = p.stat()
+            out[p.name] = (st.st_size, st.st_mtime_ns)
+    return out
+
+
+def assert_only(before: dict, after: dict, directory: Path, predicate) -> None:
+    """Every file that changed must satisfy *predicate* on its name."""
+    changed = sorted(
+        n for n in set(before) | set(after)
+        if before.get(n) != after.get(n)
+    )
+    illegal = [n for n in changed if not predicate(n)]
+    if illegal:
+        raise SystemExit(
+            f"\nABORT: files outside the permitted set changed in {directory}:\n  "
+            + "\n  ".join(illegal) +
+            "\n\nThe run must be discarded and the files restored with "
+            "`git checkout -- data/`."
+        )
+    print(f"  guard: {len(changed)} file(s) changed in {directory.name}, all permitted")
+
+
 # --------------------------------------------------------------------------
 # running the app
 # --------------------------------------------------------------------------
@@ -275,6 +304,108 @@ def cmd_folds(args) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# C11 — regenerate every FF set after the hash-order fix
+# --------------------------------------------------------------------------
+
+ALL_MODELS = [
+    ("REAL-FM-7", 14), ("arcade-game", 65), ("fqa", 179),
+    ("REAL-FM-4", 291), ("busybox-1.18.0", 854), ("ea2468", 1408),
+]
+
+
+def assert_ff_fix_present() -> None:
+    """Refuse to regenerate with the unfixed generator.
+
+    `feature_frequency.py` built its `coverage` dict by iterating a set of
+    feature names, so the target `_rng.shuffle` picked depended on Python's
+    per-process string hashing and the sets were not re-derivable from their
+    seed. Regenerating before that line is fixed would produce another
+    irreproducible batch, which is the one outcome worth guarding against.
+    """
+    src = (REPO / "conacq" / "example_generators" / "feature_frequency.py").read_text()
+    lines = src.splitlines()
+    window = "\n".join(lines[50:66])
+    if "sorted(self.features)" not in window or window.count("sorted(self.features)") < 2:
+        raise SystemExit(
+            "ABORT: the C11 fix is not in place.\n"
+            "conacq/example_generators/feature_frequency.py must build `coverage` from\n"
+            "`sorted(self.features)` (around line 59), not from the raw set. Without it\n"
+            "the regenerated sets would again not be re-derivable from seed 82.\n"
+            "Fix the line, then re-run."
+        )
+    print("  guard: C11 fix present in feature_frequency.py")
+
+
+def cmd_regen_ff(args) -> int:
+    """Regenerate the FF example sets and folds for every knowledge base."""
+    assert_ff_fix_present()
+
+    models = [(m, n) for m, n in ALL_MODELS
+              if (REPO / "data" / "fms" / f"{m}.uvl").exists()
+              and (args.models is None or m in args.models)]
+    print(f"== regenerating FF for {[m for m, _ in models]} ==")
+
+    blocks = "".join(
+        f'\n[[models]]\npath = "data/fms/{m}.uvl"\nn = {n}\n' for m, n in models
+    )
+    config = (
+        "[general]\n"
+        f"seed = {SEED}\n"
+        f'output_dir = "{EX_DIR.relative_to(REPO)}"\n'
+        "verbose = true\n"
+        'strategies = ["ff"]\n'
+        + blocks
+    )
+    print(config)
+
+    before = snapshot_all(EX_DIR)
+    result = run_app("apps.generate_examples", config, None)
+    after = snapshot_all(EX_DIR)
+    assert_only(before, after, EX_DIR, lambda n: n.endswith("_ff.json"))
+    record({"phase": "regen-ff-examples",
+            "models": [m for m, _ in models], **result})
+    if result["returncode"] != 0:
+        print(f"FAILED rc={result['returncode']}")
+        print(result["stderr_tail"])
+        return 1
+
+    fold_blocks = "".join(
+        f'\n[[models]]\nname = "{m}_ff"\n'
+        f'examples = "data/examples/{m}_ff.json"\n' for m, _ in models
+    )
+    fold_config = (
+        "[folds]\n"
+        f"seed = {SEED}\n"
+        f"n_folds = {N_FOLDS}\n"
+        f'output_dir = "{FOLD_DIR.relative_to(REPO)}"\n'
+        + fold_blocks
+    )
+    fbefore = snapshot_all(FOLD_DIR)
+    fresult = run_app("apps.generate_cv_folds", fold_config, None)
+    fafter = snapshot_all(FOLD_DIR)
+    assert_only(fbefore, fafter, FOLD_DIR, lambda n: n.endswith("_ff_folds.json"))
+    record({"phase": "regen-ff-folds", "models": [m for m, _ in models], **fresult})
+    if fresult["returncode"] != 0:
+        print(f"FAILED rc={fresult['returncode']}")
+        print(fresult["stderr_tail"])
+        return 1
+
+    print("\n| model | |E+| | |E-| | size | sha256 |")
+    print("|---|---|---|---|---|")
+    for m, _ in models:
+        p = EX_DIR / f"{m}_ff.json"
+        d = json.loads(p.read_text())
+        print(f"| {m} | {len(d['positive'])} | {len(d['negative'])} | "
+              f"{p.stat().st_size:,} B | {sha256(p)} |")
+    print("\nCompare each row against `git show conmin-aaai-data:data/examples/<m>_ff.json`.\n"
+          "The counts are expected to move; that is the point. The tag is what ConMin's\n"
+          "camera-ready supplement ships, so do not delete it.")
+    print("\nNow re-run the suite and re-baseline the goldens that read REAL-FM-7_ff.json\n"
+          "(tests/test_t11_e2e_learned_kb.py:42 asserts layer3_golden['congen_ff']).")
+    return 0
+
+
 def cmd_report(args) -> int:
     rows = []
     if LEDGER.exists():
@@ -348,6 +479,11 @@ def main() -> int:
     pf = sub.add_parser("folds", help="generate CV folds for the ea2468 sets that exist")
     pf.add_argument("--strategies", nargs="*", default=None)
     pf.set_defaults(func=cmd_folds)
+
+    pg = sub.add_parser("regen-ff",
+                        help="C11: regenerate every FF set + folds after the hash-order fix")
+    pg.add_argument("--models", nargs="*", default=None)
+    pg.set_defaults(func=cmd_regen_ff)
 
     pr = sub.add_parser("report", help="print the cost table from the ledger")
     pr.set_defaults(func=cmd_report)
