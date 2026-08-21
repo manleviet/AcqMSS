@@ -144,10 +144,10 @@ def test_render_latex_booktabs_dagger_thousands_bold():
                                       Cell("0.85", False, True), Cell("4729.8", False, False)])])
     out = latex(grid)
     assert "\\toprule" in out and "\\tabularnewline" in out and "\\hline" not in out
-    assert "$0.03^{\\dagger}$" in out          # dagger -> math
-    assert "$\\mathbf{7{,}534}$" in out         # bold thousands -> \mathbf (in-math bold), not \textbf
+    assert "0.03$^{\\dagger}$" in out          # number in text mode; only the dagger glyph stays math
+    assert "\\textbf{7,534}" in out            # bold thousands -> \textbf (text mode), not \mathbf
     assert "\\textbf{0.85}" in out             # bold plain rate -> \textbf (text mode)
-    assert "$4{,}729.8$" in out                # >=1000 FLOAT grouped too (red-team M3)
+    assert "4,729.8" in out                    # >=1000 FLOAT grouped too (red-team M3)
     assert out.rstrip().endswith("\\end{table}")
 
 
@@ -173,7 +173,7 @@ def test_prf_compact_drops_leading_zero_and_keeps_bold_and_dagger():
     cell = prf_compact([Cell("1.00", False, False), Cell("0.03", True, False),
                         Cell("0.85", False, True)])
     assert cell.raw is True
-    assert cell.text == "1.00/$.03^{\\dagger}$/\\textbf{.85}"
+    assert cell.text == "1.00/.03$^{\\dagger}$/\\textbf{.85}"
 
 
 def test_markdown_raw_cell_keeps_markers_but_row_label_keeps_dollars():
