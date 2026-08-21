@@ -58,6 +58,35 @@ PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
 - **Test control**: `ENABLED_TESTS` and `ENABLED_PARAMS` dicts at top of test files toggle specific tests
 - **Known pytest warnings**: `TestSuiteReader` triggers PytestCollectionWarning (has `__init__`). The `slow` marker is registered in `pyproject.toml` `[tool.pytest.ini_options]`; shared fixtures/paths live in `tests/conftest.py` + `tests/resource_paths.py`.
 
+## Effort plans (`plans/`) — what gets committed
+
+`plans/<timestamped-effort>/` is the implementation layer: one folder per effort,
+holding its plan, phase specs, progress log and any measurement reports. Most of
+it is scratch and stays local. Two kinds are **not** scratch, and both must be
+committed on the working branch:
+
+1. **Anything another machine has to read.** The moment an effort crosses
+   machines — a second Claude Code, a laptop running an overnight sweep — the
+   branch is the only channel. A spec left uncommitted means the other side is
+   working from a chat summary instead of the document, which defeats the point
+   of writing it down.
+2. **Anything a plan or hub cites as evidence.** If `Cowork/AcqMSS/plan.md` or a
+   paper hub points at `plans/reports/<x>.md` as the provenance for a decision,
+   that file is part of the record and belongs in history. A citation to a path
+   that exists on one laptop is not a citation.
+
+Rule of thumb: *scratch is local, evidence is committed.* When unsure, commit —
+`plans/` is text and the whole tree is a few megabytes.
+
+Commit effort logs **separately from data or code**, so the record survives
+regardless of how the run turns out.
+
+Adopted 2026-08-21, after both failure modes hit on the same day: the SoSyM hub
+cited two `plans/reports/measurement-*.md` files that existed on exactly one
+machine, and a Claude Code on a second machine wrote a C11 spec the first machine
+could not read. Before that, 13 of 439 files under `plans/` were tracked, with no
+rule behind which 13.
+
 ## Documentation Management
 
 Project docs live in `./docs` (keep updated). Tree differs from the generic global list:
