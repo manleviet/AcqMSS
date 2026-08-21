@@ -64,12 +64,12 @@ n = 854
 # valid_configs = TBD
 # m = TBD
 
-#[[models]]
-#path = "data/fms/ea2468.uvl"
-#n = 1408
-## valid_configs = TBD
-## m = TBD
-#
+[[models]]
+path = "data/fms/ea2468.uvl"
+n = 1408
+# valid_configs = TBD
+m = 22
+
 #[[models]]
 #path = "data/fms/linux-2.6.33.3.uvl"
 #n = 6467

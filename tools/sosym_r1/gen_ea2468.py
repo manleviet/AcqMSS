@@ -120,9 +120,16 @@ def assert_only(before: dict, after: dict, directory: Path, predicate) -> None:
 # running the app
 # --------------------------------------------------------------------------
 
-def run_app(module: str, config_text: str, gate_seconds: float | None) -> dict:
+def run_app(module: str, config_text: str, gate_seconds: float | None,
+            verbose_flag: bool = True) -> dict:
     """Write *config_text* to a temp file, run *module* against it, and return
-    wall-clock, peak child RSS, exit status and captured output."""
+    wall-clock, peak child RSS, exit status and captured output.
+
+    ``verbose_flag`` exists because the two apps do not share a CLI:
+    ``generate_examples`` takes ``-v``, but ``generate_cv_folds`` builds its
+    parser with ``verbose=False`` (apps/generate_cv_folds.py:27), so passing
+    ``-v`` there makes argparse exit 2 before the app does anything.
+    """
     with tempfile.TemporaryDirectory() as tmp:
         cfg = Path(tmp) / "config.toml"
         cfg.write_text(config_text)
@@ -130,12 +137,16 @@ def run_app(module: str, config_text: str, gate_seconds: float | None) -> dict:
         env = dict(os.environ)
         env["PYTHONPATH"] = "."
 
+        cmd = [sys.executable, "-m", module, str(cfg)]
+        if verbose_flag:
+            cmd.append("-v")
+
         rss_before = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
         t0 = time.monotonic()
         timed_out = False
         try:
             proc = subprocess.run(
-                [sys.executable, "-m", module, str(cfg), "-v"],
+                cmd,
                 cwd=REPO, env=env, capture_output=True, text=True,
                 timeout=gate_seconds,
             )
@@ -286,7 +297,7 @@ def cmd_folds(args) -> int:
     print(config)
 
     before = snapshot(FOLD_DIR)
-    result = run_app("apps.generate_cv_folds", config, None)
+    result = run_app("apps.generate_cv_folds", config, None, verbose_flag=False)
     after = snapshot(FOLD_DIR)
     assert_untouched(before, after, FOLD_DIR)
 
@@ -382,7 +393,7 @@ def cmd_regen_ff(args) -> int:
         + fold_blocks
     )
     fbefore = snapshot_all(FOLD_DIR)
-    fresult = run_app("apps.generate_cv_folds", fold_config, None)
+    fresult = run_app("apps.generate_cv_folds", fold_config, None, verbose_flag=False)
     fafter = snapshot_all(FOLD_DIR)
     assert_only(fbefore, fafter, FOLD_DIR, lambda n: n.endswith("_ff_folds.json"))
     record({"phase": "regen-ff-folds", "models": [m for m, _ in models], **fresult})
