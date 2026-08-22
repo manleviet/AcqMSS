@@ -57,8 +57,10 @@ PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
 - **Checker building**: Checker is built from a Task via `build_checker(task, backend=...)` (imported from `explanation.api`); models are pure KB containers with no checker protocol
 - **Test control**: `ENABLED_TESTS` and `ENABLED_PARAMS` dicts at top of test files toggle specific tests
 - **Known pytest warnings**: `TestSuiteReader` triggers PytestCollectionWarning (has `__init__`). The `slow` marker is registered in `pyproject.toml` `[tool.pytest.ini_options]`; shared fixtures/paths live in `tests/conftest.py` + `tests/resource_paths.py`.
-- **Suite baseline — `610 passed, 1 skipped`** (611 collected), measured at commit
-  `0540010` on 2026-08-22. `../explanation` is `275 passed, 0 skipped`.
+- **Suite baseline — `617 passed, 1 skipped`** (618 collected), measured at commit
+  `37e6537` on 2026-08-22. `../explanation` is `275 passed, 0 skipped`.
+  (Was `610 passed, 1 skipped` at `0540010`; C11 added seven cases — three
+  cross-process reproducibility, four FF attainable-coverage.)
 
   **Record the commit and the environment whenever you move this number.** The
   previous baseline (`507 passed + 1 skipped`) died precisely because neither was
