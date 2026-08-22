@@ -152,7 +152,11 @@ def test_site3_congen_prepared_set_layout():
     # 1 positive example, no negatives → set_tc non-empty, set_tv empty.
     task = model.prepare_task(
         ConGenTaskInput.from_examples(oracle.oracle_data, [{"java": True}], [])).task
-    assert list(task.set_b) == [28]
+    # Acquisition BG is domain-only (∅ for a boolean FM); root assumption 28 is a
+    # post-acquisition axiom on root_axiom, not runtime BG. QuAcq (site 4) keeps 28
+    # in set_b — its prep is a separate strategy, deliberately untouched here.
+    assert list(task.set_b) == []
+    assert list(task.root_axiom) == [28]
     assert list(task.set_c[:4]) == [116, 118, 120, 122]   # bias originals, stride 2
     assert len(task.set_c) == 295
     assert _strided(task.set_c)

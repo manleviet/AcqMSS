@@ -99,18 +99,11 @@ class ConMinTaskPreparation(ConGenTaskPreparation):
             task.set_c, prepared.describe, model.constraint_map,
             model.name_to_id, task_input.positive_test_cases)
 
-        # Root non-emptiness (root feature = true) is a POST-acquisition axiom, not
-        # runtime BG: keeping it in BG makes Reduce entailment-drop every `X → root`
-        # constraint and degenerates the cover on root-absent negatives. Drop it from
-        # the acquisition BG (keep any genuine domain axioms — ∅ for boolean FMs) and
-        # record it in `root_axiom` for re-appending at delivery (note "Root-constraint
-        # BG semantics"). Generic: derive by dropping the root id, never hardcode ∅.
-        root_id = task_input.oracle_data.get_bg_data().assumptions[0]
-        domain_bg = tuple(a for a in task.set_b if a != root_id)
-        root_axiom = tuple(a for a in task.set_b if a == root_id)
-
-        task = replace(task, support_count=support_count,
-                       set_b=domain_bg, root_axiom=root_axiom)
+        # The root/domain-BG split now happens once in ConGenTaskPreparation.prepare
+        # (shared by both algorithms), so `task.set_b` is already domain-only and
+        # `task.root_axiom` is already set. Re-deriving it here would read root_axiom
+        # off an already-root-free set_b and silently reset it to ().
+        task = replace(task, support_count=support_count)
         return PreparedTask(task, prepared.describe)
 
     def _prepare_negative_examples(

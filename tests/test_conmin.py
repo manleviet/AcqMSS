@@ -289,14 +289,15 @@ class TestConMinStage1:
         _om, conmin = _prepare_conmin(EXAMPLES_RS_1N_PATH)
         ct, mt = congen.task, conmin.task
 
-        # Prep field parity, EXCEPT set_b: ConMin's acquisition BG is domain-only
-        # (root non-emptiness is a post-acquisition axiom, note "Root-constraint BG
-        # semantics"), so it legitimately diverges from ConGen's root BG. Everything
-        # else — and, crucially, the resulting MSS — still matches because Stage-1 is
-        # inert to the root for complete positives.
+        # Prep field parity, set_b INCLUDED. The root/domain split now happens once
+        # in the shared ConGenTaskPreparation.prepare, so both algorithms carry a
+        # domain-only acquisition BG and the same root_axiom — the asymmetry this
+        # test used to encode (ConGen keeping root in BG) is gone by design.
         assert list(mt.set_c) == list(ct.set_c)
         assert list(mt.set_b) == []                 # domain-only (∅ for boolean FM)
-        assert list(ct.set_b) == list(mt.root_axiom)  # ConGen's BG == ConMin's root axiom
+        assert list(ct.set_b) == list(mt.set_b)     # full parity, no exception
+        assert list(ct.root_axiom) == list(mt.root_axiom)
+        assert len(mt.root_axiom) == 1              # the root is recorded, not lost
         assert list(mt.set_tc) == list(ct.set_tc)
         assert list(mt.set_neg_tv) == list(ct.set_neg_tv)
         assert mt.negation_map == ct.negation_map

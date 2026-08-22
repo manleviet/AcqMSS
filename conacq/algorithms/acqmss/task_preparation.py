@@ -91,8 +91,13 @@ class ConGenTask(TestCaseTask):
 
     Naming: Use DescriptionProvider (from PreparedTask) to map assumption IDs
     to human-readable names. It covers all assumptions (bias, root, test cases, NE).
+
+    ``root_axiom`` is the FM root non-emptiness fact, kept OUT of the acquisition BG
+    (``set_b`` is domain-only) and re-appended to the delivered theory post-acquisition
+    (design note "Root-constraint BG semantics").
     """
-    pass  # No additional fields needed
+
+    root_axiom: Tuple[int, ...] = ()
 
 
 class ConGenTaskPreparation(TaskPreparationStrategy):
@@ -151,7 +156,18 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
         set_c = prepare_kb(
             set_kb, assumptions, negation_map, provider,
             model.constraint_map, alloc, model.negated_constraint_map)
-        set_b = [assumptions[0]]
+
+        # Root non-emptiness (root feature = true) is a POST-acquisition axiom, not
+        # runtime BG: keeping it in BG makes Reduce entailment-drop every `X → root`
+        # constraint, so those constraints can never be learned. Drop it from the
+        # acquisition BG (keep any genuine domain axioms — ∅ for boolean FMs) and
+        # record it in `root_axiom` for re-appending at delivery (design note
+        # "Root-constraint BG semantics"). Generic: derive by dropping the root id,
+        # never hardcode ∅, so a non-boolean FM's domain axioms survive.
+        root_id = bg_data.assumptions[0]
+        bg_ids = [assumptions[0]]
+        set_b = [a for a in bg_ids if a != root_id]
+        root_axiom = tuple(a for a in bg_ids if a == root_id)
 
         # Step 2: E+ → set_tc (the originals); its negated forms populate the
         # ConGen-unused set_neg_tc, preserved for task-content parity.
@@ -181,7 +197,8 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
             set_c=set_c, set_b=set_b, set_kb=set_kb,
             negation_map=negation_map, assumptions=assumptions,
             set_tc=set_tc, set_tv=set_tv,
-            set_neg_tv=set_neg_tv, set_neg_tc=set_neg_tc)
+            set_neg_tv=set_neg_tv, set_neg_tc=set_neg_tc,
+            root_axiom=root_axiom)
         return PreparedTask(task, provider)
 
     def _make_task(self, **fields) -> TestCaseTask:

@@ -89,8 +89,13 @@ class TestCONGEN:
         )
 
         try:
-            # Verify set_b contains background knowledge (root assumption)
-            assert len(task.set_b) > 0, "Background knowledge (set_b) should not be empty"
+            # The acquisition BG is domain-only: root non-emptiness is a
+            # POST-acquisition axiom on task.root_axiom, not runtime BG (keeping it
+            # in BG made Reduce entailment-drop every `X -> root` constraint). For a
+            # boolean FM the domain BG is empty, so assert the root is ACCOUNTED FOR
+            # rather than that set_b is non-empty.
+            assert list(task.set_b) == [], "acquisition BG should be domain-only"
+            assert len(task.root_axiom) > 0, "root axiom should be recorded"
 
             congen = ConGen(checker, profiler)
             result = congen.acquire(
@@ -133,8 +138,13 @@ class TestCONGEN:
         )
 
         try:
-            # Verify set_b contains background knowledge (root assumption)
-            assert len(task.set_b) > 0, "Background knowledge (set_b) should not be empty"
+            # The acquisition BG is domain-only: root non-emptiness is a
+            # POST-acquisition axiom on task.root_axiom, not runtime BG (keeping it
+            # in BG made Reduce entailment-drop every `X -> root` constraint). For a
+            # boolean FM the domain BG is empty, so assert the root is ACCOUNTED FOR
+            # rather than that set_b is non-empty.
+            assert list(task.set_b) == [], "acquisition BG should be domain-only"
+            assert len(task.root_axiom) > 0, "root axiom should be recorded"
 
             congen = ConGen(checker, profiler)
             result = congen.acquire(
@@ -178,8 +188,13 @@ class TestCONGEN:
         )
 
         try:
-            # Verify set_b contains background knowledge (root assumption)
-            assert len(task.set_b) > 0, "Background knowledge (set_b) should not be empty"
+            # The acquisition BG is domain-only: root non-emptiness is a
+            # POST-acquisition axiom on task.root_axiom, not runtime BG (keeping it
+            # in BG made Reduce entailment-drop every `X -> root` constraint). For a
+            # boolean FM the domain BG is empty, so assert the root is ACCOUNTED FOR
+            # rather than that set_b is non-empty.
+            assert list(task.set_b) == [], "acquisition BG should be domain-only"
+            assert len(task.root_axiom) > 0, "root axiom should be recorded"
 
             congen = ConGen(checker, profiler)
             result = congen.acquire(
@@ -430,3 +445,56 @@ class TestOracleFeatureIds:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+# --- C7: root non-emptiness is a post-acquisition axiom, not runtime BG ---------
+
+def test_root_kept_out_of_acquisition_bg_but_recorded():
+    """The acquisition BG carries no root fact; the root is recorded on root_axiom.
+
+    Guards the C7 invariant directly: if the root is put back into set_b, Reduce
+    entailment-drops every `X -> root` constraint and they can never be learned.
+    Asserting root_axiom is non-empty also catches the opposite failure — dropping
+    the root from BG without recording it anywhere, which loses it silently.
+    """
+    if not FM_PATH.exists() or not BIAS_PATH.exists():
+        pytest.skip("REAL-FM-7 fixtures not found")
+    oracle = FMOracle(str(FM_PATH), use_incremental=False)
+    model = (ConGenModelBuilder.from_bias(str(BIAS_PATH))
+             .with_oracle_data(oracle.oracle_data).build())
+    task = model.prepare_task(
+        ConGenTaskInput.from_examples(oracle.oracle_data, [{"java": True}], [])).task
+
+    assert list(task.set_b) == [], "root must not be in the acquisition BG"
+    assert len(task.root_axiom) == 1, "root must still be recorded, not lost"
+    # The root assumption is the Oracle's first BG assumption — not re-derived here,
+    # so a change in Part-3 layout surfaces rather than being absorbed.
+    assert task.root_axiom[0] == oracle.oracle_data.get_bg_data().assumptions[0]
+
+
+def test_root_implying_constraints_are_learnable():
+    """`X -> root` constraints survive Reduce and reach the learned KB.
+
+    This is the behavioural point of C7, independent of any golden: with the root in
+    BG these constraints are provably redundant and Reduce removes all of them, so
+    the intersection below is empty. Red here means the recall regression is back.
+    """
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+        pytest.skip("REAL-FM-7 fixtures not found")
+    import json
+
+    from conacq.runners import ConGenRunner
+
+    ex = json.loads(EXAMPLES_RS_1N_PATH.read_text())
+    runner = ConGenRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=False)
+    result = runner.run([e["assignments"] for e in ex["positive"]],
+                        [e["assignments"] for e in ex["negative"]])
+
+    learned = set(result.kb_constraints)
+    # c6/c14/c18 are REAL-FM-7's `X -> root` relations; all three were unlearnable
+    # while the root sat in BG (they landed in redundant_constraints instead).
+    root_implying = {"c6", "c14", "c18"}
+    assert root_implying <= learned, (
+        f"root-implying constraints missing from KB: {sorted(root_implying - learned)}")
+    assert not (root_implying & set(result.redundant_constraints)), \
+        "root-implying constraints were classified redundant again"
