@@ -56,7 +56,7 @@ class ConGenModel(KBModel):
             result: "ConGenResult",
             describe: DescriptionProvider,
             root_clauses: Sequence[Sequence[int]],
-    ) -> Tuple[List[List[int]], List[List[int]], List[str], List[str]]:
+    ) -> Tuple[List[List[int]], List[List[int]], List[str], List[str], List[str]]:
         """Resolve a ConGenResult into clauses and names (stateless).
 
         The describe provider (from the PreparedTask) and the root BG clauses (from
@@ -65,25 +65,41 @@ class ConGenModel(KBModel):
         stored root-clause baton with an ``or []`` fallback masked exactly that).
 
         Returns:
-            (bg_clauses, kb_clauses, kb_names, redundant_names)
+            (bg_clauses, kb_clauses, kb_names, ne_names, redundant_names)
+
+        ``kb_names`` is bias constraints ONLY and ``ne_names`` the memorized ¬e⁻
+        facts, reported apart. They used to share one list, which put NE names into
+        the KB name-space: it inflated ``n_kb`` (so it no longer compared byte-for-byte
+        with ConMin's ``size``) and fed NE into the description/clause/semantic tiers,
+        whose vocabulary is the bias. The ids resolved here are POST-Reduce, so an NE
+        that Reduce dropped as entailed is not counted.
         """
         bg_clauses = root_clauses
-        kb_clauses, kb_names = self._resolve_ids(describe, result.kb_assumption_ids)
-        _, redundant_names = self._resolve_ids(describe, result.redundant_ids)
-        return bg_clauses, kb_clauses, kb_names, redundant_names
+        kb_clauses, kb_names, ne_names = self._resolve_ids(
+            describe, result.kb_assumption_ids)
+        _, redundant_names, _ = self._resolve_ids(describe, result.redundant_ids)
+        return bg_clauses, kb_clauses, kb_names, ne_names, redundant_names
 
     def _resolve_ids(
             self,
             describe: DescriptionProvider,
             assumption_ids: List[int],
-    ) -> Tuple[List[List[int]], List[str]]:
-        """Resolve assumption IDs to clauses (from this KB's constraint_map) and
-        names (from the given describe provider). Stateless."""
+    ) -> Tuple[List[List[int]], List[str], List[str]]:
+        """Resolve assumption IDs to clauses (from this KB's constraint_map) and names
+        (from the given describe provider), split by whether the name is a bias
+        constraint. Stateless.
+
+        Returns (clauses, fm_names, non_fm_names). A name absent from constraint_map is
+        a memorized ¬e⁻ (NE), not a bias constraint — it belongs in the second list.
+        """
         clauses: List[List[int]] = []
-        names: List[str] = []
+        fm_names: List[str] = []
+        non_fm_names: List[str] = []
         for aid in assumption_ids:
             name = describe.get_description(aid)
-            names.append(name)
             if name in self.constraint_map:
+                fm_names.append(name)
                 clauses.extend(self.constraint_map[name])
-        return clauses, names
+            else:
+                non_fm_names.append(name)
+        return clauses, fm_names, non_fm_names

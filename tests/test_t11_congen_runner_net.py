@@ -59,12 +59,14 @@ def _deterministic_fields(result):
     perf = result.to_dict().get("performance", {})
     fields = {
         "kb_constraints": list(result.kb_constraints),
+        "ne_constraints": list(result.ne_constraints),
         "kb_clauses": [list(c) for c in result.kb_clauses],
         "bg_clauses": [list(c) for c in result.bg_clauses],
         "redundant_constraints": list(result.redundant_constraints),
         "n_bias": result.n_bias,
         "n_mss": result.n_mss,
         "n_kb": result.n_kb,
+        "n_ne": result.n_ne,
         "consistency_checks": result.consistency_checks,
     }
     for k in _PINNED_COUNTS:

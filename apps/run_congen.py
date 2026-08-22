@@ -102,6 +102,8 @@ def process_model(model_config: ModelConfig, output_dir: Path,
             n_kb=result.n_kb,
             output_path=output_file,
             bg_clauses=result.bg_clauses,
+            ne_constraints=result.ne_constraints,
+            n_ne=result.n_ne,
         )
 
         logger.debug("  Saved: %s", output_file)

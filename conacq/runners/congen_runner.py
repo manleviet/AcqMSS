@@ -34,12 +34,20 @@ class ConGenRunResult(BaseRunResult):
     """
     redundant_constraints: List[str] = field(default_factory=list)
     n_mss: int = 0
+    # Memorized ¬e⁻ facts, reported apart from the bias constraints in
+    # ``kb_constraints``: |KB| = n_kb + n_ne. They are part of the delivered KB but
+    # carry no bias vocabulary, so they stay out of the description/clause/semantic
+    # tiers, which score against the bias.
+    ne_constraints: List[str] = field(default_factory=list)
+    n_ne: int = 0
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         d = self._base_to_dict()
         d['redundant_constraints'] = self.redundant_constraints
         d['n_mss'] = self.n_mss
+        d['ne_constraints'] = self.ne_constraints
+        d['n_ne'] = self.n_ne
         return d
 
 
@@ -177,18 +185,26 @@ class ConGenRunner(BaseRunner):
             # Resolve assumption IDs -> clauses/names via the KB (stateless): the
             # describe provider comes from the prepared task, the root BG clauses
             # from the frozen OracleData snapshot.
-            bg_clauses, kb_clauses, kb_names, redundant_names = \
+            bg_clauses, kb_clauses, kb_names, ne_names, redundant_names = \
                 self.model.resolve_result(
                     result, describe, self.oracle.oracle_data.get_root_clauses())
 
+            # ``result.n_kb`` counts the post-Reduce KB as a whole (B′ ∪ NE). Report
+            # the two populations apart: ``n_kb`` is bias constraints only, so it
+            # compares byte-for-byte with ConMin's ``size``, and ``n_ne`` carries the
+            # memorized ¬e⁻ facts. |KB| = n_kb + n_ne. Both are read off the resolved
+            # POST-Reduce ids, never off the prepared task — Reduce runs on B′ ∪ NE and
+            # can drop an NE as entailed, which an at-prep count would miss.
             run_result = ConGenRunResult(
                 kb_constraints=kb_names,
+                ne_constraints=ne_names,
                 kb_clauses=kb_clauses,
                 bg_clauses=bg_clauses,
                 redundant_constraints=redundant_names,
                 n_bias=result.n_bias,
                 n_mss=result.n_mss,
-                n_kb=result.n_kb,
+                n_kb=len(kb_names),
+                n_ne=len(ne_names),
                 runtime_ms=runtime_ms,
                 consistency_checks=consistency_checks,
                 memory_peak_mb=memory_peak_mb,

@@ -126,12 +126,15 @@
    "c6",
    "c245",
    "c106",
-   "c20",
-   "NOT(mdi = true & sdi = true)"
+   "c20"
   ],
   "n_bias": 295,
-  "n_kb": 18,
+  "n_kb": 17,
   "n_mss": 78,
+  "n_ne": 1,
+  "ne_constraints": [
+   "NOT(mdi = true & sdi = true)"
+  ],
   "redundancy_consistency_checks": 79,
   "redundant_constraints": [
    "c72",
@@ -319,12 +322,15 @@
    "c7",
    "c6",
    "c1",
-   "c4",
-   "NOT(mdi = true & sdi = true)"
+   "c4"
   ],
   "n_bias": 295,
-  "n_kb": 17,
+  "n_kb": 16,
   "n_mss": 78,
+  "n_ne": 1,
+  "ne_constraints": [
+   "NOT(mdi = true & sdi = true)"
+  ],
   "redundancy_consistency_checks": 79,
   "redundant_constraints": [
    "c294",

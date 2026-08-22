@@ -498,3 +498,72 @@ def test_root_implying_constraints_are_learnable():
         f"root-implying constraints missing from KB: {sorted(root_implying - learned)}")
     assert not (root_implying & set(result.redundant_constraints)), \
         "root-implying constraints were classified redundant again"
+
+
+# --- C6: NE reported apart from bias constraints -------------------------------
+
+def test_ne_split_out_of_kb_names():
+    """kb_constraints is bias-only; memorized ¬e⁻ facts go to ne_constraints.
+
+    They used to share one name list, so an NE inflated n_kb (breaking byte-comparison
+    with ConMin's ``size``) and entered the description/clause/semantic tiers, whose
+    vocabulary is the bias. Asserts BOTH directions — no NE in kb, no bias in ne — so
+    a split that merely moves the boundary the wrong way still goes red.
+    """
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+        pytest.skip("REAL-FM-7 fixtures not found")
+    import json
+
+    from conacq.runners import ConGenRunner
+
+    bias_names = set(BiasIO.load_from_json(str(BIAS_PATH)).to_constraint_map())
+    ex = json.loads(EXAMPLES_RS_1N_PATH.read_text())
+    result = ConGenRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=False).run(
+        [e["assignments"] for e in ex["positive"]],
+        [e["assignments"] for e in ex["negative"]])
+
+    assert set(result.kb_constraints) <= bias_names, \
+        f"non-bias names in kb_constraints: {sorted(set(result.kb_constraints) - bias_names)}"
+    assert not (set(result.ne_constraints) & bias_names), \
+        f"bias names in ne_constraints: {sorted(set(result.ne_constraints) & bias_names)}"
+    assert result.n_kb == len(result.kb_constraints)
+    assert result.n_ne == len(result.ne_constraints)
+    # This fold memorizes at least one ¬e⁻, so the split is actually exercised —
+    # otherwise the assertions above would pass vacuously on an empty ne list.
+    assert result.n_ne > 0, "expected at least one memorized ¬e⁻ on rs_1n"
+
+
+def test_ne_count_comes_from_the_post_reduce_kb():
+    """n_kb and n_ne partition the POST-Reduce KB id list, not the prepared NE.
+
+    Reduce runs on B′ ∪ NE and can drop an NE the rest of the KB already entails, so
+    a count taken at prep time over-reports |KB|. Asserting the partition against
+    ``ConGenResult.kb_assumption_ids`` — Reduce's own output — pins the source
+    structurally, so it holds on any fixture. (On every REAL-FM-7 fixture Reduce
+    happens to drop 0 NE, so a value comparison against the prepared count would pass
+    vacuously here; this does not.)
+    """
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+        pytest.skip("REAL-FM-7 fixtures not found")
+    from conacq.examples import ExampleIO
+
+    checker, task, profiler, describe = create_checker_and_task(
+        str(BIAS_PATH), str(FM_PATH), str(EXAMPLES_RS_1N_PATH), is_incremental=False)
+    try:
+        oracle = FMOracle(str(FM_PATH), use_incremental=False)
+        model = (ConGenModelBuilder.from_bias(str(BIAS_PATH))
+                 .with_oracle_data(oracle.oracle_data).build())
+        result = ConGen(checker, profiler).acquire(
+            set_b=task.set_c, set_bg=task.set_b, set_tc=task.set_tc,
+            set_neg_tv=task.set_neg_tv, negation_map=task.negation_map)
+
+        _bg, _cl, kb_names, ne_names, _red = model.resolve_result(
+            result, describe, oracle.oracle_data.get_root_clauses())
+
+        # The two populations exactly partition Reduce's output — nothing invented,
+        # nothing dropped.
+        assert len(kb_names) + len(ne_names) == len(result.kb_assumption_ids)
+        assert len(ne_names) <= len(task.set_neg_tv), \
+            "more NE reported than were ever prepared"
+    finally:
+        checker.cleanup()

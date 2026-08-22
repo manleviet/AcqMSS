@@ -44,6 +44,10 @@ class CrossValidationFoldResult:
     n_test_neg: int
     # Optional fields (after all required for dataclass ordering)
     n_mss: Optional[int] = None
+    # Memorized ¬e⁻ facts, counted apart from the bias constraints in n_kb
+    # (|KB| = n_kb + n_ne). Optional: only ConGen resolves them today.
+    ne_constraints: List[str] = field(default_factory=list)
+    n_ne: int = 0
     # Full profiler snapshot (pass-through, not aggregated)
     profiler_data: Dict[str, Any] = field(default_factory=dict)
 
@@ -58,12 +62,14 @@ class CrossValidationFoldResult:
                 'profiler': self.profiler_data,
             },
             'kb_constraints': self.kb_constraints,
+            'ne_constraints': self.ne_constraints,
             'bg_clauses': self.bg_clauses,
             'redundant_constraints': self.redundant_constraints,
             'statistics': {
                 'n_bias': self.n_bias,
                 'n_mss': self.n_mss,
                 'n_kb': self.n_kb,
+                'n_ne': self.n_ne,
             },
             'train_size': {'positive': self.n_train_pos, 'negative': self.n_train_neg},
             'test_size': {'positive': self.n_test_pos, 'negative': self.n_test_neg},
@@ -73,12 +79,14 @@ class CrossValidationFoldResult:
         """Convert to KB file format."""
         return {
             'kb_constraints': self.kb_constraints,
+            'ne_constraints': self.ne_constraints,
             'bg_clauses': self.bg_clauses,
             'redundant_constraints': self.redundant_constraints,
             'statistics': {
                 'n_bias': self.n_bias,
                 'n_mss': self.n_mss,
                 'n_kb': self.n_kb,
+                'n_ne': self.n_ne,
             },
             'fold': self.fold_index + 1,
             'accuracy': self.accuracy,
@@ -230,6 +238,8 @@ def _run_cv_loop(
             redundant_constraints=getattr(run_result, 'redundant_constraints', []),
             n_bias=run_result.n_bias,
             n_kb=run_result.n_kb,
+            ne_constraints=list(getattr(run_result, 'ne_constraints', ()) or ()),
+            n_ne=getattr(run_result, 'n_ne', 0),
             n_train_pos=len(train_pos),
             n_train_neg=len(train_neg),
             n_test_pos=len(test_pos),

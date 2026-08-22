@@ -190,7 +190,9 @@ def save_kb_result(
         n_kb: int,
         output_path: Path,
         bg_clauses: Optional[list] = None,
-        metadata: Optional[dict] = None
+        metadata: Optional[dict] = None,
+        ne_constraints: Optional[list] = None,
+        n_ne: int = 0
 ) -> None:
     """
     Save KB result to JSON file.
@@ -203,7 +205,8 @@ def save_kb_result(
         redundant_constraints: List of redundant constraint IDs
         n_bias: Original number of bias constraints
         n_mss: Size of MSS before REDUCE
-        n_kb: Final KB size
+        n_kb: Final KB size — bias constraints ONLY (byte-comparable with ConMin's
+            ``size``); the memorized ¬e⁻ facts are counted in ``n_ne``, |KB| = n_kb + n_ne
         output_path: Path to save JSON file
         bg_clauses: Background knowledge clauses (e.g., [[1]] for root)
         metadata: Optional metadata dict
@@ -212,10 +215,12 @@ def save_kb_result(
         'kb_constraints': kb_constraints,
         'redundant_constraints': redundant_constraints,
         'bg_clauses': bg_clauses or [],
+        'ne_constraints': ne_constraints or [],
         'statistics': {
             'n_bias': n_bias,
             'n_mss': n_mss,
-            'n_kb': n_kb
+            'n_kb': n_kb,
+            'n_ne': n_ne
         }
     }
     if metadata:
