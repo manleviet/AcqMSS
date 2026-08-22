@@ -60,6 +60,12 @@ class FeatureFrequencyGenerator(ExampleGenerator):
         }
 
         features_list = sorted(self.features)
+        # What each half of the run can actually attain. A positive example is a
+        # valid configuration, so mandatory and dead features put some pairs out
+        # of reach; a negative example is an arbitrary invalid assignment, so no
+        # pair is out of reach there. Both loops then share one stopping rule.
+        pos_targets = self._reachable_positive_pairs(features_list)
+        neg_targets = {(f, value) for f in features_list for value in (True, False)}
         generated_configs = set()  # Avoid duplicates
         count = 0
 
@@ -67,9 +73,10 @@ class FeatureFrequencyGenerator(ExampleGenerator):
         pos_count = 0
         max_pos_attempts = max_examples * 10
 
-        while not self._is_pos_covered(coverage) and pos_count < max_pos_attempts and count < max_examples:
+        while (not self._is_target_covered(coverage, pos_targets, 'pos')
+               and pos_count < max_pos_attempts and count < max_examples):
             # Find uncovered (feature, value) for positive
-            uncovered = self._get_uncovered_pos(coverage)
+            uncovered = self._get_uncovered(coverage, pos_targets, 'pos')
             if not uncovered:
                 break
 
@@ -97,9 +104,10 @@ class FeatureFrequencyGenerator(ExampleGenerator):
         neg_count = 0
         max_neg_attempts = max_examples * 10
 
-        while not self._is_neg_covered(coverage) and neg_count < max_neg_attempts and count < max_examples:
+        while (not self._is_target_covered(coverage, neg_targets, 'neg')
+               and neg_count < max_neg_attempts and count < max_examples):
             # Find uncovered (feature, value) for negative
-            uncovered = self._get_uncovered_neg(coverage)
+            uncovered = self._get_uncovered(coverage, neg_targets, 'neg')
             if not uncovered:
                 break
 
@@ -126,46 +134,55 @@ class FeatureFrequencyGenerator(ExampleGenerator):
             neg_count += 1
 
         # Add coverage statistics to metadata
-        example_set.metadata['coverage'] = self._coverage_stats(coverage)
-        example_set.metadata['fully_covered'] = self._is_covered(coverage)
+        example_set.metadata['coverage'] = self._coverage_stats(
+            coverage, pos_targets, neg_targets)
+        example_set.metadata['fully_covered'] = (
+            self._is_target_covered(coverage, pos_targets, 'pos')
+            and self._is_target_covered(coverage, neg_targets, 'neg'))
+        example_set.metadata['reachable_positive_pairs'] = len(pos_targets)
+        example_set.metadata['total_pairs'] = 2 * len(features_list)
         example_set.metadata['pos_attempts'] = pos_count
         example_set.metadata['neg_attempts'] = neg_count
 
         return example_set
 
-    def _is_pos_covered(self, coverage: Dict[str, Dict[bool, Set[str]]]) -> bool:
-        """Check if all features covered in positive examples."""
-        for f, vals in coverage.items():
-            if 'pos' not in vals[True] or 'pos' not in vals[False]:
-                return False
-        return True
+    def _reachable_positive_pairs(self, features_list: List[str]) -> Set[Tuple[str, bool]]:
+        """(feature, value) pairs that some valid configuration can exhibit.
 
-    def _is_neg_covered(self, coverage: Dict[str, Dict[bool, Set[str]]]) -> bool:
-        """Check if all features covered in negative examples."""
-        for f, vals in coverage.items():
-            if 'neg' not in vals[True] or 'neg' not in vals[False]:
-                return False
-        return True
+        A mandatory feature is True in every valid configuration, so ``(f, False)``
+        can never appear in a positive example; a dead feature rules out
+        ``(f, True)``. The stopping condition used to demand all 2n pairs, which no
+        feature model with a root can meet, so the positive loop never stopped on
+        coverage and always burned its whole attempt budget.
 
-    def _get_uncovered_pos(self, coverage: Dict[str, Dict[bool, Set[str]]]) -> List[Tuple[str, bool]]:
-        """Get list of (feature, value) pairs not yet covered in positive examples."""
-        uncovered = []
-        for f, vals in coverage.items():
-            if 'pos' not in vals[True]:
-                uncovered.append((f, True))
-            if 'pos' not in vals[False]:
-                uncovered.append((f, False))
-        return uncovered
+        ``complete_configuration`` cannot serve as a plain satisfiability oracle:
+        for an unsatisfiable partial it falls back to returning *any* valid
+        configuration rather than None (``oracle.py:149-151``). The witness it
+        returns is therefore checked -- if the fallback fired, ``config[f]`` is not
+        the value that was asked for.
 
-    def _get_uncovered_neg(self, coverage: Dict[str, Dict[bool, Set[str]]]) -> List[Tuple[str, bool]]:
-        """Get list of (feature, value) pairs not yet covered in negative examples."""
-        uncovered = []
-        for f, vals in coverage.items():
-            if 'neg' not in vals[True]:
-                uncovered.append((f, True))
-            if 'neg' not in vals[False]:
-                uncovered.append((f, False))
-        return uncovered
+        Costs 2n oracle calls.
+        """
+        reachable = set()
+        for f in features_list:
+            for value in (True, False):
+                config = self.oracle.complete_configuration({f: value})
+                if config is not None and config.get(f) is value:
+                    reachable.add((f, value))
+        return reachable
+
+    @staticmethod
+    def _is_target_covered(coverage: Dict[str, Dict[bool, Set[str]]],
+                           targets: Set[Tuple[str, bool]], bucket: str) -> bool:
+        """True once every attainable pair has been seen in *bucket* ('pos'/'neg')."""
+        return all(bucket in coverage[f][value] for f, value in targets)
+
+    @staticmethod
+    def _get_uncovered(coverage: Dict[str, Dict[bool, Set[str]]],
+                       targets: Set[Tuple[str, bool]], bucket: str) -> List[Tuple[str, bool]]:
+        """Attainable pairs still missing from *bucket*, in a deterministic order."""
+        return [(f, value) for f, value in sorted(targets)
+                if bucket not in coverage[f][value]]
 
     def _generate_valid_config_for_coverage(
             self,
@@ -224,52 +241,35 @@ class FeatureFrequencyGenerator(ExampleGenerator):
 
         return config
 
-    def _is_covered(self, coverage: Dict[str, Dict[bool, Set[str]]]) -> bool:
+    def _coverage_stats(self, coverage: Dict[str, Dict[bool, Set[str]]],
+                        pos_targets: Set[Tuple[str, bool]],
+                        neg_targets: Set[Tuple[str, bool]]) -> Dict:
         """
-        Check if all features covered in all 4 contexts.
+        Calculate coverage statistics against what is attainable.
+
+        Counting against ``len(self.features) * 4`` reported every mandatory
+        feature as a permanent gap, so the figure could never reach 100 % and said
+        nothing about whether the run had finished its job.
 
         Args:
             coverage: Coverage tracking dictionary
-
-        Returns:
-            True if every feature appears as True/False in both pos/neg examples
-        """
-        for f, vals in coverage.items():
-            for val in [True, False]:
-                if len(vals[val]) < 2:  # Need both 'pos' and 'neg'
-                    return False
-        return True
-
-    def _coverage_stats(self, coverage: Dict[str, Dict[bool, Set[str]]]) -> Dict:
-        """
-        Calculate coverage statistics.
-
-        Args:
-            coverage: Coverage tracking dictionary
+            pos_targets: (feature, value) pairs a valid configuration can exhibit
+            neg_targets: (feature, value) pairs an invalid assignment can exhibit
 
         Returns:
             Dictionary with coverage statistics
         """
-        total_needed = len(self.features) * 4  # features × 2 values × 2 types
-        covered = 0
+        wanted = {(f, value, 'pos') for f, value in pos_targets}
+        wanted |= {(f, value, 'neg') for f, value in neg_targets}
+        total_needed = len(wanted)
+        covered = sum(1 for f, value, bucket in wanted if bucket in coverage[f][value])
 
-        uncovered_features = []
-
-        for f, vals in coverage.items():
-            f_covered = len(vals[True]) + len(vals[False])
-            covered += f_covered
-
-            if f_covered < 4:
-                missing = []
-                if 'pos' not in vals[True]:
-                    missing.append('True/pos')
-                if 'neg' not in vals[True]:
-                    missing.append('True/neg')
-                if 'pos' not in vals[False]:
-                    missing.append('False/pos')
-                if 'neg' not in vals[False]:
-                    missing.append('False/neg')
-                uncovered_features.append({'feature': f, 'missing': missing})
+        missing_by_feature: Dict[str, List[str]] = {}
+        for f, value, bucket in sorted(wanted):
+            if bucket not in coverage[f][value]:
+                missing_by_feature.setdefault(f, []).append(f"{value}/{bucket}")
+        uncovered_features = [{'feature': f, 'missing': missing}
+                              for f, missing in sorted(missing_by_feature.items())]
 
         return {
             'total_needed': total_needed,
