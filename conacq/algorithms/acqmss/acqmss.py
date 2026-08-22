@@ -73,6 +73,7 @@ class AcqMSS:
         # if δ != Φ then E'+ <- TestC(B ∪ NE ∪ BG, E+)
         if len(delta) != 0:
             # Check which E+ are inconsistent with B ∪ NE ∪ BG
+            _solver_before = self.profiler.get_metric("is_consistent_calls", 0)
             set_tcp = self.checker.is_consistent_test_cases(
                 set_b + set_neg_tv + set_bg, set_tc, False
             )
@@ -81,6 +82,15 @@ class AcqMSS:
             # match ConGen's paper_consistency_checks). shared_ prefix — ConGen also
             # runs AcqMSS (ADR-0018); additive, so ConGen's counters stay byte-identical.
             self.profiler.increment("shared_admpool_checks")
+            # Same check at ATOMIC granularity: is_consistent_test_cases issues one
+            # solver call PER positive when stop_at_first_violation=False, so the batch
+            # counter above understates the real work by |E′⁺| per node. Count the
+            # is_consistent_calls DELTA, exactly as AcqMinCover does for QuickXplain
+            # (GAP A) — never +1, which would just duplicate the batch counter. Additive:
+            # a new key, the two counters above are untouched.
+            self.profiler.increment(
+                "shared_admpool_solver_calls",
+                self.profiler.get_metric("is_consistent_calls", 0) - _solver_before)
             # if E'+ = Φ then return B (all E+ are consistent with current B)
             if len(set_tcp) == 0:
                 logging.debug('<<< return %s', set_b)

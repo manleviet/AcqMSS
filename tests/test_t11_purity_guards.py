@@ -215,8 +215,23 @@ def test_prepare_task_is_unified_across_models():
 
     for model in (DiagnosisModel, ConGenModel, QuAcqModel):
         assert hasattr(model, "prepare_task"), f"{model.__name__} lacks prepare_task"
-        params = list(inspect.signature(model.prepare_task).parameters)
-        assert params == ["self", "task_input"], f"{model.__name__}: {params}"
+        sig = inspect.signature(model.prepare_task)
+        params = list(sig.parameters)
+        # The FACADE is the required prefix: every model is callable as
+        # prepare_task(task_input) and nothing else is mandatory. Extra parameters are
+        # allowed only if optional — ConMinModel already carries `minimize`/`profiler`
+        # this way, and ConGen takes an optional `profiler` so GenerateNE's preprocessing
+        # QuickXplain is counted. A NEW REQUIRED parameter is what the guard forbids,
+        # because that is what would fork the facade.
+        assert params[:2] == ["self", "task_input"], f"{model.__name__}: {params}"
+        required_extra = [
+            n for n in params[2:]
+            if sig.parameters[n].default is inspect.Parameter.empty
+            and sig.parameters[n].kind not in (inspect.Parameter.VAR_POSITIONAL,
+                                               inspect.Parameter.VAR_KEYWORD)
+        ]
+        assert not required_extra, \
+            f"{model.__name__} adds required params beyond task_input: {required_extra}"
 
 
 def test_prepare_is_pure_no_task_state_leaks():

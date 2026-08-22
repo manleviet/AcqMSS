@@ -40,16 +40,17 @@ class ConGenModel(KBModel):
         task = prepared.task  # ConGenTask with assumption IDs
     """
 
-    def prepare_task(self, task_input: ConGenTaskInput) -> PreparedTask:
+    def prepare_task(self, task_input: ConGenTaskInput, profiler=None) -> PreparedTask:
         """Assign assumption IDs and build a fresh ConGenTask (pure).
 
         Consumes a ConGenTaskInput carrying the oracle's frozen provisioning
         snapshot plus this fold's E+/E-; returns a new PreparedTask (task +
         describe). Can be called repeatedly (e.g. per CV fold) — no state is kept.
         The signature is unified with the other models; the input TYPE is ConGen's
-        own (not a shared union — ADR-0006).
+        own (not a shared union — ADR-0006). ``profiler`` (optional) counts
+        GenerateNE's preprocessing QuickXplain separately (GAP B).
         """
-        return ConGenTaskPreparation().prepare(self, task_input)
+        return ConGenTaskPreparation(profiler=profiler).prepare(self, task_input)
 
     def resolve_result(
             self,

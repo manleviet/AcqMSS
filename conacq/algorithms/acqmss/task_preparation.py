@@ -112,6 +112,15 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
     - negation_map: Negation map for REDUCE
     """
 
+    def __init__(self, profiler=None) -> None:
+        """``profiler`` (optional) counts GenerateNE's PREPROCESSING QuickXplain apart
+        from acquisition (GAP B). ConGen used to leave it None, so the reduction paper
+        l.299 performs outside the acquisition procedure was invisible in ConGen runs
+        while ConMin counted it — the two pipelines disagreed on preprocessing cost for
+        the same work. Owned here, not in the ConMin subclass, so both share it."""
+        super().__init__()
+        self._profiler = profiler
+
     def prepare(self, model: ConGenModel, task_input: "ConGenTaskInput") -> PreparedTask:
         """Prepare ConGen task from model + task input.
 
@@ -225,7 +234,8 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
 
         generate_ne = GenerateNE(oracle_data)
         ne_results = generate_ne.generate(
-            testsuite, model.name_to_id, set_kb, assumptions, alloc)
+            testsuite, model.name_to_id, set_kb, assumptions, alloc,
+            profiler=self._profiler)
 
         neg_tv_ids = [ne.ne_id for ne in ne_results]
         descs = [ne.desc for ne in ne_results]

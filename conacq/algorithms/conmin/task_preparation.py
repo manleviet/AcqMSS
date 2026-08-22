@@ -82,9 +82,8 @@ class ConMinTaskPreparation(ConGenTaskPreparation):
         assignment). Set at construction — NOT mutable instance state set externally —
         so a reused prep instance can never leak a previous call's mode. ``profiler``
         (optional) counts GenerateNE's preprocessing QuickXplain apart from acquire (GAP B)."""
-        super().__init__()
+        super().__init__(profiler=profiler)
         self._minimize = minimize
-        self._profiler = profiler
 
     def prepare(self, model: "ConMinModel", task_input: ConMinTaskInput) -> PreparedTask:
         """Reuse ConGen's Stage-1 prep, then attach the precomputed support⁺ counts

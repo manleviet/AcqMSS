@@ -128,7 +128,8 @@ class ConGenRunner(BaseRunner):
                             self.oracle.oracle_data,
                             positive_examples,
                             negative_examples,
-                        )
+                        ),
+                        profiler=profiler,
                     )
                     task = prepared.task
                     describe = prepared.describe
