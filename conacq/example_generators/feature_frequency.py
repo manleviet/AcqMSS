@@ -56,7 +56,7 @@ class FeatureFrequencyGenerator(ExampleGenerator):
         # Track coverage: {feature: {True: {'pos', 'neg'}, False: {'pos', 'neg'}}}
         coverage: Dict[str, Dict[bool, Set[str]]] = {
             f: {True: set(), False: set()}
-            for f in self.features
+            for f in sorted(self.features)
         }
 
         features_list = sorted(self.features)
