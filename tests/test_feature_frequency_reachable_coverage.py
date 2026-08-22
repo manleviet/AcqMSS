@@ -70,7 +70,9 @@ def test_reachability_check_is_not_fooled_by_the_completion_fallback(oracle, gen
     unreachable = {(f, v) for f in features for v in (True, False)} - reachable
     assert unreachable, "fixture model has no mandatory feature; pick another model"
 
-    fooled = [(f, value) for f, value in unreachable
+    # sorted, not the set: iterating a set of strings here would make this
+    # assertion depend on PYTHONHASHSEED — the very defect under test.
+    fooled = [(f, value) for f, value in sorted(unreachable)
               if oracle.complete_configuration({f: value}) is not None]
     assert fooled == sorted(unreachable), (
         "expected the documented fallback to return a config for every "

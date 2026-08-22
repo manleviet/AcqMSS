@@ -180,7 +180,7 @@ config, c_id = query_prov.generate(remaining_bias, learned_kb, set_b, negation_m
 
 **Example Generation Strategies**:
 1. **RandomSampling (RS)** — Uniform random configuration selection
-2. **FeatureFrequency (FF)** — Weight by feature occurrence patterns
+2. **FeatureFrequency (FF)** — Target the (feature, value) pairs not yet covered; no weighting by frequency
 3. **TwoCoverage (2-COV)** — Ensure feature pairs appear together
 
 **Query Generation & Selection** (commit 260228):

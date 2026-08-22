@@ -99,7 +99,7 @@ python -m apps.generate_examples apps/conf/generate_examples_config.toml -v
 | RS(3n) | Random Sampling, 3n examples |
 | RS(m) | Random Sampling, m examples (m = smallest for 2-wise coverage) |
 | 2-COV | Pairwise coverage — each pair of features covered |
-| FF | Feature Frequency — each feature appears as True/False |
+| FF | Feature Frequency — each feature appears True and False in an example, across every (feature, value) pair a valid configuration can attain |
 
 ### [4] generate_cv_folds.py
 

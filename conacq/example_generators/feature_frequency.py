@@ -161,6 +161,14 @@ class FeatureFrequencyGenerator(ExampleGenerator):
         returns is therefore checked -- if the fallback fired, ``config[f]`` is not
         the value that was asked for.
 
+        That check is what makes this function do anything. Testing only
+        ``is not None`` marks every pair attainable, so the target set becomes all
+        2n pairs and the stopping condition stays exactly as unreachable as it was
+        before, behind a diff that looks correct. Measured on REAL-FM-7: the naive
+        test yields 28 pairs, the witness-checked one 26, and the two it removes
+        are ``(interface, False)`` and ``(jplug, False)`` -- precisely the pairs the
+        pre-fix generator reported as permanently uncovered after 1,400 attempts.
+
         Costs 2n oracle calls.
         """
         reachable = set()
