@@ -101,6 +101,21 @@ more tie-prone than a 6-row table.
 
 ---
 
+## Coverage notes — NOT register entries
+
+Kept apart on purpose: an assertion that CAN fail is a test, whatever data drives it.
+These record that no PRODUCTION fixture exercises a path, which is a statement about
+coverage, not about discriminating power.
+
+- **NE discarded by Reduce** (`test_ne_accounting_closes_when_reduce_discards_an_ne`,
+  `conacq/algorithms/acqmss/congen_model.py`). Reduce drops 0 NE on all six REAL-FM-7
+  example sets, so the path is never taken by real data. The test drives it
+  synthetically — moving an NE id from `kb_assumption_ids` to `redundant_ids`, exactly
+  what Reduce does — and runs the real resolution path. Mutation-verified: restoring the
+  pre-fix discard turns it red. So it belongs here, not in the table above.
+
+---
+
 ## Pattern worth keeping
 
 Three of the four were found by **mutating the code and checking the test actually goes

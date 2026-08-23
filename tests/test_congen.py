@@ -557,7 +557,8 @@ def test_ne_count_comes_from_the_post_reduce_kb():
             set_b=task.set_c, set_bg=task.set_b, set_tc=task.set_tc,
             set_neg_tv=task.set_neg_tv, negation_map=task.negation_map)
 
-        _bg, _cl, kb_names, ne_clauses, ne_names, _red = model.resolve_result(
+        (_bg, _cl, kb_names, ne_clauses, ne_names,
+         _red, _red_ne) = model.resolve_result(
             result, describe, oracle.oracle_data.get_root_clauses(),
             set_kb=task.set_kb, negation_map=task.negation_map)
 
@@ -625,3 +626,69 @@ def test_delivered_theory_carries_the_memorized_negatives():
     assert m_all.false_positives == 0, (
         f"delivered theory ACCEPTS {m_all.false_positives} training negative(s) — "
         f"Definition 6 requires all e⁻ rejected")
+
+
+def test_ne_accounting_closes_when_reduce_discards_an_ne():
+    """|KB| accounting stays closed: prepared NE = kept NE + NE Reduce discarded.
+
+    An NE that Reduce drops as entailed used to fall out of EVERY returned list — not
+    kb_constraints (correct), not ne_constraints (built from the kept ids), and not
+    redundant_constraints, because the non-bias names were discarded when resolving
+    redundant_ids. The NE simply vanished from the output.
+
+    No fixture makes Reduce discard an NE (measured: 0 dropped on all six REAL-FM-7
+    example sets), so the drop is driven synthetically here — moving a real NE id from
+    kb_assumption_ids to redundant_ids is exactly what Reduce does when it finds the NE
+    entailed. Synthetic input, real resolution path: the assertion can fail.
+    """
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+        pytest.skip("REAL-FM-7 fixtures not found")
+    import copy
+    import json
+
+    from conacq.oracle import FMOracle
+    from explanation.checker.backend import SolverBackend, build_checker
+
+    ex = json.loads(EXAMPLES_RS_1N_PATH.read_text())
+    pos = [e["assignments"] for e in ex["positive"]]
+    neg = [e["assignments"] for e in ex["negative"]]
+
+    oracle = FMOracle(str(FM_PATH), use_incremental=False)
+    model = (ConGenModelBuilder.from_bias(str(BIAS_PATH))
+             .with_oracle_data(oracle.oracle_data).build())
+    prepared = model.prepare_task(
+        ConGenTaskInput.from_examples(oracle.oracle_data, pos, neg))
+    task, describe = prepared.task, prepared.describe
+    profiler = get_global_profiler()
+    checker = build_checker(task, SolverBackend.PYSAT_NON_INCREMENTAL, 'glucose4', profiler)
+    try:
+        result = ConGen(checker, profiler).acquire(
+            set_b=task.set_c, set_bg=task.set_b, set_tc=task.set_tc,
+            set_neg_tv=task.set_neg_tv, negation_map=task.negation_map)
+    finally:
+        checker.cleanup()
+
+    n_prepared = len(task.set_neg_tv)
+    assert n_prepared > 0, "fixture must prepare an NE or this proves nothing"
+    ne_id = task.set_neg_tv[0]
+    assert ne_id in result.kb_assumption_ids, "fixture must keep the NE, to then drop it"
+
+    def resolve(res):
+        return model.resolve_result(
+            res, describe, oracle.oracle_data.get_root_clauses(),
+            set_kb=task.set_kb, negation_map=task.negation_map)
+
+    # As acquired: the NE is kept, nothing is redundant-NE.
+    *_, ne_names, _red, red_ne = resolve(result)
+    assert len(ne_names) + len(red_ne) == n_prepared
+
+    # Now with Reduce having discarded it.
+    dropped = copy.copy(result)
+    dropped.kb_assumption_ids = [a for a in result.kb_assumption_ids if a != ne_id]
+    dropped.redundant_ids = list(result.redundant_ids) + [ne_id]
+    *_, ne_names2, _red2, red_ne2 = resolve(dropped)
+
+    assert describe.get_description(ne_id) in red_ne2, \
+        "an NE discarded by Reduce is not reported anywhere"
+    assert len(ne_names2) + len(red_ne2) == n_prepared, \
+        f"|KB| accounting does not close: {len(ne_names2)} + {len(red_ne2)} != {n_prepared}"

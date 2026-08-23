@@ -60,7 +60,7 @@ class ConGenModel(KBModel):
             set_kb: Sequence[Sequence[int]] = (),
             negation_map: Optional[Dict[int, int]] = None,
     ) -> Tuple[List[List[int]], List[List[int]], List[str],
-               List[List[int]], List[str], List[str]]:
+               List[List[int]], List[str], List[str], List[str]]:
         """Resolve a ConGenResult into clauses and names (stateless).
 
         The describe provider (from the PreparedTask) and the root BG clauses (from
@@ -69,14 +69,19 @@ class ConGenModel(KBModel):
         stored root-clause baton with an ``or []`` fallback masked exactly that).
 
         Returns:
-            (bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names, redundant_names)
+            (bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names,
+             redundant_names, redundant_ne_names)
 
         ``kb_names`` is bias constraints ONLY and ``ne_names`` the memorized ¬e⁻
         facts, reported apart. They used to share one list, which put NE names into
         the KB name-space: it inflated ``n_kb`` (so it no longer compared byte-for-byte
         with ConMin's ``size``) and fed NE into the description/clause/semantic tiers,
         whose vocabulary is the bias. The ids resolved here are POST-Reduce, so an NE
-        that Reduce dropped as entailed is not counted.
+        that Reduce dropped as entailed is not counted — it surfaces in
+        ``redundant_ne_names`` instead. Both redundant lists are split the same way as
+        the KB ones: an NE Reduce discards used to fall out of every returned list at
+        once, so |KB| accounting could not be closed against the NE prepared for
+        acquisition.
 
         ``ne_clauses`` are those NE names resolved back to their blocking clauses.
         Algorithm 3 delivers KB ← B′ ∪ NE, and Definition 6 asks for a theory that
@@ -110,8 +115,10 @@ class ConGenModel(KBModel):
                     f"B' u NE, so an NE must not be dropped from the theory.")
             ne_clauses.append(clause)
 
-        _, redundant_names, _ = self._resolve_ids(describe, result.redundant_ids)
-        return bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names, redundant_names
+        _, redundant_names, redundant_ne_names = self._resolve_ids(
+            describe, result.redundant_ids)
+        return (bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names,
+                redundant_names, redundant_ne_names)
 
     def _resolve_ids(
             self,

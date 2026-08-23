@@ -44,6 +44,9 @@ class ConGenRunResult(BaseRunResult):
     # (Algorithm 3: KB <- B' u NE), kept as their own list because kb_clauses mirrors
     # kb_constraints, which is bias-only.
     ne_clauses: List[List[int]] = field(default_factory=list)
+    # NE that Reduce discarded as entailed. Reported so |KB| accounting closes against
+    # the NE prepared for acquisition: prepared = n_ne + len(redundant_ne_constraints).
+    redundant_ne_constraints: List[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -53,6 +56,7 @@ class ConGenRunResult(BaseRunResult):
         d['ne_constraints'] = self.ne_constraints
         d['n_ne'] = self.n_ne
         d['ne_clauses'] = self.ne_clauses
+        d['redundant_ne_constraints'] = self.redundant_ne_constraints
         return d
 
 
@@ -191,7 +195,8 @@ class ConGenRunner(BaseRunner):
             # Resolve assumption IDs -> clauses/names via the KB (stateless): the
             # describe provider comes from the prepared task, the root BG clauses
             # from the frozen OracleData snapshot.
-            bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names, redundant_names = \
+            (bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names,
+             redundant_names, redundant_ne_names) = \
                 self.model.resolve_result(
                     result, describe, self.oracle.oracle_data.get_root_clauses(),
                     set_kb=task.set_kb, negation_map=task.negation_map)
@@ -209,6 +214,7 @@ class ConGenRunner(BaseRunner):
                 ne_clauses=ne_clauses,
                 bg_clauses=bg_clauses,
                 redundant_constraints=redundant_names,
+                redundant_ne_constraints=redundant_ne_names,
                 n_bias=result.n_bias,
                 n_mss=result.n_mss,
                 n_kb=len(kb_names),

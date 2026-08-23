@@ -11,6 +11,12 @@
 # to keep in someone's head: this project already lost a suite baseline (507)
 # because the commit and environment were never written down.
 #
+# Extras declared by the INSTALLED distribution: dev, baselines, baselines-cn2.
+# (Re-verified 2026-08-23 after a red team found the editable install's metadata still
+# listed only 'dev' — pyproject was correct and uv resolved the extras from source, but
+# the installed metadata predated the edit. Stale metadata inside the very artifact that
+# vouches for the environment is exactly the omission N10 claims to have fixed.)
+#
 # All three learners are run in THIS single environment (baselines +
 # baselines-cn2). Running RIPPER/tree on a headless 'baselines'-only machine and
 # CN2 here would draw the three baselines from two different resolutions, with

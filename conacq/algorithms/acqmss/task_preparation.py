@@ -168,11 +168,18 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
 
         # Root non-emptiness (root feature = true) is a POST-acquisition axiom, not
         # runtime BG: keeping it in BG makes Reduce entailment-drop every `X → root`
-        # constraint, so those constraints can never be learned. Drop it from the
-        # acquisition BG (keep any genuine domain axioms — ∅ for boolean FMs) and
-        # record it in `root_axiom` for re-appending at delivery (design note
-        # "Root-constraint BG semantics"). Generic: derive by dropping the root id,
-        # never hardcode ∅, so a non-boolean FM's domain axioms survive.
+        # constraint, so those constraints can never be learned. It moves to
+        # `root_axiom` for re-appending at delivery (design note "Root-constraint BG
+        # semantics").
+        #
+        # HONEST SCOPE OF THE FILTER. Today `bg_ids` holds exactly the root — the
+        # oracle's BG is the Part-3 root pair and nothing else — so `set_b` is ALWAYS
+        # empty and the comprehension is a no-op. It is written as a filter rather than
+        # `set_b = []` so that an oracle which one day supplies genuine domain axioms
+        # keeps them in the acquisition BG instead of having them silently dropped by a
+        # hardcoded empty list. It does NOT, by itself, make this generic: such axioms
+        # would first have to reach `bg_ids`, which no current code path does. Do not
+        # cite this as evidence that the implementation handles non-boolean domains.
         root_id = bg_data.assumptions[0]
         bg_ids = [assumptions[0]]
         set_b = [a for a in bg_ids if a != root_id]
