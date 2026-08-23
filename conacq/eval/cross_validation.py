@@ -220,7 +220,12 @@ def _run_cv_loop(
         # Test: calculate accuracy on held-out fold (union BG for root constraint).
         # bg_clauses is a frozen tuple (root_clauses) and kb_clauses a list — coerce
         # both so the union is list + list, not list + tuple.
-        with AccuracyCalculator(list(run_result.kb_clauses) + list(run_result.bg_clauses),
+        # Delivered theory = learned bias constraints + memorized ¬e⁻ + root
+        # (Algorithm 3: KB <- B' u NE; Definition 6 requires it to reject every e⁻).
+        # getattr: only ConGen resolves ne_clauses today.
+        with AccuracyCalculator(list(run_result.kb_clauses)
+                                + [list(c) for c in getattr(run_result, 'ne_clauses', ()) or ()]
+                                + list(run_result.bg_clauses),
                                 variables, solver_name) as calculator:
             accuracy_result = calculator.calculate(test_pos, test_neg)
 

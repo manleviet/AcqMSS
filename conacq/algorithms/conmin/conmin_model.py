@@ -146,34 +146,3 @@ class ConMinModel(KBModel):
                 names.append(name)
                 clauses.extend(self.constraint_map[name])
         return clauses, names
-
-    @staticmethod
-    def _resolve_fallback_clause(
-            ne_id: int,
-            set_kb: Sequence[Sequence[int]],
-            negation_map: Dict[int, int],
-    ) -> Optional[List[int]]:
-        """The fallback clause for a NE id, from the task KB. Its blocking clause is
-        ``[-l1,…,-lk, -ne_id]`` (the l_i are the minimal-conflict feature literals);
-        distinguish it from the NE's negation clause ``[-ne_id, -negation_map[ne_id]]``
-        by the ABSENCE of ``-negation_map[ne_id]`` (the combine clause ``[+ne_id, …]``
-        never matches ``-ne_id``), then strip the ``-ne_id`` guard — returns the
-        negation of the minimal conflict.
-
-        Returns None (⇒ the caller fails loud) when no clause matches OR when ``ne_id``
-        has no ``negation_map`` entry: without it the ne-clause cannot be safely told
-        apart from the negation clause, so guessing the first ``-ne_id`` clause (which
-        could return a wrong remainder — the P3-Critical bug class) is REFUSED, not
-        silently attempted.
-
-        NOTE on the FM/fallback split at the call site: multi-negative per-e⁻ ids are
-        left UNREGISTERED in ``describe`` (only the combined id is), so their
-        ``get_description`` returns ``str(id)`` — never a bias name (which are
-        ``c``-prefixed), so they classify as fallbacks correctly."""
-        neg = negation_map.get(ne_id)
-        if neg is None:
-            return None  # cannot safely disambiguate ne-clause vs negation clause
-        for clause in set_kb:
-            if -ne_id in clause and -neg not in clause:
-                return [lit for lit in clause if lit != -ne_id]
-        return None

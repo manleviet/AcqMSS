@@ -11,7 +11,7 @@ are passed in per call, never read off stored task state.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
 
 from conacq.kb_model import KBModel
 from explanation.api import DescriptionProvider, PreparedTask
@@ -57,7 +57,10 @@ class ConGenModel(KBModel):
             result: "ConGenResult",
             describe: DescriptionProvider,
             root_clauses: Sequence[Sequence[int]],
-    ) -> Tuple[List[List[int]], List[List[int]], List[str], List[str], List[str]]:
+            set_kb: Sequence[Sequence[int]] = (),
+            negation_map: Optional[Dict[int, int]] = None,
+    ) -> Tuple[List[List[int]], List[List[int]], List[str],
+               List[List[int]], List[str], List[str]]:
         """Resolve a ConGenResult into clauses and names (stateless).
 
         The describe provider (from the PreparedTask) and the root BG clauses (from
@@ -66,7 +69,7 @@ class ConGenModel(KBModel):
         stored root-clause baton with an ``or []`` fallback masked exactly that).
 
         Returns:
-            (bg_clauses, kb_clauses, kb_names, ne_names, redundant_names)
+            (bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names, redundant_names)
 
         ``kb_names`` is bias constraints ONLY and ``ne_names`` the memorized ¬e⁻
         facts, reported apart. They used to share one list, which put NE names into
@@ -74,12 +77,41 @@ class ConGenModel(KBModel):
         with ConMin's ``size``) and fed NE into the description/clause/semantic tiers,
         whose vocabulary is the bias. The ids resolved here are POST-Reduce, so an NE
         that Reduce dropped as entailed is not counted.
+
+        ``ne_clauses`` are those NE names resolved back to their blocking clauses.
+        Algorithm 3 delivers KB ← B′ ∪ NE, and Definition 6 asks for a theory that
+        rejects every e⁻ ∈ E⁻; a delivered theory without them can accept a training
+        negative, which the problem definition forbids. They were previously dropped
+        because an NE name has no entry in ``constraint_map``, so it resolved to no
+        clause at all. ``set_kb`` + ``negation_map`` come from the prepared task
+        (stateless — passed in, never stored); the defaults are safe only for callers
+        with no NE, where no resolution is attempted.
         """
+        negation_map = negation_map or {}
         bg_clauses = root_clauses
         kb_clauses, kb_names, ne_names = self._resolve_ids(
             describe, result.kb_assumption_ids)
+
+        # Resolve each NE id back to its blocking clause. Fail loud rather than deliver
+        # a theory that silently omits a memorized ¬e⁻ — the same contract ConMin
+        # applies to its ¬e⁻ fallbacks, using the shared resolver on KBModel.
+        ne_clauses: List[List[int]] = []
+        for aid in result.kb_assumption_ids:
+            if describe.get_description(aid) in self.constraint_map:
+                continue
+            clause = self._resolve_fallback_clause(aid, set_kb, negation_map)
+            if not clause:  # None (no match) or [] (degenerate empty ⇒ UNSAT)
+                raise ValueError(
+                    f"ConGen kb id {aid} is a memorized ¬e⁻ (name not a bias "
+                    f"constraint) but its clause could not be resolved: set_kb has "
+                    f"{len(set_kb)} clauses, negation_map "
+                    f"{'has' if aid in negation_map else 'MISSING'} id {aid}. Pass the "
+                    f"prepared task's set_kb + negation_map; Algorithm 3 delivers "
+                    f"B' u NE, so an NE must not be dropped from the theory.")
+            ne_clauses.append(clause)
+
         _, redundant_names, _ = self._resolve_ids(describe, result.redundant_ids)
-        return bg_clauses, kb_clauses, kb_names, ne_names, redundant_names
+        return bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names, redundant_names
 
     def _resolve_ids(
             self,

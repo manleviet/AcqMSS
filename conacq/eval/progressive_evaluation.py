@@ -162,8 +162,11 @@ class ProgressiveEvaluator:
             # Run comparisons
             desc_cmp = self.comparator.compare(result_data, ComparationStrategy.DESCRIPTION)
             clause_cmp = self.comparator.compare(result_data, ComparationStrategy.CLAUSE)
+            # Delivered theory includes the memorized ¬e⁻ (Algorithm 3: KB <- B' u NE).
             sem_result = self._run_semantic_check(
-                congen_result.kb_clauses, congen_result.bg_clauses)
+                list(congen_result.kb_clauses)
+                + [list(c) for c in getattr(congen_result, 'ne_clauses', ()) or ()],
+                congen_result.bg_clauses)
 
             cp = CheckpointResult(
                 checkpoint_pct=pct,

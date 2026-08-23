@@ -557,13 +557,71 @@ def test_ne_count_comes_from_the_post_reduce_kb():
             set_b=task.set_c, set_bg=task.set_b, set_tc=task.set_tc,
             set_neg_tv=task.set_neg_tv, negation_map=task.negation_map)
 
-        _bg, _cl, kb_names, ne_names, _red = model.resolve_result(
-            result, describe, oracle.oracle_data.get_root_clauses())
+        _bg, _cl, kb_names, ne_clauses, ne_names, _red = model.resolve_result(
+            result, describe, oracle.oracle_data.get_root_clauses(),
+            set_kb=task.set_kb, negation_map=task.negation_map)
 
         # The two populations exactly partition Reduce's output — nothing invented,
         # nothing dropped.
         assert len(kb_names) + len(ne_names) == len(result.kb_assumption_ids)
         assert len(ne_names) <= len(task.set_neg_tv), \
             "more NE reported than were ever prepared"
+        # Every reported NE resolves to a delivered clause — none is dropped.
+        assert len(ne_clauses) == len(ne_names)
     finally:
         checker.cleanup()
+
+
+# --- Algorithm 3: the delivered theory is B′ ∪ NE ------------------------------
+
+def test_delivered_theory_carries_the_memorized_negatives():
+    """The delivered theory contains the ¬e⁻ clauses, and they do the rejecting.
+
+    Algorithm 3 delivers KB ← B′ ∪ NE and Definition 6 asks for a theory rejecting all
+    e⁻ ∈ E⁻. The NE clauses used to be dropped on the way out — an NE name has no
+    constraint_map entry, so it resolved to no clause — leaving a theory that could
+    ACCEPT a training negative.
+
+    The load-bearing assertion is on the NE clauses ALONE: bias constraints often
+    already reject the training negatives (on every REAL-FM-7 / fqa / arcade-game fold
+    measured post-C7 they do, so the full-theory FP count does not discriminate here),
+    but ¬e⁻ must reject them BY ITSELF, whatever the bias learned. That fails the moment
+    an NE is dropped, on any fixture.
+    """
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+        pytest.skip("REAL-FM-7 fixtures not found")
+    import json
+
+    from conacq.eval.accuracy import AccuracyCalculator
+    from conacq.oracle import FMOracle
+    from conacq.runners import ConGenRunner
+
+    ex = json.loads(EXAMPLES_RS_1N_PATH.read_text())
+    pos = [e["assignments"] for e in ex["positive"]]
+    neg = [e["assignments"] for e in ex["negative"]]
+    assert neg, "fixture must have at least one negative or this proves nothing"
+
+    result = ConGenRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=False).run(pos, neg)
+    assert result.n_ne > 0, "fixture must memorize at least one ¬e⁻"
+    assert len(result.ne_clauses) == result.n_ne, "an NE was dropped from the theory"
+
+    model = (ConGenModelBuilder.from_bias(str(BIAS_PATH))
+             .with_oracle_data(FMOracle(str(FM_PATH), use_incremental=False).oracle_data)
+             .build())
+
+    # ¬e⁻ alone must reject every training negative — this is what the NE IS.
+    ne_only = [list(c) for c in result.ne_clauses] + list(result.bg_clauses)
+    with AccuracyCalculator(ne_only, model.name_to_id, 'glucose4') as acc:
+        m_ne = acc.calculate([], neg).metrics
+    assert m_ne.false_positives == 0, \
+        "the memorized ¬e⁻ clauses do not reject the negatives they encode"
+    assert m_ne.true_negatives == len(neg)
+
+    # And the full delivered theory keeps that property (Definition 6).
+    theory = (list(result.kb_clauses) + [list(c) for c in result.ne_clauses]
+              + list(result.bg_clauses))
+    with AccuracyCalculator(theory, model.name_to_id, 'glucose4') as acc:
+        m_all = acc.calculate(pos, neg).metrics
+    assert m_all.false_positives == 0, (
+        f"delivered theory ACCEPTS {m_all.false_positives} training negative(s) — "
+        f"Definition 6 requires all e⁻ rejected")

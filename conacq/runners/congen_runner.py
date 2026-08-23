@@ -40,6 +40,10 @@ class ConGenRunResult(BaseRunResult):
     # tiers, which score against the bias.
     ne_constraints: List[str] = field(default_factory=list)
     n_ne: int = 0
+    # Blocking clauses for the memorized ¬e⁻. Part of the DELIVERED theory
+    # (Algorithm 3: KB <- B' u NE), kept as their own list because kb_clauses mirrors
+    # kb_constraints, which is bias-only.
+    ne_clauses: List[List[int]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -48,6 +52,7 @@ class ConGenRunResult(BaseRunResult):
         d['n_mss'] = self.n_mss
         d['ne_constraints'] = self.ne_constraints
         d['n_ne'] = self.n_ne
+        d['ne_clauses'] = self.ne_clauses
         return d
 
 
@@ -186,9 +191,10 @@ class ConGenRunner(BaseRunner):
             # Resolve assumption IDs -> clauses/names via the KB (stateless): the
             # describe provider comes from the prepared task, the root BG clauses
             # from the frozen OracleData snapshot.
-            bg_clauses, kb_clauses, kb_names, ne_names, redundant_names = \
+            bg_clauses, kb_clauses, kb_names, ne_clauses, ne_names, redundant_names = \
                 self.model.resolve_result(
-                    result, describe, self.oracle.oracle_data.get_root_clauses())
+                    result, describe, self.oracle.oracle_data.get_root_clauses(),
+                    set_kb=task.set_kb, negation_map=task.negation_map)
 
             # ``result.n_kb`` counts the post-Reduce KB as a whole (B′ ∪ NE). Report
             # the two populations apart: ``n_kb`` is bias constraints only, so it
@@ -200,6 +206,7 @@ class ConGenRunner(BaseRunner):
                 kb_constraints=kb_names,
                 ne_constraints=ne_names,
                 kb_clauses=kb_clauses,
+                ne_clauses=ne_clauses,
                 bg_clauses=bg_clauses,
                 redundant_constraints=redundant_names,
                 n_bias=result.n_bias,
