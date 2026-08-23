@@ -10,15 +10,16 @@ Usage:
 """
 
 import argparse
-import json
 import logging
+import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from conacq.atomic_io import write_json_atomic
 from apps._harness import build_parser, setup_logging
 
+from conacq.eval.cv_partials import load_partials, write_partial
 from conacq.eval import (
     n_fold_cross_validation,
     n_fold_cross_validation_conmin,
@@ -45,6 +46,26 @@ def get_solver_modes(mode_config: str) -> List[bool]:
     return [True]
 
 
+def parse_fold_indices(spec: Optional[str]) -> Optional[List[int]]:
+    """'0,2' -> [0, 2]; None -> None (meaning every fold)."""
+    if not spec:
+        return None
+    try:
+        return [int(part) for part in spec.split(',') if part.strip() != '']
+    except ValueError:
+        raise SystemExit(f"--folds expects comma-separated integers, got {spec!r}")
+
+
+def current_commit() -> Optional[str]:
+    """HEAD sha, recorded into each partial so a merged result names the code that
+    produced it. Best-effort: a missing git is not a reason to refuse to run."""
+    try:
+        return subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True,
+                              text=True, check=True).stdout.strip()
+    except (subprocess.CalledProcessError, OSError):
+        return None
+
+
 def main():
     parser = build_parser(
         "Unified n-fold cross-validation",
@@ -56,6 +77,13 @@ Example:
     )
     parser.add_argument('-o', '--output-dir', help='Output directory (overrides config)')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+    parser.add_argument(
+        '--folds',
+        help="Comma-separated fold indices to compute this call, e.g. '0,2'. "
+             "Default: all. Folds whose partial already exists are skipped either way.")
+    parser.add_argument(
+        '--merge-only', action='store_true',
+        help="Assemble from existing partials without computing any fold.")
 
     args = parser.parse_args()
 
@@ -94,6 +122,19 @@ Example:
         logger.error("No models specified in configuration")
         sys.exit(1)
 
+    fold_indices = parse_fold_indices(args.folds)
+    commit = current_commit()
+
+    # Fail before loading a single example. The library raises the same refusal
+    # (cross_validation.n_fold_cross_validation_interactive) — that is the guard
+    # that actually holds; this one just makes it immediate and legible.
+    if algorithm == 'interactive' and not shuffle_bias:
+        logger.error(
+            "shuffle_bias=false with algorithm=interactive: the query pool would be "
+            "shuffled from OS entropy and the run would not reproduce. "
+            "Set shuffle_bias = true in [evaluation].")
+        sys.exit(2)
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("=" * 60)
@@ -112,8 +153,10 @@ Example:
         logger.info("Query mode: %s", query_mode)
 
     success_count = 0
+    deferred_count = 0
 
     for model_config in models:
+        deferred = False
         logger.info("%s", "=" * 60)
         logger.info("Model: %s", model_config.name)
         logger.info("%s", "=" * 60)
@@ -150,6 +193,26 @@ Example:
                 mode_name = "incremental" if is_incremental else "non-incremental"
                 logger.info("--- Mode: %s ---", mode_name.upper())
 
+                # Resume: folds already on disk are not recomputed. Each fold that
+                # finishes here is written before the next one starts, so a window
+                # that closes mid-run costs at most the fold that was running.
+                partial_dir = output_dir / 'partials'
+                qm = query_mode if algorithm == 'interactive' else None
+                done_folds = load_partials(partial_dir, model_config.name, mode_name,
+                                           algorithm, actual_n_folds, qm)
+                requested = (list(range(actual_n_folds)) if fold_indices is None
+                             else fold_indices)
+                todo = [] if args.merge_only else [i for i in requested
+                                                   if i not in done_folds]
+                logger.info("  Folds: %d done, computing %s%s",
+                            len(done_folds), todo or 'none',
+                            ' (--merge-only)' if args.merge_only else '')
+
+                def on_fold(fold_result, _mode=mode_name, _qm=qm,
+                            _name=model_config.name, _n=actual_n_folds):
+                    write_partial(partial_dir, _name, _mode, algorithm, _n,
+                                  fold_result, query_mode=_qm, commit=commit)
+
                 if algorithm == 'congen':
                     cv_result = n_fold_cross_validation(
                         positive_examples=pos,
@@ -161,7 +224,8 @@ Example:
                         solver_name=solver_name,
                         use_incremental=is_incremental,
                         fold_data=fold_data,
-                        shuffle_bias=shuffle_bias
+                        shuffle_bias=shuffle_bias,
+                        fold_indices=todo, on_fold=on_fold, done_folds=done_folds
                     )
                 elif algorithm == 'conmin':
                     cv_result = n_fold_cross_validation_conmin(
@@ -175,7 +239,8 @@ Example:
                         use_incremental=is_incremental,
                         fold_data=fold_data,
                         shuffle_bias=shuffle_bias,
-                        k=conmin_k
+                        k=conmin_k,
+                        fold_indices=todo, on_fold=on_fold, done_folds=done_folds
                     )
                 elif algorithm == 'interactive':
                     cv_result = n_fold_cross_validation_interactive(
@@ -190,10 +255,18 @@ Example:
                         query_mode=query_mode,
                         use_incremental=is_incremental,
                         fold_data=fold_data,
-                        shuffle_bias=shuffle_bias
+                        shuffle_bias=shuffle_bias,
+                        fold_indices=todo, on_fold=on_fold, done_folds=done_folds
                     )
                 else:
                     logger.error("Unknown algorithm: %s", algorithm)
+                    continue
+
+                if cv_result is None:
+                    # Folds outstanding: this window did what it could and the
+                    # partials are on disk. Not an error — the next call resumes.
+                    deferred = True
+                    logger.info("  Partial: merge deferred until every fold exists")
                     continue
 
                 # The CV report is this command's product — keep it on stdout.
@@ -211,16 +284,24 @@ Example:
                 logger.info("  Unified CV: %s", cv_file)
                 logger.info("  Intersected KB: %d constraints", len(cv_result.intersected_kb))
 
-            success_count += 1
+            if deferred:
+                deferred_count += 1
+            else:
+                success_count += 1
 
         except Exception:
             logger.exception("Error evaluating %s", model_config.name)
 
+    failed = len(models) - success_count - deferred_count
     logger.info("%s", "=" * 60)
-    logger.info("Completed: %d/%d models", success_count, len(models))
+    logger.info("Completed: %d/%d models (deferred: %d, failed: %d)",
+                success_count, len(models), deferred_count, failed)
     logger.info("%s", "=" * 60)
 
-    if success_count < len(models):
+    # A deferred model is a window that ran out, not a failure: its folds are on
+    # disk and the next call resumes them. Only a real error is a non-zero exit,
+    # so a sweep runner can tell "out of time" from "broken".
+    if failed:
         sys.exit(1)
 
 
