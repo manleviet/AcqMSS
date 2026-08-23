@@ -1,0 +1,146 @@
+# Environment for the C4 rule-learner baselines
+#
+# Frozen 2026-08-23T11:40:52Z on python 3.11.14, darwin/arm64,
+# at commit 6a45026, branch feat/sosym-r1.
+#
+# WHY THIS FILE EXISTS. The baseline numbers are produced under a DIFFERENT
+# resolution than the acquisition results: installing the baselines extras adds
+# a scientific stack the pipeline itself never uses, and Orange3 (CN2) further
+# constrains it — numpy 2.4.6 -> 2.3.5 and pandas 3.0.5 -> 2.3.3 relative to
+# installing 'baselines' alone. That is a fact about the artifact, not a detail
+# to keep in someone's head: this project already lost a suite baseline (507)
+# because the commit and environment were never written down.
+#
+# All three learners are run in THIS single environment (baselines +
+# baselines-cn2). Running RIPPER/tree on a headless 'baselines'-only machine and
+# CN2 here would draw the three baselines from two different resolutions, with
+# pandas 3.0's copy-on-write and string-dtype defaults differing across them.
+#
+# The four pins that would invalidate every example set and every result in both
+# papers are UNCHANGED by the baseline extras, verified after install:
+#   flamapy-fw==2.6.0.dev4  flamapy-fm==2.6.0.dev4
+#   flamapy-sat==2.6.0.dev4 python-sat==0.1.8.dev17
+# None of flamapy-fw/fm/sat/bdd or python-sat declares numpy, pandas, scipy or
+# scikit-learn as a dependency, so the downgrade cannot reach the acquisition
+# side by construction — not merely 'the suite stayed green'.
+#
+-e file:///Users/manleviet/Development/GitHub/AcqMSS
+afmparser==1.0.3
+allpairspy==2.5.1
+antlr4-python3-runtime==4.13.1
+anyio==4.14.2
+anyqt==0.2.1
+appnope==1.0.0
+asttokens==3.0.2
+astutils==0.0.6
+attrs==26.1.0
+backports-tarfile==1.2.0
+baycomp==1.0.3
+bottleneck==1.6.0
+cattrs==26.1.0
+certifi==2026.7.22
+chardet==7.6.0
+charset-normalizer==3.5.1
+colorama==0.4.6
+comm==0.2.3
+commonmark==0.9.2
+contourpy==1.3.3
+coverage==7.14.2
+cycler==0.12.1
+dd==0.5.7
+debugpy==1.8.21
+dictdiffer==0.10.0
+docutils==0.23
+et-xmlfile==2.0.0
+executing==2.2.1
+-e file:///Users/manleviet/Development/GitHub/explanation
+flamapy-bdd==2.0.1
+flamapy-fm==2.6.0.dev4
+flamapy-fw==2.6.0.dev4
+flamapy-sat==2.6.0.dev4
+fonttools==4.63.0
+graphviz==0.21
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.19
+importlib-metadata==9.0.0
+iniconfig==2.3.0
+ipykernel==7.3.0
+ipython==9.16.1
+ipython-pygments-lexers==1.1.1
+jaraco-classes==3.4.0
+jaraco-context==6.1.2
+jaraco-functools==4.6.0
+jedi==0.20.0
+joblib==1.5.3
+jupyter-client==8.9.1
+jupyter-core==5.9.1
+keyring==25.7.0
+keyrings-alt==5.0.2
+kiwisolver==1.5.0
+matplotlib==3.11.1
+matplotlib-inline==0.2.2
+more-itertools==11.1.0
+narwhals==2.25.0
+nest-asyncio2==1.7.2
+networkx==3.6.1
+numpy==2.3.5
+openpyxl==3.1.5
+opentsne==1.0.4
+orange-canvas-core==0.2.9
+orange-widget-base==4.27.0
+orange3==3.40.0
+packaging==26.2
+pandas==2.3.3
+parameterized==0.9.0
+parso==0.8.7
+pexpect==4.9.0
+pillow==12.3.0
+pip @ file:///Users/manleviet/Applications/PyCharm.app/Contents/plugins/python-ce/helpers/pip-24.3.1-py2.py3-none-any.whl
+platformdirs==4.11.3
+pluggy==1.6.0
+ply==3.10
+prompt-toolkit==3.0.53
+psutil==7.2.2
+ptyprocess==0.7.0
+pure-eval==0.2.3
+pydot==4.0.1
+pygments==2.20.0
+pyparsing==3.3.2
+pyqtgraph==0.14.0
+pytest==9.1.0
+python-dateutil==2.9.0.post0
+python-louvain==0.16
+python-sat==0.1.8.dev17
+pytz==2026.3.post1
+pyyaml==6.0.3
+pyzmq==27.2.0
+qasync==0.28.0
+qtconsole==5.7.2
+qtpy==2.4.3
+requests==2.34.2
+requests-cache==1.3.3
+scikit-learn==1.9.0
+scipy==1.17.1
+serverfiles==0.3.1
+setuptools==82.0.1
+six==1.17.0
+stack-data==0.6.3
+threadpoolctl==3.6.0
+toml==0.10.2
+tornado==6.5.8
+traitlets==5.16.1
+truststore==0.10.4
+typing-extensions==4.16.0
+tzdata==2026.3
+url-normalize==3.0.0
+urllib3==2.7.0
+uvlparser==2.5.0
+wcwidth==0.8.2
+wheel==0.47.0
+wittgenstein==0.3.5
+xgboost==2.0.3
+xlrd==2.0.2
+xlsxwriter==3.2.9
+zipp==4.1.0
