@@ -26,6 +26,22 @@ dev = [
     "pytest",
     "parameterized~=0.9.0",
 ]
+# Rule-learner baselines (C4). NOT runtime deps: the acquisition pipeline and the
+# sweep must keep installing from a clean environment without a scientific stack —
+# the adapters import these lazily, so their tests skip when the extra is absent.
+#
+# Split in two because the weight is wildly asymmetric: scikit-learn + wittgenstein
+# resolve to 9 packages, while Orange3 (for CN2 alone) pulls 87 — matplotlib,
+# xgboost, jupyter, qtconsole, pyqtgraph and the Orange canvas/widget GUI stack.
+# Keeping CN2 separate means RIPPER and the decision tree cost a headless machine
+# almost nothing.
+baselines = [
+    "scikit-learn~=1.9",
+    "wittgenstein~=0.3.5",
+]
+baselines-cn2 = [
+    "Orange3~=3.40",
+]
 
 [tool.setuptools.packages.find]
 # explanation and profiling both come from the canonical ../explanation package
