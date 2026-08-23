@@ -201,3 +201,18 @@ on a clean machine.
 5. Whether the ⅔ training split is what the baseline should use, or whether the learner should
    see all of `E⁺ ∪ E⁻` per fold. Must match whatever ConGen sees on the same fold; assumed ⅔
    here.
+
+## Write-up hazard — two near-identical numbers about different populations
+
+Flagged by Viet-Man 2026-08-23; detail in the hub §7 C4.
+
+The verification run puts the rule learners' semantic F1 at **0.046–0.056**. A claim
+withdrawn from the submission read "consistently below 0.06" — about the **iterative
+approaches**, a different population.
+
+The numbers nearly coincide, so any C4 table placed near that sentence invites a reader
+to read one as evidence for the other. If a C4 table is generated later, the two must be
+distinguished explicitly, or kept apart.
+
+Recorded here because whoever generates that table may not be in this conversation, and
+a coincidence of two decimal places is not something anyone re-derives from scratch.
