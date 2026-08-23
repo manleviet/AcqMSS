@@ -221,3 +221,8 @@ __marimo__/
 /data/examples/ea2468_rs_3n.json
 /tests/output/
 /.serena/
+
+# SoSyM sweep intermediates: partials and generated configs are regenerable;
+# the merged CV JSONs under data/results_sosym/ stay visible as evidence.
+data/results_sosym/**/partials/
+data/results_sosym/configs/
