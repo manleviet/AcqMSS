@@ -16,14 +16,14 @@ instead. Every adapter is pinned to a seed — a baseline that changed between r
 the same fold could not be reported at all.
 
 HOW FAR THAT IS ACTUALLY DEMONSTRATED, so the seed reset is not mistaken for a tested
-guarantee. Over 20 fits of a tie-prone table: the FULL Orange rule list has 2 distinct
-forms without the reset and 1 with it, but the subset this adapter keeps (INVALID rules
-carrying selectors) is stable at 1 either way. The variation sits in what the adapter
-discards — VALID-class rules and the catch-all. So the reset is insurance against a
-real nondeterminism whose effect is NOT observable at this boundary on any fixture
-available here, and the determinism test below cannot fail for CN2 by removing it. Kept
-because the nondeterminism is real and the reset costs nothing, not because a test
-proves it necessary.
+guarantee. ON ONE TIE-PRONE FIXTURE, over 20 fits: the FULL Orange rule list has 2
+distinct forms without the reset and 1 with it, while the subset this adapter keeps
+(INVALID rules carrying selectors) is stable at 1 either way — the variation sits in
+what the adapter discards, the VALID-class rules and the catch-all. That is ONE SAMPLE,
+not a proof: on another fold or KB the variation could reach the kept rules. So the
+reset is insurance against a real nondeterminism whose effect happens not to be
+observable at this boundary here, and the determinism test cannot fail for CN2 by
+removing it. Kept because the nondeterminism is real and the reset costs nothing.
 """
 from __future__ import annotations
 

@@ -65,12 +65,13 @@ def test_learner_is_deterministic_across_repeated_fits(name):
     Pins the property the reported numbers depend on: a baseline that moved between
     runs of the same fold could not be reported at all.
 
-    NON-DISCRIMINATING FOR CN2, measured rather than assumed. Orange's full rule list
-    really does vary across fits without a seed reset (2 distinct forms over 20 fits),
-    but the subset this adapter keeps is stable at 1 with or without it — the variation
-    is confined to the VALID-class rules and the catch-all, which the adapter discards.
-    Removing the reset therefore leaves this test green. It still guards RIPPER and the
-    tree, and it would catch a future CN2 whose kept rules start moving.
+    NON-DISCRIMINATING FOR CN2 ON THIS FIXTURE, measured rather than assumed. Orange's
+    full rule list really does vary across fits without a seed reset (2 distinct forms
+    over 20 fits), but the subset this adapter keeps is stable at 1 with or without it —
+    the variation is confined to the VALID-class rules and the catch-all, which the
+    adapter discards. Removing the reset therefore leaves this green HERE; that is one
+    sample, and on another fold or KB the variation could reach the kept rules. It still
+    guards RIPPER and the tree, and would catch a CN2 whose kept rules start moving.
     """
     fn = _learner(name)
     table = build_feature_table(TIE_POS, TIE_NEG, CATALOG)
