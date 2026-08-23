@@ -20,6 +20,19 @@ ids come from flamapy's tree traversal, not alphabetical order. Pairing a column
 consistent — nothing raises, every downstream call succeeds, accuracy lands somewhere
 plausible. So literals are resolved **by name** only, and `build_feature_table`
 verifies the id→name→id round trip up front rather than trusting the caller's dict.
+
+WHY THAT GUARD IS A REGRESSION GUARD, NOT A LIVE BUG FIX — measured 2026-08-23, and
+recorded because the two statements above and below otherwise read as contradictory.
+The default column order below sorts by variable id, and on every KB in this repo the
+ids are CONTIGUOUS FROM 1 (REAL-FM-7 1–14, arcade-game 1–65, fqa 1–179, REAL-FM-4
+1–291). So in production, column index *i* and variable id *i+1* coincide exactly, and
+an index-paired implementation would be right BY ACCIDENT everywhere. Name-resolution
+is therefore not currently fixing a wrong answer; it removes the coincidence the
+correctness would otherwise rest on — a non-contiguous catalog (an FM whose features
+do not own the whole low id range, e.g. after ids are reserved elsewhere) breaks
+index-pairing immediately and silently. The tests deliberately use a NON-contiguous
+catalog and a permuted column order by default, so agreeing with the bug is the
+exception there rather than the rule.
 """
 from __future__ import annotations
 

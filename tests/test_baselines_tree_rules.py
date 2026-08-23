@@ -68,7 +68,8 @@ def test_single_invalid_leaf_is_one_unconditional_rule():
         feature=[LEAF], threshold=[-2.0], children_left=[-1], children_right=[-1],
         leaf_class=[1], feature_names=NAMES)
     assert rules == [Rule.of()]
-    assert rules_to_cnf(rules, build_feature_table(POS, NEG, CATALOG)) == [[]]
+    assert rules_to_cnf(rules, build_feature_table(POS, NEG, CATALOG,
+                                           feature_order=("a", "b", "c"))) == [[]]
 
 
 def test_single_valid_leaf_is_no_rules():
@@ -94,7 +95,8 @@ def test_tree_front_end_agrees_with_converter_a_directly():
     This is the composition claim: the tree path is not a separate CNF route, it is
     the same Rule reached another way.
     """
-    table = build_feature_table(POS, NEG, CATALOG)
+    # Permuted on purpose: id-sorted order would let index-pairing agree.
+    table = build_feature_table(POS, NEG, CATALOG, feature_order=("a", "b", "c"))
     via_tree = flat_tree_to_rules(
         feature=[0, LEAF, LEAF], threshold=[0.5, -2.0, -2.0],
         children_left=[1, -1, -1], children_right=[2, -1, -1],

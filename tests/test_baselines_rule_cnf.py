@@ -16,8 +16,21 @@ POS = [{"a": True, "b": True, "c": True}]
 NEG = [{"a": False, "b": False, "c": False}]
 
 
-def _table(order=None):
+# Column order used by MOST fixtures below is deliberately NOT the id-sorted default.
+# Sorted-by-id order makes column index and variable id coincide (ids are contiguous
+# from 1 on every KB here), so an index-paired converter would agree with almost every
+# assertion. Permuting by default makes such a converter fail broadly instead of only
+# in the one canary.
+PERMUTED = ("a", "b", "c")
+
+
+def _table(order=PERMUTED):
     return build_feature_table(POS, NEG, CATALOG, feature_order=order)
+
+
+def _canonical_table():
+    """Id-sorted column order — the production default."""
+    return build_feature_table(POS, NEG, CATALOG)
 
 
 def _equivalent(cnf, expected):
@@ -93,7 +106,7 @@ def test_cnf_is_invariant_under_column_permutation():
     CNF. A converter pairing column index with variable id fails here; this one maps
     by name. Complements the table-level canary, which only checks literals.
     """
-    default = _table()
+    default = _canonical_table()
     permuted = _table(order=tuple(reversed(default.feature_names)))
     rules = [Rule.of(("a", True), ("b", False)), Rule.of(("c", True))]
 
