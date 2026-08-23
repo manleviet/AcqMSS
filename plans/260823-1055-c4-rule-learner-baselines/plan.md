@@ -123,41 +123,57 @@ table).
 | full 3-KB × 6-sampling × 3-fold run | < 10 min |
 | **total** | **~7.5 h**, run time negligible |
 
-## §5 — the finding that should gate approval
+## §5 — class balance: the real risk is overfit, not degeneracy
 
-**The target class is nearly empty, and on several cells it is exactly empty.**
+**Decided 2026-08-23: run everywhere, report degenerate cells as such.** The criteria below
+are declared here, BEFORE any number exists.
 
-Positive class = invalid = `E⁻`. Training split is ⅔:
+Counted per **fold** from the committed `data/folds/*_folds.json` (an earlier draft of this
+plan counted per example-set and overstated the problem; corrected):
 
-| KB | sampling | E⁻ total | E⁻ in training |
-|---|---|---|---|
-| REAL-FM-7 | rs_1n | 1 | **0** |
-| REAL-FM-7 | rs_m | 1 | **0** |
-| REAL-FM-7 | rs_2n | 2 | 1 |
-| REAL-FM-7 | rs_3n | 4 | 2 |
-| REAL-FM-7 | ff | 3 | 2 |
-| arcade-game / fqa / REAL-FM-4 | rs_m | 1 | **0** |
-| REAL-FM-7 | 2cov | 9 | 6 — but **E⁺ = 0** |
-| fqa | 2cov | 16 | 10 — but **E⁺ = 0** |
+| | 108 cells (6 KBs incl. ea2468) | 90 cells (5-KB paper scope) |
+|---|---|---|
+| zero training negatives | 5 | **5** |
+| zero training positives | 14 | **11** |
+| 1–5 training negatives | **37** | — |
+| both classes ≥ 10 | 39 | — |
+| both classes ≥ 20 | 31 | — |
 
-Consequences, which are results rather than bugs but must be declared, not discovered:
+Corrections to the earlier draft: "largely degenerate" was an overstatement — the zero cells
+are 6% and 12%. "Every KB's rs_m" was wrong: `rs_m` loses its negative on **fold 0 only**, and
+on 4 KBs — busybox `rs_m` is 1/1/2 and ea2468's is 1/1/2.
 
-- **Zero training negatives** ⇒ no instance of the class being learned ⇒ every learner returns
-  an empty rule set ⇒ CNF = ∅ ≡ ⊤ ⇒ the theory accepts everything: accuracy = the positive
-  fraction of the test fold, semantic recall 0, specificity 0.
-- **Zero positives (2COV)** ⇒ the other class is empty; RIPPER and CN2 will emit either
-  nothing or a single always-fire rule ⇒ theory ≡ ⊥, rejecting everything.
-- The cells with any signal at all are the larger samplings on fqa / REAL-FM-4 / arcade-game.
+**The dominant regime is neither zero nor usable.** 37 of 108 cells give the learner 1–5
+instances of the class it is learning (REAL-FM-7 rs_1n → 0/1/1, rs_2n → 1/1/2, rs_3n → 2/3/3;
+`rs_m` ≈ 0/1/1 nearly everywhere). RIPPER on one to five instances does not return a
+degenerate rule set — it returns an **overfit** one, which is worse, because it looks like a
+result. Genuinely usable cells (≥ 20 target-class instances) are ~9 of the 30
+KB × sampling configurations, concentrated in fqa / REAL-FM-4 / busybox at RS(2n) and RS(3n).
 
-So a full 3×6 baseline table is mostly structurally-determined cells. That is defensible and
-arguably the point — it shows a rule learner cannot work from this example budget while
-ConGen can — but it is a different claim from "we compared against a rule-learner baseline",
-and the table should be read as the former.
+2COV degenerates the other way: 6–14 negatives but **zero positives**, so the classifier has
+nothing to separate.
 
-**Decision this gates:** if the intended claim needs cells with actual learned rules, C4 needs
-either more negatives per fold or a restriction to the samplings that have them, and that is a
-sweep-scope change. If the degenerate cells are acceptable as evidence, C4 proceeds as
-specified.
+### Second asymmetry — for B1
+
+The example budget in this evaluation was designed for **constraint acquisition**: many
+positives to cut the bias, a few negatives to anchor. A classifier needs both classes, in
+quantity. So the rule learner is handicapped twice — no bias, and a data regime built for a
+different task. This belongs in B1 alongside the no-bias asymmetry.
+
+### Reporting rules (declared in advance)
+
+1. **Validity criterion, fixed before the numbers exist:** a cell is reported when **both
+   classes have ≥ 10 training instances**; otherwise it is marked *too few target-class
+   instances*. Declaring it here forecloses "why only these cells?" after the fact.
+2. **Never print 0.00 for a degenerate cell.** An empty rule set is CNF ∅ ≡ ⊤, which accepts
+   everything: that number is an artifact of the fold split, not a measurement. Printing it as
+   a score is the same straw man already rejected at the description tier. Mark the cell.
+3. With 1 and 2 in place the degeneracy becomes evidence for the B1 paragraph rather than a
+   hole to explain away.
+
+**Scope note (correcting the earlier draft):** only *more negatives per fold* would change
+sweep scope. Restricting which cells are **reported** is a reporting rule — no new data, no
+extra runs, no schedule impact.
 
 ## Sequencing
 
@@ -173,8 +189,8 @@ on a clean machine.
 
 ## Unresolved
 
-1. **Does the degenerate-cell finding change the intended claim?** (§5) — the one question that
-   should be settled before any code.
+1. ~~Does the degenerate-cell finding change the intended claim?~~ **RESOLVED 2026-08-23**: run
+   everywhere, mark cells below the declared threshold, never print a score for them (§5).
 2. Orange3 in a `baselines` extra vs dropping CN2 entirely. Orange3 is disproportionately heavy
    for one learner; if CN2 is not load-bearing for the paper, dropping it removes the largest
    dependency and one front end.
