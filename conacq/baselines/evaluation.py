@@ -4,10 +4,27 @@ Reports **predictive accuracy** and **semantic F1** only.
 
 No description tier, deliberately. That tier scores the NAMES of bias constraints, and
 a rule set carries none — its description F1 is ~0 by construction, so printing it
-would be a straw man. Semantic F1 is well defined here because it is clause
-ENTAILMENT against the ground-truth theory: the learned CNF is fed to the same
-``SemanticEquivalenceChecker`` ConGen's semantic tier uses, just resolved from rules
-instead of from bias names.
+would be a straw man. The semantic tier IS well defined here: it is clause ENTAILMENT
+against the ground-truth theory, so the learned CNF goes to the same
+``SemanticEquivalenceChecker`` ConGen's semantic tier uses, resolved from rules instead
+of from bias names.
+
+REPORT RECALL AND PRECISION SEPARATELY. LEAD WITH RECALL. This is not stylistic — the
+two sides' precision denominators count different objects, and F1 inherits that:
+
+- **Recall is comparable.** Its denominator is ``n_ct_checked``, the clauses of C_τ,
+  identical for both sides. It is also the number that carries the argument: ConGen ≈0.9
+  against a baseline ≈0.04.
+- **Precision is NOT comparable.** ConGen expands each learned constraint into clauses
+  and counts clauses (``kb_comparator.py:291-295``); a rule set contributes one clause
+  per rule. Measured expansion (clauses per constraint): REAL-FM-7 1.06, arcade-game
+  1.12, busybox 1.14, REAL-FM-4 1.31, **fqa 2.03** — and fqa supplies 3 of the 4
+  configurations C4 can score, so the distortion sits exactly where the comparison
+  lives. Distortion appears when a constraint's clauses are only partly entailed.
+
+So: **build no claim on a precision difference between the two sides**, and state in any
+table carrying both that the denominators count different objects. The two WILL appear
+together — that is the point of C4 — so the sentence is required, not conditional.
 
 DEGENERATE CELLS ARE MARKED, NEVER SCORED. An empty rule set is the empty CNF, i.e. ⊤,
 which accepts every configuration; printing the resulting accuracy would report an
@@ -138,5 +155,10 @@ def summarise(cells: Sequence[BaselineCell]) -> dict:
     }
     if scored:
         out["mean_accuracy"] = sum(c.accuracy for c in scored) / len(scored)
+        # Recall first, and precision reported beside it rather than folded away: only
+        # recall shares a denominator with the acquisition side. F1 is emitted last
+        # because it inherits precision's incomparability — do not lead a table with it.
+        out["mean_sem_recall"] = sum(c.sem_recall for c in scored) / len(scored)
+        out["mean_sem_precision"] = sum(c.sem_precision for c in scored) / len(scored)
         out["mean_sem_f1"] = sum(c.sem_f1 for c in scored) / len(scored)
     return out

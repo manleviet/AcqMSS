@@ -1,10 +1,11 @@
 {
  "provenance": {
-  "commit": "892e5a7",
+  "commit": "159030b",
   "config": "apps/conf/run_baselines_config.toml",
-  "date": "2026-08-23T16:02:31Z",
+  "date": "2026-08-23",
   "environment": "plans/260823-1055-c4-rule-learner-baselines/environment-baselines.txt",
   "reporting_rule": "cell scored only when BOTH classes have >= 10 training instances; otherwise marked too_few_instances and NOT scored. Declared before any number existed (plan.md 5).",
+  "semantic_caveat": "LEAD WITH RECALL. Recall shares its denominator (C_tau clauses) with the acquisition side and is comparable. PRECISION IS NOT: ConGen counts CNF clauses per learned constraint (expansion 1.06-2.03; fqa 2.03 and fqa is 3 of the 4 scored configurations), a rule set counts one clause per rule. F1 inherits this. Build no claim on a precision difference between the two sides.",
   "tiers": "accuracy + semantic only. Description tier omitted by design: a rule set carries no bias constraint names, so its description F1 is ~0 by construction.",
   "what": "C4 verification run \u2014 NOT paper numbers; the sweep re-measures."
  },
@@ -2768,6 +2769,8 @@
   "cells": 162,
   "mean_accuracy": 0.961869978645452,
   "mean_sem_f1": 0.05150284286846558,
+  "mean_sem_precision": 0.38148148148148153,
+  "mean_sem_recall": 0.0393649722597091,
   "no_rules_learned": 0,
   "scored": 36,
   "too_few_instances": 126

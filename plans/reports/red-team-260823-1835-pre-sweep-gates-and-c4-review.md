@@ -183,13 +183,40 @@ is exactly what the explicit convention exists to avoid. Now released in a `fina
 `List` in `evaluation.py`, `argparse` in `run_baselines.py`, and `tree_rules.py`
 imported `FeatureTable` while quoting the annotation that uses it (annotation unquoted).
 
-### 6. Semantic precision denominators are not commensurate (**note, not a defect**)
+### 6. Semantic precision denominators are not commensurate (**upgraded — reporting rule, applied**)
 
-ConGen's `n_kb_checked` counts CNF clauses across the learned constraints — one
-constraint may expand to several. The baseline's counts rules, one clause each. Both
-ratios still mean "fraction of my clauses entailed by C_τ", so comparing them is
-defensible, but the denominators count different objects. Worth a sentence if the two
-appear in one table.
+Downgraded too far in the first write-up ("worth a sentence **if** the two appear in one
+table"). They will appear in one table — that is the entire point of C4 — so the
+sentence is required, not conditional. Corrected 2026-08-23.
+
+ConGen expands each learned constraint into clauses and counts clauses
+(`kb_comparator.py:291-295`); a rule set contributes one clause per rule. Measured
+expansion, clauses per constraint:
+
+| KB | constraints | clauses | expansion |
+|---|---|---|---|
+| REAL-FM-7 | 295 | 314 | 1.06 |
+| arcade-game | 1,755 | 1,960 | 1.12 |
+| busybox-1.18.0 | 6,635 | 7,534 | 1.14 |
+| REAL-FM-4 | 2,079 | 2,714 | 1.31 |
+| **fqa** | 459 | 932 | **2.03** |
+
+**fqa supplies 3 of the 4 configurations C4 can score**, so the distortion sits exactly
+where the comparison lives — ConGen's denominator is about twice its constraint count
+there. Distortion arises when a constraint's clauses are only partly entailed.
+
+It does not break evenly:
+
+- **Recall is comparable** — denominator `n_ct_checked` is C_τ's clauses, identical for
+  both sides. It is also the number carrying the B1 argument: ConGen ≈0.9 vs baseline
+  ≈0.04.
+- **Precision is not.** Two different notions of "unit of assertion".
+- **F1 inherits the incomparable half**, and the C4 table had been leading with `sem_f1`.
+
+**Applied** (A5's "report P and R separately at every tier"): `summarise` now emits
+`mean_sem_recall` and `mean_sem_precision` beside `mean_sem_f1`, recall first; the
+module docstring and the verification artifact both carry the caveat and the instruction
+to build no claim on a precision difference between the two sides.
 
 ## Probed and clean (pass 2)
 
