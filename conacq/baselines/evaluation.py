@@ -25,7 +25,7 @@ Both yield ``None`` scores, never 0.0.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Mapping, Optional, Sequence
+from typing import Dict, Mapping, Optional, Sequence
 
 from .feature_table import build_feature_table
 from .rule_cnf import rules_to_cnf

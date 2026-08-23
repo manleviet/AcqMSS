@@ -15,7 +15,6 @@ Needs the ``baselines`` and ``baselines-cn2`` extras. All three learners are run
 environment on purpose — splitting them across machines would draw the baselines from
 two different dependency resolutions (see the committed environment freeze).
 """
-import argparse
 import json
 import logging
 import sys
@@ -67,10 +66,17 @@ def main() -> None:
         fold_data = load_folds(model_cfg.folds_path)
 
         oracle = FMOracle(model_cfg.oracle, use_incremental=False)
-        model = (ConGenModelBuilder.from_bias(model_cfg.bias)
-                 .with_oracle_data(oracle.oracle_data).build())
-        ground_truth = GroundTruthData.from_uvl(Path(model_cfg.oracle))
-        bg_clauses = [list(c) for c in oracle.oracle_data.get_root_clauses()]
+        try:
+            model = (ConGenModelBuilder.from_bias(model_cfg.bias)
+                     .with_oracle_data(oracle.oracle_data).build())
+            ground_truth = GroundTruthData.from_uvl(Path(model_cfg.oracle))
+            bg_clauses = [list(c) for c in oracle.oracle_data.get_root_clauses()]
+        finally:
+            # Release the oracle's solver now rather than at GC. Every other caller in
+            # the repo does this explicitly (base_runner, conmin_cv_evaluator); the
+            # __del__ fallback exists but its timing is not guaranteed, and this loop
+            # builds one oracle per model.
+            oracle.cleanup()
 
         for fold_idx in range(fold_data.n_folds):
             tr_pos, tr_neg, te_pos, te_neg = apply_folds(fold_data, pos, neg, fold_idx)

@@ -72,7 +72,7 @@ def flat_tree_to_rules(
     return rules
 
 
-def sklearn_tree_to_rules(estimator, table: "FeatureTable") -> List[Rule]:
+def sklearn_tree_to_rules(estimator, table: FeatureTable) -> List[Rule]:
     """Unpack a fitted ``DecisionTreeClassifier`` into ``flat_tree_to_rules``.
 
     Takes the TABLE, not a bare name list, on purpose. A tree's ``feature`` array holds

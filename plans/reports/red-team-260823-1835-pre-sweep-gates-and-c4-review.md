@@ -5,6 +5,27 @@
   in the running system. Not a re-read of the commit messages.
 - Suite at review time: 665 passed, 1 skipped. `data/results*` clean.
 
+## Coverage — pass 1 was NOT uniform across the 17 commits
+
+Corrected after the fact. The original header implied one even pass; it was not, and a
+review artifact that overstates its own reach is the same defect it exists to catch.
+
+| area | commits | probes in pass 1 |
+|---|---|---|
+| C7 root axiom | `012ce31` | 1 (finding 1… see below) |
+| C6 NE split | `ff4566b` | 2 |
+| C10 counters | `f3266c7` | 2 |
+| NE-clause delivery | `65153ec` | 4 |
+| deps + environment | `b8cced3`, `a6e2e31` | 1 |
+| C4 eval wiring | `d663adc` | 2 |
+| **C4 core code** | `f95ce8b`, `6a45026`, `53376e7`, `5311009`, `fdd2d63` | **0** |
+| docs / plans | `f3aeb27`, `767b402`, `bb60297`, `892e5a7`, `e9bc10b` | 0 |
+
+Pass 1 leaned, for the C4 core, on the mutation testing done WHILE writing it. That is
+real evidence but not review: those mutations targeted the properties already chosen as
+worth guarding. A red team is meant to look for the ones nobody thought of. **Pass 2
+below covers the five C4 code commits.**
+
 ## Findings
 
 | # | severity | commit | finding |
@@ -138,3 +159,58 @@ Each of these was a specific hypothesis, checked rather than assumed:
 3. No fixture in the repo makes Reduce drop an NE, so finding 1 cannot be regression-tested
    from real data — only from a synthetic result like the one used above. That is a fifth
    entry for the non-discriminating register if the fix lands.
+
+
+---
+
+# Pass 2 — the five C4 code commits
+
+Run after the coverage gap above was noticed. Same method: hypotheses, then try to break
+them in the running system.
+
+## Findings
+
+### 4. `FMOracle` is never released — `apps/run_baselines.py` (**fixed**)
+
+The runner built one `FMOracle` per model — 18 in the verification run — and never
+called `cleanup()`. Every other caller in the repo does so explicitly
+(`base_runner.py:102`, `conmin_cv_evaluator.py:118`). `FMOracle.__del__` calls
+`cleanup()`, so nothing leaked permanently, but relying on GC timing for solver handles
+is exactly what the explicit convention exists to avoid. Now released in a `finally`.
+
+### 5. Unused imports (**fixed**)
+
+`List` in `evaluation.py`, `argparse` in `run_baselines.py`, and `tree_rules.py`
+imported `FeatureTable` while quoting the annotation that uses it (annotation unquoted).
+
+### 6. Semantic precision denominators are not commensurate (**note, not a defect**)
+
+ConGen's `n_kb_checked` counts CNF clauses across the learned constraints — one
+constraint may expand to several. The baseline's counts rules, one clause each. Both
+ratios still mean "fraction of my clauses entailed by C_τ", so comparing them is
+defensible, but the denominators count different objects. Worth a sentence if the two
+appear in one table.
+
+## Probed and clean (pass 2)
+
+- **RIPPER does not emit interval conditions on 0/1 columns.** This was the same class of
+  assumption that turned out WRONG for CN2 selectors, so it was tested rather than
+  assumed: on a non-separable 8-feature / 60-row table, wittgenstein emits
+  `np.int64(0/1)` values, which `_as_bool` handles. No binning, no ranges.
+- **BG treatment is symmetric between baseline and ConGen semantic scoring.** Both pass
+  `bg_clauses`; `check_kb_entails_ct` adds BG to the source and `check_ct_entails_kb`
+  does not, identically for both. Checked because an asymmetry here would silently
+  invalidate the comparison the baseline exists to make.
+- **The baseline sees exactly the folds ConGen sees.** Train splits compared across all
+  54 comparable folds: 0 mismatches.
+- **Degenerate paths cannot be reached with an empty test set** — 2COV cells (0
+  positives) are filtered by the threshold before any scoring runs.
+- **`summarise` cannot divide by zero** — guarded on the scored list.
+- **Tree recursion depth is not a risk** at these table sizes.
+- **`sys` is imported** where the empty-model guard calls `sys.exit(1)`.
+
+## What pass 2 did NOT cover
+
+The five docs/plan commits (`f3aeb27`, `767b402`, `bb60297`, `892e5a7`, `e9bc10b`) were
+not reviewed as content in either pass. `f3aeb27` in particular asserts suite counts in
+CLAUDE.md; those numbers were verified when written but not re-derived here.
