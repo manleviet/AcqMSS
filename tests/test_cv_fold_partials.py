@@ -28,6 +28,8 @@ ENABLED_TESTS = {
     'congen_schema_unchanged': True,
     'query_mode_partials_distinct': True,
     'incomplete_window_writes_nothing': True,
+    'committed_results_guarded': True,
+    'guard_is_wired': True,
 }
 
 CONFIG = """
@@ -244,6 +246,60 @@ def test_query_budget_fields_stay_off_the_passive_schema(tmp_path):
     for fold in inter['folds']:
         assert isinstance(fold['n_queries'], int)
         assert fold['convergence_reason']
+
+
+@pytest.mark.skipif(not ENABLED_TESTS['committed_results_guarded'], reason="disabled")
+def test_committed_results_tree_is_not_written_by_accident(tmp_path, monkeypatch):
+    """Writing into data/results/ requires saying so.
+
+    The config default sends output there, so a run that merely omits -o overwrites
+    the committed results with nothing failing and nothing looking wrong. The guard
+    is on the resolved destination, not on whether -o was spelled out, so naming
+    the directory explicitly is caught the same way; only the environment variable
+    distinguishes a deliberate regeneration from an accident.
+    """
+    from apps.run_cv import guard_committed_output, ALLOW_DEFAULT_OUTPUT_ENV
+
+    monkeypatch.delenv(ALLOW_DEFAULT_OUTPUT_ENV, raising=False)
+    for spelling in (REPO_ROOT / 'data' / 'results', Path('data/results')):
+        with pytest.raises(SystemExit) as exc:
+            guard_committed_output(spelling)
+        assert exc.value.code != 0
+
+    monkeypatch.setenv(ALLOW_DEFAULT_OUTPUT_ENV, '1')
+    guard_committed_output(REPO_ROOT / 'data' / 'results')
+
+    # Inert everywhere else, including the sweep's own output root.
+    monkeypatch.delenv(ALLOW_DEFAULT_OUTPUT_ENV, raising=False)
+    guard_committed_output(tmp_path)
+    guard_committed_output(REPO_ROOT / 'data' / 'results_sosym')
+
+
+@pytest.mark.skipif(not ENABLED_TESTS['guard_is_wired'], reason="disabled")
+def test_the_guard_is_wired_into_the_run_path(tmp_path, monkeypatch):
+    """The guard runs on every invocation, not only when -o is omitted.
+
+    Testing guard_committed_output() on its own cannot see the call site. A guard
+    reached only when -o is absent would pass that test and still let
+    `-o data/results` through, which is the same destination by another spelling.
+    The protected directory is redirected to tmp_path so a regression fails the
+    test instead of overwriting the real results.
+    """
+    import apps.run_cv as run_cv
+    from apps.run_cv import ALLOW_DEFAULT_OUTPUT_ENV
+
+    protected = tmp_path / 'protected'
+    monkeypatch.setattr(run_cv, 'COMMITTED_RESULTS_DIR', protected)
+    monkeypatch.delenv(ALLOW_DEFAULT_OUTPUT_ENV, raising=False)
+    monkeypatch.chdir(REPO_ROOT)
+    monkeypatch.setattr(
+        sys, 'argv',
+        ['run_cv', str(_write_config(tmp_path, 'congen')), '-o', str(protected)])
+
+    with pytest.raises(SystemExit) as exc:
+        run_cv.main()
+    assert exc.value.code == 2
+    assert not protected.exists(), "the run created the protected tree despite the guard"
 
 
 @pytest.mark.skipif(not ENABLED_TESTS['query_mode_partials_distinct'], reason="disabled")

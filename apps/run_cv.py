@@ -11,6 +11,7 @@ Usage:
 
 import argparse
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -54,6 +55,38 @@ def parse_fold_indices(spec: Optional[str]) -> Optional[List[int]]:
         return [int(part) for part in spec.split(',') if part.strip() != '']
     except ValueError:
         raise SystemExit(f"--folds expects comma-separated integers, got {spec!r}")
+
+
+# The results C2 must regenerate deliberately, and that
+# tools/sosym_r1/congen_check_unit_factors.py reads.
+COMMITTED_RESULTS_DIR = Path(__file__).resolve().parent.parent / 'data' / 'results'
+ALLOW_DEFAULT_OUTPUT_ENV = 'ACQMSS_ALLOW_DEFAULT_OUTPUT'
+
+
+def guard_committed_output(base_dir: Path) -> None:
+    """Refuse to write into the committed results tree unless it was asked for.
+
+    The config's default output_dir is ``data/results``, so a run that simply omits
+    ``-o`` overwrites the committed results. Nothing errors and nothing looks wrong;
+    the next analysis quietly reports different numbers. The check is on the
+    resolved path rather than on whether ``-o`` was passed, so ``-o data/results``
+    is caught too -- it is the destination that matters, not the spelling.
+
+    C2's deliberate regeneration sets the environment variable once, explicitly.
+    """
+    if base_dir.resolve() != COMMITTED_RESULTS_DIR.resolve():
+        return
+    if os.environ.get(ALLOW_DEFAULT_OUTPUT_ENV) == '1':
+        logger.warning("writing into the committed results tree at %s (%s=1)",
+                       COMMITTED_RESULTS_DIR, ALLOW_DEFAULT_OUTPUT_ENV)
+        return
+    logger.error(
+        "refusing to write into %s: these are the committed results that a "
+        "deliberate regeneration owns, and overwriting them is silent -- nothing "
+        "fails, the next analysis just reports different numbers. Pass -o <dir> to "
+        "write elsewhere, or set %s=1 if overwriting them is the intent.",
+        COMMITTED_RESULTS_DIR, ALLOW_DEFAULT_OUTPUT_ENV)
+    sys.exit(2)
 
 
 def current_commit() -> Optional[str]:
@@ -102,6 +135,7 @@ Example:
     seed = general.get('seed', 42)
     algorithm = eval_config.get('algorithm', 'congen')
     base_dir = Path(args.output_dir or general.get('output_dir', 'data/results'))
+    guard_committed_output(base_dir)
     output_dir = base_dir / algorithm
     n_folds = eval_config.get('n_folds', 5)
     solver_name = eval_config.get('solver_name', 'glucose4')

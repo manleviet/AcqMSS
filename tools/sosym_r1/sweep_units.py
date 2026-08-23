@@ -49,9 +49,15 @@ ESTIMATES: Dict[str, Dict[str, Optional[float]]] = {
                   'rs_1n': 0.4801, 'rs_2n': 1.7737, 'rs_3n': 4.1739},
     # busybox rs_2n / rs_3n are bounded, not completed: measured superlinear scaling
     # on REAL-FM-4 puts them at 317 h and 745 h for three folds. Absent by decision.
-    # rs_m has examples and folds on disk but has never been run, so it has no
-    # reference at all -- only the expectation that m = 21 makes it cheap.
-    'busybox': {'2cov': 0.0000, 'rs_m': None, 'ff': 3.7923, 'rs_1n': 28.5637},
+    #
+    # busybox rs_m has examples and folds on disk but no condition-A reference: it is
+    # the one sampling that has never been run. It carries a NOMINAL 0.2 h/fold --
+    # ~18x REAL-FM-4's measured rs_m (0.0106) and charged at the default 1.0x, so
+    # 0.30 h against a window. The figure is a placeholder chosen to be schedulable
+    # and conservative, NOT a measurement; the queue records the actual on first run.
+    # It is not left at None because a unit with no estimate is never picked, and a
+    # table cell that quietly never runs is found at the worst possible moment.
+    'busybox': {'2cov': 0.0000, 'rs_m': 0.2000, 'ff': 3.7923, 'rs_1n': 28.5637},
 }
 
 # Cheapest first, so partial results accrue on the small KBs before the long tail.

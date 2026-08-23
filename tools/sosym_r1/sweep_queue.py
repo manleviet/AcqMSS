@@ -79,10 +79,31 @@ def parse_budget(text: str) -> float:
     return value * {'h': 1.0, 'm': 1 / 60, 's': 1 / 3600}[unit]
 
 
-def write_ledger(ledger: dict, path: Path) -> None:
-    """Atomic: the ledger is the only record of what has already been paid for."""
+def write_ledger(ledger: dict, path: Path, own_metadata: bool = False) -> None:
+    """Atomic, and it does not clobber metadata edited while a window ran.
+
+    A window loads the ledger once and rewrites it after every unit, so anything
+    edited on disk in the meantime -- a calibration reworded, a note added, an
+    exclusion recorded -- was silently reverted the next time a unit finished. That
+    happened on 2026-08-23 and cost a committed evidence edit with no error to show
+    for it. A running window owns ``units`` and nothing else; every other key is
+    re-read from disk at write time.
+
+    ``own_metadata`` is for the one caller that legitimately writes the whole
+    document: ``init``, which is creating or deliberately rebuilding it.
+    """
+    payload = ledger
+    if not own_metadata and path.exists():
+        try:
+            on_disk = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            on_disk = {}
+        payload = {k: v for k, v in on_disk.items() if k != 'units'}
+        for key, value in ledger.items():
+            payload.setdefault(key, value)
+        payload['units'] = ledger['units']
     tmp = path.with_suffix(path.suffix + '.tmp')
-    tmp.write_text(json.dumps(ledger, indent=2) + "\n")
+    tmp.write_text(json.dumps(payload, indent=2) + "\n")
     tmp.replace(path)
 
 
@@ -126,7 +147,7 @@ def cmd_init(args) -> int:
         },
         'units': units_mod.build_units(),
     }
-    write_ledger(ledger, path)
+    write_ledger(ledger, path, own_metadata=True)
     print(f"wrote {path}: {len(ledger['units'])} units")
     cmd_status(argparse.Namespace(ledger=args.ledger))
     return 0
@@ -266,13 +287,28 @@ def cmd_run(args) -> int:
     ledger = load_ledger(ledger_path)
     remaining = parse_budget(args.budget)
 
+    # A window killed at a boundary -- a closing lid, a SIGTERM -- leaves its unit
+    # marked running with no process behind it, and nothing would ever pick it up
+    # again. Only one window runs at a time, so anything still marked running when
+    # a new one starts is by definition abandoned. Its partial, if it got that far,
+    # is still on disk and run_cv will skip the fold.
+    for unit in ledger['units']:
+        if unit['status'] == 'running':
+            unit['status'] = units_mod.STATUS_PENDING
+            unit['note'] = f"reset from running: abandoned by a window that ended {unit['started_utc']}"
+            print(f"  reset abandoned unit {unit['id']}")
+    write_ledger(ledger, ledger_path)
+
     print(f"window budget {remaining:.2f} h   "
           f"multiplier {ledger['congen_multiplier'] or 'UNCALIBRATED'}   "
-          f"safety x{ledger['safety_factor']}")
+          f"safety x{ledger['safety_factor']}"
+          + (f"   only={args.only}" if args.only else ""))
 
     ran = 0
     for unit in ledger['units']:
         if unit['status'] != units_mod.STATUS_PENDING:
+            continue
+        if args.only and args.only not in unit['id']:
             continue
         cost = budgeted_cost(ledger, unit)
         if cost > remaining:
@@ -320,6 +356,10 @@ def main() -> int:
     p_run.add_argument('--budget', required=True, help="window budget, e.g. 5.5h")
     p_run.add_argument('--max-queries', type=int, default=5000,
                        help="QuAcq query cap (SoSyM revision doc, section 7 C1, decision 5)")
+    p_run.add_argument('--only',
+                       help="run only units whose id contains this substring, e.g. "
+                            "'busybox-1.18.0_ff'. Used to pull a decision-critical "
+                            "measurement ahead of the cheapest-first order.")
     p_run.add_argument('--dry-run', action='store_true')
     p_run.add_argument('--stop-on-failure', action='store_true')
     p_run.set_defaults(func=cmd_run)
