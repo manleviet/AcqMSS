@@ -1,10 +1,11 @@
 # Why ConGen beats condition A — the mechanism, tested
 
-> **Corrected 2026-08-24.** The first version of this report rested on a
-> counting artifact (`|NE| ∈ {0,1}`) and drew a stronger conclusion than the
-> data supports. The premise is fixed below and the conclusion is narrowed:
-> the mechanism is per-check cost, but *which* per-check change causes it is
-> **not determined** by this data. Both candidate explanations fail.
+> **Corrected 2026-08-24, twice.** The first version rested on a counting artifact
+> (`|NE| ∈ {0,1}`) and overclaimed. The premise is fixed below. The NE-form
+> hypothesis was then settled from recorded raw-vs-reduced data and is **dead**
+> (≤2 % effect, identical check counts). The mechanism is per-check cost, located
+> in the checker by elimination — but the cause is still not named, and fqa
+> remains unexplained.
 
 Branch `feat/sosym-r1`, code commit `a0afe42`. Measured 2026-08-23 from 66 matched
 `(kb, sampling, fold)` triples: ConGen partials in `data/results_sosym/congen/partials/`
@@ -68,7 +69,36 @@ fails on exactly the knowledge base that is anomalous under every other hypothes
 With four points and one clear outlier, this neither confirms nor refutes the cost form.
 It does mean the cost form has no positive support here.
 
-## The drift hypothesis: no better off
+## The NE-form hypothesis, settled from recorded data — it is dead
+
+The `negatives` column of `data/results_conmin/*_long.csv` already carries `raw` vs
+`reduced` for conditions C and C∪S: the same `GenerateNE(minimize=...)` switch, at one
+commit, one checker, one set of folds. That isolates NE form exactly, with no new runs.
+
+Condition C, 18 runs per cell:
+
+| kb | wall raw/reduced | checks raw/reduced | ms-per-check raw/reduced |
+|---|---|---|---|
+| REAL-FM-7 | 0.99 | **1.00** | 0.99 |
+| fqa | 0.98 | **1.00** | 0.98 |
+| arcade | 0.98 | **1.00** | 0.98 |
+| REAL-FM-4 | 1.00 | **1.00** | 1.00 |
+
+Check counts are identical to the decimal (835.7 both ways, 4026.4 both ways, 6810.6
+both ways, 17982.7 both ways), so `minimize` does exactly what it documents and nothing
+more. Wall-clock moves by at most 2 %, and raw is if anything marginally *faster*.
+
+**NE form changes neither the amount of work nor the cost of it.** A ≤2 % effect cannot
+account for a 2×–9× gap, so the scope-minimization channel is closed — including the
+version of it that survived the check-count argument.
+
+Two caveats, kept explicit. This is ConMin's condition C, not ConGen; the inference
+transfers because both call the same `GenerateNE`, but it is an inference. And condition
+A carries `negatives = n/a` — it does not do the NE encoding at all — so this does not
+come from A itself. What it settles is the *minimization* question that was posed, which
+is what raw-vs-reduced isolates.
+
+## The drift hypothesis: now the only candidate left standing
 
 Your objection — drift predicts a roughly uniform factor while the data spreads 4× — is
 right against the way I first stated it. The repairable form is that the change is at the
@@ -82,9 +112,13 @@ form of your hypothesis: it predicts a per-KB spread without predicting *this* s
 I have no measurement of per-KB assumption redundancy to test it against. It survives only
 in the sense that nothing here rules it out.
 
-**Neither candidate explains fqa.** fqa is the least sped up (0.37×) while sitting mid-pack
-on every quantity that has been measured — bias size, |E⁺|, |E⁻|, NE scope shrinkage. Until
-something accounts for fqa, the cause is open.
+**It is now the only candidate left, by elimination rather than by evidence.** NE form is
+excluded above; check count is excluded by the parity result. What remains is that a check
+costs less than it used to, for a reason located in the checker.
+
+**It still does not explain fqa.** fqa is the least sped up (0.37×) while sitting mid-pack
+on bias size, |E⁺|, |E⁻| and NE scope shrinkage. Elimination narrows where to look; it does
+not name the cause.
 
 ## Precision note, against my own earlier phrasing
 
@@ -118,9 +152,12 @@ that design. It does not add a comparison.
 
 ## Unresolved
 
-1. **The cause of the per-check saving is open.** Neither the checker-gate story nor NE
-   scope shrinkage rank-orders with the observed ratios, and fqa defeats both. Settling it
-   needs an A/B with the checker change reverted. Not scheduled; low value against the sweep.
+1. **The cause of the per-check saving is open**, though now narrowed to the checker by
+   elimination. Settling it needs an A/B with the checker change reverted. Not scheduled.
+   A direct ConGen `minimize=False` run would remove the "different algorithm" caveat on
+   the raw-vs-reduced result; ConGen does not plumb `minimize` today, so it needs a
+   throwaway harness rather than a library change. Low value now that the effect is
+   measured at ≤2 %.
 2. Whether `paper_consistency_checks` and `checks_total` are the same accounting is
    assumed-commensurate, not verified.
 3. **`len(fold['ne_constraints'])` is a trap** — it returns 1 regardless of |E⁻|, because

@@ -28,8 +28,11 @@ SUBSTANTIAL_H = 0.01
 def main() -> int:
     path = Path(sys.argv[1]) if len(sys.argv) > 1 else LEDGER
     ledger = json.loads(path.read_text())
+    # `is not None` plus an explicit positive-reference test: a 0.0000 h reference is
+    # a real measurement that cannot carry a ratio, not a missing one.
     done = [u for u in ledger['units']
-            if u['status'] == 'done' and u['actual_h'] and u['estimate_h']]
+            if u['status'] == 'done' and u['actual_h'] is not None
+            and u['estimate_h'] is not None and u['estimate_h'] > 0]
     if not done:
         print("no finished units with both an estimate and an actual")
         return 1

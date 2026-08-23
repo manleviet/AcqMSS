@@ -169,11 +169,34 @@ def cmd_status(args) -> int:
         extra = f", actual {act:.2f} h" if act else ""
         print(f"  {status:12s} {len(rows):4d} units   estimate {est:7.2f} h{extra}")
     done = by_status.get('done', [])
-    paired = [(u['estimate_h'], u['actual_h']) for u in done
-              if u['estimate_h'] and u['actual_h']]
+    # `is not None`, not truthiness: a condition-A reference of 0.0000 h is a real
+    # measurement of a sub-millisecond cell, not missing data. It still cannot carry
+    # a ratio, so it is excluded from the mean and counted out loud rather than
+    # vanishing into a denominator nobody checks.
+    measured = [u for u in done
+                if u['actual_h'] is not None and u['estimate_h'] is not None]
+    paired = [(u['estimate_h'], u['actual_h']) for u in measured if u['estimate_h'] > 0]
     if paired:
         ratio = sum(a for _, a in paired) / sum(e for e, _ in paired)
-        print(f"  observed actual/estimate over {len(paired)} finished units: {ratio:.2f}x")
+        print(f"  observed actual/estimate: {ratio:.2f}x over {len(paired)} of "
+              f"{len(done)} done units")
+        skipped = len(done) - len(paired)
+        if skipped:
+            print(f"    ({skipped} done units carry no ratio: their condition-A "
+                  f"reference is 0.0000 h)")
+
+    # Last line, and deliberately so: a truncated read of this output must still be
+    # true. The counts above are per-bucket and easy to mistake for a total -- this
+    # one cannot be, and it is the line to trust for whether a cell exists.
+    # Every status that exists is named, in a stable order, with unknown ones
+    # appended rather than dropped. A hardcoded list would silently omit a status
+    # added later -- which is the same shape as the bug this line exists to fix.
+    known = ('done', 'running', 'pending', 'failed', 'long-run', 'no-estimate')
+    order = [k for k in known if k in by_status] + sorted(set(by_status) - set(known))
+    summary = ", ".join(f"{len(by_status[k])} {k}" for k in order)
+    total = len(ledger['units'])
+    assert sum(len(by_status[k]) for k in order) == total, "status buckets lost a unit"
+    print(f"TOTAL {total} units: {summary}")
     return 0
 
 
