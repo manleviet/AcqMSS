@@ -77,26 +77,40 @@ commit, one checker, one set of folds. That isolates NE form exactly, with no ne
 
 Condition C, 18 runs per cell:
 
-| kb | wall raw/reduced | checks raw/reduced | ms-per-check raw/reduced |
-|---|---|---|---|
-| REAL-FM-7 | 0.99 | **1.00** | 0.99 |
-| fqa | 0.98 | **1.00** | 0.98 |
-| arcade | 0.98 | **1.00** | 0.98 |
-| REAL-FM-4 | 1.00 | **1.00** | 1.00 |
+Condition C, all five knowledge bases:
 
-Check counts are identical to the decimal (835.7 both ways, 4026.4 both ways, 6810.6
-both ways, 17982.7 both ways), so `minimize` does exactly what it documents and nothing
-more. Wall-clock moves by at most 2 %, and raw is if anything marginally *faster*.
+| kb | runs/cell | wall raw/reduced | wall Δ | checks Δ |
+|---|---|---|---|---|
+| REAL-FM-7 | 18 | 0.9892 | −1.08 % | **0.00 %** |
+| fqa | 18 | 0.9794 | −2.06 % | **0.00 %** |
+| arcade | 18 | 0.9806 | −1.94 % | **0.00 %** |
+| REAL-FM-4 | 18 | 0.9995 | −0.05 % | **0.00 %** |
+| busybox | 9 | 1.0169 | **+1.69 %** | **0.00 %** |
 
-**NE form changes neither the amount of work nor the cost of it.** A ≤2 % effect cannot
-account for a 2×–9× gap, so the scope-minimization channel is closed — including the
+Check counts are identical to the decimal on every knowledge base, so `minimize` does
+exactly what it documents and nothing more.
+
+**State the range, not the direction.** Wall-clock differences span **−2.06 % to +1.69 %**
+and busybox — the one that matters — reverses sign. It is noise-level either way, and no
+claim about which form is faster is supported. busybox also has half the runs per cell.
+
+**NE form changes neither the amount of work nor the cost of it.** A ≤2.1 % effect cannot
+account for a 2×–9× gap, so the scope-minimization channel is closed, including the
 version of it that survived the check-count argument.
 
-Two caveats, kept explicit. This is ConMin's condition C, not ConGen; the inference
-transfers because both call the same `GenerateNE`, but it is an inference. And condition
-A carries `negatives = n/a` — it does not do the NE encoding at all — so this does not
-come from A itself. What it settles is the *minimization* question that was posed, which
-is what raw-vs-reduced isolates.
+### And NE is eliminated in every form, not just this one
+
+The remaining caveat — that this is ConMin's condition C rather than ConGen — does not
+bite, for a reason stronger than the raw-vs-reduced measurement. Condition A carries
+`negatives = n/a`: it does **no** NE encoding at all, while ConGen carries |E⁻| conjuncts
+in every check. Extra clauses make checks more expensive, so NE *presence* predicts ConGen
+should be **slower** than A. It is 8× faster. The hypothesis points the wrong way, so NE is
+eliminated whatever its form — minimized, raw, or absent.
+
+> Hub correction arising from this, being made on the Cowork side: §7 C10 describes
+> condition A as running "on raw negatives". It does not — `negatives = n/a`, no NE
+> encoding. The calibration reference is clean, but for this reason rather than the one
+> originally given.
 
 ## The drift hypothesis: now the only candidate left standing
 
@@ -116,9 +130,30 @@ in the sense that nothing here rules it out.
 excluded above; check count is excluded by the parity result. What remains is that a check
 costs less than it used to, for a reason located in the checker.
 
-**It still does not explain fqa.** fqa is the least sped up (0.37×) while sitting mid-pack
-on bias size, |E⁺|, |E⁻| and NE scope shrinkage. Elimination narrows where to look; it does
-not name the cause.
+**It still does not explain fqa** on any quantity measured here — fqa is the least sped up
+(0.37×) while sitting mid-pack on bias size, |E⁺|, |E⁻| and NE scope shrinkage.
+
+### The one quantity where fqa is not mid-pack
+
+Clause-expansion factor — CNF clauses per bias constraint, from `tab:fm_summary`:
+
+| kb | clauses / \|B\| | expansion | wall ratio |
+|---|---|---|---|
+| fqa | 932 / 459 | **2.03** | 0.37 |
+| arcade | 1,960 / 1,755 | 1.12 | 0.12 |
+| REAL-FM-7 | 314 / 295 | 1.06 | 0.20 |
+
+These are the same 1.06 / 1.12 / 2.03 figures verified independently on 2026-08-23 for the
+semantic-precision denominator work, so they are not fitted to this question.
+
+**Not a clean rank-order, and it should not be sold as one.** REAL-FM-7 is second-least
+sped up at 0.20× while sitting *last* on expansion. This explains the outlier, not the
+ordering.
+
+What makes it worth following: it connects to the checker story. If the saving comes from
+dropping redundant SAT assumptions, then the saving per bias constraint should depend on
+how many clauses that constraint expands into — and fqa expands nearly twice as hard as
+anyone else. That is where to look. Low priority; the cause being open blocks nothing.
 
 ## Precision note, against my own earlier phrasing
 
