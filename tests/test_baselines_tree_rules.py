@@ -122,8 +122,30 @@ def test_real_sklearn_tree_matches_the_hand_built_layout():
     y = [1, 1, 0, 0]
     clf = DecisionTreeClassifier(random_state=0).fit(X, y)
 
-    assert sklearn_tree_to_rules(clf, NAMES) == [Rule.of(("a", False))]
+    # The wrapper takes the TABLE the estimator was fitted on, so the column order and
+    # the names cannot come from two sources and disagree.
+    table = build_feature_table(POS, NEG, CATALOG, feature_order=NAMES)
+    assert sklearn_tree_to_rules(clf, table) == [Rule.of(("a", False))]
     # And the sentinel/threshold conventions the hand-built fixtures assume still hold.
     assert clf.tree_.feature[0] == 0
     assert 0.0 < clf.tree_.threshold[0] < 1.0
     assert int(clf.tree_.feature[clf.tree_.children_left[0]]) == LEAF
+
+
+def test_estimator_fitted_on_a_different_width_table_is_refused():
+    """Belt to the structural braces: a foreign estimator is caught by width.
+
+    Passing the table removes the order-mismatch by construction, but nothing stops a
+    caller handing over an estimator fitted on a DIFFERENT table. Width catches the
+    common case; a same-width permutation would not be caught, which is exactly why
+    the order is derived from the table rather than checked.
+    """
+    pytest.importorskip("sklearn", reason="baselines extra not installed")
+    from sklearn.tree import DecisionTreeClassifier
+
+    from conacq.baselines.tree_rules import sklearn_tree_to_rules
+
+    clf = DecisionTreeClassifier(random_state=0).fit([[0, 0], [1, 1]], [1, 0])
+    table = build_feature_table(POS, NEG, CATALOG)   # 3 features, estimator saw 2
+    with pytest.raises(ValueError, match="not trained on this table"):
+        sklearn_tree_to_rules(clf, table)

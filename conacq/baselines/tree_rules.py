@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import List, Sequence, Tuple
 
-from .feature_table import INVALID
+from .feature_table import INVALID, FeatureTable
 from .rule_cnf import Rule
 
 # sklearn marks a leaf with this sentinel in `tree_.feature`.
@@ -72,13 +72,28 @@ def flat_tree_to_rules(
     return rules
 
 
-def sklearn_tree_to_rules(estimator, feature_names: Sequence[str]) -> List[Rule]:
+def sklearn_tree_to_rules(estimator, table: "FeatureTable") -> List[Rule]:
     """Unpack a fitted ``DecisionTreeClassifier`` into ``flat_tree_to_rules``.
+
+    Takes the TABLE, not a bare name list, on purpose. A tree's ``feature`` array holds
+    column INDICES; naming them needs the column order the estimator was trained on. If
+    that order and the names arrived as two independent arguments they could disagree,
+    and then this emits correct-looking rules over the WRONG features: converter A
+    faithfully turns them into a CNF over valid variables, nothing raises, and accuracy
+    lands somewhere plausible. Deriving the order from the same table the estimator was
+    fitted on leaves nothing to diverge — the misuse becomes unrepresentable rather than
+    merely tested for.
 
     ``classes_`` is consulted rather than assumed: sklearn orders classes by sorted
     label, so the argmax over a leaf's value array is an INDEX, not a class. Reading it
     as the class directly happens to work only while the labels are 0/1 in that order.
     """
+    n_in = getattr(estimator, "n_features_in_", None)
+    if n_in is not None and n_in != len(table.feature_names):
+        raise ValueError(
+            f"estimator was fitted on {n_in} features but the table has "
+            f"{len(table.feature_names)}; it was not trained on this table")
+
     t = estimator.tree_
     classes = list(estimator.classes_)
     leaf_class = [classes[int(t.value[n][0].argmax())] for n in range(t.node_count)]
@@ -88,5 +103,5 @@ def sklearn_tree_to_rules(estimator, feature_names: Sequence[str]) -> List[Rule]
         children_left=[int(c) for c in t.children_left],
         children_right=[int(c) for c in t.children_right],
         leaf_class=leaf_class,
-        feature_names=list(feature_names),
+        feature_names=list(table.feature_names),
     )
