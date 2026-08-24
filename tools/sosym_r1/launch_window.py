@@ -34,6 +34,9 @@ def main() -> int:
     parser.add_argument('--budget', required=True, help="window budget, e.g. 6h")
     parser.add_argument('--log', help="log path (default: data/results_sosym/window-<utc>.log)")
     parser.add_argument('--max-queries', type=int, default=5000)
+    parser.add_argument('--night', action='store_true',
+                        help="run the night sequence: the reserved busybox fold, then "
+                             "the post-patch cap re-probe in the tail the fold leaves.")
     parser.add_argument('--reserve',
                         help="forwarded to sweep_queue: give this substring first claim "
                              "on the budget, then backfill with the rest of the queue.")
@@ -53,15 +56,22 @@ def main() -> int:
     log_path = Path(args.log) if args.log else REPO / 'data' / 'results_sosym' / f'window-{stamp}.log'
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    inner = [sys.executable, '-u',  # -u: the log is the only view into a detached run
-             str(REPO / 'tools' / 'sosym_r1' / 'sweep_queue.py'),
-             'run', '--budget', args.budget, '--max-queries', str(args.max_queries)]
-    if args.reserve:
-        inner += ['--reserve', args.reserve]
-    if args.only:
-        inner += ['--only', args.only]
-    if args.stop_on_failure:
-        inner += ['--stop-on-failure']
+    if args.night:
+        # The whole night: reserved busybox fold, then the cap re-probe in the tail.
+        inner = [sys.executable, '-u',
+                 str(REPO / 'tools' / 'sosym_r1' / 'run_night_window.py'),
+                 '--budget', args.budget]
+    else:
+        inner = [sys.executable, '-u',  # -u: the log is the only view into a detached run
+                 str(REPO / 'tools' / 'sosym_r1' / 'sweep_queue.py'),
+                 'run', '--budget', args.budget, '--max-queries', str(args.max_queries)]
+    if not args.night:
+        if args.reserve:
+            inner += ['--reserve', args.reserve]
+        if args.only:
+            inner += ['--only', args.only]
+        if args.stop_on_failure:
+            inner += ['--stop-on-failure']
 
     # caffeinate holds the display, disk, system and user-idle timers. Without it a
     # home window ends when the machine sleeps rather than when the budget runs out.
