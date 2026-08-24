@@ -66,8 +66,7 @@
       "started_utc": "2026-08-23T21:21:34+00:00",
       "finished_utc": "2026-08-23T21:21:34+00:00",
       "partial": "REAL-FM-7_2cov_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_2cov|fold1",
@@ -85,8 +84,7 @@
       "started_utc": "2026-08-23T21:21:34+00:00",
       "finished_utc": "2026-08-23T21:21:35+00:00",
       "partial": "REAL-FM-7_2cov_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_2cov|fold2",
@@ -104,8 +102,7 @@
       "started_utc": "2026-08-23T21:21:35+00:00",
       "finished_utc": "2026-08-23T21:21:35+00:00",
       "partial": "REAL-FM-7_2cov_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_m|fold0",
@@ -123,8 +120,7 @@
       "started_utc": "2026-08-23T21:21:35+00:00",
       "finished_utc": "2026-08-23T21:21:35+00:00",
       "partial": "REAL-FM-7_rs_m_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_m|fold1",
@@ -142,8 +138,7 @@
       "started_utc": "2026-08-23T21:21:35+00:00",
       "finished_utc": "2026-08-23T21:21:35+00:00",
       "partial": "REAL-FM-7_rs_m_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_m|fold2",
@@ -161,8 +156,7 @@
       "started_utc": "2026-08-23T21:21:35+00:00",
       "finished_utc": "2026-08-23T21:21:36+00:00",
       "partial": "REAL-FM-7_rs_m_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_1n|fold0",
@@ -180,8 +174,7 @@
       "started_utc": "2026-08-23T21:21:36+00:00",
       "finished_utc": "2026-08-23T21:21:36+00:00",
       "partial": "REAL-FM-7_rs_1n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_1n|fold1",
@@ -199,8 +192,7 @@
       "started_utc": "2026-08-23T21:21:36+00:00",
       "finished_utc": "2026-08-23T21:21:36+00:00",
       "partial": "REAL-FM-7_rs_1n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_1n|fold2",
@@ -218,8 +210,7 @@
       "started_utc": "2026-08-23T21:21:36+00:00",
       "finished_utc": "2026-08-23T21:21:37+00:00",
       "partial": "REAL-FM-7_rs_1n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_2n|fold0",
@@ -237,8 +228,7 @@
       "started_utc": "2026-08-23T21:21:37+00:00",
       "finished_utc": "2026-08-23T21:21:37+00:00",
       "partial": "REAL-FM-7_rs_2n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_2n|fold1",
@@ -256,8 +246,7 @@
       "started_utc": "2026-08-23T21:21:37+00:00",
       "finished_utc": "2026-08-23T21:21:37+00:00",
       "partial": "REAL-FM-7_rs_2n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_2n|fold2",
@@ -275,8 +264,7 @@
       "started_utc": "2026-08-23T21:21:38+00:00",
       "finished_utc": "2026-08-23T21:21:38+00:00",
       "partial": "REAL-FM-7_rs_2n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_3n|fold0",
@@ -294,8 +282,7 @@
       "started_utc": "2026-08-23T21:21:38+00:00",
       "finished_utc": "2026-08-23T21:21:39+00:00",
       "partial": "REAL-FM-7_rs_3n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_3n|fold1",
@@ -313,8 +300,7 @@
       "started_utc": "2026-08-23T21:21:39+00:00",
       "finished_utc": "2026-08-23T21:21:39+00:00",
       "partial": "REAL-FM-7_rs_3n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_rs_3n|fold2",
@@ -332,8 +318,7 @@
       "started_utc": "2026-08-23T21:21:39+00:00",
       "finished_utc": "2026-08-23T21:21:40+00:00",
       "partial": "REAL-FM-7_rs_3n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_ff|fold0",
@@ -351,8 +336,7 @@
       "started_utc": "2026-08-23T21:21:40+00:00",
       "finished_utc": "2026-08-23T21:21:40+00:00",
       "partial": "REAL-FM-7_ff_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_ff|fold1",
@@ -370,8 +354,7 @@
       "started_utc": "2026-08-23T21:21:40+00:00",
       "finished_utc": "2026-08-23T21:21:41+00:00",
       "partial": "REAL-FM-7_ff_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-7_ff|fold2",
@@ -389,8 +372,7 @@
       "started_utc": "2026-08-23T21:21:41+00:00",
       "finished_utc": "2026-08-23T21:21:41+00:00",
       "partial": "REAL-FM-7_ff_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_2cov|fold0",
@@ -408,8 +390,7 @@
       "started_utc": "2026-08-23T21:21:41+00:00",
       "finished_utc": "2026-08-23T21:21:42+00:00",
       "partial": "fqa_2cov_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_2cov|fold1",
@@ -427,8 +408,7 @@
       "started_utc": "2026-08-23T21:21:42+00:00",
       "finished_utc": "2026-08-23T21:21:43+00:00",
       "partial": "fqa_2cov_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_2cov|fold2",
@@ -446,8 +426,7 @@
       "started_utc": "2026-08-23T21:21:43+00:00",
       "finished_utc": "2026-08-23T21:21:44+00:00",
       "partial": "fqa_2cov_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_m|fold0",
@@ -465,8 +444,7 @@
       "started_utc": "2026-08-23T21:21:44+00:00",
       "finished_utc": "2026-08-23T21:21:44+00:00",
       "partial": "fqa_rs_m_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_m|fold1",
@@ -484,8 +462,7 @@
       "started_utc": "2026-08-23T21:21:44+00:00",
       "finished_utc": "2026-08-23T21:21:45+00:00",
       "partial": "fqa_rs_m_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_m|fold2",
@@ -503,8 +480,7 @@
       "started_utc": "2026-08-23T21:21:45+00:00",
       "finished_utc": "2026-08-23T21:21:45+00:00",
       "partial": "fqa_rs_m_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_1n|fold0",
@@ -522,8 +498,7 @@
       "started_utc": "2026-08-23T21:21:45+00:00",
       "finished_utc": "2026-08-23T21:21:50+00:00",
       "partial": "fqa_rs_1n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_1n|fold1",
@@ -541,8 +516,7 @@
       "started_utc": "2026-08-23T21:21:50+00:00",
       "finished_utc": "2026-08-23T21:21:56+00:00",
       "partial": "fqa_rs_1n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_1n|fold2",
@@ -560,8 +534,7 @@
       "started_utc": "2026-08-23T21:21:56+00:00",
       "finished_utc": "2026-08-23T21:22:01+00:00",
       "partial": "fqa_rs_1n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_2n|fold0",
@@ -579,8 +552,7 @@
       "started_utc": "2026-08-23T21:22:01+00:00",
       "finished_utc": "2026-08-23T21:22:17+00:00",
       "partial": "fqa_rs_2n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_2n|fold1",
@@ -598,8 +570,7 @@
       "started_utc": "2026-08-23T21:22:17+00:00",
       "finished_utc": "2026-08-23T21:22:33+00:00",
       "partial": "fqa_rs_2n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_2n|fold2",
@@ -617,8 +588,7 @@
       "started_utc": "2026-08-23T21:22:33+00:00",
       "finished_utc": "2026-08-23T21:22:50+00:00",
       "partial": "fqa_rs_2n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_3n|fold0",
@@ -636,8 +606,7 @@
       "started_utc": "2026-08-23T21:22:50+00:00",
       "finished_utc": "2026-08-23T21:23:22+00:00",
       "partial": "fqa_rs_3n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_3n|fold1",
@@ -655,8 +624,7 @@
       "started_utc": "2026-08-23T21:23:22+00:00",
       "finished_utc": "2026-08-23T21:23:55+00:00",
       "partial": "fqa_rs_3n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_rs_3n|fold2",
@@ -674,8 +642,7 @@
       "started_utc": "2026-08-23T21:23:55+00:00",
       "finished_utc": "2026-08-23T21:24:30+00:00",
       "partial": "fqa_rs_3n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_ff|fold0",
@@ -693,8 +660,7 @@
       "started_utc": "2026-08-23T21:24:30+00:00",
       "finished_utc": "2026-08-23T21:24:32+00:00",
       "partial": "fqa_ff_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_ff|fold1",
@@ -712,8 +678,7 @@
       "started_utc": "2026-08-23T21:24:32+00:00",
       "finished_utc": "2026-08-23T21:24:34+00:00",
       "partial": "fqa_ff_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|fqa_ff|fold2",
@@ -731,8 +696,7 @@
       "started_utc": "2026-08-23T21:24:34+00:00",
       "finished_utc": "2026-08-23T21:24:35+00:00",
       "partial": "fqa_ff_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_2cov|fold0",
@@ -750,8 +714,7 @@
       "started_utc": "2026-08-23T21:24:35+00:00",
       "finished_utc": "2026-08-23T21:24:36+00:00",
       "partial": "arcade-game_2cov_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_2cov|fold1",
@@ -769,8 +732,7 @@
       "started_utc": "2026-08-23T21:24:36+00:00",
       "finished_utc": "2026-08-23T21:24:37+00:00",
       "partial": "arcade-game_2cov_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_2cov|fold2",
@@ -788,8 +750,7 @@
       "started_utc": "2026-08-23T21:24:37+00:00",
       "finished_utc": "2026-08-23T21:24:39+00:00",
       "partial": "arcade-game_2cov_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_m|fold0",
@@ -807,8 +768,7 @@
       "started_utc": "2026-08-23T21:24:39+00:00",
       "finished_utc": "2026-08-23T21:24:41+00:00",
       "partial": "arcade-game_rs_m_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_m|fold1",
@@ -826,8 +786,7 @@
       "started_utc": "2026-08-23T21:24:41+00:00",
       "finished_utc": "2026-08-23T21:24:43+00:00",
       "partial": "arcade-game_rs_m_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_m|fold2",
@@ -845,8 +804,7 @@
       "started_utc": "2026-08-23T21:24:43+00:00",
       "finished_utc": "2026-08-23T21:24:46+00:00",
       "partial": "arcade-game_rs_m_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_1n|fold0",
@@ -864,8 +822,7 @@
       "started_utc": "2026-08-23T21:24:46+00:00",
       "finished_utc": "2026-08-23T21:24:57+00:00",
       "partial": "arcade-game_rs_1n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_1n|fold1",
@@ -883,8 +840,7 @@
       "started_utc": "2026-08-23T21:24:57+00:00",
       "finished_utc": "2026-08-23T21:25:09+00:00",
       "partial": "arcade-game_rs_1n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_1n|fold2",
@@ -902,8 +858,7 @@
       "started_utc": "2026-08-23T21:25:09+00:00",
       "finished_utc": "2026-08-23T21:25:20+00:00",
       "partial": "arcade-game_rs_1n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_2n|fold0",
@@ -921,8 +876,7 @@
       "started_utc": "2026-08-23T21:25:20+00:00",
       "finished_utc": "2026-08-23T21:25:48+00:00",
       "partial": "arcade-game_rs_2n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_2n|fold1",
@@ -940,8 +894,7 @@
       "started_utc": "2026-08-23T21:25:48+00:00",
       "finished_utc": "2026-08-23T21:26:18+00:00",
       "partial": "arcade-game_rs_2n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_2n|fold2",
@@ -959,8 +912,7 @@
       "started_utc": "2026-08-23T21:26:18+00:00",
       "finished_utc": "2026-08-23T21:26:47+00:00",
       "partial": "arcade-game_rs_2n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_3n|fold0",
@@ -978,8 +930,7 @@
       "started_utc": "2026-08-23T21:26:47+00:00",
       "finished_utc": "2026-08-23T21:27:39+00:00",
       "partial": "arcade-game_rs_3n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_3n|fold1",
@@ -997,8 +948,7 @@
       "started_utc": "2026-08-23T21:27:39+00:00",
       "finished_utc": "2026-08-23T21:28:33+00:00",
       "partial": "arcade-game_rs_3n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_rs_3n|fold2",
@@ -1016,8 +966,7 @@
       "started_utc": "2026-08-23T21:33:16+00:00",
       "finished_utc": "2026-08-23T21:34:14+00:00",
       "partial": "arcade-game_rs_3n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_ff|fold0",
@@ -1035,8 +984,7 @@
       "started_utc": "2026-08-23T21:34:14+00:00",
       "finished_utc": "2026-08-23T21:34:18+00:00",
       "partial": "arcade-game_ff_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_ff|fold1",
@@ -1054,8 +1002,7 @@
       "started_utc": "2026-08-23T21:34:18+00:00",
       "finished_utc": "2026-08-23T21:34:23+00:00",
       "partial": "arcade-game_ff_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|arcade-game_ff|fold2",
@@ -1073,8 +1020,7 @@
       "started_utc": "2026-08-23T21:34:23+00:00",
       "finished_utc": "2026-08-23T21:34:27+00:00",
       "partial": "arcade-game_ff_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_2cov|fold0",
@@ -1092,8 +1038,7 @@
       "started_utc": "2026-08-23T21:28:33+00:00",
       "finished_utc": "2026-08-23T21:28:34+00:00",
       "partial": "REAL-FM-4_2cov_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_2cov|fold1",
@@ -1111,8 +1056,7 @@
       "started_utc": "2026-08-23T21:28:34+00:00",
       "finished_utc": "2026-08-23T21:28:37+00:00",
       "partial": "REAL-FM-4_2cov_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_2cov|fold2",
@@ -1130,8 +1074,7 @@
       "started_utc": "2026-08-23T21:28:37+00:00",
       "finished_utc": "2026-08-23T21:28:39+00:00",
       "partial": "REAL-FM-4_2cov_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_m|fold0",
@@ -1149,8 +1092,7 @@
       "started_utc": "2026-08-23T21:28:39+00:00",
       "finished_utc": "2026-08-23T21:28:44+00:00",
       "partial": "REAL-FM-4_rs_m_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_m|fold1",
@@ -1168,8 +1110,7 @@
       "started_utc": "2026-08-23T21:28:44+00:00",
       "finished_utc": "2026-08-23T21:28:49+00:00",
       "partial": "REAL-FM-4_rs_m_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_m|fold2",
@@ -1187,8 +1128,7 @@
       "started_utc": "2026-08-23T21:28:49+00:00",
       "finished_utc": "2026-08-23T21:28:54+00:00",
       "partial": "REAL-FM-4_rs_m_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_ff|fold0",
@@ -1206,8 +1146,7 @@
       "started_utc": "2026-08-23T21:28:54+00:00",
       "finished_utc": "2026-08-23T21:29:34+00:00",
       "partial": "REAL-FM-4_ff_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_ff|fold1",
@@ -1225,8 +1164,7 @@
       "started_utc": "2026-08-23T21:29:34+00:00",
       "finished_utc": "2026-08-23T21:30:16+00:00",
       "partial": "REAL-FM-4_ff_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_ff|fold2",
@@ -1244,8 +1182,7 @@
       "started_utc": "2026-08-23T21:30:16+00:00",
       "finished_utc": "2026-08-23T21:30:58+00:00",
       "partial": "REAL-FM-4_ff_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_1n|fold0",
@@ -1263,8 +1200,7 @@
       "started_utc": "2026-08-23T21:34:27+00:00",
       "finished_utc": "2026-08-23T21:37:34+00:00",
       "partial": "REAL-FM-4_rs_1n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_1n|fold1",
@@ -1282,8 +1218,7 @@
       "started_utc": "2026-08-23T21:37:34+00:00",
       "finished_utc": "2026-08-23T21:40:41+00:00",
       "partial": "REAL-FM-4_rs_1n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_1n|fold2",
@@ -1301,8 +1236,7 @@
       "started_utc": "2026-08-23T21:40:41+00:00",
       "finished_utc": "2026-08-23T21:43:49+00:00",
       "partial": "REAL-FM-4_rs_1n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_2n|fold0",
@@ -1320,8 +1254,7 @@
       "started_utc": "2026-08-23T21:43:49+00:00",
       "finished_utc": "2026-08-23T21:55:01+00:00",
       "partial": "REAL-FM-4_rs_2n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_2n|fold1",
@@ -1339,8 +1272,7 @@
       "started_utc": "2026-08-23T21:55:01+00:00",
       "finished_utc": "2026-08-23T22:06:04+00:00",
       "partial": "REAL-FM-4_rs_2n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_2n|fold2",
@@ -1358,8 +1290,7 @@
       "started_utc": "2026-08-23T22:06:04+00:00",
       "finished_utc": "2026-08-23T22:17:30+00:00",
       "partial": "REAL-FM-4_rs_2n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_3n|fold0",
@@ -1377,8 +1308,7 @@
       "started_utc": "2026-08-23T22:17:30+00:00",
       "finished_utc": "2026-08-23T22:42:53+00:00",
       "partial": "REAL-FM-4_rs_3n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_3n|fold1",
@@ -1396,8 +1326,7 @@
       "started_utc": "2026-08-23T22:42:53+00:00",
       "finished_utc": "2026-08-23T23:08:30+00:00",
       "partial": "REAL-FM-4_rs_3n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|REAL-FM-4_rs_3n|fold2",
@@ -1415,8 +1344,7 @@
       "started_utc": "2026-08-23T23:08:30+00:00",
       "finished_utc": "2026-08-23T23:33:17+00:00",
       "partial": "REAL-FM-4_rs_3n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_2cov|fold0",
@@ -1434,8 +1362,7 @@
       "started_utc": "2026-08-23T23:33:17+00:00",
       "finished_utc": "2026-08-23T23:33:25+00:00",
       "partial": "busybox-1.18.0_2cov_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_2cov|fold1",
@@ -1453,8 +1380,7 @@
       "started_utc": "2026-08-23T23:33:25+00:00",
       "finished_utc": "2026-08-23T23:33:33+00:00",
       "partial": "busybox-1.18.0_2cov_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_2cov|fold2",
@@ -1472,8 +1398,7 @@
       "started_utc": "2026-08-23T23:33:33+00:00",
       "finished_utc": "2026-08-23T23:33:41+00:00",
       "partial": "busybox-1.18.0_2cov_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_rs_m|fold0",
@@ -1491,8 +1416,7 @@
       "started_utc": "2026-08-23T23:34:55+00:00",
       "finished_utc": "2026-08-23T23:35:35+00:00",
       "partial": "busybox-1.18.0_rs_m_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_rs_m|fold1",
@@ -1510,8 +1434,7 @@
       "started_utc": "2026-08-23T23:35:35+00:00",
       "finished_utc": "2026-08-23T23:36:19+00:00",
       "partial": "busybox-1.18.0_rs_m_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_rs_m|fold2",
@@ -1529,8 +1452,7 @@
       "started_utc": "2026-08-23T23:36:19+00:00",
       "finished_utc": "2026-08-23T23:37:05+00:00",
       "partial": "busybox-1.18.0_rs_m_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_ff|fold0",
@@ -1548,8 +1470,7 @@
       "started_utc": "2026-08-23T23:37:05+00:00",
       "finished_utc": "2026-08-24T00:14:54+00:00",
       "partial": "busybox-1.18.0_ff_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_ff|fold1",
@@ -1561,14 +1482,13 @@
       "solver_mode": "incremental",
       "fold": 1,
       "estimate_h": 3.7923,
-      "status": "running",
-      "actual_h": null,
+      "status": "done",
+      "actual_h": 0.6365,
       "commit": "6361ac04691e3177347a75babdd51815f8c7b494",
       "started_utc": "2026-08-24T07:53:50+00:00",
-      "finished_utc": null,
+      "finished_utc": "2026-08-24T08:32:01+00:00",
       "partial": "busybox-1.18.0_ff_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_ff|fold2",
@@ -1580,14 +1500,13 @@
       "solver_mode": "incremental",
       "fold": 2,
       "estimate_h": 3.7923,
-      "status": "pending",
-      "actual_h": null,
-      "commit": null,
-      "started_utc": null,
-      "finished_utc": null,
+      "status": "done",
+      "actual_h": 0.6299,
+      "commit": "8470be15e4ae50a012e16868ea480022c21e4837",
+      "started_utc": "2026-08-24T08:32:01+00:00",
+      "finished_utc": "2026-08-24T09:09:49+00:00",
       "partial": "busybox-1.18.0_ff_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "congen|busybox-1.18.0_rs_1n|fold0",
@@ -1599,14 +1518,13 @@
       "solver_mode": "incremental",
       "fold": 0,
       "estimate_h": 28.5637,
-      "status": "long-run",
+      "status": "pending",
       "actual_h": null,
       "commit": null,
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": "untagged 2026-08-24: busybox ff measured 0.1667x at n=3 (spread 1.0%), projecting rs_1n to 4.76 h/fold. Charged 8.57 h with the 1.5 safety factor, which a 6.5 h office window refuses and an 11 h night window takes exactly one of."
     },
     {
       "id": "congen|busybox-1.18.0_rs_1n|fold1",
@@ -1618,14 +1536,13 @@
       "solver_mode": "incremental",
       "fold": 1,
       "estimate_h": 28.5637,
-      "status": "long-run",
+      "status": "pending",
       "actual_h": null,
       "commit": null,
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": "untagged 2026-08-24: busybox ff measured 0.1667x at n=3 (spread 1.0%), projecting rs_1n to 4.76 h/fold. Charged 8.57 h with the 1.5 safety factor, which a 6.5 h office window refuses and an 11 h night window takes exactly one of."
     },
     {
       "id": "congen|busybox-1.18.0_rs_1n|fold2",
@@ -1637,14 +1554,13 @@
       "solver_mode": "incremental",
       "fold": 2,
       "estimate_h": 28.5637,
-      "status": "long-run",
+      "status": "pending",
       "actual_h": null,
       "commit": null,
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": "untagged 2026-08-24: busybox ff measured 0.1667x at n=3 (spread 1.0%), projecting rs_1n to 4.76 h/fold. Charged 8.57 h with the 1.5 safety factor, which a 6.5 h office window refuses and an 11 h night window takes exactly one of."
     },
     {
       "id": "interactive_example_only|REAL-FM-7_2cov|fold0",
@@ -1662,8 +1578,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_2cov_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_2cov|fold1",
@@ -1681,8 +1596,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_2cov_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_2cov|fold2",
@@ -1700,8 +1614,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_2cov_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_m|fold0",
@@ -1719,8 +1632,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_m_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_m|fold1",
@@ -1738,8 +1650,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_m_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_m|fold2",
@@ -1757,8 +1668,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_m_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_1n|fold0",
@@ -1776,8 +1686,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_1n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_1n|fold1",
@@ -1795,8 +1704,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_1n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_1n|fold2",
@@ -1814,8 +1722,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_1n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_2n|fold0",
@@ -1833,8 +1740,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_2n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_2n|fold1",
@@ -1852,8 +1758,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_2n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_2n|fold2",
@@ -1871,8 +1776,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_2n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_3n|fold0",
@@ -1890,8 +1794,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_3n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_3n|fold1",
@@ -1909,8 +1812,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_3n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_rs_3n|fold2",
@@ -1928,8 +1830,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_3n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_ff|fold0",
@@ -1947,8 +1848,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_ff_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_ff|fold1",
@@ -1966,8 +1866,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_ff_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-7_ff|fold2",
@@ -1985,8 +1884,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_ff_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_2cov|fold0",
@@ -2004,8 +1902,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_2cov_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_2cov|fold1",
@@ -2023,8 +1920,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_2cov_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_2cov|fold2",
@@ -2042,8 +1938,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_2cov_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_m|fold0",
@@ -2061,8 +1956,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_m_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_m|fold1",
@@ -2080,8 +1974,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_m_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_m|fold2",
@@ -2099,8 +1992,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_m_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_1n|fold0",
@@ -2118,8 +2010,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_1n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_1n|fold1",
@@ -2137,8 +2028,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_1n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_1n|fold2",
@@ -2156,8 +2046,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_1n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_2n|fold0",
@@ -2175,8 +2064,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_2n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_2n|fold1",
@@ -2194,8 +2082,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_2n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_2n|fold2",
@@ -2213,8 +2100,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_2n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_3n|fold0",
@@ -2232,8 +2118,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_3n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_3n|fold1",
@@ -2251,8 +2136,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_3n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_rs_3n|fold2",
@@ -2270,8 +2154,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_3n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_ff|fold0",
@@ -2289,8 +2172,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_ff_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_ff|fold1",
@@ -2308,8 +2190,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_ff_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|fqa_ff|fold2",
@@ -2327,8 +2208,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_ff_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_2cov|fold0",
@@ -2346,8 +2226,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_2cov_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_2cov|fold1",
@@ -2365,8 +2244,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_2cov_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_2cov|fold2",
@@ -2384,8 +2262,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_2cov_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_m|fold0",
@@ -2403,8 +2280,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_m_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_m|fold1",
@@ -2422,8 +2298,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_m_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_m|fold2",
@@ -2441,8 +2316,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_m_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_1n|fold0",
@@ -2460,8 +2334,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_1n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_1n|fold1",
@@ -2479,8 +2352,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_1n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_1n|fold2",
@@ -2498,8 +2370,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_1n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_2n|fold0",
@@ -2517,8 +2388,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_2n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_2n|fold1",
@@ -2536,8 +2406,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_2n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_2n|fold2",
@@ -2555,8 +2424,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_2n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_3n|fold0",
@@ -2574,8 +2442,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_3n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_3n|fold1",
@@ -2593,8 +2460,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_3n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_rs_3n|fold2",
@@ -2612,8 +2478,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_3n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_ff|fold0",
@@ -2631,8 +2496,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_ff_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_ff|fold1",
@@ -2650,8 +2514,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_ff_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|arcade-game_ff|fold2",
@@ -2669,8 +2532,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_ff_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_2cov|fold0",
@@ -2688,8 +2550,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_2cov_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_2cov|fold1",
@@ -2707,8 +2568,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_2cov_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_2cov|fold2",
@@ -2726,8 +2586,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_2cov_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_m|fold0",
@@ -2745,8 +2604,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_m_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_m|fold1",
@@ -2764,8 +2622,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_m_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_m|fold2",
@@ -2783,8 +2640,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_m_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_ff|fold0",
@@ -2802,8 +2658,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_ff_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_ff|fold1",
@@ -2821,8 +2676,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_ff_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_ff|fold2",
@@ -2840,8 +2694,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_ff_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_1n|fold0",
@@ -2859,8 +2712,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_1n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_1n|fold1",
@@ -2878,8 +2730,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_1n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_1n|fold2",
@@ -2897,8 +2748,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_1n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_2n|fold0",
@@ -2916,8 +2766,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_2n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_2n|fold1",
@@ -2935,8 +2784,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_2n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_2n|fold2",
@@ -2954,8 +2802,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_2n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_3n|fold0",
@@ -2973,8 +2820,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_3n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_3n|fold1",
@@ -2992,8 +2838,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_3n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|REAL-FM-4_rs_3n|fold2",
@@ -3011,8 +2856,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_3n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_2cov|fold0",
@@ -3030,8 +2874,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_2cov_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_2cov|fold1",
@@ -3049,8 +2892,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_2cov_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_2cov|fold2",
@@ -3068,8 +2910,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_2cov_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_rs_m|fold0",
@@ -3087,8 +2928,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_m_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_rs_m|fold1",
@@ -3106,8 +2946,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_m_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_rs_m|fold2",
@@ -3125,8 +2964,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_m_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_ff|fold0",
@@ -3144,8 +2982,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_ff_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_ff|fold1",
@@ -3163,8 +3000,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_ff_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_ff|fold2",
@@ -3182,8 +3018,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_ff_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_rs_1n|fold0",
@@ -3201,8 +3036,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_example_only_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_rs_1n|fold1",
@@ -3220,8 +3054,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_example_only_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_only|busybox-1.18.0_rs_1n|fold2",
@@ -3239,8 +3072,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_example_only_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_2cov|fold0",
@@ -3258,8 +3090,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_2cov_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_2cov|fold1",
@@ -3277,8 +3108,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_2cov_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_2cov|fold2",
@@ -3296,8 +3126,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_2cov_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_m|fold0",
@@ -3315,8 +3144,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_m_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_m|fold1",
@@ -3334,8 +3162,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_m_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_m|fold2",
@@ -3353,8 +3180,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_m_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_1n|fold0",
@@ -3372,8 +3198,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_1n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_1n|fold1",
@@ -3391,8 +3216,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_1n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_1n|fold2",
@@ -3410,8 +3234,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_1n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_2n|fold0",
@@ -3429,8 +3252,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_2n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_2n|fold1",
@@ -3448,8 +3270,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_2n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_2n|fold2",
@@ -3467,8 +3288,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_2n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_3n|fold0",
@@ -3486,8 +3306,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_3n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_3n|fold1",
@@ -3505,8 +3324,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_3n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_rs_3n|fold2",
@@ -3524,8 +3342,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_rs_3n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_ff|fold0",
@@ -3543,8 +3360,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_ff_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_ff|fold1",
@@ -3562,8 +3378,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_ff_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-7_ff|fold2",
@@ -3581,8 +3396,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-7_ff_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_2cov|fold0",
@@ -3600,8 +3414,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_2cov_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_2cov|fold1",
@@ -3619,8 +3432,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_2cov_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_2cov|fold2",
@@ -3638,8 +3450,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_2cov_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_m|fold0",
@@ -3657,8 +3468,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_m_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_m|fold1",
@@ -3676,8 +3486,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_m_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_m|fold2",
@@ -3695,8 +3504,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_m_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_1n|fold0",
@@ -3714,8 +3522,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_1n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_1n|fold1",
@@ -3733,8 +3540,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_1n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_1n|fold2",
@@ -3752,8 +3558,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_1n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_2n|fold0",
@@ -3771,8 +3576,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_2n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_2n|fold1",
@@ -3790,8 +3594,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_2n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_2n|fold2",
@@ -3809,8 +3612,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_2n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_3n|fold0",
@@ -3828,8 +3630,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_3n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_3n|fold1",
@@ -3847,8 +3648,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_3n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_rs_3n|fold2",
@@ -3866,8 +3666,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_rs_3n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_ff|fold0",
@@ -3885,8 +3684,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_ff_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_ff|fold1",
@@ -3904,8 +3702,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_ff_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|fqa_ff|fold2",
@@ -3923,8 +3720,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "fqa_ff_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_2cov|fold0",
@@ -3942,8 +3738,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_2cov_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_2cov|fold1",
@@ -3961,8 +3756,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_2cov_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_2cov|fold2",
@@ -3980,8 +3774,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_2cov_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_m|fold0",
@@ -3999,8 +3792,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_m_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_m|fold1",
@@ -4018,8 +3810,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_m_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_m|fold2",
@@ -4037,8 +3828,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_m_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_1n|fold0",
@@ -4056,8 +3846,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_1n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_1n|fold1",
@@ -4075,8 +3864,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_1n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_1n|fold2",
@@ -4094,8 +3882,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_1n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_2n|fold0",
@@ -4113,8 +3900,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_2n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_2n|fold1",
@@ -4132,8 +3918,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_2n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_2n|fold2",
@@ -4151,8 +3936,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_2n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_3n|fold0",
@@ -4170,8 +3954,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_3n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_3n|fold1",
@@ -4189,8 +3972,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_3n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_rs_3n|fold2",
@@ -4208,8 +3990,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_rs_3n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_ff|fold0",
@@ -4227,8 +4008,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_ff_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_ff|fold1",
@@ -4246,8 +4026,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_ff_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|arcade-game_ff|fold2",
@@ -4265,8 +4044,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "arcade-game_ff_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_2cov|fold0",
@@ -4284,8 +4062,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_2cov_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_2cov|fold1",
@@ -4303,8 +4080,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_2cov_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_2cov|fold2",
@@ -4322,8 +4098,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_2cov_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_m|fold0",
@@ -4341,8 +4116,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_m_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_m|fold1",
@@ -4360,8 +4134,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_m_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_m|fold2",
@@ -4379,8 +4152,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_m_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_ff|fold0",
@@ -4398,8 +4170,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_ff_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_ff|fold1",
@@ -4417,8 +4188,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_ff_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_ff|fold2",
@@ -4436,8 +4206,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_ff_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_1n|fold0",
@@ -4455,8 +4224,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_1n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_1n|fold1",
@@ -4474,8 +4242,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_1n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_1n|fold2",
@@ -4493,8 +4260,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_1n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_2n|fold0",
@@ -4512,8 +4278,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_2n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_2n|fold1",
@@ -4531,8 +4296,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_2n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_2n|fold2",
@@ -4550,8 +4314,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_2n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_3n|fold0",
@@ -4569,8 +4332,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_3n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_3n|fold1",
@@ -4588,8 +4350,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_3n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|REAL-FM-4_rs_3n|fold2",
@@ -4607,8 +4368,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "REAL-FM-4_rs_3n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_2cov|fold0",
@@ -4626,8 +4386,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_2cov_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_2cov|fold1",
@@ -4645,8 +4404,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_2cov_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_2cov|fold2",
@@ -4664,8 +4422,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_2cov_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_rs_m|fold0",
@@ -4683,8 +4440,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_m_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_rs_m|fold1",
@@ -4702,8 +4458,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_m_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_rs_m|fold2",
@@ -4721,8 +4476,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_m_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "nominal"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_ff|fold0",
@@ -4740,8 +4494,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_ff_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_ff|fold1",
@@ -4759,8 +4512,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_ff_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_ff|fold2",
@@ -4778,8 +4530,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_ff_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_rs_1n|fold0",
@@ -4797,8 +4548,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_example_first_fold0.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_rs_1n|fold1",
@@ -4816,8 +4566,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_example_first_fold1.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     },
     {
       "id": "interactive_example_first|busybox-1.18.0_rs_1n|fold2",
@@ -4835,8 +4584,7 @@
       "started_utc": null,
       "finished_utc": null,
       "partial": "busybox-1.18.0_rs_1n_incremental_example_first_fold2.json",
-      "note": null,
-      "estimate_source": "condition-A"
+      "note": null
     }
   ]
 }
