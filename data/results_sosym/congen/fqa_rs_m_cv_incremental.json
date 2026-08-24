@@ -1,0 +1,2798 @@
+{
+  "n_folds": 3,
+  "fold_accuracies": [
+    0.5,
+    0.2,
+    0.4
+  ],
+  "mean_accuracy": 0.3666666666666667,
+  "std_accuracy": 0.15275252316519466,
+  "total_runtime_ms": 288.34637498948723,
+  "intersected_kb": {
+    "kb_constraints": [
+      {
+        "id": "c103",
+        "description": "ContextualHelp --mandatory--> ContextualHelpImplementations"
+      },
+      {
+        "id": "c106",
+        "description": "ContextualHelpImplementations --optional--> JavaWizardAPI"
+      },
+      {
+        "id": "c107",
+        "description": "ContextualHelp --mandatory--> HelpType"
+      },
+      {
+        "id": "c109",
+        "description": "HelpType --alternative--> ['Tutorial', 'Wizard']"
+      },
+      {
+        "id": "c11",
+        "description": "Symmetric --alternative--> ['AES', 'DESede', 'Blowfish', 'DES']"
+      },
+      {
+        "id": "c111",
+        "description": "ContextualHelp --mandatory--> UserType"
+      },
+      {
+        "id": "c113",
+        "description": "UserType --alternative--> ['Beginner', 'Intermediate', 'Advanced', 'Expert']"
+      },
+      {
+        "id": "c117",
+        "description": "ExecutionControl --mandatory--> ExecutionControl_1"
+      },
+      {
+        "id": "c122",
+        "description": "ExecutionControl --optional--> Shortcuts"
+      },
+      {
+        "id": "c123",
+        "description": "Internationalization --mandatory--> Locale"
+      },
+      {
+        "id": "c125",
+        "description": "Feedback --alternative--> ['InteractionFeedback', 'ProgressFeedback', 'SystemStatusDisplay', 'Alerts']"
+      },
+      {
+        "id": "c127",
+        "description": "Persistence --alternative--> ['FileStorage', 'DatabaseStorage']"
+      },
+      {
+        "id": "c129",
+        "description": "FileStorage --mandatory--> FileStorageOperations"
+      },
+      {
+        "id": "c131",
+        "description": "FileStorageOperations --alternative--> ['CreateFile', 'ModifyFile', 'DeleteFile']"
+      },
+      {
+        "id": "c133",
+        "description": "FileStorage --mandatory--> FileType"
+      },
+      {
+        "id": "c135",
+        "description": "FileType --alternative--> ['Binary', 'TXTFile', 'XMLFile', 'JSONFile']"
+      },
+      {
+        "id": "c137",
+        "description": "FileStorage --mandatory--> FileStorageImplementations"
+      },
+      {
+        "id": "c14",
+        "description": "Encryption --optional--> KeySize"
+      },
+      {
+        "id": "c140",
+        "description": "FileStorageImplementations --optional--> JavaIO"
+      },
+      {
+        "id": "c142",
+        "description": "FileStorage --optional--> TemporalFile"
+      },
+      {
+        "id": "c143",
+        "description": "DatabaseStorage --mandatory--> DatabaseStorageOperations"
+      },
+      {
+        "id": "c145",
+        "description": "DatabaseStorageOperations --alternative--> ['Store', 'Query']"
+      },
+      {
+        "id": "c147",
+        "description": "DatabaseStorage --mandatory--> DatabaseStorageImplementations"
+      },
+      {
+        "id": "c149",
+        "description": "DatabaseStorageImplementations --alternative--> ['MySQL', 'MongoDB', 'OracleDB']"
+      },
+      {
+        "id": "c15",
+        "description": "Encryption --mandatory--> EncryptionImplementations"
+      },
+      {
+        "id": "c151",
+        "description": "DatabaseStorage --mandatory--> DatabaseType"
+      },
+      {
+        "id": "c153",
+        "description": "DatabaseType --alternative--> ['Relational', 'NoSQL']"
+      },
+      {
+        "id": "c155",
+        "description": "DatabaseStorage --mandatory--> DataType"
+      },
+      {
+        "id": "c163",
+        "description": "LocationAware --alternative--> ['GPS', 'WiFiLocation']"
+      },
+      {
+        "id": "c168",
+        "description": "Performance --optional--> Caching"
+      },
+      {
+        "id": "c169",
+        "description": "Caching --mandatory--> CachingOperations"
+      },
+      {
+        "id": "c17",
+        "description": "EncryptionImplementations --alternative--> ['JavaxCrypto', 'BouncyCastle']"
+      },
+      {
+        "id": "c171",
+        "description": "CachingOperations --alternative--> ['CacheStore', 'CacheQuery', 'CacheUpdate']"
+      },
+      {
+        "id": "c173",
+        "description": "Caching --mandatory--> CachingImplementations"
+      },
+      {
+        "id": "c175",
+        "description": "CachingImplementations --alternative--> ['JavaCachingSystem', 'Caffeine']"
+      },
+      {
+        "id": "c177",
+        "description": "Caching --mandatory--> MaxSizeCache"
+      },
+      {
+        "id": "c179",
+        "description": "Caching --mandatory--> CacheType"
+      },
+      {
+        "id": "c181",
+        "description": "CacheType --alternative--> ['LocalCache', 'RemoteCache']"
+      },
+      {
+        "id": "c19",
+        "description": "Encryption --mandatory--> EncryptionOperations"
+      },
+      {
+        "id": "c2",
+        "description": "FQAs --or--> ['Security', 'Usability', 'Persistence', 'ContextAwareness', 'Performance']"
+      },
+      {
+        "id": "c21",
+        "description": "EncryptionOperations --alternative--> ['Encrypt', 'Decrypt']"
+      },
+      {
+        "id": "c23",
+        "description": "Encryption --mandatory--> Mode"
+      },
+      {
+        "id": "c25",
+        "description": "Mode --alternative--> ['CBC', 'ECB', 'CFB', 'CTR', 'CTS']"
+      },
+      {
+        "id": "c27",
+        "description": "Encryption --mandatory--> Padding"
+      },
+      {
+        "id": "c29",
+        "description": "Padding --alternative--> ['PKCS5', 'PKCS1', 'OAEP']"
+      },
+      {
+        "id": "c31",
+        "description": "Authentication --mandatory--> AuthenticationImplementations"
+      },
+      {
+        "id": "c316",
+        "description": "BatteryStatus requires TimeAware"
+      },
+      {
+        "id": "c33",
+        "description": "AuthenticationImplementations --alternative--> ['JAAS', 'SpringSecurity']"
+      },
+      {
+        "id": "c35",
+        "description": "Authentication --mandatory--> AuthenticationOperations"
+      },
+      {
+        "id": "c38",
+        "description": "AuthenticationOperations --optional--> Authenticate"
+      },
+      {
+        "id": "c39",
+        "description": "Authentication --mandatory--> AuthenticationMechanism"
+      },
+      {
+        "id": "c4",
+        "description": "Security --or--> ['Encryption', 'Authentication', 'Hashing', 'Confidentiality', 'Privacy', 'Integrity', 'Non_Repudiation']"
+      },
+      {
+        "id": "c41",
+        "description": "AuthenticationMechanism --alternative--> ['UserPassword', 'DigitalCertificate', 'Biometric', 'SocialID', 'Pin', 'MatrixCode']"
+      },
+      {
+        "id": "c46",
+        "description": "Authentication --optional--> PasswordLength"
+      },
+      {
+        "id": "c48",
+        "description": "Authentication --optional--> PasswordType"
+      },
+      {
+        "id": "c49",
+        "description": "PasswordType --alternative--> ['Numeric', 'Alphanumeric', 'SpecialChars']"
+      },
+      {
+        "id": "c5",
+        "description": "Encryption --mandatory--> EncryptionAlgorithms"
+      },
+      {
+        "id": "c52",
+        "description": "Authentication --optional--> LimitedSession"
+      },
+      {
+        "id": "c54",
+        "description": "Authentication --optional--> AuthenticationLogging"
+      },
+      {
+        "id": "c56",
+        "description": "Authentication --optional--> AnonymousUser"
+      },
+      {
+        "id": "c57",
+        "description": "Hashing --mandatory--> HashingImplementations"
+      },
+      {
+        "id": "c59",
+        "description": "HashingImplementations --alternative--> ['JavaSecurityMessageDigest', 'Guava']"
+      },
+      {
+        "id": "c61",
+        "description": "Hashing --mandatory--> HashingOperations"
+      },
+      {
+        "id": "c64",
+        "description": "HashingOperations --optional--> Hash"
+      },
+      {
+        "id": "c65",
+        "description": "Hashing --mandatory--> HashingAlgorithms"
+      },
+      {
+        "id": "c67",
+        "description": "HashingAlgorithms --alternative--> ['MD5', 'SHA1', 'SHA256', 'SHA512']"
+      },
+      {
+        "id": "c7",
+        "description": "EncryptionAlgorithms --alternative--> ['Asymmetric', 'Symmetric']"
+      },
+      {
+        "id": "c70",
+        "description": "Usability --or--> ['Logging', 'ContextualHelp', 'ExecutionControl', 'Internationalization', 'Feedback']"
+      },
+      {
+        "id": "c71",
+        "description": "Logging --mandatory--> LoggingOperations"
+      },
+      {
+        "id": "c74",
+        "description": "LoggingOperations --optional--> Log"
+      },
+      {
+        "id": "c75",
+        "description": "Logging --mandatory--> LoggingImplementations"
+      },
+      {
+        "id": "c77",
+        "description": "LoggingImplementations --alternative--> ['Log4J', 'LogBack', 'JavaUtilLogging', 'SimpleImplementationSLF4J']"
+      },
+      {
+        "id": "c79",
+        "description": "Logging --mandatory--> Handler"
+      },
+      {
+        "id": "c81",
+        "description": "Handler --alternative--> ['ConsoleLog', 'FileLog', 'DatabaseLog']"
+      },
+      {
+        "id": "c83",
+        "description": "Logging --mandatory--> Format"
+      },
+      {
+        "id": "c85",
+        "description": "Format --alternative--> ['TXT', 'XML', 'HTML', 'JSON']"
+      },
+      {
+        "id": "c87",
+        "description": "Logging --mandatory--> Level"
+      },
+      {
+        "id": "c9",
+        "description": "Asymmetric --alternative--> ['RSA', 'DSA', 'ECDSA']"
+      },
+      {
+        "id": "c97",
+        "description": "ErrorLog --mandatory--> TraceFile"
+      },
+      {
+        "id": "c99",
+        "description": "ContextualHelp --mandatory--> ContextualHelpOperations"
+      }
+    ],
+    "bg_clauses": [
+      [
+        1
+      ]
+    ],
+    "n_kb": 80,
+    "evaluation": null
+  },
+  "folds": [
+    {
+      "fold_index": 0,
+      "accuracy": 0.5,
+      "metrics": {
+        "accuracy": 0.5,
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1_score": 0.5714285714285715,
+        "specificity": 1.0,
+        "true_positives": 2,
+        "true_negatives": 1,
+        "false_positives": 0,
+        "false_negatives": 3
+      },
+      "performance": {
+        "runtime_ms": 200.93679201090708,
+        "consistency_checks": 509,
+        "memory_peak_mb": 1.5986404418945312,
+        "n_mss": 327,
+        "n_kb": 112,
+        "congen_runtime_ms": 174.53454196220264,
+        "acqmss_runtime_ms": 1111.6650456679054,
+        "acqmss_calls": 597,
+        "reduce_runtime_ms": 33.2589169847779,
+        "solver_time_ms": 72.31599999999952,
+        "is_consistent_calls": 2026,
+        "is_consistent_test_cases_calls": 509,
+        "redundancy_consistency_checks": 327,
+        "profiler": {
+          "solver_time": {
+            "count": 2026,
+            "total": 0.07231599999999952,
+            "mean": 3.569397828232948e-05,
+            "min": 2.000000000002e-06,
+            "max": 0.00020599999999998397,
+            "median": 1.1000000000038757e-05,
+            "stddev": 3.5282299038604e-05
+          },
+          "solver_time_accum": 0.07231599999999952,
+          "is_consistent_calls": 2026,
+          "is_consistent_test_cases_calls": 509,
+          "paper_consistency_checks": 509,
+          "shared_admpool_checks": 508,
+          "shared_admpool_solver_calls": 1689,
+          "acqmss_calls": 597,
+          "acqmss_runtime": {
+            "count": 597,
+            "total": 1.1116650456679054,
+            "mean": 0.0018620855036313323,
+            "min": 7.374968845397234e-06,
+            "max": 0.14018129202304408,
+            "median": 0.0003555829753167927,
+            "stddev": 0.007848538194450404
+          },
+          "redundancy_consistency_checks": 327,
+          "reduce_calls": 1,
+          "reduce_runtime": {
+            "count": 1,
+            "total": 0.0332589169847779,
+            "mean": 0.0332589169847779,
+            "min": 0.0332589169847779,
+            "max": 0.0332589169847779
+          },
+          "congen_calls": 1,
+          "congen_runtime": {
+            "count": 1,
+            "total": 0.17453454196220264,
+            "mean": 0.17453454196220264,
+            "min": 0.17453454196220264,
+            "max": 0.17453454196220264
+          },
+          "congen_total_time": {
+            "count": 1,
+            "total": 0.20093679201090708,
+            "mean": 0.20093679201090708,
+            "min": 0.20093679201090708,
+            "max": 0.20093679201090708
+          }
+        }
+      },
+      "kb_constraints": [
+        {
+          "id": "c14",
+          "description": "Encryption --optional--> KeySize"
+        },
+        {
+          "id": "c131",
+          "description": "FileStorageOperations --alternative--> ['CreateFile', 'ModifyFile', 'DeleteFile']"
+        },
+        {
+          "id": "c17",
+          "description": "EncryptionImplementations --alternative--> ['JavaxCrypto', 'BouncyCastle']"
+        },
+        {
+          "id": "c92",
+          "description": "Logging --optional--> CypheredMessages"
+        },
+        {
+          "id": "c163",
+          "description": "LocationAware --alternative--> ['GPS', 'WiFiLocation']"
+        },
+        {
+          "id": "c193",
+          "description": "Alerts requires BatteryStatus"
+        },
+        {
+          "id": "c162",
+          "description": "ContextAwareness --or--> ['LocationAware', 'TimeAware', 'DeviceAware', 'UserAware', 'EnvironmentAware']"
+        },
+        {
+          "id": "c90",
+          "description": "Level --or--> ['Trace', 'Debug', 'Info', 'Warning', 'Error']"
+        },
+        {
+          "id": "c48",
+          "description": "Authentication --optional--> PasswordType"
+        },
+        {
+          "id": "c140",
+          "description": "FileStorageImplementations --optional--> JavaIO"
+        },
+        {
+          "id": "c270",
+          "description": "Authentication excludes CypheredMessages"
+        },
+        {
+          "id": "c149",
+          "description": "DatabaseStorageImplementations --alternative--> ['MySQL', 'MongoDB', 'OracleDB']"
+        },
+        {
+          "id": "c218",
+          "description": "TimeAware requires Alerts"
+        },
+        {
+          "id": "c7",
+          "description": "EncryptionAlgorithms --alternative--> ['Asymmetric', 'Symmetric']"
+        },
+        {
+          "id": "c23",
+          "description": "Encryption --mandatory--> Mode"
+        },
+        {
+          "id": "c157",
+          "description": "DataType --alternative--> ['Integers', 'Strings', 'Floats', 'Objects']"
+        },
+        {
+          "id": "c38",
+          "description": "AuthenticationOperations --optional--> Authenticate"
+        },
+        {
+          "id": "c46",
+          "description": "Authentication --optional--> PasswordLength"
+        },
+        {
+          "id": "c33",
+          "description": "AuthenticationImplementations --alternative--> ['JAAS', 'SpringSecurity']"
+        },
+        {
+          "id": "c226",
+          "description": "AuthenticatedUser requires Authentication"
+        },
+        {
+          "id": "c15",
+          "description": "Encryption --mandatory--> EncryptionImplementations"
+        },
+        {
+          "id": "c49",
+          "description": "PasswordType --alternative--> ['Numeric', 'Alphanumeric', 'SpecialChars']"
+        },
+        {
+          "id": "c179",
+          "description": "Caching --mandatory--> CacheType"
+        },
+        {
+          "id": "c9",
+          "description": "Asymmetric --alternative--> ['RSA', 'DSA', 'ECDSA']"
+        },
+        {
+          "id": "c181",
+          "description": "CacheType --alternative--> ['LocalCache', 'RemoteCache']"
+        },
+        {
+          "id": "c56",
+          "description": "Authentication --optional--> AnonymousUser"
+        },
+        {
+          "id": "c120",
+          "description": "ExecutionControl_1 --or--> ['Undo', 'Redo', 'Cancel', 'GoBack']"
+        },
+        {
+          "id": "c102",
+          "description": "ContextualHelpOperations --optional--> ShowHelp"
+        },
+        {
+          "id": "c85",
+          "description": "Format --alternative--> ['TXT', 'XML', 'HTML', 'JSON']"
+        },
+        {
+          "id": "c165",
+          "description": "DeviceAware --alternative--> ['BatteryStatus', 'IRSensor']"
+        },
+        {
+          "id": "c25",
+          "description": "Mode --alternative--> ['CBC', 'ECB', 'CFB', 'CTR', 'CTS']"
+        },
+        {
+          "id": "c135",
+          "description": "FileType --alternative--> ['Binary', 'TXTFile', 'XMLFile', 'JSONFile']"
+        },
+        {
+          "id": "c44",
+          "description": "DigitalCertificate --optional--> PseudonymousCertificate"
+        },
+        {
+          "id": "c29",
+          "description": "Padding --alternative--> ['PKCS5', 'PKCS1', 'OAEP']"
+        },
+        {
+          "id": "c127",
+          "description": "Persistence --alternative--> ['FileStorage', 'DatabaseStorage']"
+        },
+        {
+          "id": "c117",
+          "description": "ExecutionControl --mandatory--> ExecutionControl_1"
+        },
+        {
+          "id": "c175",
+          "description": "CachingImplementations --alternative--> ['JavaCachingSystem', 'Caffeine']"
+        },
+        {
+          "id": "c87",
+          "description": "Logging --mandatory--> Level"
+        },
+        {
+          "id": "c97",
+          "description": "ErrorLog --mandatory--> TraceFile"
+        },
+        {
+          "id": "c41",
+          "description": "AuthenticationMechanism --alternative--> ['UserPassword', 'DigitalCertificate', 'Biometric', 'SocialID', 'Pin', 'MatrixCode']"
+        },
+        {
+          "id": "c77",
+          "description": "LoggingImplementations --alternative--> ['Log4J', 'LogBack', 'JavaUtilLogging', 'SimpleImplementationSLF4J']"
+        },
+        {
+          "id": "c74",
+          "description": "LoggingOperations --optional--> Log"
+        },
+        {
+          "id": "c171",
+          "description": "CachingOperations --alternative--> ['CacheStore', 'CacheQuery', 'CacheUpdate']"
+        },
+        {
+          "id": "c129",
+          "description": "FileStorage --mandatory--> FileStorageOperations"
+        },
+        {
+          "id": "c173",
+          "description": "Caching --mandatory--> CachingImplementations"
+        },
+        {
+          "id": "c169",
+          "description": "Caching --mandatory--> CachingOperations"
+        },
+        {
+          "id": "c106",
+          "description": "ContextualHelpImplementations --optional--> JavaWizardAPI"
+        },
+        {
+          "id": "c116",
+          "description": "ContextualHelp --optional--> AuthenticatedUser"
+        },
+        {
+          "id": "c145",
+          "description": "DatabaseStorageOperations --alternative--> ['Store', 'Query']"
+        },
+        {
+          "id": "c316",
+          "description": "BatteryStatus requires TimeAware"
+        },
+        {
+          "id": "c113",
+          "description": "UserType --alternative--> ['Beginner', 'Intermediate', 'Advanced', 'Expert']"
+        },
+        {
+          "id": "c142",
+          "description": "FileStorage --optional--> TemporalFile"
+        },
+        {
+          "id": "c65",
+          "description": "Hashing --mandatory--> HashingAlgorithms"
+        },
+        {
+          "id": "c168",
+          "description": "Performance --optional--> Caching"
+        },
+        {
+          "id": "c155",
+          "description": "DatabaseStorage --mandatory--> DataType"
+        },
+        {
+          "id": "c79",
+          "description": "Logging --mandatory--> Handler"
+        },
+        {
+          "id": "c264",
+          "description": "Authentication excludes BatteryStatus"
+        },
+        {
+          "id": "c125",
+          "description": "Feedback --alternative--> ['InteractionFeedback', 'ProgressFeedback', 'SystemStatusDisplay', 'Alerts']"
+        },
+        {
+          "id": "c54",
+          "description": "Authentication --optional--> AuthenticationLogging"
+        },
+        {
+          "id": "c39",
+          "description": "Authentication --mandatory--> AuthenticationMechanism"
+        },
+        {
+          "id": "c407",
+          "description": "TimeAware requires FileStorage"
+        },
+        {
+          "id": "c103",
+          "description": "ContextualHelp --mandatory--> ContextualHelpImplementations"
+        },
+        {
+          "id": "c81",
+          "description": "Handler --alternative--> ['ConsoleLog', 'FileLog', 'DatabaseLog']"
+        },
+        {
+          "id": "c123",
+          "description": "Internationalization --mandatory--> Locale"
+        },
+        {
+          "id": "c11",
+          "description": "Symmetric --alternative--> ['AES', 'DESede', 'Blowfish', 'DES']"
+        },
+        {
+          "id": "c35",
+          "description": "Authentication --mandatory--> AuthenticationOperations"
+        },
+        {
+          "id": "c75",
+          "description": "Logging --mandatory--> LoggingImplementations"
+        },
+        {
+          "id": "c122",
+          "description": "ExecutionControl --optional--> Shortcuts"
+        },
+        {
+          "id": "c337",
+          "description": "Confidentiality requires SecureDatabase"
+        },
+        {
+          "id": "c5",
+          "description": "Encryption --mandatory--> EncryptionAlgorithms"
+        },
+        {
+          "id": "c107",
+          "description": "ContextualHelp --mandatory--> HelpType"
+        },
+        {
+          "id": "c94",
+          "description": "Logging --optional--> HistoryLog"
+        },
+        {
+          "id": "c83",
+          "description": "Logging --mandatory--> Format"
+        },
+        {
+          "id": "c186",
+          "description": "Caching --optional--> EternalObjects"
+        },
+        {
+          "id": "c64",
+          "description": "HashingOperations --optional--> Hash"
+        },
+        {
+          "id": "c2",
+          "description": "FQAs --or--> ['Security', 'Usability', 'Persistence', 'ContextAwareness', 'Performance']"
+        },
+        {
+          "id": "c395",
+          "description": "XML requires Encryption"
+        },
+        {
+          "id": "c352",
+          "description": "CypheredMessages requires Encryption"
+        },
+        {
+          "id": "c153",
+          "description": "DatabaseType --alternative--> ['Relational', 'NoSQL']"
+        },
+        {
+          "id": "c184",
+          "description": "Caching --optional--> MaxLifeSeconds"
+        },
+        {
+          "id": "c21",
+          "description": "EncryptionOperations --alternative--> ['Encrypt', 'Decrypt']"
+        },
+        {
+          "id": "c31",
+          "description": "Authentication --mandatory--> AuthenticationImplementations"
+        },
+        {
+          "id": "c414",
+          "description": "FileStorage excludes XML"
+        },
+        {
+          "id": "c61",
+          "description": "Hashing --mandatory--> HashingOperations"
+        },
+        {
+          "id": "c52",
+          "description": "Authentication --optional--> LimitedSession"
+        },
+        {
+          "id": "c19",
+          "description": "Encryption --mandatory--> EncryptionOperations"
+        },
+        {
+          "id": "c177",
+          "description": "Caching --mandatory--> MaxSizeCache"
+        },
+        {
+          "id": "c303",
+          "description": "BatteryStatus excludes Encryption"
+        },
+        {
+          "id": "c59",
+          "description": "HashingImplementations --alternative--> ['JavaSecurityMessageDigest', 'Guava']"
+        },
+        {
+          "id": "c137",
+          "description": "FileStorage --mandatory--> FileStorageImplementations"
+        },
+        {
+          "id": "c257",
+          "description": "TraceFile requires AuthenticatedUser"
+        },
+        {
+          "id": "c251",
+          "description": "SimpleImplementationSLF4J requires AuthenticatedUser"
+        },
+        {
+          "id": "c143",
+          "description": "DatabaseStorage --mandatory--> DatabaseStorageOperations"
+        },
+        {
+          "id": "c151",
+          "description": "DatabaseStorage --mandatory--> DatabaseType"
+        },
+        {
+          "id": "c99",
+          "description": "ContextualHelp --mandatory--> ContextualHelpOperations"
+        },
+        {
+          "id": "c70",
+          "description": "Usability --or--> ['Logging', 'ContextualHelp', 'ExecutionControl', 'Internationalization', 'Feedback']"
+        },
+        {
+          "id": "c392",
+          "description": "TraceFile requires Encryption"
+        },
+        {
+          "id": "c67",
+          "description": "HashingAlgorithms --alternative--> ['MD5', 'SHA1', 'SHA256', 'SHA512']"
+        },
+        {
+          "id": "c71",
+          "description": "Logging --mandatory--> LoggingOperations"
+        },
+        {
+          "id": "c147",
+          "description": "DatabaseStorage --mandatory--> DatabaseStorageImplementations"
+        },
+        {
+          "id": "c381",
+          "description": "Encryption excludes Privacy"
+        },
+        {
+          "id": "c111",
+          "description": "ContextualHelp --mandatory--> UserType"
+        },
+        {
+          "id": "c380",
+          "description": "Privacy requires Encryption"
+        },
+        {
+          "id": "c4",
+          "description": "Security --or--> ['Encryption', 'Authentication', 'Hashing', 'Confidentiality', 'Privacy', 'Integrity', 'Non_Repudiation']"
+        },
+        {
+          "id": "c430",
+          "description": "SecureDatabase requires SimpleImplementationSLF4J"
+        },
+        {
+          "id": "c285",
+          "description": "Authentication excludes SimpleImplementationSLF4J"
+        },
+        {
+          "id": "c376",
+          "description": "Encryption requires FileStorage"
+        },
+        {
+          "id": "c133",
+          "description": "FileStorage --mandatory--> FileType"
+        },
+        {
+          "id": "c57",
+          "description": "Hashing --mandatory--> HashingImplementations"
+        },
+        {
+          "id": "c109",
+          "description": "HelpType --alternative--> ['Tutorial', 'Wizard']"
+        },
+        {
+          "id": "c27",
+          "description": "Encryption --mandatory--> Padding"
+        },
+        {
+          "id": "c243",
+          "description": "AuthenticatedUser excludes FileStorage"
+        }
+      ],
+      "ne_constraints": [],
+      "bg_clauses": [
+        [
+          1
+        ]
+      ],
+      "redundant_constraints": [
+        "c334",
+        "c336",
+        "c260",
+        "c375",
+        "c425",
+        "c136",
+        "c130",
+        "c166",
+        "c126",
+        "c36",
+        "c198",
+        "c231",
+        "c396",
+        "c60",
+        "c399",
+        "c42",
+        "c156",
+        "c34",
+        "c164",
+        "c50",
+        "c213",
+        "c182",
+        "c217",
+        "c390",
+        "c258",
+        "c224",
+        "c348",
+        "c176",
+        "c240",
+        "c458",
+        "c291",
+        "c317",
+        "c209",
+        "c349",
+        "c435",
+        "c284",
+        "c205",
+        "c401",
+        "c335",
+        "c233",
+        "c331",
+        "c405",
+        "c411",
+        "c216",
+        "c445",
+        "c296",
+        "c197",
+        "c252",
+        "c114",
+        "c459",
+        "c18",
+        "c374",
+        "c293",
+        "c152",
+        "c138",
+        "c402",
+        "c78",
+        "c320",
+        "c210",
+        "c383",
+        "c104",
+        "c118",
+        "c96",
+        "c84",
+        "c363",
+        "c194",
+        "c327",
+        "c449",
+        "c308",
+        "c438",
+        "c365",
+        "c314",
+        "c278",
+        "c424",
+        "c255",
+        "c446",
+        "c387",
+        "c315",
+        "c323",
+        "c10",
+        "c148",
+        "c386",
+        "c404",
+        "c410",
+        "c248",
+        "c178",
+        "c325",
+        "c215",
+        "c189",
+        "c158",
+        "c345",
+        "c88",
+        "c204",
+        "c431",
+        "c24",
+        "c134",
+        "c132",
+        "c234",
+        "c437",
+        "c225",
+        "c351",
+        "c341",
+        "c66",
+        "c455",
+        "c8",
+        "c221",
+        "c58",
+        "c237",
+        "c441",
+        "c267",
+        "c324",
+        "c261",
+        "c288",
+        "c429",
+        "c362",
+        "c456",
+        "c398",
+        "c304",
+        "c124",
+        "c68",
+        "c76",
+        "c100",
+        "c393",
+        "c297",
+        "c452",
+        "c245",
+        "c338",
+        "c192",
+        "c300",
+        "c448",
+        "c28",
+        "c350",
+        "c423",
+        "c339",
+        "c421",
+        "c112",
+        "c160",
+        "c20",
+        "c432",
+        "c330",
+        "c180",
+        "c427",
+        "c444",
+        "c340",
+        "c447",
+        "c32",
+        "c413",
+        "c419",
+        "c282",
+        "c355",
+        "c108",
+        "c442",
+        "c457",
+        "c372",
+        "c40",
+        "c415",
+        "c16",
+        "c420",
+        "c311",
+        "c249",
+        "c347",
+        "c369",
+        "c222",
+        "c146",
+        "c333",
+        "c170",
+        "c266",
+        "c328",
+        "c346",
+        "c110",
+        "c98",
+        "c72",
+        "c418",
+        "c343",
+        "c440",
+        "c279",
+        "c426",
+        "c26",
+        "c359",
+        "c22",
+        "c366",
+        "c428",
+        "c246",
+        "c30",
+        "c128",
+        "c201",
+        "c342",
+        "c82",
+        "c321",
+        "c294",
+        "c281",
+        "c312",
+        "c371",
+        "c416",
+        "c436",
+        "c439",
+        "c144",
+        "c453",
+        "c417",
+        "c309",
+        "c150",
+        "c174",
+        "c62",
+        "c212",
+        "c360",
+        "c12",
+        "c154",
+        "c172",
+        "c86",
+        "c450",
+        "c433",
+        "c80",
+        "c384",
+        "c290",
+        "c6"
+      ],
+      "statistics": {
+        "n_bias": 459,
+        "n_mss": 327,
+        "n_kb": 112,
+        "n_ne": 0
+      },
+      "train_size": {
+        "positive": 10,
+        "negative": 0
+      },
+      "test_size": {
+        "positive": 5,
+        "negative": 1
+      },
+      "evaluation": null
+    },
+    {
+      "fold_index": 1,
+      "accuracy": 0.2,
+      "metrics": {
+        "accuracy": 0.2,
+        "precision": 1.0,
+        "recall": 0.2,
+        "f1_score": 0.33333333333333337,
+        "specificity": 0.0,
+        "true_positives": 1,
+        "true_negatives": 0,
+        "false_positives": 0,
+        "false_negatives": 4
+      },
+      "performance": {
+        "runtime_ms": 258.5712500149384,
+        "consistency_checks": 452,
+        "memory_peak_mb": 1.798844337463379,
+        "n_mss": 352,
+        "n_kb": 106,
+        "congen_runtime_ms": 148.51095800986513,
+        "acqmss_runtime_ms": 872.7415532339364,
+        "acqmss_calls": 553,
+        "reduce_runtime_ms": 35.351416969206184,
+        "solver_time_ms": 63.5980000000001,
+        "is_consistent_calls": 1719,
+        "is_consistent_test_cases_calls": 452,
+        "redundancy_consistency_checks": 353,
+        "profiler": {
+          "solver_time": {
+            "count": 1719,
+            "total": 0.0635980000000001,
+            "mean": 3.699709133216992e-05,
+            "min": 2.9999999999752447e-06,
+            "max": 0.00020999999999998797,
+            "median": 1.2999999999985246e-05,
+            "stddev": 3.587264844630462e-05
+          },
+          "is_consistent_calls": 1719,
+          "qx_runtime": {
+            "count": 21,
+            "total": 0.5070051249931566,
+            "mean": 0.024143101190150316,
+            "min": 0.004354499978944659,
+            "max": 0.07731174997752532,
+            "median": 0.005682583025190979,
+            "stddev": 0.026697896424817787
+          },
+          "qx_calls": 21,
+          "quickxplain_calls": 1,
+          "quickxplain_runtime": {
+            "count": 1,
+            "total": 0.0817864999989979,
+            "mean": 0.0817864999989979,
+            "min": 0.0817864999989979,
+            "max": 0.0817864999989979
+          },
+          "shared_preprocessing_runtime": {
+            "count": 1,
+            "total": 0.08179612504318357,
+            "mean": 0.08179612504318357,
+            "min": 0.08179612504318357,
+            "max": 0.08179612504318357
+          },
+          "shared_preprocessing_quickxplain_checks": 16,
+          "solver_time_accum": 0.06211200000000022,
+          "is_consistent_test_cases_calls": 452,
+          "paper_consistency_checks": 452,
+          "shared_admpool_checks": 451,
+          "shared_admpool_solver_calls": 1340,
+          "acqmss_calls": 553,
+          "acqmss_runtime": {
+            "count": 553,
+            "total": 0.8727415532339364,
+            "mean": 0.001578194490477281,
+            "min": 7.333001121878624e-06,
+            "max": 0.11207333405036479,
+            "median": 0.0002996249822899699,
+            "stddev": 0.006585583155313304
+          },
+          "redundancy_consistency_checks": 353,
+          "reduce_calls": 1,
+          "reduce_runtime": {
+            "count": 1,
+            "total": 0.035351416969206184,
+            "mean": 0.035351416969206184,
+            "min": 0.035351416969206184,
+            "max": 0.035351416969206184
+          },
+          "congen_calls": 1,
+          "congen_runtime": {
+            "count": 1,
+            "total": 0.14851095800986513,
+            "mean": 0.14851095800986513,
+            "min": 0.14851095800986513,
+            "max": 0.14851095800986513
+          },
+          "congen_total_time": {
+            "count": 1,
+            "total": 0.2585712500149384,
+            "mean": 0.2585712500149384,
+            "min": 0.2585712500149384,
+            "max": 0.2585712500149384
+          }
+        }
+      },
+      "kb_constraints": [
+        {
+          "id": "c39",
+          "description": "Authentication --mandatory--> AuthenticationMechanism"
+        },
+        {
+          "id": "c317",
+          "description": "TimeAware requires BatteryStatus"
+        },
+        {
+          "id": "c57",
+          "description": "Hashing --mandatory--> HashingImplementations"
+        },
+        {
+          "id": "c65",
+          "description": "Hashing --mandatory--> HashingAlgorithms"
+        },
+        {
+          "id": "c111",
+          "description": "ContextualHelp --mandatory--> UserType"
+        },
+        {
+          "id": "c15",
+          "description": "Encryption --mandatory--> EncryptionImplementations"
+        },
+        {
+          "id": "c35",
+          "description": "Authentication --mandatory--> AuthenticationOperations"
+        },
+        {
+          "id": "c17",
+          "description": "EncryptionImplementations --alternative--> ['JavaxCrypto', 'BouncyCastle']"
+        },
+        {
+          "id": "c9",
+          "description": "Asymmetric --alternative--> ['RSA', 'DSA', 'ECDSA']"
+        },
+        {
+          "id": "c204",
+          "description": "Alerts excludes Encryption"
+        },
+        {
+          "id": "c19",
+          "description": "Encryption --mandatory--> EncryptionOperations"
+        },
+        {
+          "id": "c129",
+          "description": "FileStorage --mandatory--> FileStorageOperations"
+        },
+        {
+          "id": "c316",
+          "description": "BatteryStatus requires TimeAware"
+        },
+        {
+          "id": "c23",
+          "description": "Encryption --mandatory--> Mode"
+        },
+        {
+          "id": "c87",
+          "description": "Logging --mandatory--> Level"
+        },
+        {
+          "id": "c71",
+          "description": "Logging --mandatory--> LoggingOperations"
+        },
+        {
+          "id": "c184",
+          "description": "Caching --optional--> MaxLifeSeconds"
+        },
+        {
+          "id": "c2",
+          "description": "FQAs --or--> ['Security', 'Usability', 'Persistence', 'ContextAwareness', 'Performance']"
+        },
+        {
+          "id": "c194",
+          "description": "BatteryStatus requires Alerts"
+        },
+        {
+          "id": "c77",
+          "description": "LoggingImplementations --alternative--> ['Log4J', 'LogBack', 'JavaUtilLogging', 'SimpleImplementationSLF4J']"
+        },
+        {
+          "id": "c85",
+          "description": "Format --alternative--> ['TXT', 'XML', 'HTML', 'JSON']"
+        },
+        {
+          "id": "c171",
+          "description": "CachingOperations --alternative--> ['CacheStore', 'CacheQuery', 'CacheUpdate']"
+        },
+        {
+          "id": "c48",
+          "description": "Authentication --optional--> PasswordType"
+        },
+        {
+          "id": "c61",
+          "description": "Hashing --mandatory--> HashingOperations"
+        },
+        {
+          "id": "c46",
+          "description": "Authentication --optional--> PasswordLength"
+        },
+        {
+          "id": "c177",
+          "description": "Caching --mandatory--> MaxSizeCache"
+        },
+        {
+          "id": "c64",
+          "description": "HashingOperations --optional--> Hash"
+        },
+        {
+          "id": "c135",
+          "description": "FileType --alternative--> ['Binary', 'TXTFile', 'XMLFile', 'JSONFile']"
+        },
+        {
+          "id": "c41",
+          "description": "AuthenticationMechanism --alternative--> ['UserPassword', 'DigitalCertificate', 'Biometric', 'SocialID', 'Pin', 'MatrixCode']"
+        },
+        {
+          "id": "c168",
+          "description": "Performance --optional--> Caching"
+        },
+        {
+          "id": "c54",
+          "description": "Authentication --optional--> AuthenticationLogging"
+        },
+        {
+          "id": "c145",
+          "description": "DatabaseStorageOperations --alternative--> ['Store', 'Query']"
+        },
+        {
+          "id": "c175",
+          "description": "CachingImplementations --alternative--> ['JavaCachingSystem', 'Caffeine']"
+        },
+        {
+          "id": "c4",
+          "description": "Security --or--> ['Encryption', 'Authentication', 'Hashing', 'Confidentiality', 'Privacy', 'Integrity', 'Non_Repudiation']"
+        },
+        {
+          "id": "c107",
+          "description": "ContextualHelp --mandatory--> HelpType"
+        },
+        {
+          "id": "c83",
+          "description": "Logging --mandatory--> Format"
+        },
+        {
+          "id": "c109",
+          "description": "HelpType --alternative--> ['Tutorial', 'Wizard']"
+        },
+        {
+          "id": "c70",
+          "description": "Usability --or--> ['Logging', 'ContextualHelp', 'ExecutionControl', 'Internationalization', 'Feedback']"
+        },
+        {
+          "id": "c79",
+          "description": "Logging --mandatory--> Handler"
+        },
+        {
+          "id": "c155",
+          "description": "DatabaseStorage --mandatory--> DataType"
+        },
+        {
+          "id": "c165",
+          "description": "DeviceAware --alternative--> ['BatteryStatus', 'IRSensor']"
+        },
+        {
+          "id": "c27",
+          "description": "Encryption --mandatory--> Padding"
+        },
+        {
+          "id": "c158",
+          "description": "DataType --or--> ['Integers', 'Strings', 'Floats', 'Objects']"
+        },
+        {
+          "id": "c125",
+          "description": "Feedback --alternative--> ['InteractionFeedback', 'ProgressFeedback', 'SystemStatusDisplay', 'Alerts']"
+        },
+        {
+          "id": "c97",
+          "description": "ErrorLog --mandatory--> TraceFile"
+        },
+        {
+          "id": "c106",
+          "description": "ContextualHelpImplementations --optional--> JavaWizardAPI"
+        },
+        {
+          "id": "c93",
+          "description": "Logging --mandatory--> HistoryLog"
+        },
+        {
+          "id": "c5",
+          "description": "Encryption --mandatory--> EncryptionAlgorithms"
+        },
+        {
+          "id": "c147",
+          "description": "DatabaseStorage --mandatory--> DatabaseStorageImplementations"
+        },
+        {
+          "id": "c33",
+          "description": "AuthenticationImplementations --alternative--> ['JAAS', 'SpringSecurity']"
+        },
+        {
+          "id": "c127",
+          "description": "Persistence --alternative--> ['FileStorage', 'DatabaseStorage']"
+        },
+        {
+          "id": "c192",
+          "description": "Alerts excludes Authentication"
+        },
+        {
+          "id": "c31",
+          "description": "Authentication --mandatory--> AuthenticationImplementations"
+        },
+        {
+          "id": "c131",
+          "description": "FileStorageOperations --alternative--> ['CreateFile', 'ModifyFile', 'DeleteFile']"
+        },
+        {
+          "id": "c153",
+          "description": "DatabaseType --alternative--> ['Relational', 'NoSQL']"
+        },
+        {
+          "id": "c29",
+          "description": "Padding --alternative--> ['PKCS5', 'PKCS1', 'OAEP']"
+        },
+        {
+          "id": "c143",
+          "description": "DatabaseStorage --mandatory--> DatabaseStorageOperations"
+        },
+        {
+          "id": "c43",
+          "description": "DigitalCertificate --mandatory--> PseudonymousCertificate"
+        },
+        {
+          "id": "c21",
+          "description": "EncryptionOperations --alternative--> ['Encrypt', 'Decrypt']"
+        },
+        {
+          "id": "c14",
+          "description": "Encryption --optional--> KeySize"
+        },
+        {
+          "id": "c74",
+          "description": "LoggingOperations --optional--> Log"
+        },
+        {
+          "id": "c38",
+          "description": "AuthenticationOperations --optional--> Authenticate"
+        },
+        {
+          "id": "c56",
+          "description": "Authentication --optional--> AnonymousUser"
+        },
+        {
+          "id": "c81",
+          "description": "Handler --alternative--> ['ConsoleLog', 'FileLog', 'DatabaseLog']"
+        },
+        {
+          "id": "c361",
+          "description": "CypheredMessages requires SecureDatabase"
+        },
+        {
+          "id": "c120",
+          "description": "ExecutionControl_1 --or--> ['Undo', 'Redo', 'Cancel', 'GoBack']"
+        },
+        {
+          "id": "c256",
+          "description": "AuthenticatedUser requires TraceFile"
+        },
+        {
+          "id": "c162",
+          "description": "ContextAwareness --or--> ['LocationAware', 'TimeAware', 'DeviceAware', 'UserAware', 'EnvironmentAware']"
+        },
+        {
+          "id": "c142",
+          "description": "FileStorage --optional--> TemporalFile"
+        },
+        {
+          "id": "c11",
+          "description": "Symmetric --alternative--> ['AES', 'DESede', 'Blowfish', 'DES']"
+        },
+        {
+          "id": "c431",
+          "description": "SimpleImplementationSLF4J requires SecureDatabase"
+        },
+        {
+          "id": "c49",
+          "description": "PasswordType --alternative--> ['Numeric', 'Alphanumeric', 'SpecialChars']"
+        },
+        {
+          "id": "c173",
+          "description": "Caching --mandatory--> CachingImplementations"
+        },
+        {
+          "id": "c103",
+          "description": "ContextualHelp --mandatory--> ContextualHelpImplementations"
+        },
+        {
+          "id": "c75",
+          "description": "Logging --mandatory--> LoggingImplementations"
+        },
+        {
+          "id": "c149",
+          "description": "DatabaseStorageImplementations --alternative--> ['MySQL', 'MongoDB', 'OracleDB']"
+        },
+        {
+          "id": "c101",
+          "description": "ContextualHelpOperations --mandatory--> ShowHelp"
+        },
+        {
+          "id": "c25",
+          "description": "Mode --alternative--> ['CBC', 'ECB', 'CFB', 'CTR', 'CTS']"
+        },
+        {
+          "id": "c67",
+          "description": "HashingAlgorithms --alternative--> ['MD5', 'SHA1', 'SHA256', 'SHA512']"
+        },
+        {
+          "id": "c425",
+          "description": "TraceFile requires Privacy"
+        },
+        {
+          "id": "c117",
+          "description": "ExecutionControl --mandatory--> ExecutionControl_1"
+        },
+        {
+          "id": "c260",
+          "description": "XML requires AuthenticatedUser"
+        },
+        {
+          "id": "c113",
+          "description": "UserType --alternative--> ['Beginner', 'Intermediate', 'Advanced', 'Expert']"
+        },
+        {
+          "id": "c186",
+          "description": "Caching --optional--> EternalObjects"
+        },
+        {
+          "id": "c436",
+          "description": "SecureDatabase requires TraceFile"
+        },
+        {
+          "id": "c233",
+          "description": "Confidentiality requires AuthenticatedUser"
+        },
+        {
+          "id": "c123",
+          "description": "Internationalization --mandatory--> Locale"
+        },
+        {
+          "id": "c7",
+          "description": "EncryptionAlgorithms --alternative--> ['Asymmetric', 'Symmetric']"
+        },
+        {
+          "id": "c163",
+          "description": "LocationAware --alternative--> ['GPS', 'WiFiLocation']"
+        },
+        {
+          "id": "c151",
+          "description": "DatabaseStorage --mandatory--> DatabaseType"
+        },
+        {
+          "id": "c122",
+          "description": "ExecutionControl --optional--> Shortcuts"
+        },
+        {
+          "id": "c266",
+          "description": "Confidentiality requires Authentication"
+        },
+        {
+          "id": "c181",
+          "description": "CacheType --alternative--> ['LocalCache', 'RemoteCache']"
+        },
+        {
+          "id": "c335",
+          "description": "Privacy requires Confidentiality"
+        },
+        {
+          "id": "c52",
+          "description": "Authentication --optional--> LimitedSession"
+        },
+        {
+          "id": "c137",
+          "description": "FileStorage --mandatory--> FileStorageImplementations"
+        },
+        {
+          "id": "c304",
+          "description": "BatteryStatus requires FileStorage"
+        },
+        {
+          "id": "c179",
+          "description": "Caching --mandatory--> CacheType"
+        },
+        {
+          "id": "c133",
+          "description": "FileStorage --mandatory--> FileType"
+        },
+        {
+          "id": "c89",
+          "description": "Level --alternative--> ['Trace', 'Debug', 'Info', 'Warning', 'Error']"
+        },
+        {
+          "id": "c99",
+          "description": "ContextualHelp --mandatory--> ContextualHelpOperations"
+        },
+        {
+          "id": "c169",
+          "description": "Caching --mandatory--> CachingOperations"
+        },
+        {
+          "id": "c59",
+          "description": "HashingImplementations --alternative--> ['JavaSecurityMessageDigest', 'Guava']"
+        },
+        {
+          "id": "c140",
+          "description": "FileStorageImplementations --optional--> JavaIO"
+        },
+        {
+          "id": "c421",
+          "description": "Privacy requires TimeAware"
+        }
+      ],
+      "ne_constraints": [
+        "NOT(Tutorial = true & UserType = false)"
+      ],
+      "bg_clauses": [
+        [
+          1
+        ]
+      ],
+      "redundant_constraints": [
+        "c410",
+        "c225",
+        "c416",
+        "c440",
+        "c433",
+        "c132",
+        "c16",
+        "c210",
+        "c110",
+        "c267",
+        "c459",
+        "c160",
+        "c457",
+        "c221",
+        "c426",
+        "c387",
+        "c370",
+        "c373",
+        "c418",
+        "c423",
+        "c438",
+        "c284",
+        "c58",
+        "c231",
+        "c414",
+        "c413",
+        "c303",
+        "c189",
+        "c20",
+        "c323",
+        "c164",
+        "c288",
+        "c348",
+        "c218",
+        "c241",
+        "c338",
+        "c365",
+        "c278",
+        "c150",
+        "c417",
+        "c419",
+        "c30",
+        "c458",
+        "c352",
+        "c354",
+        "c311",
+        "c10",
+        "c40",
+        "c321",
+        "c424",
+        "c449",
+        "c444",
+        "c324",
+        "c384",
+        "c244",
+        "c293",
+        "c154",
+        "c236",
+        "c44",
+        "c336",
+        "c390",
+        "c174",
+        "c156",
+        "c456",
+        "c264",
+        "c367",
+        "c224",
+        "c366",
+        "c134",
+        "c243",
+        "c197",
+        "c146",
+        "c386",
+        "c198",
+        "c116",
+        "c357",
+        "c420",
+        "c36",
+        "c118",
+        "c72",
+        "c32",
+        "c24",
+        "c446",
+        "c28",
+        "c229",
+        "c228",
+        "c170",
+        "c86",
+        "c232",
+        "c439",
+        "c453",
+        "c248",
+        "c430",
+        "c240",
+        "c396",
+        "c258",
+        "c238",
+        "c445",
+        "c405",
+        "c326",
+        "c337",
+        "c299",
+        "c415",
+        "c200",
+        "c398",
+        "c8",
+        "c407",
+        "c172",
+        "c22",
+        "c212",
+        "c281",
+        "c250",
+        "c18",
+        "c124",
+        "c138",
+        "c245",
+        "c234",
+        "c235",
+        "c392",
+        "c252",
+        "c450",
+        "c371",
+        "c144",
+        "c364",
+        "c404",
+        "c108",
+        "c60",
+        "c435",
+        "c455",
+        "c285",
+        "c351",
+        "c84",
+        "c369",
+        "c104",
+        "c374",
+        "c448",
+        "c314",
+        "c393",
+        "c395",
+        "c249",
+        "c270",
+        "c253",
+        "c383",
+        "c82",
+        "c98",
+        "c309",
+        "c399",
+        "c282",
+        "c312",
+        "c411",
+        "c148",
+        "c68",
+        "c331",
+        "c201",
+        "c350",
+        "c251",
+        "c432",
+        "c437",
+        "c358",
+        "c100",
+        "c178",
+        "c255",
+        "c315",
+        "c259",
+        "c328",
+        "c247",
+        "c349",
+        "c296",
+        "c50",
+        "c363",
+        "c279",
+        "c66",
+        "c26",
+        "c246",
+        "c347",
+        "c452",
+        "c257",
+        "c340",
+        "c330",
+        "c325",
+        "c290",
+        "c442",
+        "c375",
+        "c76",
+        "c226",
+        "c130",
+        "c12",
+        "c269",
+        "c320",
+        "c96",
+        "c92",
+        "c341",
+        "c94",
+        "c308",
+        "c112",
+        "c355",
+        "c294",
+        "c213",
+        "c237",
+        "c427",
+        "c291",
+        "c216",
+        "c360",
+        "c88",
+        "c362",
+        "c6",
+        "c152",
+        "c428",
+        "c176",
+        "c345",
+        "c429",
+        "c215",
+        "c380",
+        "c342",
+        "c182",
+        "c297",
+        "c78",
+        "c401",
+        "c102",
+        "c222",
+        "c34",
+        "c166",
+        "c114",
+        "c42",
+        "c343",
+        "c441",
+        "c136",
+        "c80",
+        "c359",
+        "c381",
+        "c261",
+        "c346",
+        "c333",
+        "c334",
+        "c180",
+        "c128",
+        "c188",
+        "c62",
+        "c327",
+        "c300",
+        "c126",
+        "c402",
+        "c339",
+        "c209",
+        "c372",
+        "c447",
+        "c90"
+      ],
+      "statistics": {
+        "n_bias": 459,
+        "n_mss": 352,
+        "n_kb": 105,
+        "n_ne": 1
+      },
+      "train_size": {
+        "positive": 10,
+        "negative": 1
+      },
+      "test_size": {
+        "positive": 5,
+        "negative": 0
+      },
+      "evaluation": null
+    },
+    {
+      "fold_index": 2,
+      "accuracy": 0.4,
+      "metrics": {
+        "accuracy": 0.4,
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1_score": 0.5714285714285715,
+        "specificity": 0.0,
+        "true_positives": 2,
+        "true_negatives": 0,
+        "false_positives": 0,
+        "false_negatives": 3
+      },
+      "performance": {
+        "runtime_ms": 284.7987079876475,
+        "consistency_checks": 468,
+        "memory_peak_mb": 1.7988252639770508,
+        "n_mss": 354,
+        "n_kb": 109,
+        "congen_runtime_ms": 173.48175001097843,
+        "acqmss_runtime_ms": 1053.1092734308913,
+        "acqmss_calls": 557,
+        "reduce_runtime_ms": 37.103625014424324,
+        "solver_time_ms": 74.84400000000119,
+        "is_consistent_calls": 2018,
+        "is_consistent_test_cases_calls": 468,
+        "redundancy_consistency_checks": 355,
+        "profiler": {
+          "solver_time": {
+            "count": 2018,
+            "total": 0.07484400000000119,
+            "mean": 3.708820614469831e-05,
+            "min": 2.000000000002e-06,
+            "max": 0.00023899999999998922,
+            "median": 1.2000000000012001e-05,
+            "stddev": 3.637856851978858e-05
+          },
+          "is_consistent_calls": 2018,
+          "qx_runtime": {
+            "count": 21,
+            "total": 0.4842394978622906,
+            "mean": 0.023059023707728124,
+            "min": 0.00456741702510044,
+            "max": 0.07524404098512605,
+            "median": 0.005227124958764762,
+            "stddev": 0.02565620985034227
+          },
+          "qx_calls": 21,
+          "quickxplain_calls": 1,
+          "quickxplain_runtime": {
+            "count": 1,
+            "total": 0.08004566701129079,
+            "mean": 0.08004566701129079,
+            "min": 0.08004566701129079,
+            "max": 0.08004566701129079
+          },
+          "shared_preprocessing_runtime": {
+            "count": 1,
+            "total": 0.08005508297355846,
+            "mean": 0.08005508297355846,
+            "min": 0.08005508297355846,
+            "max": 0.08005508297355846
+          },
+          "shared_preprocessing_quickxplain_checks": 16,
+          "solver_time_accum": 0.0733600000000012,
+          "is_consistent_test_cases_calls": 468,
+          "paper_consistency_checks": 468,
+          "shared_admpool_checks": 467,
+          "shared_admpool_solver_calls": 1637,
+          "acqmss_calls": 557,
+          "acqmss_runtime": {
+            "count": 557,
+            "total": 1.0531092734308913,
+            "mean": 0.0018906809217789792,
+            "min": 7.4579729698598385e-06,
+            "max": 0.13519216602435336,
+            "median": 0.0003539170138537884,
+            "stddev": 0.007887943958949605
+          },
+          "redundancy_consistency_checks": 355,
+          "reduce_calls": 1,
+          "reduce_runtime": {
+            "count": 1,
+            "total": 0.037103625014424324,
+            "mean": 0.037103625014424324,
+            "min": 0.037103625014424324,
+            "max": 0.037103625014424324
+          },
+          "congen_calls": 1,
+          "congen_runtime": {
+            "count": 1,
+            "total": 0.17348175001097843,
+            "mean": 0.17348175001097843,
+            "min": 0.17348175001097843,
+            "max": 0.17348175001097843
+          },
+          "congen_total_time": {
+            "count": 1,
+            "total": 0.2847987079876475,
+            "mean": 0.2847987079876475,
+            "min": 0.2847987079876475,
+            "max": 0.2847987079876475
+          }
+        }
+      },
+      "kb_constraints": [
+        {
+          "id": "c33",
+          "description": "AuthenticationImplementations --alternative--> ['JAAS', 'SpringSecurity']"
+        },
+        {
+          "id": "c77",
+          "description": "LoggingImplementations --alternative--> ['Log4J', 'LogBack', 'JavaUtilLogging', 'SimpleImplementationSLF4J']"
+        },
+        {
+          "id": "c65",
+          "description": "Hashing --mandatory--> HashingAlgorithms"
+        },
+        {
+          "id": "c149",
+          "description": "DatabaseStorageImplementations --alternative--> ['MySQL', 'MongoDB', 'OracleDB']"
+        },
+        {
+          "id": "c79",
+          "description": "Logging --mandatory--> Handler"
+        },
+        {
+          "id": "c90",
+          "description": "Level --or--> ['Trace', 'Debug', 'Info', 'Warning', 'Error']"
+        },
+        {
+          "id": "c75",
+          "description": "Logging --mandatory--> LoggingImplementations"
+        },
+        {
+          "id": "c14",
+          "description": "Encryption --optional--> KeySize"
+        },
+        {
+          "id": "c99",
+          "description": "ContextualHelp --mandatory--> ContextualHelpOperations"
+        },
+        {
+          "id": "c173",
+          "description": "Caching --mandatory--> CachingImplementations"
+        },
+        {
+          "id": "c54",
+          "description": "Authentication --optional--> AuthenticationLogging"
+        },
+        {
+          "id": "c166",
+          "description": "DeviceAware --or--> ['BatteryStatus', 'IRSensor']"
+        },
+        {
+          "id": "c94",
+          "description": "Logging --optional--> HistoryLog"
+        },
+        {
+          "id": "c192",
+          "description": "Alerts excludes Authentication"
+        },
+        {
+          "id": "c23",
+          "description": "Encryption --mandatory--> Mode"
+        },
+        {
+          "id": "c142",
+          "description": "FileStorage --optional--> TemporalFile"
+        },
+        {
+          "id": "c109",
+          "description": "HelpType --alternative--> ['Tutorial', 'Wizard']"
+        },
+        {
+          "id": "c21",
+          "description": "EncryptionOperations --alternative--> ['Encrypt', 'Decrypt']"
+        },
+        {
+          "id": "c61",
+          "description": "Hashing --mandatory--> HashingOperations"
+        },
+        {
+          "id": "c175",
+          "description": "CachingImplementations --alternative--> ['JavaCachingSystem', 'Caffeine']"
+        },
+        {
+          "id": "c226",
+          "description": "AuthenticatedUser requires Authentication"
+        },
+        {
+          "id": "c106",
+          "description": "ContextualHelpImplementations --optional--> JavaWizardAPI"
+        },
+        {
+          "id": "c133",
+          "description": "FileStorage --mandatory--> FileType"
+        },
+        {
+          "id": "c171",
+          "description": "CachingOperations --alternative--> ['CacheStore', 'CacheQuery', 'CacheUpdate']"
+        },
+        {
+          "id": "c111",
+          "description": "ContextualHelp --mandatory--> UserType"
+        },
+        {
+          "id": "c56",
+          "description": "Authentication --optional--> AnonymousUser"
+        },
+        {
+          "id": "c119",
+          "description": "ExecutionControl_1 --alternative--> ['Undo', 'Redo', 'Cancel', 'GoBack']"
+        },
+        {
+          "id": "c85",
+          "description": "Format --alternative--> ['TXT', 'XML', 'HTML', 'JSON']"
+        },
+        {
+          "id": "c49",
+          "description": "PasswordType --alternative--> ['Numeric', 'Alphanumeric', 'SpecialChars']"
+        },
+        {
+          "id": "c207",
+          "description": "Alerts excludes FileStorage"
+        },
+        {
+          "id": "c48",
+          "description": "Authentication --optional--> PasswordType"
+        },
+        {
+          "id": "c39",
+          "description": "Authentication --mandatory--> AuthenticationMechanism"
+        },
+        {
+          "id": "c185",
+          "description": "Caching --mandatory--> EternalObjects"
+        },
+        {
+          "id": "c11",
+          "description": "Symmetric --alternative--> ['AES', 'DESede', 'Blowfish', 'DES']"
+        },
+        {
+          "id": "c70",
+          "description": "Usability --or--> ['Logging', 'ContextualHelp', 'ExecutionControl', 'Internationalization', 'Feedback']"
+        },
+        {
+          "id": "c83",
+          "description": "Logging --mandatory--> Format"
+        },
+        {
+          "id": "c74",
+          "description": "LoggingOperations --optional--> Log"
+        },
+        {
+          "id": "c204",
+          "description": "Alerts excludes Encryption"
+        },
+        {
+          "id": "c107",
+          "description": "ContextualHelp --mandatory--> HelpType"
+        },
+        {
+          "id": "c59",
+          "description": "HashingImplementations --alternative--> ['JavaSecurityMessageDigest', 'Guava']"
+        },
+        {
+          "id": "c4",
+          "description": "Security --or--> ['Encryption', 'Authentication', 'Hashing', 'Confidentiality', 'Privacy', 'Integrity', 'Non_Repudiation']"
+        },
+        {
+          "id": "c179",
+          "description": "Caching --mandatory--> CacheType"
+        },
+        {
+          "id": "c122",
+          "description": "ExecutionControl --optional--> Shortcuts"
+        },
+        {
+          "id": "c2",
+          "description": "FQAs --or--> ['Security', 'Usability', 'Persistence', 'ContextAwareness', 'Performance']"
+        },
+        {
+          "id": "c123",
+          "description": "Internationalization --mandatory--> Locale"
+        },
+        {
+          "id": "c31",
+          "description": "Authentication --mandatory--> AuthenticationImplementations"
+        },
+        {
+          "id": "c158",
+          "description": "DataType --or--> ['Integers', 'Strings', 'Floats', 'Objects']"
+        },
+        {
+          "id": "c102",
+          "description": "ContextualHelpOperations --optional--> ShowHelp"
+        },
+        {
+          "id": "c151",
+          "description": "DatabaseStorage --mandatory--> DatabaseType"
+        },
+        {
+          "id": "c153",
+          "description": "DatabaseType --alternative--> ['Relational', 'NoSQL']"
+        },
+        {
+          "id": "c103",
+          "description": "ContextualHelp --mandatory--> ContextualHelpImplementations"
+        },
+        {
+          "id": "c87",
+          "description": "Logging --mandatory--> Level"
+        },
+        {
+          "id": "c113",
+          "description": "UserType --alternative--> ['Beginner', 'Intermediate', 'Advanced', 'Expert']"
+        },
+        {
+          "id": "c17",
+          "description": "EncryptionImplementations --alternative--> ['JavaxCrypto', 'BouncyCastle']"
+        },
+        {
+          "id": "c127",
+          "description": "Persistence --alternative--> ['FileStorage', 'DatabaseStorage']"
+        },
+        {
+          "id": "c161",
+          "description": "ContextAwareness --alternative--> ['LocationAware', 'TimeAware', 'DeviceAware', 'UserAware', 'EnvironmentAware']"
+        },
+        {
+          "id": "c135",
+          "description": "FileType --alternative--> ['Binary', 'TXTFile', 'XMLFile', 'JSONFile']"
+        },
+        {
+          "id": "c117",
+          "description": "ExecutionControl --mandatory--> ExecutionControl_1"
+        },
+        {
+          "id": "c57",
+          "description": "Hashing --mandatory--> HashingImplementations"
+        },
+        {
+          "id": "c46",
+          "description": "Authentication --optional--> PasswordLength"
+        },
+        {
+          "id": "c7",
+          "description": "EncryptionAlgorithms --alternative--> ['Asymmetric', 'Symmetric']"
+        },
+        {
+          "id": "c64",
+          "description": "HashingOperations --optional--> Hash"
+        },
+        {
+          "id": "c29",
+          "description": "Padding --alternative--> ['PKCS5', 'PKCS1', 'OAEP']"
+        },
+        {
+          "id": "c140",
+          "description": "FileStorageImplementations --optional--> JavaIO"
+        },
+        {
+          "id": "c143",
+          "description": "DatabaseStorage --mandatory--> DatabaseStorageOperations"
+        },
+        {
+          "id": "c116",
+          "description": "ContextualHelp --optional--> AuthenticatedUser"
+        },
+        {
+          "id": "c38",
+          "description": "AuthenticationOperations --optional--> Authenticate"
+        },
+        {
+          "id": "c125",
+          "description": "Feedback --alternative--> ['InteractionFeedback', 'ProgressFeedback', 'SystemStatusDisplay', 'Alerts']"
+        },
+        {
+          "id": "c81",
+          "description": "Handler --alternative--> ['ConsoleLog', 'FileLog', 'DatabaseLog']"
+        },
+        {
+          "id": "c71",
+          "description": "Logging --mandatory--> LoggingOperations"
+        },
+        {
+          "id": "c177",
+          "description": "Caching --mandatory--> MaxSizeCache"
+        },
+        {
+          "id": "c137",
+          "description": "FileStorage --mandatory--> FileStorageImplementations"
+        },
+        {
+          "id": "c97",
+          "description": "ErrorLog --mandatory--> TraceFile"
+        },
+        {
+          "id": "c5",
+          "description": "Encryption --mandatory--> EncryptionAlgorithms"
+        },
+        {
+          "id": "c181",
+          "description": "CacheType --alternative--> ['LocalCache', 'RemoteCache']"
+        },
+        {
+          "id": "c155",
+          "description": "DatabaseStorage --mandatory--> DataType"
+        },
+        {
+          "id": "c145",
+          "description": "DatabaseStorageOperations --alternative--> ['Store', 'Query']"
+        },
+        {
+          "id": "c41",
+          "description": "AuthenticationMechanism --alternative--> ['UserPassword', 'DigitalCertificate', 'Biometric', 'SocialID', 'Pin', 'MatrixCode']"
+        },
+        {
+          "id": "c131",
+          "description": "FileStorageOperations --alternative--> ['CreateFile', 'ModifyFile', 'DeleteFile']"
+        },
+        {
+          "id": "c352",
+          "description": "CypheredMessages requires Encryption"
+        },
+        {
+          "id": "c27",
+          "description": "Encryption --mandatory--> Padding"
+        },
+        {
+          "id": "c129",
+          "description": "FileStorage --mandatory--> FileStorageOperations"
+        },
+        {
+          "id": "c35",
+          "description": "Authentication --mandatory--> AuthenticationOperations"
+        },
+        {
+          "id": "c355",
+          "description": "CypheredMessages requires FileStorage"
+        },
+        {
+          "id": "c273",
+          "description": "Authentication excludes Encryption"
+        },
+        {
+          "id": "c168",
+          "description": "Performance --optional--> Caching"
+        },
+        {
+          "id": "c67",
+          "description": "HashingAlgorithms --alternative--> ['MD5', 'SHA1', 'SHA256', 'SHA512']"
+        },
+        {
+          "id": "c425",
+          "description": "TraceFile requires Privacy"
+        },
+        {
+          "id": "c44",
+          "description": "DigitalCertificate --optional--> PseudonymousCertificate"
+        },
+        {
+          "id": "c343",
+          "description": "Confidentiality requires TimeAware"
+        },
+        {
+          "id": "c9",
+          "description": "Asymmetric --alternative--> ['RSA', 'DSA', 'ECDSA']"
+        },
+        {
+          "id": "c243",
+          "description": "AuthenticatedUser excludes FileStorage"
+        },
+        {
+          "id": "c19",
+          "description": "Encryption --mandatory--> EncryptionOperations"
+        },
+        {
+          "id": "c169",
+          "description": "Caching --mandatory--> CachingOperations"
+        },
+        {
+          "id": "c91",
+          "description": "Logging --mandatory--> CypheredMessages"
+        },
+        {
+          "id": "c52",
+          "description": "Authentication --optional--> LimitedSession"
+        },
+        {
+          "id": "c366",
+          "description": "CypheredMessages excludes SimpleImplementationSLF4J"
+        },
+        {
+          "id": "c147",
+          "description": "DatabaseStorage --mandatory--> DatabaseStorageImplementations"
+        },
+        {
+          "id": "c454",
+          "description": "TimeAware requires XML"
+        },
+        {
+          "id": "c163",
+          "description": "LocationAware --alternative--> ['GPS', 'WiFiLocation']"
+        },
+        {
+          "id": "c316",
+          "description": "BatteryStatus requires TimeAware"
+        },
+        {
+          "id": "c15",
+          "description": "Encryption --mandatory--> EncryptionImplementations"
+        },
+        {
+          "id": "c25",
+          "description": "Mode --alternative--> ['CBC', 'ECB', 'CFB', 'CTR', 'CTS']"
+        },
+        {
+          "id": "c436",
+          "description": "SecureDatabase requires TraceFile"
+        },
+        {
+          "id": "c183",
+          "description": "Caching --mandatory--> MaxLifeSeconds"
+        },
+        {
+          "id": "c335",
+          "description": "Privacy requires Confidentiality"
+        },
+        {
+          "id": "c440",
+          "description": "XML requires SecureDatabase"
+        },
+        {
+          "id": "c233",
+          "description": "Confidentiality requires AuthenticatedUser"
+        }
+      ],
+      "ne_constraints": [
+        "NOT(Tutorial = true & UserType = false)"
+      ],
+      "bg_clauses": [
+        [
+          1
+        ]
+      ],
+      "redundant_constraints": [
+        "c322",
+        "c418",
+        "c349",
+        "c156",
+        "c104",
+        "c261",
+        "c311",
+        "c371",
+        "c424",
+        "c165",
+        "c344",
+        "c6",
+        "c431",
+        "c392",
+        "c172",
+        "c301",
+        "c310",
+        "c362",
+        "c347",
+        "c295",
+        "c384",
+        "c413",
+        "c427",
+        "c369",
+        "c266",
+        "c80",
+        "c138",
+        "c426",
+        "c414",
+        "c248",
+        "c372",
+        "c445",
+        "c408",
+        "c264",
+        "c439",
+        "c315",
+        "c375",
+        "c267",
+        "c8",
+        "c317",
+        "c307",
+        "c218",
+        "c120",
+        "c76",
+        "c10",
+        "c411",
+        "c300",
+        "c288",
+        "c72",
+        "c339",
+        "c26",
+        "c319",
+        "c40",
+        "c437",
+        "c293",
+        "c126",
+        "c184",
+        "c60",
+        "c410",
+        "c254",
+        "c433",
+        "c291",
+        "c323",
+        "c96",
+        "c16",
+        "c154",
+        "c455",
+        "c110",
+        "c395",
+        "c284",
+        "c359",
+        "c389",
+        "c350",
+        "c66",
+        "c108",
+        "c164",
+        "c124",
+        "c82",
+        "c320",
+        "c20",
+        "c112",
+        "c132",
+        "c398",
+        "c438",
+        "c160",
+        "c446",
+        "c279",
+        "c234",
+        "c128",
+        "c342",
+        "c285",
+        "c30",
+        "c399",
+        "c423",
+        "c174",
+        "c178",
+        "c216",
+        "c18",
+        "c215",
+        "c180",
+        "c331",
+        "c222",
+        "c221",
+        "c432",
+        "c341",
+        "c381",
+        "c415",
+        "c422",
+        "c246",
+        "c98",
+        "c296",
+        "c434",
+        "c346",
+        "c449",
+        "c452",
+        "c402",
+        "c304",
+        "c12",
+        "c321",
+        "c368",
+        "c419",
+        "c34",
+        "c443",
+        "c420",
+        "c374",
+        "c417",
+        "c114",
+        "c28",
+        "c448",
+        "c393",
+        "c152",
+        "c209",
+        "c325",
+        "c230",
+        "c318",
+        "c198",
+        "c144",
+        "c136",
+        "c430",
+        "c459",
+        "c257",
+        "c407",
+        "c195",
+        "c92",
+        "c298",
+        "c170",
+        "c62",
+        "c447",
+        "c251",
+        "c337",
+        "c416",
+        "c287",
+        "c42",
+        "c428",
+        "c197",
+        "c134",
+        "c255",
+        "c68",
+        "c263",
+        "c249",
+        "c328",
+        "c212",
+        "c213",
+        "c237",
+        "c290",
+        "c324",
+        "c297",
+        "c219",
+        "c58",
+        "c380",
+        "c435",
+        "c36",
+        "c32",
+        "c282",
+        "c451",
+        "c258",
+        "c401",
+        "c84",
+        "c348",
+        "c225",
+        "c340",
+        "c456",
+        "c162",
+        "c404",
+        "c387",
+        "c351",
+        "c421",
+        "c313",
+        "c186",
+        "c444",
+        "c24",
+        "c327",
+        "c314",
+        "c88",
+        "c150",
+        "c405",
+        "c294",
+        "c308",
+        "c260",
+        "c281",
+        "c442",
+        "c22",
+        "c189",
+        "c146",
+        "c210",
+        "c429",
+        "c457",
+        "c303",
+        "c148",
+        "c360",
+        "c450",
+        "c336",
+        "c453",
+        "c231",
+        "c194",
+        "c224",
+        "c86",
+        "c176",
+        "c334",
+        "c118",
+        "c345",
+        "c330",
+        "c252",
+        "c309",
+        "c365",
+        "c201",
+        "c458",
+        "c333",
+        "c396",
+        "c182",
+        "c270",
+        "c386",
+        "c100",
+        "c240",
+        "c306",
+        "c383",
+        "c338",
+        "c363",
+        "c441",
+        "c245",
+        "c130",
+        "c312",
+        "c50",
+        "c78",
+        "c390",
+        "c278"
+      ],
+      "statistics": {
+        "n_bias": 459,
+        "n_mss": 354,
+        "n_kb": 108,
+        "n_ne": 1
+      },
+      "train_size": {
+        "positive": 10,
+        "negative": 1
+      },
+      "test_size": {
+        "positive": 5,
+        "negative": 0
+      },
+      "evaluation": null
+    }
+  ],
+  "performance": {
+    "n_runs": 3,
+    "runtime": {
+      "mean_ms": 248.10225000449768,
+      "std_ms": 42.899944157730836,
+      "min_ms": 200.93679201090708,
+      "max_ms": 284.7987079876475
+    },
+    "consistency_checks": {
+      "mean": 476.3333333333333,
+      "std": 29.399546481762833,
+      "min": 452,
+      "max": 509
+    },
+    "memory": {
+      "mean_mb": 1.7321033477783203,
+      "max_mb": 1.798844337463379
+    },
+    "kb_size": {
+      "n_mss_mean": 344.3333333333333,
+      "n_kb_mean": 109
+    },
+    "congen_runtime": {
+      "mean_ms": 165.50908332768208,
+      "std_ms": 14.730216935378019,
+      "min_ms": 148.51095800986513,
+      "max_ms": 174.53454196220264
+    },
+    "acqmss_runtime": {
+      "mean_ms": 1012.5052907775777,
+      "std_ms": 124.52960035547432,
+      "min_ms": 872.7415532339364,
+      "max_ms": 1111.6650456679054
+    },
+    "acqmss_calls": {
+      "mean": 569,
+      "std": 24.331050121192877,
+      "min": 553,
+      "max": 597
+    },
+    "reduce_runtime": {
+      "mean_ms": 35.237986322802804,
+      "std_ms": 1.9248622916885623,
+      "min_ms": 33.2589169847779,
+      "max_ms": 37.103625014424324
+    },
+    "solver_time": {
+      "mean_ms": 70.25266666666694,
+      "std_ms": 5.900096383393846,
+      "min_ms": 63.5980000000001,
+      "max_ms": 74.84400000000119
+    },
+    "is_consistent_calls": {
+      "mean": 1921,
+      "std": 174.98285630312475,
+      "min": 1719,
+      "max": 2026
+    },
+    "is_consistent_test_cases_calls": {
+      "mean": 476.3333333333333,
+      "std": 29.399546481762833,
+      "min": 452,
+      "max": 509
+    },
+    "redundancy_consistency_checks": {
+      "mean": 345,
+      "std": 15.620499351813308,
+      "min": 327,
+      "max": 355
+    }
+  },
+  "summary": null
+}
