@@ -222,7 +222,14 @@ __marimo__/
 /tests/output/
 /.serena/
 
-# SoSyM sweep intermediates: partials and generated configs are regenerable;
-# the merged CV JSONs under data/results_sosym/ stay visible as evidence.
+# SoSyM sweep: partials are the only genuine intermediate. Gate 0 proved the merged
+# CV JSON reconstructs them exactly, so they are regenerable and ignored.
+#
+# The generated configs are NOT intermediates and are tracked. They carry the
+# provenance of every run — seed, shuffle_bias, solver_mode, n_folds, max_queries,
+# query_mode and the exact input paths. At 0b0313a the committed config said
+# query_mode = "example_only" while the commit shipped example-first results from an
+# uncommitted edit, and those numbers cannot be reproduced as a result. shuffle_bias
+# is load-bearing besides: ADR-0015's defect bites precisely when the pool seed is
+# None, which is precisely when that flag is false.
 data/results_sosym/**/partials/
-data/results_sosym/configs/
