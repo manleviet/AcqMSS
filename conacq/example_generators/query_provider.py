@@ -21,6 +21,11 @@ if TYPE_CHECKING:
     from conacq.algorithms.quacq.quacq_model import QuAcqModel
 
 
+def _config_key(config: Dict[str, bool]) -> frozenset:
+    """Identity of a configuration, independent of dict ordering."""
+    return frozenset(config.items())
+
+
 class QueryProvider:
     """Unified query provider: pool-filtered + SAT-based strategies.
 
@@ -51,6 +56,10 @@ class QueryProvider:
         # Pool state
         self._pool: List[Dict[str, bool]] = []
         self._pool_index: int = 0
+        # Configurations this provider has already proposed from SAT, this run.
+        # Read ONLY by generate_from_sat. The pool path neither records nor consults
+        # it, so example_only — which never reaches SAT — is bit-for-bit unaffected.
+        self._sat_proposed: set = set()
         # Initializes pool state with optional seeded shuffling
         if pool is not None:
             self._pool = list(pool)
@@ -135,10 +144,33 @@ class QueryProvider:
             model_lits = self.checker.find_model(set_c)
             if model_lits is not None:
                 config = self.model.model_to_config(model_lits)
+                key = _config_key(config)
+                if key in self._sat_proposed:
+                    # Already asked. Re-asking teaches nothing and, when FindC cannot
+                    # isolate a constraint for it, nothing leaves remaining_bias — so
+                    # this loop would return the identical query on every subsequent
+                    # call until the budget ran out. Measured at 88-98% of a 5,000
+                    # query budget before this skip existed.
+                    #
+                    # Move to the next candidate rather than dropping c_id from
+                    # remaining_bias. Dropping is what the oracle-mode band-aid does,
+                    # and the code calls it "a recall trade-off ... the dropped
+                    # candidate may be a TRUE, bias-representable constraint". c_id
+                    # stays a candidate here and becomes askable again once learned_kb
+                    # grows, because learned_kb is part of set_c and a different
+                    # assumption set yields a different model.
+                    self.profiler.increment('query_generation_repeat_skips')
+                    logging.debug('Skipping already-proposed query for %s', c_id)
+                    continue
+                self._sat_proposed.add(key)
                 logging.debug('SAT query testing constraint %s', c_id)
                 return config, c_id
 
-        logging.debug('No SAT query possible - all bias implied by KB + BG')
+        # Every candidate is either UNSAT or would repeat a query already asked.
+        # Terminates: remaining_bias is finite and each call either returns a query
+        # never returned before or exhausts the list.
+        logging.debug('No SAT query possible - all bias implied by KB + BG, '
+                      'or every candidate would repeat an asked query')
         return None, None
 
     def generate(

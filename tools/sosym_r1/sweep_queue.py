@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -341,8 +342,52 @@ def run_unit(ledger: dict, unit: dict, ledger_path: Path, max_queries: int) -> b
     return unit['status'] == 'done'
 
 
+def acquire_window_lock(ledger_path: Path) -> Path | None:
+    """Claim the right to run a window, or return None if one already is.
+
+    Two windows on one ledger is not merely wasteful: the abandoned-unit reset
+    treats anything marked running as dead, so a second window would reset the
+    first's in-flight unit to pending and run it again — losing hours and writing
+    two results for one unit. A belt-and-braces schedule alongside a manual launch
+    makes that a live possibility rather than a theoretical one.
+
+    A lock whose pid is gone is stale — a window killed by a closing lid leaves one —
+    and is taken over rather than blocking the queue forever.
+    """
+    lock = ledger_path.with_suffix('.lock')
+    if lock.exists():
+        try:
+            holder = json.loads(lock.read_text())
+            pid = int(holder['pid'])
+        except (json.JSONDecodeError, OSError, KeyError, ValueError):
+            pid = None
+        if pid is not None:
+            try:
+                os.kill(pid, 0)          # signal 0: liveness test, no signal sent
+            except ProcessLookupError:
+                print(f"  taking over a stale lock from dead pid {pid}")
+            except PermissionError:
+                print(f"  another window is running (pid {pid}, not ours) — exiting")
+                return None
+            else:
+                print(f"  another window is already running (pid {pid}) — exiting cleanly")
+                return None
+    lock.write_text(json.dumps({'pid': os.getpid(), 'since': now()}))
+    return lock
+
+
 def cmd_run(args) -> int:
     ledger_path = Path(args.ledger)
+    lock = acquire_window_lock(ledger_path)
+    if lock is None:
+        return 0                          # not an error: the work is already in hand
+    try:
+        return _run_window(args, ledger_path)
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+def _run_window(args, ledger_path: Path) -> int:
     ledger = load_ledger(ledger_path)
     remaining = parse_budget(args.budget)
 
