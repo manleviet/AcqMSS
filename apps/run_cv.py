@@ -146,6 +146,10 @@ Example:
     interactive_config = eval_config.get('interactive', {})
     max_queries = interactive_config.get('max_queries', 1000)
     query_mode = interactive_config.get('query_mode', 'example_only')
+    # Operational guard, not a stopping rule. 0 or absent disables it. See
+    # cross_validation.n_fold_cross_validation_interactive for why the two must not be
+    # confused: max_queries is reproducible, this is not.
+    timeout_s = interactive_config.get('timeout_s') or None
 
     # ConMin-specific settings
     conmin_config = eval_config.get('conmin', {})
@@ -183,8 +187,9 @@ Example:
     logger.info("Solver: %s", solver_name)
     logger.info("Shuffle bias: %s", shuffle_bias)
     if algorithm == 'interactive':
-        logger.info("Max queries: %s", max_queries)
+        logger.info("Max queries: %s (stopping rule)", max_queries)
         logger.info("Query mode: %s", query_mode)
+        logger.info("Wall-clock guard: %s", f"{timeout_s} s" if timeout_s else "disabled")
 
     success_count = 0
     deferred_count = 0
@@ -287,6 +292,7 @@ Example:
                         solver_name=solver_name,
                         max_queries=max_queries,
                         query_mode=query_mode,
+                        timeout_s=timeout_s,
                         use_incremental=is_incremental,
                         fold_data=fold_data,
                         shuffle_bias=shuffle_bias,

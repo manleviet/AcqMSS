@@ -102,10 +102,14 @@ class QuAcqRunner(BaseRunner):
             max_queries: Maximum membership queries per run
             query_mode: Default query mode for example-based learning
             use_incremental: Use incremental solver mode for Oracle
-            timeout_s: Optional wall-clock cap (seconds) for oracle-mode learning. A soft
-                safety net (checked between outer iterations) that halts with
-                convergence_reason='timeout'; ``None`` (default) disables it. Example modes
-                ignore it. Prefer sizing max_queries so it fires first (deterministic).
+            timeout_s: Optional per-run wall-clock guard (seconds), applied in every mode.
+                An OPERATIONAL safety net, not a stopping rule: it is checked between outer
+                iterations, so an in-flight FindScope/FindC overruns it, and it depends on
+                machine load, which makes it irreproducible. ``max_queries`` is the
+                scientific bound and must be the one that fires. When this guard fires it
+                is recorded as convergence_reason='timeout', which is distinct from
+                'max_queries' precisely so a run stopped by the clock can never be mistaken
+                for a run stopped by the budget. ``None`` (default) disables it.
         """
         super().__init__(bias_path, fm_path, solver_name, use_incremental=use_incremental)
 
@@ -257,6 +261,17 @@ class QuAcqRunner(BaseRunner):
 
         return run_result
 
+    def _deadline(self) -> Optional[float]:
+        """Wall-clock guard expiry, or None when disabled.
+
+        Computed at the call boundary so model build and checker setup — already done in
+        __init__/run — are not charged against the learning budget. The guard exists so a
+        pathological fold cannot hold a sweep window open indefinitely; it is not a
+        stopping rule and nothing reported may depend on it.
+        """
+        return (time.monotonic() + self.timeout_s
+                if self.timeout_s is not None else None)
+
     def _run_oracle_mode(self, checker, task, assignment_map, task_data, profiler, mode):
         """Run oracle-based learning via QuAcq.learn(mode='oracle')."""
         if mode == 'interactive':
@@ -281,13 +296,9 @@ class QuAcqRunner(BaseRunner):
                                  model=self.model, profiler=profiler,
                                  task=task, assignment_map=assignment_map)
 
-        # Wall-clock deadline computed at the call boundary so model-build/checker setup
-        # (already done in __init__/run) is not counted against it. None → disabled.
-        deadline = (time.monotonic() + self.timeout_s
-                    if self.timeout_s is not None else None)
         return quacq.learn(
             **task_data, mode='oracle',
-            max_queries=self.max_queries, deadline=deadline)
+            max_queries=self.max_queries, deadline=self._deadline())
 
     def _run_example_mode(self, checker, task, assignment_map, task_data, profiler,
                           positive_examples, negative_examples,
@@ -323,4 +334,4 @@ class QuAcqRunner(BaseRunner):
 
         return quacq.learn(
             **task_data, mode=mode,
-            max_queries=self.max_queries)
+            max_queries=self.max_queries, deadline=self._deadline())

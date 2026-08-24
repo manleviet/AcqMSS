@@ -534,6 +534,7 @@ def n_fold_cross_validation_interactive(
         shuffle_each_fold: bool = True,
         fold_data: Optional[FoldData] = None,
         shuffle_bias: bool = False,
+        timeout_s: Optional[float] = None,
         fold_indices: Optional[Sequence[int]] = None,
         on_fold: Optional[Callable[[CrossValidationFoldResult], None]] = None,
         done_folds: Optional[Mapping[int, CrossValidationFoldResult]] = None
@@ -551,8 +552,14 @@ def n_fold_cross_validation_interactive(
         bias_path: Path to bias file (.json)
         seed: Random seed for fold generation and training shuffle (required)
         solver_name: SAT solver name
-        max_queries: Maximum queries per fold
+        max_queries: Maximum queries per fold — the stopping RULE, deterministic and
+            machine-independent, and the only bound any reported number may rest on
         query_mode: 'example_only' or 'example_first'
+        timeout_s: Optional per-fold wall-clock GUARD (seconds). Operational only: it
+            stops a pathological fold from holding a sweep window open, is checked
+            between outer iterations, and depends on machine load. It records
+            convergence_reason='timeout', which is distinct from 'max_queries' so a
+            clock-stopped fold can never be read as a budget-stopped one.
         use_incremental: Use incremental solver mode
         shuffle_each_fold: Shuffle training examples before each fold
         fold_data: Optional pre-generated fold assignments
@@ -590,7 +597,8 @@ def n_fold_cross_validation_interactive(
         solver_name=solver_name,
         max_queries=max_queries,
         query_mode=query_mode,
-        use_incremental=use_incremental
+        use_incremental=use_incremental,
+        timeout_s=timeout_s
     )
     try:
         return _run_cv_loop(
