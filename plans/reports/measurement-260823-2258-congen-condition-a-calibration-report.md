@@ -33,8 +33,44 @@ one fold per process.
 | fqa | ff | 0.0010 | 0.0005 | 0.50× |
 | REAL-FM-7 | all six | ≤0.0007 | ≤0.0002 | 0.20×–1.00× |
 
-Over the 20 folds whose reference is ≥ 0.01 h — the only ones where a window
-could plausibly fail to hold a unit — **median 0.13×, max 0.47×**.
+Over the folds whose reference is ≥ 0.01 h — the only ones where a window could
+plausibly fail to hold a unit — **median 0.13×**.
+
+**Read the spread only on those cells.** Sub-0.01 h references are dominated by
+interpreter start-up, and a ratio taken over one describes process overhead, not
+ConGen. Quoting them inflates the apparent within-KB variability by 3×:
+
+| kb | all cells | **cells with reference ≥ 0.01 h** |
+|---|---|---|
+| arcade | 0.113–0.370 | **0.113–0.125** (3 samplings) |
+| REAL-FM-4 | 0.101–0.429 | **0.101–0.132** (5 samplings) |
+| fqa | 0.354–0.667 | **0.354–0.440** (2 samplings) |
+| REAL-FM-7 | 0.200–1.000 | *no cell qualifies* |
+| busybox | — | **0.166** (`ff`, 1 cell) |
+
+### Within-KB projection is supported; cross-KB is not
+
+The data contains one controlled size comparison, and it is reassuring:
+
+| REAL-FM-4 | reference | ratio |
+|---|---|---|
+| rs_1n | 0.480 h | 0.108 |
+| rs_2n | 1.774 h | 0.106 |
+| rs_3n | 4.174 h | 0.101 |
+
+An **8.7× size step moves the ratio by 6 %**. So projecting a ratio across samplings
+*within* a knowledge base is sound, and busybox `ff` → `rs_1n` is a 7.5× step —
+smaller than the one already validated.
+
+**The cross-KB refusal stands unchanged**, and fqa is the proof: it sits 3× away from
+every other knowledge base on the same metric. A ratio measured on one KB licenses
+nothing about another.
+
+⚠ **A nominal estimate is not a reference.** busybox `rs_m` has no condition-A figure
+at all — its 0.2 h is a placeholder chosen to make the unit schedulable. Computing
+`actual / estimate` over it produced a "0.060× ratio" against a number nobody
+measured. Units now carry `estimate_source`, and the ratio is restricted to ConGen
+units with a genuine condition-A reference.
 
 The two cells the handoff named are both in there: REAL-FM-4 `rs_1n`'s reference
 reproduces exactly (0.4801 h/fold measured against the handoff's 0.48), and

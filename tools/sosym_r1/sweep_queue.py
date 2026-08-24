@@ -173,17 +173,23 @@ def cmd_status(args) -> int:
     # measurement of a sub-millisecond cell, not missing data. It still cannot carry
     # a ratio, so it is excluded from the mean and counted out loud rather than
     # vanishing into a denominator nobody checks.
+    # The ratio means one thing: ConGen against AcqMss condition A. A unit whose
+    # estimate is a nominal placeholder, or whose algorithm is not ConGen, has no
+    # condition-A reference to be a ratio *of* -- including it would report a
+    # measurement against a number nobody measured.
     measured = [u for u in done
-                if u['actual_h'] is not None and u['estimate_h'] is not None]
+                if u['actual_h'] is not None and u['estimate_h'] is not None
+                and u.get('estimate_source', 'condition-A') == 'condition-A'
+                and u['algorithm'] == 'congen']
     paired = [(u['estimate_h'], u['actual_h']) for u in measured if u['estimate_h'] > 0]
     if paired:
         ratio = sum(a for _, a in paired) / sum(e for e, _ in paired)
-        print(f"  observed actual/estimate: {ratio:.2f}x over {len(paired)} of "
+        print(f"  ConGen vs condition A: {ratio:.2f}x over {len(paired)} of "
               f"{len(done)} done units")
         skipped = len(done) - len(paired)
         if skipped:
-            print(f"    ({skipped} done units carry no ratio: their condition-A "
-                  f"reference is 0.0000 h)")
+            print(f"    ({skipped} done units carry no ratio: zero, nominal or "
+                  f"non-ConGen reference)")
 
     # Last line, and deliberately so: a truncated read of this output must still be
     # true. The counts above are per-bucket and easy to mistake for a total -- this

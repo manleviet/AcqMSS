@@ -30,9 +30,14 @@ def main() -> int:
     ledger = json.loads(path.read_text())
     # `is not None` plus an explicit positive-reference test: a 0.0000 h reference is
     # a real measurement that cannot carry a ratio, not a missing one.
+    # ConGen-only, condition-A-referenced, positive reference. A nominal placeholder
+    # is a scheduling device, not a baseline; a ratio taken against one measures
+    # nothing. busybox rs_m reported 0.060x this way before the flag existed.
     done = [u for u in ledger['units']
             if u['status'] == 'done' and u['actual_h'] is not None
-            and u['estimate_h'] is not None and u['estimate_h'] > 0]
+            and u['estimate_h'] is not None and u['estimate_h'] > 0
+            and u.get('estimate_source', 'condition-A') == 'condition-A'
+            and u['algorithm'] == 'congen']
     if not done:
         print("no finished units with both an estimate and an actual")
         return 1

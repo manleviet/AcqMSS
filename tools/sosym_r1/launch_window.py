@@ -34,6 +34,14 @@ def main() -> int:
     parser.add_argument('--budget', required=True, help="window budget, e.g. 6h")
     parser.add_argument('--log', help="log path (default: data/results_sosym/window-<utc>.log)")
     parser.add_argument('--max-queries', type=int, default=5000)
+    parser.add_argument('--only',
+                        help="forwarded to sweep_queue: run only units whose id contains "
+                             "this substring. Without it the window works the whole "
+                             "cheapest-first queue, which is rarely what you want when "
+                             "you launched it to get one specific measurement.")
+    parser.add_argument('--stop-on-failure', action='store_true',
+                        help="forwarded to sweep_queue: stop the window on the first "
+                             "failed unit instead of continuing.")
     parser.add_argument('--no-caffeinate', action='store_true',
                         help="do not hold the machine awake (use when on battery)")
     args = parser.parse_args()
@@ -45,6 +53,10 @@ def main() -> int:
     inner = [sys.executable, '-u',  # -u: the log is the only view into a detached run
              str(REPO / 'tools' / 'sosym_r1' / 'sweep_queue.py'),
              'run', '--budget', args.budget, '--max-queries', str(args.max_queries)]
+    if args.only:
+        inner += ['--only', args.only]
+    if args.stop_on_failure:
+        inner += ['--stop-on-failure']
 
     # caffeinate holds the display, disk, system and user-idle timers. Without it a
     # home window ends when the machine sleeps rather than when the budget runs out.

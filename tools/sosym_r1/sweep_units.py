@@ -78,6 +78,10 @@ ORDER: List[tuple] = [
 # conditions. QuAcq-active is not run (§7 C1 decision 1, retracted and re-settled).
 QUERY_MODES = ('example_only', 'example_first')
 
+# Cells with no condition-A reference at all. Their estimate is a placeholder chosen
+# to be schedulable and conservative; it must never be used as a measurement baseline.
+NOMINAL_ESTIMATES = {('busybox', 'rs_m')}
+
 STATUS_PENDING = 'pending'
 STATUS_LONG_RUN = 'long-run'
 STATUS_NO_ESTIMATE = 'no-estimate'
@@ -99,9 +103,16 @@ def _unit(kb: str, sampling: str, algorithm: str, fold: int,
         status = STATUS_LONG_RUN
     else:
         status = STATUS_PENDING
+    # A nominal estimate is a schedulable placeholder, not a condition-A reference.
+    # Without this flag an "actual / estimate" ratio computed over it looks like a
+    # measurement of ConGen against AcqMss when it is really a measurement against a
+    # number invented to get the unit scheduled -- which is how busybox rs_m briefly
+    # reported a 0.060x ratio against a figure nobody measured.
+    source = 'nominal' if (kb, sampling) in NOMINAL_ESTIMATES else 'condition-A'
     return {
         'id': f"{algorithm}{suffix}|{stem}_{sampling}|fold{fold}",
         'kb': kb, 'kb_stem': stem, 'sampling': sampling,
+        'estimate_source': source,
         'algorithm': algorithm, 'query_mode': query_mode,
         'solver_mode': SOLVER_MODE, 'fold': fold,
         'estimate_h': estimate, 'status': status,
