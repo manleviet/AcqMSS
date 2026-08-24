@@ -67,16 +67,37 @@ def _run(args) -> int:
         return rc
 
     # The window's own lock is released by now, so nothing here can collide with it.
-    print("\n=== phase 2: post-patch cap re-probe (tail) ===", flush=True)
+    #
+    # The question the probe answers has INVERTED since the fix. Before, it asked
+    # whether a larger budget bought anything — the answer was no, because the run was
+    # spinning. Post-fix the runs are still producing novel queries at ~4,990 of 5,000,
+    # so the cap may now bind for an honest reason, and the question is where learning
+    # actually stops. That cannot be answered from a grid bounded at 5,000: bounding it
+    # there would report "still learning at the ceiling" and call it a result.
+    #
+    # So the extension runs FIRST, on the cheapest mid-size KB. The grid is the
+    # familiar shape but it is now the secondary question, and if the tail is cut short
+    # the extension is the half worth having.
+    print("\n=== phase 2a: where does learning stop? (fqa, extended past 5000) ===",
+          flush=True)
+    ext_rc = subprocess.run(
+        [sys.executable, '-u', str(TOOLS / 'probe_query_budget.py'),
+         '--out', args.probe_out + '_extended', '--kbs', 'fqa',
+         '--modes', 'example_first',
+         '--caps', '1000', '5000', '10000', '20000'],
+        cwd=REPO).returncode
+    print(f"=== phase 2a exit {ext_rc} ===", flush=True)
+
+    print("\n=== phase 2b: the standard grid, post-fix ===", flush=True)
     probe_rc = subprocess.run(
         [sys.executable, '-u', str(TOOLS / 'probe_query_budget.py'),
          '--out', args.probe_out,
-         '--kbs', 'fqa', 'arcade-game', 'REAL-FM-4',
+         '--kbs', 'arcade-game', 'REAL-FM-4',
          '--modes', 'example_first',
          '--caps', '250', '500', '1000', '2000', '5000'],
         cwd=REPO).returncode
-    print(f"=== phase 2 exit {probe_rc} ===", flush=True)
-    return rc or probe_rc
+    print(f"=== phase 2b exit {probe_rc} ===", flush=True)
+    return rc or ext_rc or probe_rc
 
 
 if __name__ == '__main__':
