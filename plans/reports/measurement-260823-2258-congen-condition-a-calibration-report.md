@@ -77,10 +77,13 @@ reproduces exactly (0.4801 h/fold measured against the handoff's 0.48), and
 arcade `rs_3n`'s does too (0.1340 against ≤0.13). The estimates were right about
 condition A. What is wrong is the assumption about which side of it ConGen falls.
 
-**Hypothesis, not verified here**: the checker-gate split (~4.2× measured) and
-the C10 profiler hoisting both landed after those CSVs were recorded. That would
-account for a several-fold across-the-board speedup. Worth confirming before the
-number is used in prose, since it changes what Table 7/8 is comparing.
+**Cause — superseded, see the mechanism report.** This section originally guessed at
+drift. The mechanism was then located: check counts agree with condition A at
+0.98–1.09, and the per-check time ratio equals the wall-clock ratio, so the gap is
+the cost of a check rather than the number of them. NE form is eliminated in every
+form. The remaining candidate is checker-level, by elimination rather than evidence,
+and fqa is unexplained. Full working in
+`measurement-260823-2347-congen-condition-a-ratio-mechanism-report.md`.
 
 ## What went into the ledger
 
@@ -91,30 +94,36 @@ each KB charged at *its own worst observed cell*, with the safety factor still o
 top:
 
 ```
-{"REAL-FM-7": 1.0, "fqa": 1.0, "arcade": 0.44, "REAL-FM-4": 0.5, "default": 1.0}
+{"REAL-FM-7": 1.0, "fqa": 1.0, "arcade": 0.44, "REAL-FM-4": 0.5,
+ "busybox": 0.20, "default": 1.0}
 ```
 
-**busybox is deliberately absent and charges the full condition-A estimate.** It
-has no measurement, it is 60× larger than anything here, and letting a ratio
-gathered on arcade authorise starting a 28.6 h unit is exactly the mistake the
-budget check exists to prevent.
+**busybox was deliberately absent and charged the full condition-A estimate** until it
+had a measurement of its own: it is 60× larger than anything else here, and letting a
+ratio gathered on arcade authorise starting a 28.6 h unit is exactly the mistake the
+budget check exists to prevent. It entered on 2026-08-24 at 0.20× — its own `ff`
+measurement of 0.166×, rounded up — and on that basis only.
 
-## What this does to the schedule, and what it does not
+## What this does to the schedule — measured, 2026-08-24
 
-If the 0.13× median held at busybox scale, the §8 arithmetic would change
-completely: the 117.5 h ConGen total would be ~15 h, and busybox `rs_1n` would
-drop from 28.6 h/fold to ~3.7 h/fold — inside a single home window, which would
-retire the "keep or cut busybox" fork without needing the two-week extension.
+The extrapolation this section originally declined has now been replaced by a
+measurement. **busybox `ff` fold 0: 0.6303 h against a 3.7923 h reference = 0.166×.**
+busybox is slower than the 0.10–0.13 cluster and faster than fqa, and it did not have
+to be either.
 
-**That extrapolation is not licensed and I have not made it.** Every measured
-ratio comes from a model of 6 to 14 features. busybox is 854. The ratio could
-differ in either direction — a large bias changes the solver's working set, and
-Reduce's cost does not obviously scale like AcqMss's.
+Projecting *within* busybox — which the REAL-FM-4 size-step control supports — at
+0.166×:
 
-The measurement that settles it is **busybox `ff`**: reference 3.79 h/fold, so
-even at 1.00× it fits a home window, and it is the only large-KB cell that is both
-affordable and informative. Running it yields the busybox ratio, which is what the
-busybox decision actually turns on. It is next in the queue.
+| | reference | at 0.166× |
+|---|---|---|
+| busybox `ff`, 3 folds | 11.38 h | 1.89 h |
+| busybox `rs_1n`, per fold | 28.56 h | **4.75 h** |
+| busybox `rs_1n`, 3 folds | 85.69 h | **14.24 h** |
+
+**The "keep or cut busybox" fork dissolves.** All three `rs_1n` folds fit in a single
+overnight stretch rather than needing a two-week extension. Charged with the safety
+factor the unit is 7.1 h/fold, so it is refused by a 6.5 h office window and taken by
+an evening one — which is the schedule, not a judgement call.
 
 ## First window, for the record
 
@@ -125,7 +134,9 @@ with 0.14 h unspent. ConGen is now complete for REAL-FM-7 (all 6 samplings), fqa
 
 ## Unresolved
 
-1. Confirm the speedup hypothesis before any prose compares ConGen's runtime to
-   the recorded ConMin condition-A numbers — they are not from the same code.
-2. busybox's ratio is unmeasured and the busybox schedule decision depends on it.
-3. QuAcq's 171 units still carry no estimate; step 4's probe fills them.
+1. No prose compares ConGen runtime to recorded condition-A runtime — they are not
+   from the same code state, and condition A belongs to an unpublished paper that
+   SoSyM cannot cite in any case. Internal validation only.
+2. ~~busybox's ratio is unmeasured~~ — measured 2026-08-24 at 0.166× on `ff` fold 0,
+   n=1. Folds 1–2 confirm or refute; `rs_1n` remains a within-KB projection.
+3. QuAcq's 168 units still carry no estimate; step 4's probe fills them.
