@@ -361,10 +361,24 @@ def cmd_run(args) -> int:
     print(f"window budget {remaining:.2f} h   "
           f"multiplier {ledger['congen_multiplier'] or 'UNCALIBRATED'}   "
           f"safety x{ledger['safety_factor']}"
-          + (f"   only={args.only}" if args.only else ""))
+          + (f"   only={args.only}" if args.only else "")
+          + (f"   reserve={args.reserve}" if args.reserve else ""))
+
+    # Reservation, then backfill. A night window is sized for one busybox fold, and
+    # if the queue were free to choose it would take the cheap units first and then
+    # refuse busybox on the remainder -- silently, every night. So matching units are
+    # offered the budget first, and only then is the rest of the queue released into
+    # whatever is left. The tail of a night window is ~6 h that fits no second busybox
+    # fold but plenty of QuAcq.
+    def scan_order(units):
+        if not args.reserve:
+            return list(units)
+        reserved = [u for u in units if args.reserve in u['id']]
+        rest = [u for u in units if args.reserve not in u['id']]
+        return reserved + rest
 
     ran = 0
-    for unit in ledger['units']:
+    for unit in scan_order(ledger['units']):
         if unit['status'] != units_mod.STATUS_PENDING:
             continue
         if args.only and args.only not in unit['id']:
@@ -415,6 +429,12 @@ def main() -> int:
     p_run.add_argument('--budget', required=True, help="window budget, e.g. 5.5h")
     p_run.add_argument('--max-queries', type=int, default=5000,
                        help="QuAcq query cap (SoSyM revision doc, section 7 C1, decision 5)")
+    p_run.add_argument('--reserve',
+                       help="offer the budget to units whose id contains this substring "
+                            "FIRST, then release the remainder to the rest of the queue. "
+                            "Unlike --only this does not exclude anything: it fixes the "
+                            "order so an expensive reserved unit cannot be crowded out by "
+                            "cheap ones and then refused on what is left.")
     p_run.add_argument('--only',
                        help="run only units whose id contains this substring, e.g. "
                             "'busybox-1.18.0_ff'. Used to pull a decision-critical "
