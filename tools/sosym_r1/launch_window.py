@@ -50,7 +50,13 @@ def main() -> int:
                              "failed unit instead of continuing.")
     parser.add_argument('--no-caffeinate', action='store_true',
                         help="do not hold the machine awake (use when on battery)")
-    args = parser.parse_args()
+    # parse_known_args, not parse_args: in --night mode anything this launcher does not
+    # recognise is forwarded verbatim to run_night_window. Enumerating its flags here
+    # meant adding each one twice, and three times running a launch failed because the
+    # second copy was missing (--only, --reserve, then --probe-first and friends).
+    args, passthrough = parser.parse_known_args()
+    if passthrough and not args.night:
+        parser.error(f"unrecognised arguments: {' '.join(passthrough)}")
 
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     log_path = Path(args.log) if args.log else REPO / 'data' / 'results_sosym' / f'window-{stamp}.log'
@@ -60,7 +66,7 @@ def main() -> int:
         # The whole night: reserved busybox fold, then the cap re-probe in the tail.
         inner = [sys.executable, '-u',
                  str(REPO / 'tools' / 'sosym_r1' / 'run_night_window.py'),
-                 '--budget', args.budget]
+                 '--budget', args.budget, *passthrough]
     else:
         inner = [sys.executable, '-u',  # -u: the log is the only view into a detached run
                  str(REPO / 'tools' / 'sosym_r1' / 'sweep_queue.py'),
