@@ -225,6 +225,11 @@ __marimo__/
 # SoSyM sweep: partials are the only genuine intermediate. Gate 0 proved the merged
 # CV JSON reconstructs them exactly, so they are regenerable and ignored.
 #
+# EXCEPTION, and the reason the rule needs one: that reconstruction argument holds
+# only for a unit whose folds are ALL done. While a unit is part-finished there is no
+# merged file, so its partials are the only copy of that compute. Force-add those
+# (git add -f) until the unit completes and the merged file supersedes them.
+#
 # The generated configs are NOT intermediates and are tracked. They carry the
 # provenance of every run — seed, shuffle_bias, solver_mode, n_folds, max_queries,
 # query_mode and the exact input paths. At 0b0313a the committed config said
