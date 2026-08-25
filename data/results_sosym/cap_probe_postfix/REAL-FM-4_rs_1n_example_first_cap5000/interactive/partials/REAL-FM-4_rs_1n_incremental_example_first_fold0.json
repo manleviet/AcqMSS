@@ -1,0 +1,166 @@
+{
+  "schema": "acqmss.cv.partial/1",
+  "model": "REAL-FM-4_rs_1n",
+  "algorithm": "interactive",
+  "solver_mode": "incremental",
+  "query_mode": "example_first",
+  "n_folds": 3,
+  "fold_index": 0,
+  "commit": "85502d6ac00f09c532fb98c0bbb7327b3bdb6741",
+  "fold": {
+    "fold_index": 0,
+    "accuracy": 0.9897959183673469,
+    "metrics": {
+      "accuracy": 0.9897959183673469,
+      "precision": 0.9887640449438202,
+      "recall": 1.0,
+      "f1_score": 0.9943502824858756,
+      "specificity": 0.9,
+      "true_positives": 88,
+      "true_negatives": 9,
+      "false_positives": 1,
+      "false_negatives": 0
+    },
+    "performance": {
+      "runtime_ms": 1332004.5005420689,
+      "consistency_checks": 5007,
+      "memory_peak_mb": 54.149353981018066,
+      "quacq_runtime_ms": 1331917.1660409775,
+      "query_generation_runtime_ms": 69300.32983678393,
+      "findscope_runtime_ms": 7716196.972972597,
+      "findc_runtime_ms": 2010.6256656581536,
+      "dis_gen_runtime_ms": 749.9641495523974,
+      "reduce_runtime_ms": 10.885833064094186,
+      "solver_time_ms": 189044.39399994587,
+      "is_consistent_calls": 992364,
+      "is_consistent_test_cases_calls": 0,
+      "quacq_calls": 1,
+      "query_generation_calls": 368,
+      "query_generation_consistency_checks": 109483,
+      "prune_calls": 1325,
+      "prune_is_consistent_calls": 886525,
+      "findscope_calls": 7665,
+      "findc_calls": 303,
+      "findc_consistency_checks": 598,
+      "dis_gen_calls": 296,
+      "dis_gen_consistency_checks": 296,
+      "reduce_calls": 1,
+      "redundancy_consistency_checks": 4,
+      "profiler": {
+        "query_generation_consistency_checks": 109483,
+        "solver_time": {
+          "count": 996906,
+          "total": 189.04439399994587,
+          "mean": 0.0001896311126625237,
+          "min": 8.999999998593466e-06,
+          "max": 0.0008659999998599233,
+          "median": 0.0001930000000243126,
+          "stddev": 2.8856085809064335e-05
+        },
+        "solver_time_accum": 189.04439399994587,
+        "is_consistent_calls": 992364,
+        "query_generation_runtime": {
+          "count": 368,
+          "total": 69.30032983678393,
+          "mean": 0.18831611368691287,
+          "min": 0.0006092089461162686,
+          "max": 3.570781833026558,
+          "median": 0.06926758348708972,
+          "stddev": 0.43867993167418506
+        },
+        "query_generation_calls": 368,
+        "paper_consistency_checks": 5007,
+        "prune_is_consistent_calls": 886525,
+        "quacq_prune_complete_pruned": 1431,
+        "prune_calls": 1325,
+        "findscope_calls": 7665,
+        "findscope_runtime": {
+          "count": 7665,
+          "total": 7716.196972972597,
+          "mean": 1.0066793180655704,
+          "min": 4.875008016824722e-06,
+          "max": 7.023684374988079,
+          "median": 0.0014314580475911498,
+          "stddev": 1.5969519483683783
+        },
+        "findc_consistency_checks": 598,
+        "findc_calls": 303,
+        "findc_runtime": {
+          "count": 303,
+          "total": 2.0106256656581536,
+          "mean": 0.006635728269498857,
+          "min": 0.0011883750557899475,
+          "max": 0.010033000027760863,
+          "median": 0.006496540969237685,
+          "stddev": 0.0018953341797863948
+        },
+        "dis_gen_consistency_checks": 296,
+        "dis_gen_calls": 296,
+        "dis_gen_runtime": {
+          "count": 296,
+          "total": 0.7499641495523974,
+          "mean": 0.0025336626674067482,
+          "min": 0.0014281660551205277,
+          "max": 0.005198458093218505,
+          "median": 0.0024476455291733146,
+          "stddev": 0.0006158647861666495
+        },
+        "quacq_findc_unconfirmed": 296,
+        "query_generation_repeat_skips": 3851,
+        "redundancy_consistency_checks": 4,
+        "reduce_calls": 1,
+        "reduce_runtime": {
+          "count": 1,
+          "total": 0.010885833064094186,
+          "mean": 0.010885833064094186,
+          "min": 0.010885833064094186,
+          "max": 0.010885833064094186
+        },
+        "quacq_calls": 1,
+        "quacq_runtime": {
+          "count": 1,
+          "total": 1331.9171660409775,
+          "mean": 1331.9171660409775,
+          "min": 1331.9171660409775,
+          "max": 1331.9171660409775
+        },
+        "quacq_total_time": {
+          "count": 1,
+          "total": 1332.0045005420689,
+          "mean": 1332.0045005420689,
+          "min": 1332.0045005420689,
+          "max": 1332.0045005420689
+        }
+      }
+    },
+    "kb_constraints": [
+      "c289",
+      "c300",
+      "c347",
+      "c349"
+    ],
+    "ne_constraints": [],
+    "bg_clauses": [
+      [
+        1
+      ]
+    ],
+    "redundant_constraints": [],
+    "statistics": {
+      "n_bias": 2079,
+      "n_mss": null,
+      "n_kb": 4,
+      "n_ne": 0
+    },
+    "train_size": {
+      "positive": 174,
+      "negative": 19
+    },
+    "test_size": {
+      "positive": 88,
+      "negative": 10
+    },
+    "n_queries": 5000,
+    "convergence_reason": "max_queries"
+  }
+}
