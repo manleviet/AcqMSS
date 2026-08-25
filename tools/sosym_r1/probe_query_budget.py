@@ -109,15 +109,40 @@ def main() -> int:
     ap.add_argument('--modes', nargs='+', default=['example_first', 'example_only'])
     ap.add_argument('--caps', nargs='+', type=int, default=[250, 500, 1000, 2000, 5000])
     ap.add_argument('--timeout-s', type=int, default=6 * 3600)
+    ap.add_argument('--budget-h', type=float,
+                    help="stop starting new cells once this many hours have elapsed. "
+                         "Without it the probe runs every cell to completion however "
+                         "long that takes, which is how a bounded 13 h night window "
+                         "ran for 13 h 40 m and was still going in the morning.")
     args = ap.parse_args()
+    started_at = time.time()
 
     out_root = Path(args.out)
     out_root.mkdir(parents=True, exist_ok=True)
     rows = []
 
+    def budget_spent() -> bool:
+        """True once the probe's share of the night is gone.
+
+        Checked before starting a cell, never during one: a cell killed part-way is a
+        cell whose whole cost is wasted, and cells are the unit that checkpoints.
+        """
+        if args.budget_h is None:
+            return False
+        return (time.time() - started_at) / 3600 >= args.budget_h
+
     for stem in args.kbs:
+        if budget_spent():
+            break
         for mode in args.modes:
+            if budget_spent():
+                break
             for cap in sorted(args.caps):
+                if budget_spent():
+                    spent = (time.time() - started_at) / 3600
+                    print(f"  budget {args.budget_h} h spent ({spent:.2f} h); "
+                          f"stopping before {stem} {mode} cap={cap}", flush=True)
+                    break
                 print(f"  {stem} {args.sampling} {mode} cap={cap} ...", flush=True)
                 row = run_cell(out_root, stem, args.sampling, mode, cap, args.timeout_s)
                 if row:

@@ -35,6 +35,9 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--budget', default='11h')
     ap.add_argument('--skip-probe', action='store_true')
+    ap.add_argument('--tail-budget-h', type=float, default=4.0,
+                    help="hours the probe phases may spend in total, split between "
+                         "2a and 2b. Bounds the half of the night that was unbounded.")
     ap.add_argument('--probe-out', default=str(REPO / 'data' / 'results_sosym' / 'cap_probe_postfix'))
     args = ap.parse_args()
 
@@ -78,13 +81,19 @@ def _run(args) -> int:
     # So the extension runs FIRST, on the cheapest mid-size KB. The grid is the
     # familiar shape but it is now the secondary question, and if the tail is cut short
     # the extension is the half worth having.
-    print("\n=== phase 2a: where does learning stop? (fqa, extended past 5000) ===",
-          flush=True)
+    # The tail gets an explicit budget. Phase 1 is bounded and phase 2 was not, so a
+    # 13 h night ran 13 h 40 m and was still probing at breakfast. The probe now stops
+    # STARTING cells once its share is spent; a cell already running finishes, because
+    # killing it mid-cell would discard the whole cell for nothing.
+    tail_h = max(0.5, float(args.tail_budget_h))
+    print(f"\n=== phase 2a: where does learning stop? (fqa, past 5000) "
+          f"[tail budget {tail_h} h] ===", flush=True)
     ext_rc = subprocess.run(
         [sys.executable, '-u', str(TOOLS / 'probe_query_budget.py'),
          '--out', args.probe_out + '_extended', '--kbs', 'fqa',
          '--modes', 'example_first',
-         '--caps', '1000', '5000', '10000', '20000'],
+         '--caps', '1000', '5000', '10000', '20000',
+         '--budget-h', str(tail_h / 2)],
         cwd=REPO).returncode
     print(f"=== phase 2a exit {ext_rc} ===", flush=True)
 
@@ -94,7 +103,8 @@ def _run(args) -> int:
          '--out', args.probe_out,
          '--kbs', 'arcade-game', 'REAL-FM-4',
          '--modes', 'example_first',
-         '--caps', '250', '500', '1000', '2000', '5000'],
+         '--caps', '250', '500', '1000', '2000', '5000',
+         '--budget-h', str(tail_h / 2)],
         cwd=REPO).returncode
     print(f"=== phase 2b exit {probe_rc} ===", flush=True)
     return rc or ext_rc or probe_rc
