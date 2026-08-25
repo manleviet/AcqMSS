@@ -138,6 +138,21 @@ EXAMPLE_ONLY_ESTIMATES: Dict[str, float] = {
 }
 
 
+# Per-fold hours for QuAcq example_first at the SETTLED cap of 5,000 (decision
+# 2026-08-25). Measured post-fix on rs_1n and rounded up; applied to every sampling
+# because the cap is what stops the run, not the pool.
+#
+# busybox is absent, deliberately. Two extrapolations from the measured KBs disagree
+# by 13x: bias x features puts it at ~3 h/fold, while the example_first/example_only
+# ratio — a steady 43x on both fqa and arcade — puts it at ~54 h/fold against its
+# measured 1.258 h example_only. A number nobody can bound is not an estimate, and at
+# 54 h/fold the 6 h wall-clock guard would fire and record a result that is not
+# comparable. One fold gets probed first, as busybox ff was.
+EXAMPLE_FIRST_ESTIMATES: Dict[str, float] = {
+    'REAL-FM-7': 0.02, 'fqa': 0.08, 'arcade': 0.12, 'REAL-FM-4': 0.40,
+}
+
+
 def build_units() -> List[dict]:
     """Every atomic unit, cheapest first, ConGen before QuAcq.
 
@@ -155,7 +170,8 @@ def build_units() -> List[dict]:
             # example_only is cap-independent, so it can be estimated and run before
             # the cap is settled. example_first cannot: its cost is a direct function
             # of the cap, and the cap is the open question.
-            est = EXAMPLE_ONLY_ESTIMATES.get(kb) if query_mode == 'example_only' else None
+            est = (EXAMPLE_ONLY_ESTIMATES.get(kb) if query_mode == 'example_only'
+                   else EXAMPLE_FIRST_ESTIMATES.get(kb))
             units += [_unit(kb, sampling, 'interactive', f, query_mode, est)
                       for f in range(N_FOLDS)]
     return units
