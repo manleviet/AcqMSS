@@ -123,6 +123,21 @@ def _unit(kb: str, sampling: str, algorithm: str, fold: int,
     }
 
 
+# Per-fold hours for QuAcq example_only. This mode is cap-independent: the example
+# pool exhausts long before any cap under consideration — the largest pool in the
+# sweep is 582, at REAL-FM-4 rs_3n, against caps of 1,000 and 5,000 — so these units
+# are not blocked by the cap decision and their cost does not depend on it.
+#
+# fqa and arcade are measured (15.3 s and 25.1 s for three folds: ~0.0014 and ~0.0023
+# h/fold). The rest are NOMINAL and deliberately loose, because cost scales with pool
+# size and bias size and busybox carries 6,635 bias constraints against arcade's
+# 1,755. Rounding up can only make the queue decline a unit it could have run.
+EXAMPLE_ONLY_ESTIMATES: Dict[str, float] = {
+    'REAL-FM-7': 0.01, 'fqa': 0.01, 'arcade': 0.01, 'REAL-FM-4': 0.10,
+    'busybox': 1.00,
+}
+
+
 def build_units() -> List[dict]:
     """Every atomic unit, cheapest first, ConGen before QuAcq.
 
@@ -137,6 +152,10 @@ def build_units() -> List[dict]:
                       for f in range(N_FOLDS)]
     for query_mode in QUERY_MODES:
         for kb, sampling in ORDER:
-            units += [_unit(kb, sampling, 'interactive', f, query_mode, None)
+            # example_only is cap-independent, so it can be estimated and run before
+            # the cap is settled. example_first cannot: its cost is a direct function
+            # of the cap, and the cap is the open question.
+            est = EXAMPLE_ONLY_ESTIMATES.get(kb) if query_mode == 'example_only' else None
+            units += [_unit(kb, sampling, 'interactive', f, query_mode, est)
                       for f in range(N_FOLDS)]
     return units

@@ -35,6 +35,11 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--budget', default='11h')
     ap.add_argument('--skip-probe', action='store_true')
+    ap.add_argument('--probe-first', action='store_true',
+                    help="run the probe phases BEFORE the sweep window. Use when the "
+                         "probe is what unblocks a decision and the sweep is filler: an "
+                         "office window cannot hold a busybox fold anyway, so the "
+                         "ordering costs nothing and banks the decision input first.")
     ap.add_argument('--probe-kbs', nargs='+',
                     help="restrict phase 2b to these knowledge bases. Re-running a cell "
                          "that already finished is not free of consequence: the folds "
@@ -67,6 +72,15 @@ def main() -> int:
 
 
 def _run(args) -> int:
+    if args.probe_first:
+        probe_rc = _probes(args)
+        sweep_rc = _sweep(args)
+        return sweep_rc or probe_rc
+    sweep_rc = _sweep(args)
+    return sweep_rc or _probes(args)
+
+
+def _sweep(args) -> int:
     print("=== phase 1: busybox rs_1n, reserved ===", flush=True)
     # --reserve rather than --only: if rs_1n is already done on a later night, the
     # budget still goes to whatever else is pending instead of the window idling.
@@ -75,9 +89,12 @@ def _run(args) -> int:
          '--budget', args.budget, '--reserve', 'busybox-1.18.0_rs_1n'],
         cwd=REPO).returncode
     print(f"=== phase 1 exit {rc} ===", flush=True)
+    return rc
 
+
+def _probes(args) -> int:
     if args.skip_probe:
-        return rc
+        return 0
 
     # The window's own lock is released by now, so nothing here can collide with it.
     #
@@ -121,7 +138,7 @@ def _run(args) -> int:
          '--budget-h', str(tail_h if args.skip_extension else tail_h / 2)],
         cwd=REPO).returncode
     print(f"=== phase 2b exit {probe_rc} ===", flush=True)
-    return rc or ext_rc or probe_rc
+    return ext_rc or probe_rc
 
 
 if __name__ == '__main__':

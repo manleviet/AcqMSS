@@ -286,7 +286,12 @@ def budgeted_cost(ledger: dict, unit: dict) -> float:
     multipliers = ledger.get('congen_multiplier') or {}
     if not isinstance(multipliers, dict):  # pre-per-KB ledger
         multipliers = {}
-    multiplier = multipliers.get(unit['kb'], multipliers.get('default', 1.0))
+    # The multiplier is the measured ConGen/condition-A ratio and means nothing for
+    # any other algorithm. Applying it to a QuAcq unit would scale its estimate by a
+    # number derived from a different computation — and for busybox it would scale it
+    # DOWN by 5x, which is the dangerous direction.
+    multiplier = (multipliers.get(unit['kb'], multipliers.get('default', 1.0))
+                  if unit['algorithm'] == 'congen' else 1.0)
     return unit['estimate_h'] * multiplier * ledger['safety_factor']
 
 
