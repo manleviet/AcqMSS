@@ -35,6 +35,16 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--budget', default='11h')
     ap.add_argument('--skip-probe', action='store_true')
+    ap.add_argument('--probe-kbs', nargs='+',
+                    help="restrict phase 2b to these knowledge bases. Re-running a cell "
+                         "that already finished is not free of consequence: the folds "
+                         "are skipped via their partials, so it completes in seconds and "
+                         "OVERWRITES the recorded wall_s with a meaningless one. Target "
+                         "what is missing.")
+    ap.add_argument('--probe-caps', nargs='+', type=int,
+                    help="restrict phase 2b to these caps, for the same reason.")
+    ap.add_argument('--skip-extension', action='store_true',
+                    help="skip phase 2a when the extension has already been measured.")
     ap.add_argument('--tail-budget-h', type=float, default=4.0,
                     help="hours the probe phases may spend in total, split between "
                          "2a and 2b. Bounds the half of the night that was unbounded.")
@@ -86,25 +96,29 @@ def _run(args) -> int:
     # STARTING cells once its share is spent; a cell already running finishes, because
     # killing it mid-cell would discard the whole cell for nothing.
     tail_h = max(0.5, float(args.tail_budget_h))
-    print(f"\n=== phase 2a: where does learning stop? (fqa, past 5000) "
-          f"[tail budget {tail_h} h] ===", flush=True)
-    ext_rc = subprocess.run(
-        [sys.executable, '-u', str(TOOLS / 'probe_query_budget.py'),
-         '--out', args.probe_out + '_extended', '--kbs', 'fqa',
-         '--modes', 'example_first',
-         '--caps', '1000', '5000', '10000', '20000',
-         '--budget-h', str(tail_h / 2)],
-        cwd=REPO).returncode
-    print(f"=== phase 2a exit {ext_rc} ===", flush=True)
+    if args.skip_extension:
+        print("\n=== phase 2a: skipped (already measured) ===", flush=True)
+        ext_rc = 0
+    else:
+        print(f"\n=== phase 2a: where does learning stop? (fqa, past 5000) "
+              f"[tail budget {tail_h} h] ===", flush=True)
+        ext_rc = subprocess.run(
+            [sys.executable, '-u', str(TOOLS / 'probe_query_budget.py'),
+             '--out', args.probe_out + '_extended', '--kbs', 'fqa',
+             '--modes', 'example_first',
+             '--caps', '1000', '5000', '10000', '20000',
+             '--budget-h', str(tail_h / 2)],
+            cwd=REPO).returncode
+        print(f"=== phase 2a exit {ext_rc} ===", flush=True)
 
     print("\n=== phase 2b: the standard grid, post-fix ===", flush=True)
     probe_rc = subprocess.run(
         [sys.executable, '-u', str(TOOLS / 'probe_query_budget.py'),
          '--out', args.probe_out,
-         '--kbs', 'arcade-game', 'REAL-FM-4',
+         '--kbs', *(args.probe_kbs or ['arcade-game', 'REAL-FM-4']),
          '--modes', 'example_first',
-         '--caps', '250', '500', '1000', '2000', '5000',
-         '--budget-h', str(tail_h / 2)],
+         '--caps', *[str(c) for c in (args.probe_caps or [250, 500, 1000, 2000, 5000])],
+         '--budget-h', str(tail_h if args.skip_extension else tail_h / 2)],
         cwd=REPO).returncode
     print(f"=== phase 2b exit {probe_rc} ===", flush=True)
     return rc or ext_rc or probe_rc
