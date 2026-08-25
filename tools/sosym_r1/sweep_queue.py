@@ -226,6 +226,24 @@ def cmd_reestimate(args) -> int:
     unit that was parked for want of an estimate is released once it has one.
     """
     ledger_path = Path(args.ledger)
+    # Refuse while a window runs. A window loads `units` once and rewrites them after
+    # every unit, so an estimate written here mid-window is reverted the next time a
+    # unit finishes — silently, with the file looking correct in between. That happened
+    # on 2026-08-25: 72 example_first estimates set at 12:55 were gone by 16:17, and the
+    # only symptom was a no-estimate count that had grown instead of shrunk.
+    # write_ledger's metadata merge does not help here: `units` is the window's to own.
+    lock = ledger_path.with_suffix('.lock')
+    if lock.exists():
+        try:
+            pid = int(json.loads(lock.read_text())['pid'])
+            os.kill(pid, 0)
+        except (json.JSONDecodeError, OSError, KeyError, ValueError, ProcessLookupError):
+            print(f"  ignoring a stale lock at {lock}")
+        else:
+            raise SystemExit(
+                f"a window is running (pid {pid}); it owns the units array and would "
+                f"revert this. Re-estimate after it closes.")
+
     ledger = load_ledger(ledger_path)
     fresh = {u['id']: u for u in units_mod.build_units()}
 
