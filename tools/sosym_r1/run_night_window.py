@@ -35,6 +35,13 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--budget', default='11h')
     ap.add_argument('--skip-probe', action='store_true')
+    ap.add_argument('--probe-spin-kb',
+                    help="after the sweep, run probe_query_spin on this KB for ONE fold. "
+                         "Used to bound a knowledge base nobody can estimate: the 6 h "
+                         "wall-clock guard turns the run into a decision — finishing "
+                         "under it settles the cost, hitting it settles that the cost is "
+                         "prohibitive. Either outcome is an answer.")
+    ap.add_argument('--probe-spin-cap', type=int, default=5000)
     ap.add_argument('--probe-first', action='store_true',
                     help="run the probe phases BEFORE the sweep window. Use when the "
                          "probe is what unblocks a decision and the sweep is filler: an "
@@ -75,9 +82,26 @@ def _run(args) -> int:
     if args.probe_first:
         probe_rc = _probes(args)
         sweep_rc = _sweep(args)
-        return sweep_rc or probe_rc
+        return sweep_rc or probe_rc or _spin_probe(args)
     sweep_rc = _sweep(args)
-    return sweep_rc or _probes(args)
+    return sweep_rc or _spin_probe(args) or _probes(args)
+
+
+def _spin_probe(args) -> int:
+    """One fold of an unestimatable KB, bounded by the wall-clock guard."""
+    if not args.probe_spin_kb:
+        return 0
+    out = REPO / 'data' / 'results_sosym' / f'spin_{args.probe_spin_kb}_cap{args.probe_spin_cap}'
+    out.mkdir(parents=True, exist_ok=True)
+    print(f"\n=== phase 3: bound {args.probe_spin_kb} example_first "
+          f"(1 fold, cap {args.probe_spin_cap}, 6 h guard) ===", flush=True)
+    rc = subprocess.run(
+        [sys.executable, '-u', str(TOOLS / 'probe_query_spin.py'),
+         '--kb', args.probe_spin_kb, '--cap', str(args.probe_spin_cap),
+         '--folds', '0', '--out', str(out / 'result.json')],
+        cwd=REPO).returncode
+    print(f"=== phase 3 exit {rc} ===", flush=True)
+    return rc
 
 
 def _sweep(args) -> int:
