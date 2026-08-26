@@ -103,6 +103,13 @@ def main() -> int:
         for fold in args.folds:
             row = run_fold(runner, pos, neg, fold_data, fold)
             rows.append(row)
+            # Checkpoint per fold. This tool drives the runner in process rather than
+            # through run_cv, so it produces no partials and, before this, wrote nothing
+            # until every fold had finished. A busybox fold stopped at 2 h 19 min on
+            # 2026-08-26 left nothing at all behind. A fold that completes is a
+            # measurement; it should survive whatever happens to the next one.
+            if args.out:
+                Path(args.out).write_text(json.dumps(rows, indent=2))
             print(f"  fold {fold}: total={row['total_queries']:>5d} "
                   f"distinct={row['distinct_queries']:>5d} "
                   f"repeat={row['repeat_fraction']:>7} "

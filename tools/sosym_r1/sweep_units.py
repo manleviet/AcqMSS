@@ -152,6 +152,30 @@ EXAMPLE_FIRST_ESTIMATES: Dict[str, float] = {
     'REAL-FM-7': 0.02, 'fqa': 0.08, 'arcade': 0.12, 'REAL-FM-4': 0.40,
 }
 
+# Per (kb, sampling), because the per-KB figures above are wrong in a way that a
+# single measurement could not reveal. They were taken from rs_1n, which has the
+# LARGEST pool and is therefore the CHEAPEST cell: example_first draws from the pool
+# first and falls back to SAT generation, so a small pool empties early and spends
+# most of the 5,000-query budget on the expensive path. Measured, arcade 2cov cost
+# 2.51 h/fold against the 0.12 estimated from rs_1n — 21x.
+#
+# Measured cells carry the MAX of their three folds, not the mean: within arcade 2cov
+# the folds ranged 0.10 to 2.51 h, so a mean would let a window start a unit it cannot
+# finish. Unmeasured cells are scaled from their KB's measured cell by the square root
+# of the pool ratio, capped at the 12x inflation observed between arcade 2cov and
+# arcade rs_1n. Deliberately pessimistic: an over-estimate declines a unit that would
+# have fitted, an under-estimate runs a window past the hour the machine leaves.
+EXAMPLE_FIRST_BY_SAMPLING: Dict[str, float] = {
+    'REAL-FM-7|2cov': 0.0093, 'REAL-FM-7|rs_m': 0.0026, 'REAL-FM-7|rs_1n': 0.0018,
+    'REAL-FM-7|rs_2n': 0.0011, 'REAL-FM-7|rs_3n': 0.0010, 'REAL-FM-7|ff': 0.0020,
+    'fqa|2cov': 0.2237, 'fqa|rs_m': 0.1220, 'fqa|rs_1n': 0.0737,
+    'fqa|rs_2n': 0.0697, 'fqa|rs_3n': 0.0712, 'fqa|ff': 0.0837,
+    'arcade|2cov': 2.5093, 'arcade|rs_m': 0.3420, 'arcade|rs_1n': 0.0991,
+    'arcade|rs_2n': 0.0991, 'arcade|rs_3n': 0.0991, 'arcade|ff': 0.4359,
+    'REAL-FM-4|2cov': 4.0224, 'REAL-FM-4|rs_m': 4.0224, 'REAL-FM-4|rs_1n': 0.3352,
+    'REAL-FM-4|rs_2n': 0.3352, 'REAL-FM-4|rs_3n': 0.3352, 'REAL-FM-4|ff': 1.6173,
+}
+
 
 def build_units() -> List[dict]:
     """Every atomic unit, cheapest first, ConGen before QuAcq.
@@ -170,8 +194,11 @@ def build_units() -> List[dict]:
             # example_only is cap-independent, so it can be estimated and run before
             # the cap is settled. example_first cannot: its cost is a direct function
             # of the cap, and the cap is the open question.
-            est = (EXAMPLE_ONLY_ESTIMATES.get(kb) if query_mode == 'example_only'
-                   else EXAMPLE_FIRST_ESTIMATES.get(kb))
+            if query_mode == 'example_only':
+                est = EXAMPLE_ONLY_ESTIMATES.get(kb)
+            else:
+                est = (EXAMPLE_FIRST_BY_SAMPLING.get(f'{kb}|{sampling}')
+                       or EXAMPLE_FIRST_ESTIMATES.get(kb))
             units += [_unit(kb, sampling, 'interactive', f, query_mode, est)
                       for f in range(N_FOLDS)]
     return units
