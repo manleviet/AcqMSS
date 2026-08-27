@@ -105,6 +105,30 @@ def compute_summary(data: dict, strategies: List[ComparationStrategy]) -> dict:
     return summary
 
 
+def reject_foreign_knowledge_bases(model, cv_files) -> None:
+    """Refuse to score a CV file against another model's ground truth.
+
+    A block's ``name`` is a label; it selects nothing. ``kb_dir`` is scored in full
+    with THIS block's oracle and bias, so pointing it at a directory scores every
+    knowledge base in it against one model's ground truth — silently. The files gain
+    evaluation blocks, nothing errors, and every number is wrong except the named
+    model's. That happened on 2026-08-27 and corrupted 79 committed files; it was
+    caught only because a log line said 78 when one knowledge base had been asked for.
+
+    A CV file is named for the model that produced it, and the oracle is named for the
+    model it describes, so a mismatch between the two is exactly the widening.
+    """
+    expected = Path(model.oracle).stem
+    foreign = [f.name for f in cv_files if not f.name.startswith(expected + '_')]
+    if foreign:
+        raise SystemExit(
+            f"refusing to score against the wrong ground truth: block '{model.name}' "
+            f"has oracle '{expected}' but kb_dir '{model.kb_dir}' resolves to "
+            f"{len(cv_files)} file(s) including {foreign[:3]}"
+            f"{' and more' if len(foreign) > 3 else ''}. Point kb_dir at a single CV "
+            f"file, or at a directory holding only this model's results.")
+
+
 def compare_model_unified(model, strategies):
     """Compare all unified CV files for a model."""
     if not model.kb_dir:
@@ -119,6 +143,8 @@ def compare_model_unified(model, strategies):
     if not cv_files:
         logger.warning("No CV files found in %s", model.kb_dir)
         return 0
+
+    reject_foreign_knowledge_bases(model, cv_files)
 
     bias = BiasIO.load_from_json(model.bias)
     oracle = GroundTruthData.from_uvl(Path(model.oracle))

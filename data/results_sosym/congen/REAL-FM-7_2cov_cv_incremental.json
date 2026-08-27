@@ -473,7 +473,282 @@
         "positive": 0,
         "negative": 3
       },
-      "evaluation": null
+      "evaluation": {
+        "description": {
+          "metrics": {
+            "accuracy": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "specificity": 0.0,
+            "true_positives": 0,
+            "true_negatives": 0,
+            "false_positives": 8,
+            "false_negatives": 13
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "c41",
+              "description": "jplug requires model_code_synch"
+            },
+            {
+              "id": "c83",
+              "description": "interface requires javac"
+            },
+            {
+              "id": "c78",
+              "description": "model_code_synch requires interface"
+            },
+            {
+              "id": "c129",
+              "description": "petri_net requires sdi"
+            },
+            {
+              "id": "c254",
+              "description": "compiler requires mvc"
+            },
+            {
+              "id": "c121",
+              "description": "mvc excludes sdi"
+            },
+            {
+              "id": "c252",
+              "description": "javac requires compiler"
+            },
+            {
+              "id": "c263",
+              "description": "compiler requires petri_net"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "gui_builder --optional--> qt"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --mandatory--> uml"
+            },
+            {
+              "id": null,
+              "description": "gui_builder excludes sdi"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --mandatory--> interface"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --optional--> petri_net"
+            },
+            {
+              "id": null,
+              "description": "interface --alternative--> ['sdi', 'mdi']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> compiler"
+            },
+            {
+              "id": null,
+              "description": "model_code_synch requires diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "compiler --or--> ['javac', 'mvc']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> gui_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> model_code_synch"
+            },
+            {
+              "id": null,
+              "description": "gui_builder --mandatory--> java"
+            }
+          ]
+        },
+        "clause": {
+          "metrics": {
+            "accuracy": 0.9021739130434783,
+            "precision": 0.2222222222222222,
+            "recall": 0.09090909090909091,
+            "f1_score": 0.1290322580645161,
+            "specificity": 0.9724409448818898,
+            "true_positives": 2,
+            "true_negatives": 247,
+            "false_positives": 7,
+            "false_negatives": 20
+          },
+          "tp": [
+            {
+              "id": "c252",
+              "description": "javac requires compiler"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c41",
+              "description": "jplug requires model_code_synch"
+            },
+            {
+              "id": "c83",
+              "description": "interface requires javac"
+            },
+            {
+              "id": "c78",
+              "description": "model_code_synch requires interface"
+            },
+            {
+              "id": "c129",
+              "description": "petri_net requires sdi"
+            },
+            {
+              "id": "c254",
+              "description": "compiler requires mvc"
+            },
+            {
+              "id": "c121",
+              "description": "mvc excludes sdi"
+            },
+            {
+              "id": "c263",
+              "description": "compiler requires petri_net"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-9, 10, 11]"
+            },
+            {
+              "id": null,
+              "description": "[-5, -3]"
+            },
+            {
+              "id": null,
+              "description": "[-12, 13]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 3, 4]"
+            },
+            {
+              "id": null,
+              "description": "[-5, 6]"
+            },
+            {
+              "id": null,
+              "description": "[-14, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-8, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-7, 5]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-3, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-9, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-4, -3]"
+            },
+            {
+              "id": null,
+              "description": "[-8, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-13, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-11, 9]"
+            },
+            {
+              "id": null,
+              "description": "[-5, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-6, 5]"
+            },
+            {
+              "id": null,
+              "description": "[-4, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-1, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-12, 1]"
+            }
+          ]
+        },
+        "semantic": {
+          "metrics": {
+            "accuracy": 0.7857142857142857,
+            "precision": 0.7857142857142857,
+            "recall": 1.0,
+            "f1_score": 0.88,
+            "specificity": 0.0,
+            "true_positives": 22,
+            "true_negatives": 0,
+            "false_positives": 6,
+            "false_negatives": 0
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "[-1, 8]",
+              "description": "[-1, 8]"
+            },
+            {
+              "id": "[-2, 10]",
+              "description": "[-2, 10]"
+            },
+            {
+              "id": "[-14, 3]",
+              "description": "[-14, 3]"
+            },
+            {
+              "id": "[-9, 11]",
+              "description": "[-9, 11]"
+            },
+            {
+              "id": "[-11, -3]",
+              "description": "[-11, -3]"
+            },
+            {
+              "id": "[-9, 14]",
+              "description": "[-9, 14]"
+            }
+          ],
+          "fn": []
+        }
+      }
     },
     {
       "fold_index": 1,
@@ -923,7 +1198,262 @@
         "positive": 0,
         "negative": 3
       },
-      "evaluation": null
+      "evaluation": {
+        "description": {
+          "metrics": {
+            "accuracy": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "specificity": 0.0,
+            "true_positives": 0,
+            "true_negatives": 0,
+            "false_positives": 6,
+            "false_negatives": 13
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "c245",
+              "description": "model_code_synch requires uml"
+            },
+            {
+              "id": "c17",
+              "description": "jplug --mandatory--> diagram_builder"
+            },
+            {
+              "id": "c283",
+              "description": "mvc excludes uml"
+            },
+            {
+              "id": "c243",
+              "description": "diagram_builder requires model_code_synch"
+            },
+            {
+              "id": "c200",
+              "description": "java requires mvc"
+            },
+            {
+              "id": "c204",
+              "description": "diagram_builder requires java"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "gui_builder --optional--> qt"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --mandatory--> uml"
+            },
+            {
+              "id": null,
+              "description": "gui_builder excludes sdi"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --mandatory--> interface"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --optional--> petri_net"
+            },
+            {
+              "id": null,
+              "description": "interface --alternative--> ['sdi', 'mdi']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> compiler"
+            },
+            {
+              "id": null,
+              "description": "model_code_synch requires diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "compiler --or--> ['javac', 'mvc']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> gui_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> model_code_synch"
+            },
+            {
+              "id": null,
+              "description": "gui_builder --mandatory--> java"
+            }
+          ]
+        },
+        "clause": {
+          "metrics": {
+            "accuracy": 0.9057971014492754,
+            "precision": 0.25,
+            "recall": 0.09090909090909091,
+            "f1_score": 0.13333333333333333,
+            "specificity": 0.9763779527559056,
+            "true_positives": 2,
+            "true_negatives": 248,
+            "false_positives": 6,
+            "false_negatives": 20
+          },
+          "tp": [
+            {
+              "id": "c17",
+              "description": "jplug --mandatory--> diagram_builder"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c245",
+              "description": "model_code_synch requires uml"
+            },
+            {
+              "id": "c283",
+              "description": "mvc excludes uml"
+            },
+            {
+              "id": "c243",
+              "description": "diagram_builder requires model_code_synch"
+            },
+            {
+              "id": "c200",
+              "description": "java requires mvc"
+            },
+            {
+              "id": "c204",
+              "description": "diagram_builder requires java"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-9, 10, 11]"
+            },
+            {
+              "id": null,
+              "description": "[-5, -3]"
+            },
+            {
+              "id": null,
+              "description": "[-12, 13]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 3, 4]"
+            },
+            {
+              "id": null,
+              "description": "[-5, 6]"
+            },
+            {
+              "id": null,
+              "description": "[-14, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-8, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-7, 5]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-10, 9]"
+            },
+            {
+              "id": null,
+              "description": "[-3, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-9, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-4, -3]"
+            },
+            {
+              "id": null,
+              "description": "[-8, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-13, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-11, 9]"
+            },
+            {
+              "id": null,
+              "description": "[-5, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-6, 5]"
+            },
+            {
+              "id": null,
+              "description": "[-4, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-1, 2]"
+            }
+          ]
+        },
+        "semantic": {
+          "metrics": {
+            "accuracy": 0.8148148148148148,
+            "precision": 0.8148148148148148,
+            "recall": 1.0,
+            "f1_score": 0.8979591836734693,
+            "specificity": 0.0,
+            "true_positives": 22,
+            "true_negatives": 0,
+            "false_positives": 5,
+            "false_negatives": 0
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "[-1, 12]",
+              "description": "[-1, 12]"
+            },
+            {
+              "id": "[-13, -11]",
+              "description": "[-13, -11]"
+            },
+            {
+              "id": "[-12, 8]",
+              "description": "[-12, 8]"
+            },
+            {
+              "id": "[-6, 11]",
+              "description": "[-6, 11]"
+            },
+            {
+              "id": "[-12, 6]",
+              "description": "[-12, 6]"
+            }
+          ],
+          "fn": []
+        }
+      }
     },
     {
       "fold_index": 2,
@@ -1373,7 +1903,254 @@
         "positive": 0,
         "negative": 3
       },
-      "evaluation": null
+      "evaluation": {
+        "description": {
+          "metrics": {
+            "accuracy": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "specificity": 0.0,
+            "true_positives": 0,
+            "true_negatives": 0,
+            "false_positives": 6,
+            "false_negatives": 13
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "c63",
+              "description": "sdi requires interface"
+            },
+            {
+              "id": "c56",
+              "description": "jplug requires uml"
+            },
+            {
+              "id": "c74",
+              "description": "interface requires qt"
+            },
+            {
+              "id": "c93",
+              "description": "uml requires interface"
+            },
+            {
+              "id": "c40",
+              "description": "jplug excludes qt"
+            },
+            {
+              "id": "c30",
+              "description": "mdi requires jplug"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "gui_builder --optional--> qt"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --mandatory--> uml"
+            },
+            {
+              "id": null,
+              "description": "gui_builder excludes sdi"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --mandatory--> interface"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --optional--> petri_net"
+            },
+            {
+              "id": null,
+              "description": "interface --alternative--> ['sdi', 'mdi']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> compiler"
+            },
+            {
+              "id": null,
+              "description": "model_code_synch requires diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "compiler --or--> ['javac', 'mvc']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> gui_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> model_code_synch"
+            },
+            {
+              "id": null,
+              "description": "gui_builder --mandatory--> java"
+            }
+          ]
+        },
+        "clause": {
+          "metrics": {
+            "accuracy": 0.9094202898550725,
+            "precision": 0.2857142857142857,
+            "recall": 0.09090909090909091,
+            "f1_score": 0.13793103448275862,
+            "specificity": 0.9803149606299213,
+            "true_positives": 2,
+            "true_negatives": 249,
+            "false_positives": 5,
+            "false_negatives": 20
+          },
+          "tp": [
+            {
+              "id": "c63",
+              "description": "sdi requires interface"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c56",
+              "description": "jplug requires uml"
+            },
+            {
+              "id": "c74",
+              "description": "interface requires qt"
+            },
+            {
+              "id": "c93",
+              "description": "uml requires interface"
+            },
+            {
+              "id": "c40",
+              "description": "jplug excludes qt"
+            },
+            {
+              "id": "c30",
+              "description": "mdi requires jplug"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-9, 10, 11]"
+            },
+            {
+              "id": null,
+              "description": "[-5, -3]"
+            },
+            {
+              "id": null,
+              "description": "[-12, 13]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 3, 4]"
+            },
+            {
+              "id": null,
+              "description": "[-5, 6]"
+            },
+            {
+              "id": null,
+              "description": "[-14, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-8, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-7, 5]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-10, 9]"
+            },
+            {
+              "id": null,
+              "description": "[-9, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-4, -3]"
+            },
+            {
+              "id": null,
+              "description": "[-8, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-13, 12]"
+            },
+            {
+              "id": null,
+              "description": "[-11, 9]"
+            },
+            {
+              "id": null,
+              "description": "[-5, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-6, 5]"
+            },
+            {
+              "id": null,
+              "description": "[-4, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-1, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-12, 1]"
+            }
+          ]
+        },
+        "semantic": {
+          "metrics": {
+            "accuracy": 0.88,
+            "precision": 0.88,
+            "recall": 1.0,
+            "f1_score": 0.9361702127659575,
+            "specificity": 0.0,
+            "true_positives": 22,
+            "true_negatives": 0,
+            "false_positives": 3,
+            "false_negatives": 0
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "[-1, 13]",
+              "description": "[-1, 13]"
+            },
+            {
+              "id": "[-2, 7]",
+              "description": "[-2, 7]"
+            },
+            {
+              "id": "[-7, -1]",
+              "description": "[-7, -1]"
+            }
+          ],
+          "fn": []
+        }
+      }
     }
   ],
   "performance": {
@@ -1447,5 +2224,48 @@
       "max": 295
     }
   },
-  "summary": null
+  "summary": {
+    "description": {
+      "precision": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "f1_score": {
+        "mean": 0.0,
+        "std": 0.0
+      }
+    },
+    "clause": {
+      "precision": {
+        "mean": 0.252646,
+        "std": 0.025988
+      },
+      "recall": {
+        "mean": 0.090909,
+        "std": 0.0
+      },
+      "f1_score": {
+        "mean": 0.133432,
+        "std": 0.003634
+      }
+    },
+    "semantic": {
+      "precision": {
+        "mean": 0.826843,
+        "std": 0.03942
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "f1_score": {
+        "mean": 0.90471,
+        "std": 0.023423
+      }
+    }
+  }
 }

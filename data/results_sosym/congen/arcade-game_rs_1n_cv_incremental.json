@@ -221,7 +221,892 @@
       ]
     ],
     "n_kb": 51,
-    "evaluation": null
+    "evaluation": {
+      "description": {
+        "metrics": {
+          "accuracy": 0.2604166666666667,
+          "precision": 0.49019607843137253,
+          "recall": 0.35714285714285715,
+          "f1_score": 0.4132231404958677,
+          "specificity": 0.0,
+          "true_positives": 25,
+          "true_negatives": 0,
+          "false_positives": 26,
+          "false_negatives": 45
+        },
+        "tp": [
+          {
+            "id": "c11",
+            "description": "UseCases --mandatory--> InstallGame"
+          },
+          {
+            "id": "c15",
+            "description": "UseCases --mandatory--> ListGame"
+          },
+          {
+            "id": "c1621",
+            "description": "PlayPong requires Pong"
+          },
+          {
+            "id": "c224",
+            "description": "Lane requires Bowling"
+          },
+          {
+            "id": "c23",
+            "description": "PlayGame --mandatory--> Initialization"
+          },
+          {
+            "id": "c233",
+            "description": "PlayBowling requires Bowling"
+          },
+          {
+            "id": "c25",
+            "description": "PlayGame --mandatory--> AnimationLoop"
+          },
+          {
+            "id": "c29",
+            "description": "ClassDiagram --mandatory--> GameSprite"
+          },
+          {
+            "id": "c33",
+            "description": "GameSprite --mandatory--> Rectangle"
+          },
+          {
+            "id": "c35",
+            "description": "Rectangle --mandatory--> Size"
+          },
+          {
+            "id": "c37",
+            "description": "Rectangle --mandatory--> Point"
+          },
+          {
+            "id": "c39",
+            "description": "GameSprite --mandatory--> GameSprite_3"
+          },
+          {
+            "id": "c42",
+            "description": "GameSprite_3 --or--> ['MovableSprite', 'StationarySprite']"
+          },
+          {
+            "id": "c43",
+            "description": "MovableSprite --mandatory--> Velocity"
+          },
+          {
+            "id": "c45",
+            "description": "MovableSprite --mandatory--> MovableSprite_2"
+          },
+          {
+            "id": "c48",
+            "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
+          },
+          {
+            "id": "c52",
+            "description": "StationarySprite --optional--> Wall"
+          },
+          {
+            "id": "c54",
+            "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+          },
+          {
+            "id": "c55",
+            "description": "StationarySprite --mandatory--> StationarySprite_2"
+          },
+          {
+            "id": "c58",
+            "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+          },
+          {
+            "id": "c61",
+            "description": "ClassDiagram --mandatory--> Board"
+          },
+          {
+            "id": "c69",
+            "description": "ClassDiagram --mandatory--> GameMenu"
+          },
+          {
+            "id": "c7",
+            "description": "UseCases --mandatory--> SaveGame"
+          },
+          {
+            "id": "c824",
+            "description": "PlayBrickles requires Brickles"
+          },
+          {
+            "id": "c9",
+            "description": "UseCases --mandatory--> ExitGame"
+          }
+        ],
+        "fp": [
+          {
+            "id": "c1047",
+            "description": "Ceilingbrickles excludes Pucksupply"
+          },
+          {
+            "id": "c1188",
+            "description": "Edge excludes EndofAlley"
+          },
+          {
+            "id": "c1254",
+            "description": "EndofAlley excludes Lane"
+          },
+          {
+            "id": "c1260",
+            "description": "EndofAlley excludes Leftpong"
+          },
+          {
+            "id": "c1261",
+            "description": "EndofAlley requires PlayBowling"
+          },
+          {
+            "id": "c1284",
+            "description": "EndofAlley excludes RackofPins"
+          },
+          {
+            "id": "c1296",
+            "description": "EndofAlley excludes TopPaddle"
+          },
+          {
+            "id": "c1311",
+            "description": "Floorbrickles excludes Leftpong"
+          },
+          {
+            "id": "c1359",
+            "description": "Floorpong excludes Leftpong"
+          },
+          {
+            "id": "c1395",
+            "description": "Floorpong excludes TopPaddle"
+          },
+          {
+            "id": "c1398",
+            "description": "Gutter excludes Lane"
+          },
+          {
+            "id": "c1404",
+            "description": "Gutter excludes Leftpong"
+          },
+          {
+            "id": "c1410",
+            "description": "Gutter excludes PlayBrickles"
+          },
+          {
+            "id": "c1428",
+            "description": "Gutter excludes RackofPins"
+          },
+          {
+            "id": "c1440",
+            "description": "Gutter excludes TopPaddle"
+          },
+          {
+            "id": "c1482",
+            "description": "Lane excludes TopPaddle"
+          },
+          {
+            "id": "c1545",
+            "description": "Leftpong excludes RackofPins"
+          },
+          {
+            "id": "c1557",
+            "description": "Leftpong excludes TopPaddle"
+          },
+          {
+            "id": "c1622",
+            "description": "Pong requires PlayPong"
+          },
+          {
+            "id": "c1737",
+            "description": "RackofPins excludes TopPaddle"
+          },
+          {
+            "id": "c232",
+            "description": "Bowling requires PlayBowling"
+          },
+          {
+            "id": "c415",
+            "description": "BowlingBoard requires PlayBowling"
+          },
+          {
+            "id": "c435",
+            "description": "BowlingBoard excludes Pucksupply"
+          },
+          {
+            "id": "c567",
+            "description": "BowlingPin excludes EndofAlley"
+          },
+          {
+            "id": "c823",
+            "description": "Brickles requires PlayBrickles"
+          },
+          {
+            "id": "c964",
+            "description": "BricklesGameMenu requires PlayBrickles"
+          }
+        ],
+        "fn": [
+          {
+            "id": null,
+            "description": "RackofPins requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "Ceilingbrickles requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "TopPaddle requires Pong"
+          },
+          {
+            "id": null,
+            "description": "ClassDiagram --optional--> Pucksupply"
+          },
+          {
+            "id": null,
+            "description": "Brick requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "BowlingBall requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "BrickPile requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "Floorpong requires Pong"
+          },
+          {
+            "id": null,
+            "description": "Rightpont requires Pong"
+          },
+          {
+            "id": null,
+            "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+          },
+          {
+            "id": null,
+            "description": "Pucksupply requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "PlayGame --mandatory--> PlayGame_1"
+          },
+          {
+            "id": null,
+            "description": "BowlingBoard requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "Gutter requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "BowlingGameMenu requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
+          },
+          {
+            "id": null,
+            "description": "UseCases --optional--> SaveScore"
+          },
+          {
+            "id": null,
+            "description": "ScoreBoard requires Pong"
+          },
+          {
+            "id": null,
+            "description": "Edge requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "PongGameMenu requires Pong"
+          },
+          {
+            "id": null,
+            "description": "UseCases --mandatory--> UninstallGame"
+          },
+          {
+            "id": null,
+            "description": "ArcadeGame --mandatory--> UseCases"
+          },
+          {
+            "id": null,
+            "description": "ArcadeGame --mandatory--> ClassDiagram"
+          },
+          {
+            "id": null,
+            "description": "UseCases --optional--> CheckPreviousBestScore"
+          },
+          {
+            "id": null,
+            "description": "GameMenu --or--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+          },
+          {
+            "id": null,
+            "description": "DividingLine requires Pong"
+          },
+          {
+            "id": null,
+            "description": "ClassDiagram --mandatory--> Menu"
+          },
+          {
+            "id": null,
+            "description": "BricklesBoard requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "BottomPaddle requires Pong"
+          },
+          {
+            "id": null,
+            "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+          },
+          {
+            "id": null,
+            "description": "UseCases --mandatory--> PlayGame"
+          },
+          {
+            "id": null,
+            "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+          },
+          {
+            "id": null,
+            "description": "BricklesGameMenu requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "EndofAlley requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "Ceilingpong requires Pong"
+          },
+          {
+            "id": null,
+            "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+          },
+          {
+            "id": null,
+            "description": "Floorbrickles requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "Leftbrickles requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "Leftpong requires Pong"
+          },
+          {
+            "id": null,
+            "description": "GameSprite --optional--> SpritePair"
+          },
+          {
+            "id": null,
+            "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
+          },
+          {
+            "id": null,
+            "description": "BowlingPin requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+          },
+          {
+            "id": null,
+            "description": "PongBoard requires Pong"
+          },
+          {
+            "id": null,
+            "description": "Rightbrickles requires Brickles"
+          }
+        ]
+      },
+      "clause": {
+        "metrics": {
+          "accuracy": 0.952513966480447,
+          "precision": 0.7472527472527473,
+          "recall": 0.5230769230769231,
+          "f1_score": 0.6153846153846154,
+          "specificity": 0.986144578313253,
+          "true_positives": 68,
+          "true_negatives": 1637,
+          "false_positives": 23,
+          "false_negatives": 62
+        },
+        "tp": [
+          {
+            "id": "c11",
+            "description": "UseCases --mandatory--> InstallGame"
+          },
+          {
+            "id": "c15",
+            "description": "UseCases --mandatory--> ListGame"
+          },
+          {
+            "id": "c1621",
+            "description": "PlayPong requires Pong"
+          },
+          {
+            "id": "c1622",
+            "description": "Pong requires PlayPong"
+          },
+          {
+            "id": "c224",
+            "description": "Lane requires Bowling"
+          },
+          {
+            "id": "c23",
+            "description": "PlayGame --mandatory--> Initialization"
+          },
+          {
+            "id": "c232",
+            "description": "Bowling requires PlayBowling"
+          },
+          {
+            "id": "c233",
+            "description": "PlayBowling requires Bowling"
+          },
+          {
+            "id": "c25",
+            "description": "PlayGame --mandatory--> AnimationLoop"
+          },
+          {
+            "id": "c29",
+            "description": "ClassDiagram --mandatory--> GameSprite"
+          },
+          {
+            "id": "c33",
+            "description": "GameSprite --mandatory--> Rectangle"
+          },
+          {
+            "id": "c35",
+            "description": "Rectangle --mandatory--> Size"
+          },
+          {
+            "id": "c37",
+            "description": "Rectangle --mandatory--> Point"
+          },
+          {
+            "id": "c39",
+            "description": "GameSprite --mandatory--> GameSprite_3"
+          },
+          {
+            "id": "c42",
+            "description": "GameSprite_3 --or--> ['MovableSprite', 'StationarySprite']"
+          },
+          {
+            "id": "c43",
+            "description": "MovableSprite --mandatory--> Velocity"
+          },
+          {
+            "id": "c45",
+            "description": "MovableSprite --mandatory--> MovableSprite_2"
+          },
+          {
+            "id": "c48",
+            "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
+          },
+          {
+            "id": "c52",
+            "description": "StationarySprite --optional--> Wall"
+          },
+          {
+            "id": "c54",
+            "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+          },
+          {
+            "id": "c55",
+            "description": "StationarySprite --mandatory--> StationarySprite_2"
+          },
+          {
+            "id": "c58",
+            "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+          },
+          {
+            "id": "c61",
+            "description": "ClassDiagram --mandatory--> Board"
+          },
+          {
+            "id": "c69",
+            "description": "ClassDiagram --mandatory--> GameMenu"
+          },
+          {
+            "id": "c7",
+            "description": "UseCases --mandatory--> SaveGame"
+          },
+          {
+            "id": "c823",
+            "description": "Brickles requires PlayBrickles"
+          },
+          {
+            "id": "c824",
+            "description": "PlayBrickles requires Brickles"
+          },
+          {
+            "id": "c9",
+            "description": "UseCases --mandatory--> ExitGame"
+          }
+        ],
+        "fp": [
+          {
+            "id": "c1047",
+            "description": "Ceilingbrickles excludes Pucksupply"
+          },
+          {
+            "id": "c1188",
+            "description": "Edge excludes EndofAlley"
+          },
+          {
+            "id": "c1254",
+            "description": "EndofAlley excludes Lane"
+          },
+          {
+            "id": "c1260",
+            "description": "EndofAlley excludes Leftpong"
+          },
+          {
+            "id": "c1261",
+            "description": "EndofAlley requires PlayBowling"
+          },
+          {
+            "id": "c1284",
+            "description": "EndofAlley excludes RackofPins"
+          },
+          {
+            "id": "c1296",
+            "description": "EndofAlley excludes TopPaddle"
+          },
+          {
+            "id": "c1311",
+            "description": "Floorbrickles excludes Leftpong"
+          },
+          {
+            "id": "c1359",
+            "description": "Floorpong excludes Leftpong"
+          },
+          {
+            "id": "c1395",
+            "description": "Floorpong excludes TopPaddle"
+          },
+          {
+            "id": "c1398",
+            "description": "Gutter excludes Lane"
+          },
+          {
+            "id": "c1404",
+            "description": "Gutter excludes Leftpong"
+          },
+          {
+            "id": "c1410",
+            "description": "Gutter excludes PlayBrickles"
+          },
+          {
+            "id": "c1428",
+            "description": "Gutter excludes RackofPins"
+          },
+          {
+            "id": "c1440",
+            "description": "Gutter excludes TopPaddle"
+          },
+          {
+            "id": "c1482",
+            "description": "Lane excludes TopPaddle"
+          },
+          {
+            "id": "c1545",
+            "description": "Leftpong excludes RackofPins"
+          },
+          {
+            "id": "c1557",
+            "description": "Leftpong excludes TopPaddle"
+          },
+          {
+            "id": "c1737",
+            "description": "RackofPins excludes TopPaddle"
+          },
+          {
+            "id": "c415",
+            "description": "BowlingBoard requires PlayBowling"
+          },
+          {
+            "id": "c435",
+            "description": "BowlingBoard excludes Pucksupply"
+          },
+          {
+            "id": "c567",
+            "description": "BowlingPin excludes EndofAlley"
+          },
+          {
+            "id": "c964",
+            "description": "BricklesGameMenu requires PlayBrickles"
+          }
+        ],
+        "fn": [
+          {
+            "id": null,
+            "description": "[-13, 11]"
+          },
+          {
+            "id": null,
+            "description": "[-52, 59]"
+          },
+          {
+            "id": null,
+            "description": "[-63, 59]"
+          },
+          {
+            "id": null,
+            "description": "[-2, 8]"
+          },
+          {
+            "id": null,
+            "description": "[-63, 62]"
+          },
+          {
+            "id": null,
+            "description": "[-60, 58]"
+          },
+          {
+            "id": null,
+            "description": "[-1, 17]"
+          },
+          {
+            "id": null,
+            "description": "[-45, 61]"
+          },
+          {
+            "id": null,
+            "description": "[-55, 54]"
+          },
+          {
+            "id": null,
+            "description": "[-47, 61]"
+          },
+          {
+            "id": null,
+            "description": "[-64, 60]"
+          },
+          {
+            "id": null,
+            "description": "[-42, 60]"
+          },
+          {
+            "id": null,
+            "description": "[-50, 59]"
+          },
+          {
+            "id": null,
+            "description": "[-53, 60]"
+          },
+          {
+            "id": null,
+            "description": "[-40, 60]"
+          },
+          {
+            "id": null,
+            "description": "[-17, 1]"
+          },
+          {
+            "id": null,
+            "description": "[-53, 17]"
+          },
+          {
+            "id": null,
+            "description": "[-35, 59]"
+          },
+          {
+            "id": null,
+            "description": "[-2, 1]"
+          },
+          {
+            "id": null,
+            "description": "[-30, 61]"
+          }
+        ]
+      },
+      "semantic": {
+        "metrics": {
+          "accuracy": 0.4866666666666667,
+          "precision": 0.7849462365591398,
+          "recall": 0.5615384615384615,
+          "f1_score": 0.6547085201793722,
+          "specificity": 0.0,
+          "true_positives": 73,
+          "true_negatives": 0,
+          "false_positives": 20,
+          "false_negatives": 57
+        },
+        "tp": [],
+        "fp": [
+          {
+            "id": "[-53, -42]",
+            "description": "[-53, -42]"
+          },
+          {
+            "id": "[-47, -46]",
+            "description": "[-47, -46]"
+          },
+          {
+            "id": "[-47, -44]",
+            "description": "[-47, -44]"
+          },
+          {
+            "id": "[-47, -35]",
+            "description": "[-47, -35]"
+          },
+          {
+            "id": "[-48, -47]",
+            "description": "[-48, -47]"
+          },
+          {
+            "id": "[-47, -32]",
+            "description": "[-47, -32]"
+          },
+          {
+            "id": "[-43, -35]",
+            "description": "[-43, -35]"
+          },
+          {
+            "id": "[-50, -35]",
+            "description": "[-50, -35]"
+          },
+          {
+            "id": "[-50, -32]",
+            "description": "[-50, -32]"
+          },
+          {
+            "id": "[-45, -44]",
+            "description": "[-45, -44]"
+          },
+          {
+            "id": "[-45, -35]",
+            "description": "[-45, -35]"
+          },
+          {
+            "id": "[-45, -12]",
+            "description": "[-45, -12]"
+          },
+          {
+            "id": "[-48, -45]",
+            "description": "[-48, -45]"
+          },
+          {
+            "id": "[-45, -32]",
+            "description": "[-45, -32]"
+          },
+          {
+            "id": "[-44, -32]",
+            "description": "[-44, -32]"
+          },
+          {
+            "id": "[-48, -35]",
+            "description": "[-48, -35]"
+          },
+          {
+            "id": "[-35, -32]",
+            "description": "[-35, -32]"
+          },
+          {
+            "id": "[-48, -32]",
+            "description": "[-48, -32]"
+          },
+          {
+            "id": "[-57, -53]",
+            "description": "[-57, -53]"
+          },
+          {
+            "id": "[-47, -31]",
+            "description": "[-47, -31]"
+          }
+        ],
+        "fn": [
+          {
+            "id": null,
+            "description": "[-1, 2]"
+          },
+          {
+            "id": null,
+            "description": "[-3, 2]"
+          },
+          {
+            "id": null,
+            "description": "[-4, 2]"
+          },
+          {
+            "id": null,
+            "description": "[-2, 8]"
+          },
+          {
+            "id": null,
+            "description": "[-8, 2]"
+          },
+          {
+            "id": null,
+            "description": "[-2, 10]"
+          },
+          {
+            "id": null,
+            "description": "[-10, 2]"
+          },
+          {
+            "id": null,
+            "description": "[-10, 11]"
+          },
+          {
+            "id": null,
+            "description": "[-11, 10]"
+          },
+          {
+            "id": null,
+            "description": "[-11, 12, 13, 14]"
+          },
+          {
+            "id": null,
+            "description": "[-12, 11]"
+          },
+          {
+            "id": null,
+            "description": "[-13, 11]"
+          },
+          {
+            "id": null,
+            "description": "[-14, 11]"
+          },
+          {
+            "id": null,
+            "description": "[-1, 17]"
+          },
+          {
+            "id": null,
+            "description": "[-19, 18]"
+          },
+          {
+            "id": null,
+            "description": "[-28, 32, 33]"
+          },
+          {
+            "id": null,
+            "description": "[-32, 28]"
+          },
+          {
+            "id": null,
+            "description": "[-33, 28]"
+          },
+          {
+            "id": null,
+            "description": "[-53, 17]"
+          },
+          {
+            "id": null,
+            "description": "[-54, 55, 56, 57]"
+          }
+        ]
+      }
+    }
   },
   "folds": [
     {
@@ -1393,7 +2278,1756 @@
         "positive": 20,
         "negative": 2
       },
-      "evaluation": null
+      "evaluation": {
+        "description": {
+          "metrics": {
+            "accuracy": 0.1921182266009852,
+            "precision": 0.22674418604651161,
+            "recall": 0.5571428571428572,
+            "f1_score": 0.32231404958677684,
+            "specificity": 0.0,
+            "true_positives": 39,
+            "true_negatives": 0,
+            "false_positives": 133,
+            "false_negatives": 31
+          },
+          "tp": [
+            {
+              "id": "c48",
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
+            },
+            {
+              "id": "c55",
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": "c52",
+              "description": "StationarySprite --optional--> Wall"
+            },
+            {
+              "id": "c17",
+              "description": "UseCases --mandatory--> PlayGame"
+            },
+            {
+              "id": "c69",
+              "description": "ClassDiagram --mandatory--> GameMenu"
+            },
+            {
+              "id": "c27",
+              "description": "ArcadeGame --mandatory--> ClassDiagram"
+            },
+            {
+              "id": "c43",
+              "description": "MovableSprite --mandatory--> Velocity"
+            },
+            {
+              "id": "c25",
+              "description": "PlayGame --mandatory--> AnimationLoop"
+            },
+            {
+              "id": "c7",
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": "c58",
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": "c37",
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": "c72",
+              "description": "GameMenu --or--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+            },
+            {
+              "id": "c65",
+              "description": "ClassDiagram --mandatory--> Menu"
+            },
+            {
+              "id": "c23",
+              "description": "PlayGame --mandatory--> Initialization"
+            },
+            {
+              "id": "c15",
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": "c29",
+              "description": "ClassDiagram --mandatory--> GameSprite"
+            },
+            {
+              "id": "c11",
+              "description": "UseCases --mandatory--> InstallGame"
+            },
+            {
+              "id": "c45",
+              "description": "MovableSprite --mandatory--> MovableSprite_2"
+            },
+            {
+              "id": "c35",
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": "c61",
+              "description": "ClassDiagram --mandatory--> Board"
+            },
+            {
+              "id": "c824",
+              "description": "PlayBrickles requires Brickles"
+            },
+            {
+              "id": "c9",
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": "c39",
+              "description": "GameSprite --mandatory--> GameSprite_3"
+            },
+            {
+              "id": "c1621",
+              "description": "PlayPong requires Pong"
+            },
+            {
+              "id": "c42",
+              "description": "GameSprite_3 --or--> ['MovableSprite', 'StationarySprite']"
+            },
+            {
+              "id": "c221",
+              "description": "Gutter requires Bowling"
+            },
+            {
+              "id": "c50",
+              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": "c224",
+              "description": "Lane requires Bowling"
+            },
+            {
+              "id": "c1649",
+              "description": "PongBoard requires Pong"
+            },
+            {
+              "id": "c839",
+              "description": "Pucksupply requires Brickles"
+            },
+            {
+              "id": "c54",
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            },
+            {
+              "id": "c233",
+              "description": "PlayBowling requires Bowling"
+            },
+            {
+              "id": "c19",
+              "description": "PlayGame --mandatory--> PlayGame_1"
+            },
+            {
+              "id": "c803",
+              "description": "Floorbrickles requires Brickles"
+            },
+            {
+              "id": "c182",
+              "description": "BowlingPin requires Bowling"
+            },
+            {
+              "id": "c33",
+              "description": "GameSprite --mandatory--> Rectangle"
+            },
+            {
+              "id": "c782",
+              "description": "BricklesBoard requires Brickles"
+            },
+            {
+              "id": "c209",
+              "description": "Edge requires Bowling"
+            },
+            {
+              "id": "c64",
+              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c501",
+              "description": "BowlingGameMenu excludes Leftpong"
+            },
+            {
+              "id": "c1227",
+              "description": "Edge excludes Pucksupply"
+            },
+            {
+              "id": "c1737",
+              "description": "RackofPins excludes TopPaddle"
+            },
+            {
+              "id": "c1296",
+              "description": "EndofAlley excludes TopPaddle"
+            },
+            {
+              "id": "c1404",
+              "description": "Gutter excludes Leftpong"
+            },
+            {
+              "id": "c483",
+              "description": "BowlingGameMenu excludes EndofAlley"
+            },
+            {
+              "id": "c1183",
+              "description": "DividingLine requires TopPaddle"
+            },
+            {
+              "id": "c573",
+              "description": "BowlingPin excludes Floorpong"
+            },
+            {
+              "id": "c1545",
+              "description": "Leftpong excludes RackofPins"
+            },
+            {
+              "id": "c270",
+              "description": "BowlingBall excludes BowlingBoard"
+            },
+            {
+              "id": "c1332",
+              "description": "Floorbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c303",
+              "description": "BowlingBall excludes Edge"
+            },
+            {
+              "id": "c1335",
+              "description": "Floorbrickles excludes RackofPins"
+            },
+            {
+              "id": "c138",
+              "description": "BottomPaddle excludes PlayBowling"
+            },
+            {
+              "id": "c1083",
+              "description": "Ceilingpong excludes Lane"
+            },
+            {
+              "id": "c1125",
+              "description": "Ceilingpong excludes TopPaddle"
+            },
+            {
+              "id": "c522",
+              "description": "BowlingGameMenu excludes Pucksupply"
+            },
+            {
+              "id": "c1482",
+              "description": "Lane excludes TopPaddle"
+            },
+            {
+              "id": "c915",
+              "description": "BricklesBoard excludes RackofPins"
+            },
+            {
+              "id": "c564",
+              "description": "BowlingPin excludes Edge"
+            },
+            {
+              "id": "c1730",
+              "description": "Rightpont requires RackofPins"
+            },
+            {
+              "id": "c567",
+              "description": "BowlingPin excludes EndofAlley"
+            },
+            {
+              "id": "c1050",
+              "description": "Ceilingbrickles excludes RackofPins"
+            },
+            {
+              "id": "c1446",
+              "description": "Lane excludes Leftpong"
+            },
+            {
+              "id": "c1254",
+              "description": "EndofAlley excludes Lane"
+            },
+            {
+              "id": "c664",
+              "description": "Brick requires Leftpong"
+            },
+            {
+              "id": "c1030",
+              "description": "Ceilingbrickles requires PlayBrickles"
+            },
+            {
+              "id": "c294",
+              "description": "BowlingBall excludes Ceilingbrickles"
+            },
+            {
+              "id": "c414",
+              "description": "BowlingBoard excludes Leftpong"
+            },
+            {
+              "id": "c681",
+              "description": "Brick excludes PongBoard"
+            },
+            {
+              "id": "c1307",
+              "description": "Leftbrickles requires Floorbrickles"
+            },
+            {
+              "id": "c312",
+              "description": "BowlingBall excludes Floorpong"
+            },
+            {
+              "id": "c1398",
+              "description": "Gutter excludes Lane"
+            },
+            {
+              "id": "c363",
+              "description": "BowlingBoard excludes BowlingGameMenu"
+            },
+            {
+              "id": "c1713",
+              "description": "Pucksupply excludes RackofPins"
+            },
+            {
+              "id": "c964",
+              "description": "BricklesGameMenu requires PlayBrickles"
+            },
+            {
+              "id": "c1440",
+              "description": "Gutter excludes TopPaddle"
+            },
+            {
+              "id": "c792",
+              "description": "Brickles excludes Ceilingpong"
+            },
+            {
+              "id": "c360",
+              "description": "BowlingBall excludes TopPaddle"
+            },
+            {
+              "id": "c465",
+              "description": "BowlingGameMenu excludes BricklesBoard"
+            },
+            {
+              "id": "c606",
+              "description": "BowlingPin excludes Pucksupply"
+            },
+            {
+              "id": "c558",
+              "description": "BowlingPin excludes Ceilingpong"
+            },
+            {
+              "id": "c1622",
+              "description": "Pong requires PlayPong"
+            },
+            {
+              "id": "c1395",
+              "description": "Floorpong excludes TopPaddle"
+            },
+            {
+              "id": "c1350",
+              "description": "Floorpong excludes Gutter"
+            },
+            {
+              "id": "c876",
+              "description": "BricklesBoard excludes Floorbrickles"
+            },
+            {
+              "id": "c1113",
+              "description": "Ceilingpong excludes RackofPins"
+            },
+            {
+              "id": "c108",
+              "description": "BottomPaddle excludes Ceilingpong"
+            },
+            {
+              "id": "c123",
+              "description": "BottomPaddle excludes Floorpong"
+            },
+            {
+              "id": "c1305",
+              "description": "Floorbrickles excludes Lane"
+            },
+            {
+              "id": "c273",
+              "description": "BowlingBall excludes BowlingGameMenu"
+            },
+            {
+              "id": "c288",
+              "description": "BowlingBall excludes BricklesBoard"
+            },
+            {
+              "id": "c1459",
+              "description": "Lane requires PongBoard"
+            },
+            {
+              "id": "c2",
+              "description": "ArcadeGame --optional--> UseCases"
+            },
+            {
+              "id": "c1068",
+              "description": "Ceilingpong excludes Edge"
+            },
+            {
+              "id": "c1077",
+              "description": "Ceilingpong excludes Floorpong"
+            },
+            {
+              "id": "c1261",
+              "description": "EndofAlley requires PlayBowling"
+            },
+            {
+              "id": "c476",
+              "description": "DividingLine requires BowlingGameMenu"
+            },
+            {
+              "id": "c579",
+              "description": "BowlingPin excludes Lane"
+            },
+            {
+              "id": "c435",
+              "description": "BowlingBoard excludes Pucksupply"
+            },
+            {
+              "id": "c1557",
+              "description": "Leftpong excludes TopPaddle"
+            },
+            {
+              "id": "c609",
+              "description": "BowlingPin excludes RackofPins"
+            },
+            {
+              "id": "c1089",
+              "description": "Ceilingpong excludes Leftpong"
+            },
+            {
+              "id": "c1353",
+              "description": "Floorpong excludes Lane"
+            },
+            {
+              "id": "c141",
+              "description": "BottomPaddle excludes PlayBrickles"
+            },
+            {
+              "id": "c495",
+              "description": "BowlingGameMenu excludes Lane"
+            },
+            {
+              "id": "c1022",
+              "description": "Leftbrickles requires Ceilingbrickles"
+            },
+            {
+              "id": "c1284",
+              "description": "EndofAlley excludes RackofPins"
+            },
+            {
+              "id": "c1327",
+              "description": "Floorbrickles requires PongGameMenu"
+            },
+            {
+              "id": "c168",
+              "description": "BottomPaddle excludes ScoreBoard"
+            },
+            {
+              "id": "c576",
+              "description": "BowlingPin excludes Gutter"
+            },
+            {
+              "id": "c1235",
+              "description": "Rightpont requires Edge"
+            },
+            {
+              "id": "c1410",
+              "description": "Gutter excludes PlayBrickles"
+            },
+            {
+              "id": "c1245",
+              "description": "EndofAlley excludes Floorbrickles"
+            },
+            {
+              "id": "c393",
+              "description": "BowlingBoard excludes Edge"
+            },
+            {
+              "id": "c1260",
+              "description": "EndofAlley excludes Leftpong"
+            },
+            {
+              "id": "c415",
+              "description": "BowlingBoard requires PlayBowling"
+            },
+            {
+              "id": "c309",
+              "description": "BowlingBall excludes Floorbrickles"
+            },
+            {
+              "id": "c852",
+              "description": "Brickles excludes ScoreBoard"
+            },
+            {
+              "id": "c1194",
+              "description": "Edge excludes Floorpong"
+            },
+            {
+              "id": "c1428",
+              "description": "Gutter excludes RackofPins"
+            },
+            {
+              "id": "c1467",
+              "description": "Lane excludes Pucksupply"
+            },
+            {
+              "id": "c1365",
+              "description": "Floorpong excludes PlayBrickles"
+            },
+            {
+              "id": "c429",
+              "description": "BowlingBoard excludes PongBoard"
+            },
+            {
+              "id": "c1126",
+              "description": "DividingLine requires Edge"
+            },
+            {
+              "id": "c232",
+              "description": "Bowling requires PlayBowling"
+            },
+            {
+              "id": "c468",
+              "description": "BowlingGameMenu excludes BricklesGameMenu"
+            },
+            {
+              "id": "c1613",
+              "description": "Rightpont requires PlayBrickles"
+            },
+            {
+              "id": "c1033",
+              "description": "Ceilingbrickles requires PlayPong"
+            },
+            {
+              "id": "c171",
+              "description": "BottomPaddle excludes TopPaddle"
+            },
+            {
+              "id": "c1188",
+              "description": "Edge excludes EndofAlley"
+            },
+            {
+              "id": "c1755",
+              "description": "ScoreBoard excludes TopPaddle"
+            },
+            {
+              "id": "c1197",
+              "description": "Edge excludes Gutter"
+            },
+            {
+              "id": "c631",
+              "description": "Brick requires BricklesGameMenu"
+            },
+            {
+              "id": "c634",
+              "description": "Brick requires Ceilingbrickles"
+            },
+            {
+              "id": "c549",
+              "description": "BowlingPin excludes BricklesBoard"
+            },
+            {
+              "id": "c502",
+              "description": "BowlingGameMenu requires PlayBowling"
+            },
+            {
+              "id": "c978",
+              "description": "BricklesGameMenu excludes PongGameMenu"
+            },
+            {
+              "id": "c410",
+              "description": "Leftbrickles requires BowlingBoard"
+            },
+            {
+              "id": "c492",
+              "description": "BowlingGameMenu excludes Gutter"
+            },
+            {
+              "id": "c1587",
+              "description": "PlayBowling excludes ScoreBoard"
+            },
+            {
+              "id": "c643",
+              "description": "Brick requires Edge"
+            },
+            {
+              "id": "c318",
+              "description": "BowlingBall excludes Lane"
+            },
+            {
+              "id": "c1703",
+              "description": "Rightpont requires PongGameMenu"
+            },
+            {
+              "id": "c1047",
+              "description": "Ceilingbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c984",
+              "description": "BricklesGameMenu excludes RackofPins"
+            },
+            {
+              "id": "c595",
+              "description": "BowlingPin requires Pong"
+            },
+            {
+              "id": "c519",
+              "description": "BowlingGameMenu excludes PongGameMenu"
+            },
+            {
+              "id": "c348",
+              "description": "BowlingBall excludes RackofPins"
+            },
+            {
+              "id": "c378",
+              "description": "BowlingBoard excludes BricklesBoard"
+            },
+            {
+              "id": "c1628",
+              "description": "PongGameMenu requires PlayPong"
+            },
+            {
+              "id": "c1216",
+              "description": "Edge requires Pong"
+            },
+            {
+              "id": "c325",
+              "description": "BowlingBall requires PlayBowling"
+            },
+            {
+              "id": "c1359",
+              "description": "Floorpong excludes Leftpong"
+            },
+            {
+              "id": "c345",
+              "description": "BowlingBall excludes Pucksupply"
+            },
+            {
+              "id": "c438",
+              "description": "BowlingBoard excludes RackofPins"
+            },
+            {
+              "id": "c1620",
+              "description": "PlayBrickles excludes TopPaddle"
+            },
+            {
+              "id": "c775",
+              "description": "BrickPile requires ScoreBoard"
+            },
+            {
+              "id": "c1311",
+              "description": "Floorbrickles excludes Leftpong"
+            },
+            {
+              "id": "c1476",
+              "description": "Lane excludes Rightpont"
+            },
+            {
+              "id": "c555",
+              "description": "BowlingPin excludes Ceilingbrickles"
+            },
+            {
+              "id": "c823",
+              "description": "Brickles requires PlayBrickles"
+            },
+            {
+              "id": "c1105",
+              "description": "Ceilingpong requires PongGameMenu"
+            },
+            {
+              "id": "c1122",
+              "description": "Ceilingpong excludes ScoreBoard"
+            },
+            {
+              "id": "c453",
+              "description": "BowlingGameMenu excludes BowlingPin"
+            },
+            {
+              "id": "c1102",
+              "description": "Ceilingpong requires PongBoard"
+            },
+            {
+              "id": "c1008",
+              "description": "Ceilingbrickles excludes EndofAlley"
+            },
+            {
+              "id": "c1312",
+              "description": "Floorbrickles requires PlayBowling"
+            },
+            {
+              "id": "c1715",
+              "description": "Rightbrickles requires Pucksupply"
+            },
+            {
+              "id": "c1191",
+              "description": "Edge excludes Floorbrickles"
+            },
+            {
+              "id": "c1662",
+              "description": "Pong excludes Rightbrickles"
+            },
+            {
+              "id": "c1577",
+              "description": "RackofPins requires PlayBowling"
+            },
+            {
+              "id": "c733",
+              "description": "BrickPile requires Gutter"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "RackofPins requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "Ceilingbrickles requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "TopPaddle requires Pong"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --optional--> Pucksupply"
+            },
+            {
+              "id": null,
+              "description": "Brick requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "BowlingBall requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "BrickPile requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "Floorpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Rightpont requires Pong"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+            },
+            {
+              "id": null,
+              "description": "BowlingBoard requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "BowlingGameMenu requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
+            },
+            {
+              "id": null,
+              "description": "UseCases --optional--> SaveScore"
+            },
+            {
+              "id": null,
+              "description": "ScoreBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "PongGameMenu requires Pong"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> UninstallGame"
+            },
+            {
+              "id": null,
+              "description": "ArcadeGame --mandatory--> UseCases"
+            },
+            {
+              "id": null,
+              "description": "UseCases --optional--> CheckPreviousBestScore"
+            },
+            {
+              "id": null,
+              "description": "DividingLine requires Pong"
+            },
+            {
+              "id": null,
+              "description": "BottomPaddle requires Pong"
+            },
+            {
+              "id": null,
+              "description": "BricklesGameMenu requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "EndofAlley requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "Ceilingpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+            },
+            {
+              "id": null,
+              "description": "Leftbrickles requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "Leftpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "GameSprite --optional--> SpritePair"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
+            },
+            {
+              "id": null,
+              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+            },
+            {
+              "id": null,
+              "description": "Rightbrickles requires Brickles"
+            }
+          ]
+        },
+        "clause": {
+          "metrics": {
+            "accuracy": 0.9083798882681564,
+            "precision": 0.42410714285714285,
+            "recall": 0.7307692307692307,
+            "f1_score": 0.5367231638418078,
+            "specificity": 0.922289156626506,
+            "true_positives": 95,
+            "true_negatives": 1531,
+            "false_positives": 129,
+            "false_negatives": 35
+          },
+          "tp": [
+            {
+              "id": "c48",
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
+            },
+            {
+              "id": "c55",
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": "c52",
+              "description": "StationarySprite --optional--> Wall"
+            },
+            {
+              "id": "c17",
+              "description": "UseCases --mandatory--> PlayGame"
+            },
+            {
+              "id": "c69",
+              "description": "ClassDiagram --mandatory--> GameMenu"
+            },
+            {
+              "id": "c27",
+              "description": "ArcadeGame --mandatory--> ClassDiagram"
+            },
+            {
+              "id": "c43",
+              "description": "MovableSprite --mandatory--> Velocity"
+            },
+            {
+              "id": "c25",
+              "description": "PlayGame --mandatory--> AnimationLoop"
+            },
+            {
+              "id": "c7",
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": "c58",
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": "c37",
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": "c72",
+              "description": "GameMenu --or--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+            },
+            {
+              "id": "c65",
+              "description": "ClassDiagram --mandatory--> Menu"
+            },
+            {
+              "id": "c23",
+              "description": "PlayGame --mandatory--> Initialization"
+            },
+            {
+              "id": "c15",
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": "c29",
+              "description": "ClassDiagram --mandatory--> GameSprite"
+            },
+            {
+              "id": "c11",
+              "description": "UseCases --mandatory--> InstallGame"
+            },
+            {
+              "id": "c1622",
+              "description": "Pong requires PlayPong"
+            },
+            {
+              "id": "c45",
+              "description": "MovableSprite --mandatory--> MovableSprite_2"
+            },
+            {
+              "id": "c2",
+              "description": "ArcadeGame --optional--> UseCases"
+            },
+            {
+              "id": "c35",
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": "c61",
+              "description": "ClassDiagram --mandatory--> Board"
+            },
+            {
+              "id": "c824",
+              "description": "PlayBrickles requires Brickles"
+            },
+            {
+              "id": "c9",
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": "c232",
+              "description": "Bowling requires PlayBowling"
+            },
+            {
+              "id": "c39",
+              "description": "GameSprite --mandatory--> GameSprite_3"
+            },
+            {
+              "id": "c1621",
+              "description": "PlayPong requires Pong"
+            },
+            {
+              "id": "c42",
+              "description": "GameSprite_3 --or--> ['MovableSprite', 'StationarySprite']"
+            },
+            {
+              "id": "c221",
+              "description": "Gutter requires Bowling"
+            },
+            {
+              "id": "c50",
+              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": "c224",
+              "description": "Lane requires Bowling"
+            },
+            {
+              "id": "c1649",
+              "description": "PongBoard requires Pong"
+            },
+            {
+              "id": "c839",
+              "description": "Pucksupply requires Brickles"
+            },
+            {
+              "id": "c54",
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            },
+            {
+              "id": "c233",
+              "description": "PlayBowling requires Bowling"
+            },
+            {
+              "id": "c19",
+              "description": "PlayGame --mandatory--> PlayGame_1"
+            },
+            {
+              "id": "c823",
+              "description": "Brickles requires PlayBrickles"
+            },
+            {
+              "id": "c803",
+              "description": "Floorbrickles requires Brickles"
+            },
+            {
+              "id": "c182",
+              "description": "BowlingPin requires Bowling"
+            },
+            {
+              "id": "c33",
+              "description": "GameSprite --mandatory--> Rectangle"
+            },
+            {
+              "id": "c782",
+              "description": "BricklesBoard requires Brickles"
+            },
+            {
+              "id": "c209",
+              "description": "Edge requires Bowling"
+            },
+            {
+              "id": "c64",
+              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c501",
+              "description": "BowlingGameMenu excludes Leftpong"
+            },
+            {
+              "id": "c1227",
+              "description": "Edge excludes Pucksupply"
+            },
+            {
+              "id": "c1737",
+              "description": "RackofPins excludes TopPaddle"
+            },
+            {
+              "id": "c1296",
+              "description": "EndofAlley excludes TopPaddle"
+            },
+            {
+              "id": "c1404",
+              "description": "Gutter excludes Leftpong"
+            },
+            {
+              "id": "c483",
+              "description": "BowlingGameMenu excludes EndofAlley"
+            },
+            {
+              "id": "c1183",
+              "description": "DividingLine requires TopPaddle"
+            },
+            {
+              "id": "c573",
+              "description": "BowlingPin excludes Floorpong"
+            },
+            {
+              "id": "c1545",
+              "description": "Leftpong excludes RackofPins"
+            },
+            {
+              "id": "c270",
+              "description": "BowlingBall excludes BowlingBoard"
+            },
+            {
+              "id": "c1332",
+              "description": "Floorbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c303",
+              "description": "BowlingBall excludes Edge"
+            },
+            {
+              "id": "c1335",
+              "description": "Floorbrickles excludes RackofPins"
+            },
+            {
+              "id": "c138",
+              "description": "BottomPaddle excludes PlayBowling"
+            },
+            {
+              "id": "c1083",
+              "description": "Ceilingpong excludes Lane"
+            },
+            {
+              "id": "c1125",
+              "description": "Ceilingpong excludes TopPaddle"
+            },
+            {
+              "id": "c522",
+              "description": "BowlingGameMenu excludes Pucksupply"
+            },
+            {
+              "id": "c1482",
+              "description": "Lane excludes TopPaddle"
+            },
+            {
+              "id": "c915",
+              "description": "BricklesBoard excludes RackofPins"
+            },
+            {
+              "id": "c564",
+              "description": "BowlingPin excludes Edge"
+            },
+            {
+              "id": "c1730",
+              "description": "Rightpont requires RackofPins"
+            },
+            {
+              "id": "c567",
+              "description": "BowlingPin excludes EndofAlley"
+            },
+            {
+              "id": "c1050",
+              "description": "Ceilingbrickles excludes RackofPins"
+            },
+            {
+              "id": "c1446",
+              "description": "Lane excludes Leftpong"
+            },
+            {
+              "id": "c1254",
+              "description": "EndofAlley excludes Lane"
+            },
+            {
+              "id": "c664",
+              "description": "Brick requires Leftpong"
+            },
+            {
+              "id": "c1030",
+              "description": "Ceilingbrickles requires PlayBrickles"
+            },
+            {
+              "id": "c294",
+              "description": "BowlingBall excludes Ceilingbrickles"
+            },
+            {
+              "id": "c414",
+              "description": "BowlingBoard excludes Leftpong"
+            },
+            {
+              "id": "c681",
+              "description": "Brick excludes PongBoard"
+            },
+            {
+              "id": "c1307",
+              "description": "Leftbrickles requires Floorbrickles"
+            },
+            {
+              "id": "c312",
+              "description": "BowlingBall excludes Floorpong"
+            },
+            {
+              "id": "c1398",
+              "description": "Gutter excludes Lane"
+            },
+            {
+              "id": "c363",
+              "description": "BowlingBoard excludes BowlingGameMenu"
+            },
+            {
+              "id": "c1713",
+              "description": "Pucksupply excludes RackofPins"
+            },
+            {
+              "id": "c964",
+              "description": "BricklesGameMenu requires PlayBrickles"
+            },
+            {
+              "id": "c1440",
+              "description": "Gutter excludes TopPaddle"
+            },
+            {
+              "id": "c792",
+              "description": "Brickles excludes Ceilingpong"
+            },
+            {
+              "id": "c360",
+              "description": "BowlingBall excludes TopPaddle"
+            },
+            {
+              "id": "c465",
+              "description": "BowlingGameMenu excludes BricklesBoard"
+            },
+            {
+              "id": "c606",
+              "description": "BowlingPin excludes Pucksupply"
+            },
+            {
+              "id": "c558",
+              "description": "BowlingPin excludes Ceilingpong"
+            },
+            {
+              "id": "c1395",
+              "description": "Floorpong excludes TopPaddle"
+            },
+            {
+              "id": "c1350",
+              "description": "Floorpong excludes Gutter"
+            },
+            {
+              "id": "c876",
+              "description": "BricklesBoard excludes Floorbrickles"
+            },
+            {
+              "id": "c1113",
+              "description": "Ceilingpong excludes RackofPins"
+            },
+            {
+              "id": "c108",
+              "description": "BottomPaddle excludes Ceilingpong"
+            },
+            {
+              "id": "c123",
+              "description": "BottomPaddle excludes Floorpong"
+            },
+            {
+              "id": "c1305",
+              "description": "Floorbrickles excludes Lane"
+            },
+            {
+              "id": "c273",
+              "description": "BowlingBall excludes BowlingGameMenu"
+            },
+            {
+              "id": "c288",
+              "description": "BowlingBall excludes BricklesBoard"
+            },
+            {
+              "id": "c1459",
+              "description": "Lane requires PongBoard"
+            },
+            {
+              "id": "c1068",
+              "description": "Ceilingpong excludes Edge"
+            },
+            {
+              "id": "c1077",
+              "description": "Ceilingpong excludes Floorpong"
+            },
+            {
+              "id": "c1261",
+              "description": "EndofAlley requires PlayBowling"
+            },
+            {
+              "id": "c476",
+              "description": "DividingLine requires BowlingGameMenu"
+            },
+            {
+              "id": "c579",
+              "description": "BowlingPin excludes Lane"
+            },
+            {
+              "id": "c435",
+              "description": "BowlingBoard excludes Pucksupply"
+            },
+            {
+              "id": "c1557",
+              "description": "Leftpong excludes TopPaddle"
+            },
+            {
+              "id": "c609",
+              "description": "BowlingPin excludes RackofPins"
+            },
+            {
+              "id": "c1089",
+              "description": "Ceilingpong excludes Leftpong"
+            },
+            {
+              "id": "c1353",
+              "description": "Floorpong excludes Lane"
+            },
+            {
+              "id": "c141",
+              "description": "BottomPaddle excludes PlayBrickles"
+            },
+            {
+              "id": "c495",
+              "description": "BowlingGameMenu excludes Lane"
+            },
+            {
+              "id": "c1022",
+              "description": "Leftbrickles requires Ceilingbrickles"
+            },
+            {
+              "id": "c1284",
+              "description": "EndofAlley excludes RackofPins"
+            },
+            {
+              "id": "c1327",
+              "description": "Floorbrickles requires PongGameMenu"
+            },
+            {
+              "id": "c168",
+              "description": "BottomPaddle excludes ScoreBoard"
+            },
+            {
+              "id": "c576",
+              "description": "BowlingPin excludes Gutter"
+            },
+            {
+              "id": "c1235",
+              "description": "Rightpont requires Edge"
+            },
+            {
+              "id": "c1410",
+              "description": "Gutter excludes PlayBrickles"
+            },
+            {
+              "id": "c1245",
+              "description": "EndofAlley excludes Floorbrickles"
+            },
+            {
+              "id": "c393",
+              "description": "BowlingBoard excludes Edge"
+            },
+            {
+              "id": "c1260",
+              "description": "EndofAlley excludes Leftpong"
+            },
+            {
+              "id": "c415",
+              "description": "BowlingBoard requires PlayBowling"
+            },
+            {
+              "id": "c309",
+              "description": "BowlingBall excludes Floorbrickles"
+            },
+            {
+              "id": "c852",
+              "description": "Brickles excludes ScoreBoard"
+            },
+            {
+              "id": "c1194",
+              "description": "Edge excludes Floorpong"
+            },
+            {
+              "id": "c1428",
+              "description": "Gutter excludes RackofPins"
+            },
+            {
+              "id": "c1467",
+              "description": "Lane excludes Pucksupply"
+            },
+            {
+              "id": "c1365",
+              "description": "Floorpong excludes PlayBrickles"
+            },
+            {
+              "id": "c429",
+              "description": "BowlingBoard excludes PongBoard"
+            },
+            {
+              "id": "c1126",
+              "description": "DividingLine requires Edge"
+            },
+            {
+              "id": "c468",
+              "description": "BowlingGameMenu excludes BricklesGameMenu"
+            },
+            {
+              "id": "c1613",
+              "description": "Rightpont requires PlayBrickles"
+            },
+            {
+              "id": "c1033",
+              "description": "Ceilingbrickles requires PlayPong"
+            },
+            {
+              "id": "c171",
+              "description": "BottomPaddle excludes TopPaddle"
+            },
+            {
+              "id": "c1188",
+              "description": "Edge excludes EndofAlley"
+            },
+            {
+              "id": "c1755",
+              "description": "ScoreBoard excludes TopPaddle"
+            },
+            {
+              "id": "c1197",
+              "description": "Edge excludes Gutter"
+            },
+            {
+              "id": "c631",
+              "description": "Brick requires BricklesGameMenu"
+            },
+            {
+              "id": "c634",
+              "description": "Brick requires Ceilingbrickles"
+            },
+            {
+              "id": "c549",
+              "description": "BowlingPin excludes BricklesBoard"
+            },
+            {
+              "id": "c502",
+              "description": "BowlingGameMenu requires PlayBowling"
+            },
+            {
+              "id": "c978",
+              "description": "BricklesGameMenu excludes PongGameMenu"
+            },
+            {
+              "id": "c410",
+              "description": "Leftbrickles requires BowlingBoard"
+            },
+            {
+              "id": "c492",
+              "description": "BowlingGameMenu excludes Gutter"
+            },
+            {
+              "id": "c1587",
+              "description": "PlayBowling excludes ScoreBoard"
+            },
+            {
+              "id": "c643",
+              "description": "Brick requires Edge"
+            },
+            {
+              "id": "c318",
+              "description": "BowlingBall excludes Lane"
+            },
+            {
+              "id": "c1703",
+              "description": "Rightpont requires PongGameMenu"
+            },
+            {
+              "id": "c1047",
+              "description": "Ceilingbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c984",
+              "description": "BricklesGameMenu excludes RackofPins"
+            },
+            {
+              "id": "c595",
+              "description": "BowlingPin requires Pong"
+            },
+            {
+              "id": "c519",
+              "description": "BowlingGameMenu excludes PongGameMenu"
+            },
+            {
+              "id": "c348",
+              "description": "BowlingBall excludes RackofPins"
+            },
+            {
+              "id": "c378",
+              "description": "BowlingBoard excludes BricklesBoard"
+            },
+            {
+              "id": "c1628",
+              "description": "PongGameMenu requires PlayPong"
+            },
+            {
+              "id": "c1216",
+              "description": "Edge requires Pong"
+            },
+            {
+              "id": "c325",
+              "description": "BowlingBall requires PlayBowling"
+            },
+            {
+              "id": "c1359",
+              "description": "Floorpong excludes Leftpong"
+            },
+            {
+              "id": "c345",
+              "description": "BowlingBall excludes Pucksupply"
+            },
+            {
+              "id": "c438",
+              "description": "BowlingBoard excludes RackofPins"
+            },
+            {
+              "id": "c1620",
+              "description": "PlayBrickles excludes TopPaddle"
+            },
+            {
+              "id": "c775",
+              "description": "BrickPile requires ScoreBoard"
+            },
+            {
+              "id": "c1311",
+              "description": "Floorbrickles excludes Leftpong"
+            },
+            {
+              "id": "c1476",
+              "description": "Lane excludes Rightpont"
+            },
+            {
+              "id": "c555",
+              "description": "BowlingPin excludes Ceilingbrickles"
+            },
+            {
+              "id": "c1105",
+              "description": "Ceilingpong requires PongGameMenu"
+            },
+            {
+              "id": "c1122",
+              "description": "Ceilingpong excludes ScoreBoard"
+            },
+            {
+              "id": "c453",
+              "description": "BowlingGameMenu excludes BowlingPin"
+            },
+            {
+              "id": "c1102",
+              "description": "Ceilingpong requires PongBoard"
+            },
+            {
+              "id": "c1008",
+              "description": "Ceilingbrickles excludes EndofAlley"
+            },
+            {
+              "id": "c1312",
+              "description": "Floorbrickles requires PlayBowling"
+            },
+            {
+              "id": "c1715",
+              "description": "Rightbrickles requires Pucksupply"
+            },
+            {
+              "id": "c1191",
+              "description": "Edge excludes Floorbrickles"
+            },
+            {
+              "id": "c1662",
+              "description": "Pong excludes Rightbrickles"
+            },
+            {
+              "id": "c1577",
+              "description": "RackofPins requires PlayBowling"
+            },
+            {
+              "id": "c733",
+              "description": "BrickPile requires Gutter"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-13, 11]"
+            },
+            {
+              "id": null,
+              "description": "[-52, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-63, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 8]"
+            },
+            {
+              "id": null,
+              "description": "[-60, 58]"
+            },
+            {
+              "id": null,
+              "description": "[-47, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-64, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-42, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-50, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-40, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-53, 17]"
+            },
+            {
+              "id": null,
+              "description": "[-35, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-30, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-65, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-61, 58]"
+            },
+            {
+              "id": null,
+              "description": "[-38, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-3, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-33, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-14, 11]"
+            },
+            {
+              "id": null,
+              "description": "[-19, 18]"
+            }
+          ]
+        },
+        "semantic": {
+          "metrics": {
+            "accuracy": 0.4860557768924303,
+            "precision": 0.5020576131687243,
+            "recall": 0.9384615384615385,
+            "f1_score": 0.6541554959785524,
+            "specificity": 0.0,
+            "true_positives": 122,
+            "true_negatives": 0,
+            "false_positives": 121,
+            "false_negatives": 8
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "[-65, -35]",
+              "description": "[-65, -35]"
+            },
+            {
+              "id": "[-53, -46]",
+              "description": "[-53, -46]"
+            },
+            {
+              "id": "[-48, -32]",
+              "description": "[-48, -32]"
+            },
+            {
+              "id": "[-47, -32]",
+              "description": "[-47, -32]"
+            },
+            {
+              "id": "[-45, -35]",
+              "description": "[-45, -35]"
+            },
+            {
+              "id": "[-65, -47]",
+              "description": "[-65, -47]"
+            },
+            {
+              "id": "[-52, 32]",
+              "description": "[-52, 32]"
+            },
+            {
+              "id": "[-50, -31]",
+              "description": "[-50, -31]"
+            },
+            {
+              "id": "[-48, -35]",
+              "description": "[-48, -35]"
+            },
+            {
+              "id": "[-57, -30]",
+              "description": "[-57, -30]"
+            },
+            {
+              "id": "[-53, -43]",
+              "description": "[-53, -43]"
+            },
+            {
+              "id": "[-46, -30]",
+              "description": "[-46, -30]"
+            },
+            {
+              "id": "[-48, -43]",
+              "description": "[-48, -43]"
+            },
+            {
+              "id": "[-33, -14]",
+              "description": "[-33, -14]"
+            },
+            {
+              "id": "[-51, -44]",
+              "description": "[-51, -44]"
+            },
+            {
+              "id": "[-51, -32]",
+              "description": "[-51, -32]"
+            },
+            {
+              "id": "[-65, -53]",
+              "description": "[-65, -53]"
+            },
+            {
+              "id": "[-44, -32]",
+              "description": "[-44, -32]"
+            },
+            {
+              "id": "[-56, -48]",
+              "description": "[-56, -48]"
+            },
+            {
+              "id": "[-46, -31]",
+              "description": "[-46, -31]"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-1, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-3, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-4, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 8]"
+            },
+            {
+              "id": null,
+              "description": "[-8, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-12, 11]"
+            },
+            {
+              "id": null,
+              "description": "[-13, 11]"
+            },
+            {
+              "id": null,
+              "description": "[-14, 11]"
+            }
+          ]
+        }
+      }
     },
     {
       "fold_index": 1,
@@ -2643,7 +5277,1836 @@
         "positive": 20,
         "negative": 2
       },
-      "evaluation": null
+      "evaluation": {
+        "description": {
+          "metrics": {
+            "accuracy": 0.19811320754716982,
+            "precision": 0.22826086956521738,
+            "recall": 0.6,
+            "f1_score": 0.3307086614173228,
+            "specificity": 0.0,
+            "true_positives": 42,
+            "true_negatives": 0,
+            "false_positives": 142,
+            "false_negatives": 28
+          },
+          "tp": [
+            {
+              "id": "c45",
+              "description": "MovableSprite --mandatory--> MovableSprite_2"
+            },
+            {
+              "id": "c52",
+              "description": "StationarySprite --optional--> Wall"
+            },
+            {
+              "id": "c824",
+              "description": "PlayBrickles requires Brickles"
+            },
+            {
+              "id": "c25",
+              "description": "PlayGame --mandatory--> AnimationLoop"
+            },
+            {
+              "id": "c58",
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": "c72",
+              "description": "GameMenu --or--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+            },
+            {
+              "id": "c19",
+              "description": "PlayGame --mandatory--> PlayGame_1"
+            },
+            {
+              "id": "c43",
+              "description": "MovableSprite --mandatory--> Velocity"
+            },
+            {
+              "id": "c788",
+              "description": "Ceilingbrickles requires Brickles"
+            },
+            {
+              "id": "c55",
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": "c64",
+              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+            },
+            {
+              "id": "c9",
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": "c69",
+              "description": "ClassDiagram --mandatory--> GameMenu"
+            },
+            {
+              "id": "c17",
+              "description": "UseCases --mandatory--> PlayGame"
+            },
+            {
+              "id": "c37",
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": "c224",
+              "description": "Lane requires Bowling"
+            },
+            {
+              "id": "c35",
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": "c61",
+              "description": "ClassDiagram --mandatory--> Board"
+            },
+            {
+              "id": "c68",
+              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+            },
+            {
+              "id": "c23",
+              "description": "PlayGame --mandatory--> Initialization"
+            },
+            {
+              "id": "c11",
+              "description": "UseCases --mandatory--> InstallGame"
+            },
+            {
+              "id": "c33",
+              "description": "GameSprite --mandatory--> Rectangle"
+            },
+            {
+              "id": "c48",
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
+            },
+            {
+              "id": "c233",
+              "description": "PlayBowling requires Bowling"
+            },
+            {
+              "id": "c1649",
+              "description": "PongBoard requires Pong"
+            },
+            {
+              "id": "c1652",
+              "description": "PongGameMenu requires Pong"
+            },
+            {
+              "id": "c7",
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": "c703",
+              "description": "BrickPile requires Brickles"
+            },
+            {
+              "id": "c173",
+              "description": "BowlingBall requires Bowling"
+            },
+            {
+              "id": "c50",
+              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": "c839",
+              "description": "Pucksupply requires Brickles"
+            },
+            {
+              "id": "c54",
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            },
+            {
+              "id": "c815",
+              "description": "Leftbrickles requires Brickles"
+            },
+            {
+              "id": "c221",
+              "description": "Gutter requires Bowling"
+            },
+            {
+              "id": "c782",
+              "description": "BricklesBoard requires Brickles"
+            },
+            {
+              "id": "c15",
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": "c22",
+              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+            },
+            {
+              "id": "c39",
+              "description": "GameSprite --mandatory--> GameSprite_3"
+            },
+            {
+              "id": "c29",
+              "description": "ClassDiagram --mandatory--> GameSprite"
+            },
+            {
+              "id": "c42",
+              "description": "GameSprite_3 --or--> ['MovableSprite', 'StationarySprite']"
+            },
+            {
+              "id": "c1621",
+              "description": "PlayPong requires Pong"
+            },
+            {
+              "id": "c209",
+              "description": "Edge requires Bowling"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c487",
+              "description": "BowlingGameMenu requires Floorpong"
+            },
+            {
+              "id": "c1260",
+              "description": "EndofAlley excludes Leftpong"
+            },
+            {
+              "id": "c1200",
+              "description": "Edge excludes Lane"
+            },
+            {
+              "id": "c561",
+              "description": "BowlingPin excludes DividingLine"
+            },
+            {
+              "id": "c1542",
+              "description": "Leftpong excludes Pucksupply"
+            },
+            {
+              "id": "c232",
+              "description": "Bowling requires PlayBowling"
+            },
+            {
+              "id": "c1137",
+              "description": "DividingLine excludes Floorpong"
+            },
+            {
+              "id": "c1251",
+              "description": "EndofAlley excludes Gutter"
+            },
+            {
+              "id": "c888",
+              "description": "BricklesBoard excludes Leftbrickles"
+            },
+            {
+              "id": "c567",
+              "description": "BowlingPin excludes EndofAlley"
+            },
+            {
+              "id": "c921",
+              "description": "BricklesBoard excludes Rightpont"
+            },
+            {
+              "id": "c1182",
+              "description": "DividingLine excludes ScoreBoard"
+            },
+            {
+              "id": "c1056",
+              "description": "Ceilingbrickles excludes Rightpont"
+            },
+            {
+              "id": "c414",
+              "description": "BowlingBoard excludes Leftpong"
+            },
+            {
+              "id": "c1404",
+              "description": "Gutter excludes Leftpong"
+            },
+            {
+              "id": "c711",
+              "description": "BrickPile excludes BricklesGameMenu"
+            },
+            {
+              "id": "c609",
+              "description": "BowlingPin excludes RackofPins"
+            },
+            {
+              "id": "c1191",
+              "description": "Edge excludes Floorbrickles"
+            },
+            {
+              "id": "c1440",
+              "description": "Gutter excludes TopPaddle"
+            },
+            {
+              "id": "c264",
+              "description": "Bowling excludes ScoreBoard"
+            },
+            {
+              "id": "c322",
+              "description": "BowlingBall requires Leftpong"
+            },
+            {
+              "id": "c634",
+              "description": "Brick requires Ceilingbrickles"
+            },
+            {
+              "id": "c573",
+              "description": "BowlingPin excludes Floorpong"
+            },
+            {
+              "id": "c105",
+              "description": "BottomPaddle excludes Ceilingbrickles"
+            },
+            {
+              "id": "c601",
+              "description": "BowlingPin requires PongGameMenu"
+            },
+            {
+              "id": "c1062",
+              "description": "Ceilingbrickles excludes TopPaddle"
+            },
+            {
+              "id": "c744",
+              "description": "BrickPile excludes Leftpong"
+            },
+            {
+              "id": "c984",
+              "description": "BricklesGameMenu excludes RackofPins"
+            },
+            {
+              "id": "c1737",
+              "description": "RackofPins excludes TopPaddle"
+            },
+            {
+              "id": "c1476",
+              "description": "Lane excludes Rightpont"
+            },
+            {
+              "id": "c1335",
+              "description": "Floorbrickles excludes RackofPins"
+            },
+            {
+              "id": "c519",
+              "description": "BowlingGameMenu excludes PongGameMenu"
+            },
+            {
+              "id": "c765",
+              "description": "BrickPile excludes Pucksupply"
+            },
+            {
+              "id": "c564",
+              "description": "BowlingPin excludes Edge"
+            },
+            {
+              "id": "c1521",
+              "description": "Leftbrickles excludes TopPaddle"
+            },
+            {
+              "id": "c135",
+              "description": "BottomPaddle excludes Leftpong"
+            },
+            {
+              "id": "c1501",
+              "description": "Leftbrickles requires PongGameMenu"
+            },
+            {
+              "id": "c1577",
+              "description": "RackofPins requires PlayBowling"
+            },
+            {
+              "id": "c848",
+              "description": "Rightpont requires Brickles"
+            },
+            {
+              "id": "c876",
+              "description": "BricklesBoard excludes Floorbrickles"
+            },
+            {
+              "id": "c150",
+              "description": "BottomPaddle excludes PongBoard"
+            },
+            {
+              "id": "c1344",
+              "description": "Floorbrickles excludes ScoreBoard"
+            },
+            {
+              "id": "c1149",
+              "description": "DividingLine excludes Leftpong"
+            },
+            {
+              "id": "c1245",
+              "description": "EndofAlley excludes Floorbrickles"
+            },
+            {
+              "id": "c1752",
+              "description": "Rightpont excludes TopPaddle"
+            },
+            {
+              "id": "c1482",
+              "description": "Lane excludes TopPaddle"
+            },
+            {
+              "id": "c435",
+              "description": "BowlingBoard excludes Pucksupply"
+            },
+            {
+              "id": "c1290",
+              "description": "EndofAlley excludes Rightpont"
+            },
+            {
+              "id": "c643",
+              "description": "Brick requires Edge"
+            },
+            {
+              "id": "c708",
+              "description": "BrickPile excludes BricklesBoard"
+            },
+            {
+              "id": "c408",
+              "description": "BowlingBoard excludes Lane"
+            },
+            {
+              "id": "c1140",
+              "description": "DividingLine excludes Gutter"
+            },
+            {
+              "id": "c549",
+              "description": "BowlingPin excludes BricklesBoard"
+            },
+            {
+              "id": "c429",
+              "description": "BowlingBoard excludes PongBoard"
+            },
+            {
+              "id": "c873",
+              "description": "BricklesBoard excludes EndofAlley"
+            },
+            {
+              "id": "c1506",
+              "description": "Leftbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c1185",
+              "description": "DividingLine excludes TopPaddle"
+            },
+            {
+              "id": "c1131",
+              "description": "DividingLine excludes EndofAlley"
+            },
+            {
+              "id": "c1470",
+              "description": "Lane excludes RackofPins"
+            },
+            {
+              "id": "c1353",
+              "description": "Floorpong excludes Lane"
+            },
+            {
+              "id": "c66",
+              "description": "ClassDiagram --optional--> Menu"
+            },
+            {
+              "id": "c1213",
+              "description": "Edge requires PlayPong"
+            },
+            {
+              "id": "c1709",
+              "description": "TopPaddle requires PongGameMenu"
+            },
+            {
+              "id": "c1428",
+              "description": "Gutter excludes RackofPins"
+            },
+            {
+              "id": "c579",
+              "description": "BowlingPin excludes Lane"
+            },
+            {
+              "id": "c807",
+              "description": "Brickles excludes Floorpong"
+            },
+            {
+              "id": "c978",
+              "description": "BricklesGameMenu excludes PongGameMenu"
+            },
+            {
+              "id": "c924",
+              "description": "BricklesBoard excludes ScoreBoard"
+            },
+            {
+              "id": "c1453",
+              "description": "Lane requires PlayPong"
+            },
+            {
+              "id": "c915",
+              "description": "BricklesBoard excludes RackofPins"
+            },
+            {
+              "id": "c1027",
+              "description": "Ceilingbrickles requires PlayBowling"
+            },
+            {
+              "id": "c1713",
+              "description": "Pucksupply excludes RackofPins"
+            },
+            {
+              "id": "c1257",
+              "description": "EndofAlley excludes Leftbrickles"
+            },
+            {
+              "id": "c1203",
+              "description": "Edge excludes Leftbrickles"
+            },
+            {
+              "id": "c1545",
+              "description": "Leftpong excludes RackofPins"
+            },
+            {
+              "id": "c1398",
+              "description": "Gutter excludes Lane"
+            },
+            {
+              "id": "c777",
+              "description": "BrickPile excludes ScoreBoard"
+            },
+            {
+              "id": "c1050",
+              "description": "Ceilingbrickles excludes RackofPins"
+            },
+            {
+              "id": "c1305",
+              "description": "Floorbrickles excludes Lane"
+            },
+            {
+              "id": "c774",
+              "description": "BrickPile excludes Rightpont"
+            },
+            {
+              "id": "c555",
+              "description": "BowlingPin excludes Ceilingbrickles"
+            },
+            {
+              "id": "c1341",
+              "description": "Floorbrickles excludes Rightpont"
+            },
+            {
+              "id": "c1509",
+              "description": "Leftbrickles excludes RackofPins"
+            },
+            {
+              "id": "c1036",
+              "description": "Ceilingbrickles requires Pong"
+            },
+            {
+              "id": "c681",
+              "description": "Brick excludes PongBoard"
+            },
+            {
+              "id": "c1679",
+              "description": "RackofPins requires PongBoard"
+            },
+            {
+              "id": "c1622",
+              "description": "Pong requires PlayPong"
+            },
+            {
+              "id": "c990",
+              "description": "BricklesGameMenu excludes Rightpont"
+            },
+            {
+              "id": "c1694",
+              "description": "Pucksupply requires PongGameMenu"
+            },
+            {
+              "id": "c945",
+              "description": "BricklesGameMenu excludes Floorbrickles"
+            },
+            {
+              "id": "c1281",
+              "description": "EndofAlley excludes Pucksupply"
+            },
+            {
+              "id": "c1443",
+              "description": "Lane excludes Leftbrickles"
+            },
+            {
+              "id": "c942",
+              "description": "BricklesGameMenu excludes EndofAlley"
+            },
+            {
+              "id": "c684",
+              "description": "Brick excludes PongGameMenu"
+            },
+            {
+              "id": "c523",
+              "description": "BowlingGameMenu requires RackofPins"
+            },
+            {
+              "id": "c741",
+              "description": "BrickPile excludes Leftbrickles"
+            },
+            {
+              "id": "c1706",
+              "description": "ScoreBoard requires PongGameMenu"
+            },
+            {
+              "id": "c1296",
+              "description": "EndofAlley excludes TopPaddle"
+            },
+            {
+              "id": "c582",
+              "description": "BowlingPin excludes Leftbrickles"
+            },
+            {
+              "id": "c415",
+              "description": "BowlingBoard requires PlayBowling"
+            },
+            {
+              "id": "c780",
+              "description": "BrickPile excludes TopPaddle"
+            },
+            {
+              "id": "c729",
+              "description": "BrickPile excludes Floorbrickles"
+            },
+            {
+              "id": "c912",
+              "description": "BricklesBoard excludes Pucksupply"
+            },
+            {
+              "id": "c1410",
+              "description": "Gutter excludes PlayBrickles"
+            },
+            {
+              "id": "c1557",
+              "description": "Leftpong excludes TopPaddle"
+            },
+            {
+              "id": "c1350",
+              "description": "Floorpong excludes Gutter"
+            },
+            {
+              "id": "c1392",
+              "description": "Floorpong excludes ScoreBoard"
+            },
+            {
+              "id": "c1395",
+              "description": "Floorpong excludes TopPaddle"
+            },
+            {
+              "id": "c28",
+              "description": "ArcadeGame --optional--> ClassDiagram"
+            },
+            {
+              "id": "c1242",
+              "description": "Edge excludes TopPaddle"
+            },
+            {
+              "id": "c127",
+              "description": "BottomPaddle requires Lane"
+            },
+            {
+              "id": "c1143",
+              "description": "DividingLine excludes Lane"
+            },
+            {
+              "id": "c1254",
+              "description": "EndofAlley excludes Lane"
+            },
+            {
+              "id": "c795",
+              "description": "Brickles excludes DividingLine"
+            },
+            {
+              "id": "c576",
+              "description": "BowlingPin excludes Gutter"
+            },
+            {
+              "id": "c1315",
+              "description": "Floorbrickles requires PlayBrickles"
+            },
+            {
+              "id": "c1047",
+              "description": "Ceilingbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c606",
+              "description": "BowlingPin excludes Pucksupply"
+            },
+            {
+              "id": "c823",
+              "description": "Brickles requires PlayBrickles"
+            },
+            {
+              "id": "c1722",
+              "description": "Pucksupply excludes ScoreBoard"
+            },
+            {
+              "id": "c1173",
+              "description": "DividingLine excludes RackofPins"
+            },
+            {
+              "id": "c1188",
+              "description": "Edge excludes EndofAlley"
+            },
+            {
+              "id": "c1311",
+              "description": "Floorbrickles excludes Leftpong"
+            },
+            {
+              "id": "c1227",
+              "description": "Edge excludes Pucksupply"
+            },
+            {
+              "id": "c747",
+              "description": "BrickPile excludes PlayBowling"
+            },
+            {
+              "id": "c1210",
+              "description": "Edge requires PlayBrickles"
+            },
+            {
+              "id": "c927",
+              "description": "BricklesBoard excludes TopPaddle"
+            },
+            {
+              "id": "c1725",
+              "description": "Pucksupply excludes TopPaddle"
+            },
+            {
+              "id": "c964",
+              "description": "BricklesGameMenu requires PlayBrickles"
+            },
+            {
+              "id": "c664",
+              "description": "Brick requires Leftpong"
+            },
+            {
+              "id": "c1359",
+              "description": "Floorpong excludes Leftpong"
+            },
+            {
+              "id": "c998",
+              "description": "Ceilingpong requires Ceilingbrickles"
+            },
+            {
+              "id": "c1284",
+              "description": "EndofAlley excludes RackofPins"
+            },
+            {
+              "id": "c1063",
+              "description": "Ceilingpong requires DividingLine"
+            },
+            {
+              "id": "c285",
+              "description": "BowlingBall excludes Brickles"
+            },
+            {
+              "id": "c440",
+              "description": "Rightbrickles requires BowlingBoard"
+            },
+            {
+              "id": "c393",
+              "description": "BowlingBoard excludes Edge"
+            },
+            {
+              "id": "c102",
+              "description": "BottomPaddle excludes BricklesGameMenu"
+            },
+            {
+              "id": "c350",
+              "description": "Rightbrickles requires BowlingBall"
+            },
+            {
+              "id": "c378",
+              "description": "BowlingBoard excludes BricklesBoard"
+            },
+            {
+              "id": "c586",
+              "description": "BowlingPin requires PlayBowling"
+            },
+            {
+              "id": "c1261",
+              "description": "EndofAlley requires PlayBowling"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "RackofPins requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "TopPaddle requires Pong"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --optional--> Pucksupply"
+            },
+            {
+              "id": null,
+              "description": "Brick requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "Floorpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Rightpont requires Pong"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+            },
+            {
+              "id": null,
+              "description": "BowlingBoard requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "BowlingGameMenu requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
+            },
+            {
+              "id": null,
+              "description": "UseCases --optional--> SaveScore"
+            },
+            {
+              "id": null,
+              "description": "ScoreBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> UninstallGame"
+            },
+            {
+              "id": null,
+              "description": "ArcadeGame --mandatory--> UseCases"
+            },
+            {
+              "id": null,
+              "description": "ArcadeGame --mandatory--> ClassDiagram"
+            },
+            {
+              "id": null,
+              "description": "UseCases --optional--> CheckPreviousBestScore"
+            },
+            {
+              "id": null,
+              "description": "DividingLine requires Pong"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --mandatory--> Menu"
+            },
+            {
+              "id": null,
+              "description": "BottomPaddle requires Pong"
+            },
+            {
+              "id": null,
+              "description": "BricklesGameMenu requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "EndofAlley requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "Ceilingpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Floorbrickles requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "Leftpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "GameSprite --optional--> SpritePair"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
+            },
+            {
+              "id": null,
+              "description": "BowlingPin requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "Rightbrickles requires Brickles"
+            }
+          ]
+        },
+        "clause": {
+          "metrics": {
+            "accuracy": 0.9083798882681564,
+            "precision": 0.42916666666666664,
+            "recall": 0.7923076923076923,
+            "f1_score": 0.5567567567567567,
+            "specificity": 0.9174698795180722,
+            "true_positives": 103,
+            "true_negatives": 1523,
+            "false_positives": 137,
+            "false_negatives": 27
+          },
+          "tp": [
+            {
+              "id": "c45",
+              "description": "MovableSprite --mandatory--> MovableSprite_2"
+            },
+            {
+              "id": "c52",
+              "description": "StationarySprite --optional--> Wall"
+            },
+            {
+              "id": "c232",
+              "description": "Bowling requires PlayBowling"
+            },
+            {
+              "id": "c824",
+              "description": "PlayBrickles requires Brickles"
+            },
+            {
+              "id": "c25",
+              "description": "PlayGame --mandatory--> AnimationLoop"
+            },
+            {
+              "id": "c58",
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": "c72",
+              "description": "GameMenu --or--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+            },
+            {
+              "id": "c19",
+              "description": "PlayGame --mandatory--> PlayGame_1"
+            },
+            {
+              "id": "c43",
+              "description": "MovableSprite --mandatory--> Velocity"
+            },
+            {
+              "id": "c788",
+              "description": "Ceilingbrickles requires Brickles"
+            },
+            {
+              "id": "c55",
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": "c64",
+              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+            },
+            {
+              "id": "c9",
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": "c69",
+              "description": "ClassDiagram --mandatory--> GameMenu"
+            },
+            {
+              "id": "c17",
+              "description": "UseCases --mandatory--> PlayGame"
+            },
+            {
+              "id": "c37",
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": "c224",
+              "description": "Lane requires Bowling"
+            },
+            {
+              "id": "c35",
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": "c61",
+              "description": "ClassDiagram --mandatory--> Board"
+            },
+            {
+              "id": "c68",
+              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+            },
+            {
+              "id": "c23",
+              "description": "PlayGame --mandatory--> Initialization"
+            },
+            {
+              "id": "c66",
+              "description": "ClassDiagram --optional--> Menu"
+            },
+            {
+              "id": "c11",
+              "description": "UseCases --mandatory--> InstallGame"
+            },
+            {
+              "id": "c33",
+              "description": "GameSprite --mandatory--> Rectangle"
+            },
+            {
+              "id": "c48",
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
+            },
+            {
+              "id": "c233",
+              "description": "PlayBowling requires Bowling"
+            },
+            {
+              "id": "c1649",
+              "description": "PongBoard requires Pong"
+            },
+            {
+              "id": "c1622",
+              "description": "Pong requires PlayPong"
+            },
+            {
+              "id": "c1652",
+              "description": "PongGameMenu requires Pong"
+            },
+            {
+              "id": "c7",
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": "c703",
+              "description": "BrickPile requires Brickles"
+            },
+            {
+              "id": "c173",
+              "description": "BowlingBall requires Bowling"
+            },
+            {
+              "id": "c50",
+              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": "c839",
+              "description": "Pucksupply requires Brickles"
+            },
+            {
+              "id": "c54",
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            },
+            {
+              "id": "c815",
+              "description": "Leftbrickles requires Brickles"
+            },
+            {
+              "id": "c28",
+              "description": "ArcadeGame --optional--> ClassDiagram"
+            },
+            {
+              "id": "c221",
+              "description": "Gutter requires Bowling"
+            },
+            {
+              "id": "c823",
+              "description": "Brickles requires PlayBrickles"
+            },
+            {
+              "id": "c782",
+              "description": "BricklesBoard requires Brickles"
+            },
+            {
+              "id": "c15",
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": "c22",
+              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+            },
+            {
+              "id": "c39",
+              "description": "GameSprite --mandatory--> GameSprite_3"
+            },
+            {
+              "id": "c29",
+              "description": "ClassDiagram --mandatory--> GameSprite"
+            },
+            {
+              "id": "c42",
+              "description": "GameSprite_3 --or--> ['MovableSprite', 'StationarySprite']"
+            },
+            {
+              "id": "c1621",
+              "description": "PlayPong requires Pong"
+            },
+            {
+              "id": "c209",
+              "description": "Edge requires Bowling"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c487",
+              "description": "BowlingGameMenu requires Floorpong"
+            },
+            {
+              "id": "c1260",
+              "description": "EndofAlley excludes Leftpong"
+            },
+            {
+              "id": "c1200",
+              "description": "Edge excludes Lane"
+            },
+            {
+              "id": "c561",
+              "description": "BowlingPin excludes DividingLine"
+            },
+            {
+              "id": "c1542",
+              "description": "Leftpong excludes Pucksupply"
+            },
+            {
+              "id": "c1137",
+              "description": "DividingLine excludes Floorpong"
+            },
+            {
+              "id": "c1251",
+              "description": "EndofAlley excludes Gutter"
+            },
+            {
+              "id": "c888",
+              "description": "BricklesBoard excludes Leftbrickles"
+            },
+            {
+              "id": "c567",
+              "description": "BowlingPin excludes EndofAlley"
+            },
+            {
+              "id": "c921",
+              "description": "BricklesBoard excludes Rightpont"
+            },
+            {
+              "id": "c1182",
+              "description": "DividingLine excludes ScoreBoard"
+            },
+            {
+              "id": "c1056",
+              "description": "Ceilingbrickles excludes Rightpont"
+            },
+            {
+              "id": "c414",
+              "description": "BowlingBoard excludes Leftpong"
+            },
+            {
+              "id": "c1404",
+              "description": "Gutter excludes Leftpong"
+            },
+            {
+              "id": "c711",
+              "description": "BrickPile excludes BricklesGameMenu"
+            },
+            {
+              "id": "c609",
+              "description": "BowlingPin excludes RackofPins"
+            },
+            {
+              "id": "c1191",
+              "description": "Edge excludes Floorbrickles"
+            },
+            {
+              "id": "c1440",
+              "description": "Gutter excludes TopPaddle"
+            },
+            {
+              "id": "c264",
+              "description": "Bowling excludes ScoreBoard"
+            },
+            {
+              "id": "c322",
+              "description": "BowlingBall requires Leftpong"
+            },
+            {
+              "id": "c634",
+              "description": "Brick requires Ceilingbrickles"
+            },
+            {
+              "id": "c573",
+              "description": "BowlingPin excludes Floorpong"
+            },
+            {
+              "id": "c105",
+              "description": "BottomPaddle excludes Ceilingbrickles"
+            },
+            {
+              "id": "c601",
+              "description": "BowlingPin requires PongGameMenu"
+            },
+            {
+              "id": "c1062",
+              "description": "Ceilingbrickles excludes TopPaddle"
+            },
+            {
+              "id": "c744",
+              "description": "BrickPile excludes Leftpong"
+            },
+            {
+              "id": "c984",
+              "description": "BricklesGameMenu excludes RackofPins"
+            },
+            {
+              "id": "c1737",
+              "description": "RackofPins excludes TopPaddle"
+            },
+            {
+              "id": "c1476",
+              "description": "Lane excludes Rightpont"
+            },
+            {
+              "id": "c1335",
+              "description": "Floorbrickles excludes RackofPins"
+            },
+            {
+              "id": "c519",
+              "description": "BowlingGameMenu excludes PongGameMenu"
+            },
+            {
+              "id": "c765",
+              "description": "BrickPile excludes Pucksupply"
+            },
+            {
+              "id": "c564",
+              "description": "BowlingPin excludes Edge"
+            },
+            {
+              "id": "c1521",
+              "description": "Leftbrickles excludes TopPaddle"
+            },
+            {
+              "id": "c135",
+              "description": "BottomPaddle excludes Leftpong"
+            },
+            {
+              "id": "c1501",
+              "description": "Leftbrickles requires PongGameMenu"
+            },
+            {
+              "id": "c1577",
+              "description": "RackofPins requires PlayBowling"
+            },
+            {
+              "id": "c848",
+              "description": "Rightpont requires Brickles"
+            },
+            {
+              "id": "c876",
+              "description": "BricklesBoard excludes Floorbrickles"
+            },
+            {
+              "id": "c150",
+              "description": "BottomPaddle excludes PongBoard"
+            },
+            {
+              "id": "c1344",
+              "description": "Floorbrickles excludes ScoreBoard"
+            },
+            {
+              "id": "c1149",
+              "description": "DividingLine excludes Leftpong"
+            },
+            {
+              "id": "c1245",
+              "description": "EndofAlley excludes Floorbrickles"
+            },
+            {
+              "id": "c1752",
+              "description": "Rightpont excludes TopPaddle"
+            },
+            {
+              "id": "c1482",
+              "description": "Lane excludes TopPaddle"
+            },
+            {
+              "id": "c435",
+              "description": "BowlingBoard excludes Pucksupply"
+            },
+            {
+              "id": "c1290",
+              "description": "EndofAlley excludes Rightpont"
+            },
+            {
+              "id": "c643",
+              "description": "Brick requires Edge"
+            },
+            {
+              "id": "c708",
+              "description": "BrickPile excludes BricklesBoard"
+            },
+            {
+              "id": "c408",
+              "description": "BowlingBoard excludes Lane"
+            },
+            {
+              "id": "c1140",
+              "description": "DividingLine excludes Gutter"
+            },
+            {
+              "id": "c549",
+              "description": "BowlingPin excludes BricklesBoard"
+            },
+            {
+              "id": "c429",
+              "description": "BowlingBoard excludes PongBoard"
+            },
+            {
+              "id": "c873",
+              "description": "BricklesBoard excludes EndofAlley"
+            },
+            {
+              "id": "c1506",
+              "description": "Leftbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c1185",
+              "description": "DividingLine excludes TopPaddle"
+            },
+            {
+              "id": "c1131",
+              "description": "DividingLine excludes EndofAlley"
+            },
+            {
+              "id": "c1470",
+              "description": "Lane excludes RackofPins"
+            },
+            {
+              "id": "c1353",
+              "description": "Floorpong excludes Lane"
+            },
+            {
+              "id": "c1213",
+              "description": "Edge requires PlayPong"
+            },
+            {
+              "id": "c1709",
+              "description": "TopPaddle requires PongGameMenu"
+            },
+            {
+              "id": "c1428",
+              "description": "Gutter excludes RackofPins"
+            },
+            {
+              "id": "c579",
+              "description": "BowlingPin excludes Lane"
+            },
+            {
+              "id": "c807",
+              "description": "Brickles excludes Floorpong"
+            },
+            {
+              "id": "c978",
+              "description": "BricklesGameMenu excludes PongGameMenu"
+            },
+            {
+              "id": "c924",
+              "description": "BricklesBoard excludes ScoreBoard"
+            },
+            {
+              "id": "c1453",
+              "description": "Lane requires PlayPong"
+            },
+            {
+              "id": "c915",
+              "description": "BricklesBoard excludes RackofPins"
+            },
+            {
+              "id": "c1027",
+              "description": "Ceilingbrickles requires PlayBowling"
+            },
+            {
+              "id": "c1713",
+              "description": "Pucksupply excludes RackofPins"
+            },
+            {
+              "id": "c1257",
+              "description": "EndofAlley excludes Leftbrickles"
+            },
+            {
+              "id": "c1203",
+              "description": "Edge excludes Leftbrickles"
+            },
+            {
+              "id": "c1545",
+              "description": "Leftpong excludes RackofPins"
+            },
+            {
+              "id": "c1398",
+              "description": "Gutter excludes Lane"
+            },
+            {
+              "id": "c777",
+              "description": "BrickPile excludes ScoreBoard"
+            },
+            {
+              "id": "c1050",
+              "description": "Ceilingbrickles excludes RackofPins"
+            },
+            {
+              "id": "c1305",
+              "description": "Floorbrickles excludes Lane"
+            },
+            {
+              "id": "c774",
+              "description": "BrickPile excludes Rightpont"
+            },
+            {
+              "id": "c555",
+              "description": "BowlingPin excludes Ceilingbrickles"
+            },
+            {
+              "id": "c1341",
+              "description": "Floorbrickles excludes Rightpont"
+            },
+            {
+              "id": "c1509",
+              "description": "Leftbrickles excludes RackofPins"
+            },
+            {
+              "id": "c1036",
+              "description": "Ceilingbrickles requires Pong"
+            },
+            {
+              "id": "c681",
+              "description": "Brick excludes PongBoard"
+            },
+            {
+              "id": "c1679",
+              "description": "RackofPins requires PongBoard"
+            },
+            {
+              "id": "c990",
+              "description": "BricklesGameMenu excludes Rightpont"
+            },
+            {
+              "id": "c1694",
+              "description": "Pucksupply requires PongGameMenu"
+            },
+            {
+              "id": "c945",
+              "description": "BricklesGameMenu excludes Floorbrickles"
+            },
+            {
+              "id": "c1281",
+              "description": "EndofAlley excludes Pucksupply"
+            },
+            {
+              "id": "c1443",
+              "description": "Lane excludes Leftbrickles"
+            },
+            {
+              "id": "c942",
+              "description": "BricklesGameMenu excludes EndofAlley"
+            },
+            {
+              "id": "c684",
+              "description": "Brick excludes PongGameMenu"
+            },
+            {
+              "id": "c523",
+              "description": "BowlingGameMenu requires RackofPins"
+            },
+            {
+              "id": "c741",
+              "description": "BrickPile excludes Leftbrickles"
+            },
+            {
+              "id": "c1706",
+              "description": "ScoreBoard requires PongGameMenu"
+            },
+            {
+              "id": "c1296",
+              "description": "EndofAlley excludes TopPaddle"
+            },
+            {
+              "id": "c582",
+              "description": "BowlingPin excludes Leftbrickles"
+            },
+            {
+              "id": "c415",
+              "description": "BowlingBoard requires PlayBowling"
+            },
+            {
+              "id": "c780",
+              "description": "BrickPile excludes TopPaddle"
+            },
+            {
+              "id": "c729",
+              "description": "BrickPile excludes Floorbrickles"
+            },
+            {
+              "id": "c912",
+              "description": "BricklesBoard excludes Pucksupply"
+            },
+            {
+              "id": "c1410",
+              "description": "Gutter excludes PlayBrickles"
+            },
+            {
+              "id": "c1557",
+              "description": "Leftpong excludes TopPaddle"
+            },
+            {
+              "id": "c1350",
+              "description": "Floorpong excludes Gutter"
+            },
+            {
+              "id": "c1392",
+              "description": "Floorpong excludes ScoreBoard"
+            },
+            {
+              "id": "c1395",
+              "description": "Floorpong excludes TopPaddle"
+            },
+            {
+              "id": "c1242",
+              "description": "Edge excludes TopPaddle"
+            },
+            {
+              "id": "c127",
+              "description": "BottomPaddle requires Lane"
+            },
+            {
+              "id": "c1143",
+              "description": "DividingLine excludes Lane"
+            },
+            {
+              "id": "c1254",
+              "description": "EndofAlley excludes Lane"
+            },
+            {
+              "id": "c795",
+              "description": "Brickles excludes DividingLine"
+            },
+            {
+              "id": "c576",
+              "description": "BowlingPin excludes Gutter"
+            },
+            {
+              "id": "c1315",
+              "description": "Floorbrickles requires PlayBrickles"
+            },
+            {
+              "id": "c1047",
+              "description": "Ceilingbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c606",
+              "description": "BowlingPin excludes Pucksupply"
+            },
+            {
+              "id": "c1722",
+              "description": "Pucksupply excludes ScoreBoard"
+            },
+            {
+              "id": "c1173",
+              "description": "DividingLine excludes RackofPins"
+            },
+            {
+              "id": "c1188",
+              "description": "Edge excludes EndofAlley"
+            },
+            {
+              "id": "c1311",
+              "description": "Floorbrickles excludes Leftpong"
+            },
+            {
+              "id": "c1227",
+              "description": "Edge excludes Pucksupply"
+            },
+            {
+              "id": "c747",
+              "description": "BrickPile excludes PlayBowling"
+            },
+            {
+              "id": "c1210",
+              "description": "Edge requires PlayBrickles"
+            },
+            {
+              "id": "c927",
+              "description": "BricklesBoard excludes TopPaddle"
+            },
+            {
+              "id": "c1725",
+              "description": "Pucksupply excludes TopPaddle"
+            },
+            {
+              "id": "c964",
+              "description": "BricklesGameMenu requires PlayBrickles"
+            },
+            {
+              "id": "c664",
+              "description": "Brick requires Leftpong"
+            },
+            {
+              "id": "c1359",
+              "description": "Floorpong excludes Leftpong"
+            },
+            {
+              "id": "c998",
+              "description": "Ceilingpong requires Ceilingbrickles"
+            },
+            {
+              "id": "c1284",
+              "description": "EndofAlley excludes RackofPins"
+            },
+            {
+              "id": "c1063",
+              "description": "Ceilingpong requires DividingLine"
+            },
+            {
+              "id": "c285",
+              "description": "BowlingBall excludes Brickles"
+            },
+            {
+              "id": "c440",
+              "description": "Rightbrickles requires BowlingBoard"
+            },
+            {
+              "id": "c393",
+              "description": "BowlingBoard excludes Edge"
+            },
+            {
+              "id": "c102",
+              "description": "BottomPaddle excludes BricklesGameMenu"
+            },
+            {
+              "id": "c350",
+              "description": "Rightbrickles requires BowlingBall"
+            },
+            {
+              "id": "c378",
+              "description": "BowlingBoard excludes BricklesBoard"
+            },
+            {
+              "id": "c586",
+              "description": "BowlingPin requires PlayBowling"
+            },
+            {
+              "id": "c1261",
+              "description": "EndofAlley requires PlayBowling"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-52, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 8]"
+            },
+            {
+              "id": null,
+              "description": "[-1, 17]"
+            },
+            {
+              "id": null,
+              "description": "[-47, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-64, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-50, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-40, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-53, 17]"
+            },
+            {
+              "id": null,
+              "description": "[-35, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 1]"
+            },
+            {
+              "id": null,
+              "description": "[-65, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-38, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-3, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-33, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-19, 18]"
+            },
+            {
+              "id": null,
+              "description": "[-51, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-17, 58]"
+            },
+            {
+              "id": null,
+              "description": "[-49, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-57, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-48, 61]"
+            }
+          ]
+        },
+        "semantic": {
+          "metrics": {
+            "accuracy": 0.47126436781609193,
+            "precision": 0.484251968503937,
+            "recall": 0.9461538461538461,
+            "f1_score": 0.6406249999999999,
+            "specificity": 0.0,
+            "true_positives": 123,
+            "true_negatives": 0,
+            "false_positives": 131,
+            "false_negatives": 7
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "[-65, 50]",
+              "description": "[-65, 50]"
+            },
+            {
+              "id": "[-47, -35]",
+              "description": "[-47, -35]"
+            },
+            {
+              "id": "[-46, -44]",
+              "description": "[-46, -44]"
+            },
+            {
+              "id": "[-52, -31]",
+              "description": "[-52, -31]"
+            },
+            {
+              "id": "[-53, -35]",
+              "description": "[-53, -35]"
+            },
+            {
+              "id": "[-52, -50]",
+              "description": "[-52, -50]"
+            },
+            {
+              "id": "[-47, -45]",
+              "description": "[-47, -45]"
+            },
+            {
+              "id": "[-56, -37]",
+              "description": "[-56, -37]"
+            },
+            {
+              "id": "[-47, -31]",
+              "description": "[-47, -31]"
+            },
+            {
+              "id": "[-56, -36]",
+              "description": "[-56, -36]"
+            },
+            {
+              "id": "[-52, -49]",
+              "description": "[-52, -49]"
+            },
+            {
+              "id": "[-42, -36]",
+              "description": "[-42, -36]"
+            },
+            {
+              "id": "[-57, -35]",
+              "description": "[-57, -35]"
+            },
+            {
+              "id": "[-45, -35]",
+              "description": "[-45, -35]"
+            },
+            {
+              "id": "[-64, -41]",
+              "description": "[-64, -41]"
+            },
+            {
+              "id": "[-48, -31]",
+              "description": "[-48, -31]"
+            },
+            {
+              "id": "[-46, -43]",
+              "description": "[-46, -43]"
+            },
+            {
+              "id": "[-45, -32]",
+              "description": "[-45, -32]"
+            },
+            {
+              "id": "[-61, -49]",
+              "description": "[-61, -49]"
+            },
+            {
+              "id": "[-30, 35]",
+              "description": "[-30, 35]"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-1, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-3, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-4, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 8]"
+            },
+            {
+              "id": null,
+              "description": "[-8, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-1, 17]"
+            },
+            {
+              "id": null,
+              "description": "[-19, 18]"
+            }
+          ]
+        }
+      }
     },
     {
       "fold_index": 2,
@@ -3839,7 +8302,1744 @@
         "positive": 19,
         "negative": 2
       },
-      "evaluation": null
+      "evaluation": {
+        "description": {
+          "metrics": {
+            "accuracy": 0.15865384615384615,
+            "precision": 0.19298245614035087,
+            "recall": 0.4714285714285714,
+            "f1_score": 0.2738589211618257,
+            "specificity": 0.0,
+            "true_positives": 33,
+            "true_negatives": 0,
+            "false_positives": 138,
+            "false_negatives": 37
+          },
+          "tp": [
+            {
+              "id": "c61",
+              "description": "ClassDiagram --mandatory--> Board"
+            },
+            {
+              "id": "c9",
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": "c39",
+              "description": "GameSprite --mandatory--> GameSprite_3"
+            },
+            {
+              "id": "c54",
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            },
+            {
+              "id": "c33",
+              "description": "GameSprite --mandatory--> Rectangle"
+            },
+            {
+              "id": "c22",
+              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+            },
+            {
+              "id": "c55",
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": "c7",
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": "c48",
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
+            },
+            {
+              "id": "c25",
+              "description": "PlayGame --mandatory--> AnimationLoop"
+            },
+            {
+              "id": "c69",
+              "description": "ClassDiagram --mandatory--> GameMenu"
+            },
+            {
+              "id": "c43",
+              "description": "MovableSprite --mandatory--> Velocity"
+            },
+            {
+              "id": "c1621",
+              "description": "PlayPong requires Pong"
+            },
+            {
+              "id": "c15",
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": "c35",
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": "c254",
+              "description": "RackofPins requires Bowling"
+            },
+            {
+              "id": "c42",
+              "description": "GameSprite_3 --or--> ['MovableSprite', 'StationarySprite']"
+            },
+            {
+              "id": "c29",
+              "description": "ClassDiagram --mandatory--> GameSprite"
+            },
+            {
+              "id": "c68",
+              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+            },
+            {
+              "id": "c52",
+              "description": "StationarySprite --optional--> Wall"
+            },
+            {
+              "id": "c179",
+              "description": "BowlingGameMenu requires Bowling"
+            },
+            {
+              "id": "c58",
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": "c824",
+              "description": "PlayBrickles requires Brickles"
+            },
+            {
+              "id": "c27",
+              "description": "ArcadeGame --mandatory--> ClassDiagram"
+            },
+            {
+              "id": "c1",
+              "description": "ArcadeGame --mandatory--> UseCases"
+            },
+            {
+              "id": "c45",
+              "description": "MovableSprite --mandatory--> MovableSprite_2"
+            },
+            {
+              "id": "c224",
+              "description": "Lane requires Bowling"
+            },
+            {
+              "id": "c233",
+              "description": "PlayBowling requires Bowling"
+            },
+            {
+              "id": "c37",
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": "c815",
+              "description": "Leftbrickles requires Brickles"
+            },
+            {
+              "id": "c23",
+              "description": "PlayGame --mandatory--> Initialization"
+            },
+            {
+              "id": "c1652",
+              "description": "PongGameMenu requires Pong"
+            },
+            {
+              "id": "c11",
+              "description": "UseCases --mandatory--> InstallGame"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c123",
+              "description": "BottomPaddle excludes Floorpong"
+            },
+            {
+              "id": "c744",
+              "description": "BrickPile excludes Leftpong"
+            },
+            {
+              "id": "c1140",
+              "description": "DividingLine excludes Gutter"
+            },
+            {
+              "id": "c823",
+              "description": "Brickles requires PlayBrickles"
+            },
+            {
+              "id": "c1725",
+              "description": "Pucksupply excludes TopPaddle"
+            },
+            {
+              "id": "c1206",
+              "description": "Edge excludes Leftpong"
+            },
+            {
+              "id": "c156",
+              "description": "BottomPaddle excludes Pucksupply"
+            },
+            {
+              "id": "c1077",
+              "description": "Ceilingpong excludes Floorpong"
+            },
+            {
+              "id": "c1125",
+              "description": "Ceilingpong excludes TopPaddle"
+            },
+            {
+              "id": "c1188",
+              "description": "Edge excludes EndofAlley"
+            },
+            {
+              "id": "c1404",
+              "description": "Gutter excludes Leftpong"
+            },
+            {
+              "id": "c1059",
+              "description": "Ceilingbrickles excludes ScoreBoard"
+            },
+            {
+              "id": "c1514",
+              "description": "Rightpont requires Leftbrickles"
+            },
+            {
+              "id": "c1398",
+              "description": "Gutter excludes Lane"
+            },
+            {
+              "id": "c729",
+              "description": "BrickPile excludes Floorbrickles"
+            },
+            {
+              "id": "c435",
+              "description": "BowlingBoard excludes Pucksupply"
+            },
+            {
+              "id": "c135",
+              "description": "BottomPaddle excludes Leftpong"
+            },
+            {
+              "id": "c780",
+              "description": "BrickPile excludes TopPaddle"
+            },
+            {
+              "id": "c78",
+              "description": "BottomPaddle excludes BowlingBall"
+            },
+            {
+              "id": "c430",
+              "description": "BowlingBoard requires PongGameMenu"
+            },
+            {
+              "id": "c1359",
+              "description": "Floorpong excludes Leftpong"
+            },
+            {
+              "id": "c1197",
+              "description": "Edge excludes Gutter"
+            },
+            {
+              "id": "c1737",
+              "description": "RackofPins excludes TopPaddle"
+            },
+            {
+              "id": "c1715",
+              "description": "Rightbrickles requires Pucksupply"
+            },
+            {
+              "id": "c438",
+              "description": "BowlingBoard excludes RackofPins"
+            },
+            {
+              "id": "c522",
+              "description": "BowlingGameMenu excludes Pucksupply"
+            },
+            {
+              "id": "c1089",
+              "description": "Ceilingpong excludes Leftpong"
+            },
+            {
+              "id": "c777",
+              "description": "BrickPile excludes ScoreBoard"
+            },
+            {
+              "id": "c1113",
+              "description": "Ceilingpong excludes RackofPins"
+            },
+            {
+              "id": "c1062",
+              "description": "Ceilingbrickles excludes TopPaddle"
+            },
+            {
+              "id": "c108",
+              "description": "BottomPaddle excludes Ceilingpong"
+            },
+            {
+              "id": "c114",
+              "description": "BottomPaddle excludes Edge"
+            },
+            {
+              "id": "c120",
+              "description": "BottomPaddle excludes Floorbrickles"
+            },
+            {
+              "id": "c1462",
+              "description": "Lane requires PongGameMenu"
+            },
+            {
+              "id": "c765",
+              "description": "BrickPile excludes Pucksupply"
+            },
+            {
+              "id": "c1137",
+              "description": "DividingLine excludes Floorpong"
+            },
+            {
+              "id": "c1011",
+              "description": "Ceilingbrickles excludes Floorbrickles"
+            },
+            {
+              "id": "c1314",
+              "description": "Floorbrickles excludes PlayBowling"
+            },
+            {
+              "id": "c1122",
+              "description": "Ceilingpong excludes ScoreBoard"
+            },
+            {
+              "id": "c1284",
+              "description": "EndofAlley excludes RackofPins"
+            },
+            {
+              "id": "c408",
+              "description": "BowlingBoard excludes Lane"
+            },
+            {
+              "id": "c1428",
+              "description": "Gutter excludes RackofPins"
+            },
+            {
+              "id": "c415",
+              "description": "BowlingBoard requires PlayBowling"
+            },
+            {
+              "id": "c1039",
+              "description": "Ceilingbrickles requires PongBoard"
+            },
+            {
+              "id": "c930",
+              "description": "BricklesGameMenu excludes Ceilingbrickles"
+            },
+            {
+              "id": "c360",
+              "description": "BowlingBall excludes TopPaddle"
+            },
+            {
+              "id": "c1638",
+              "description": "PlayPong excludes Rightbrickles"
+            },
+            {
+              "id": "c1604",
+              "description": "Pucksupply requires PlayBrickles"
+            },
+            {
+              "id": "c345",
+              "description": "BowlingBall excludes Pucksupply"
+            },
+            {
+              "id": "c748",
+              "description": "BrickPile requires PlayBrickles"
+            },
+            {
+              "id": "c151",
+              "description": "BottomPaddle requires PongGameMenu"
+            },
+            {
+              "id": "c294",
+              "description": "BowlingBall excludes Ceilingbrickles"
+            },
+            {
+              "id": "c117",
+              "description": "BottomPaddle excludes EndofAlley"
+            },
+            {
+              "id": "c1173",
+              "description": "DividingLine excludes RackofPins"
+            },
+            {
+              "id": "c1362",
+              "description": "Floorpong excludes PlayBowling"
+            },
+            {
+              "id": "c1395",
+              "description": "Floorpong excludes TopPaddle"
+            },
+            {
+              "id": "c1410",
+              "description": "Gutter excludes PlayBrickles"
+            },
+            {
+              "id": "c300",
+              "description": "BowlingBall excludes DividingLine"
+            },
+            {
+              "id": "c714",
+              "description": "BrickPile excludes Ceilingbrickles"
+            },
+            {
+              "id": "c63",
+              "description": "Board --alternative--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+            },
+            {
+              "id": "c337",
+              "description": "BowlingBall requires PongBoard"
+            },
+            {
+              "id": "c483",
+              "description": "BowlingGameMenu excludes EndofAlley"
+            },
+            {
+              "id": "c232",
+              "description": "Bowling requires PlayBowling"
+            },
+            {
+              "id": "c1149",
+              "description": "DividingLine excludes Leftpong"
+            },
+            {
+              "id": "c105",
+              "description": "BottomPaddle excludes Ceilingbrickles"
+            },
+            {
+              "id": "c1315",
+              "description": "Floorbrickles requires PlayBrickles"
+            },
+            {
+              "id": "c49",
+              "description": "Paddle --alternative--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": "c387",
+              "description": "BowlingBoard excludes Ceilingpong"
+            },
+            {
+              "id": "c396",
+              "description": "BowlingBoard excludes EndofAlley"
+            },
+            {
+              "id": "c189",
+              "description": "Bowling excludes BrickPile"
+            },
+            {
+              "id": "c168",
+              "description": "BottomPaddle excludes ScoreBoard"
+            },
+            {
+              "id": "c1083",
+              "description": "Ceilingpong excludes Lane"
+            },
+            {
+              "id": "c1365",
+              "description": "Floorpong excludes PlayBrickles"
+            },
+            {
+              "id": "c1026",
+              "description": "Ceilingbrickles excludes Leftpong"
+            },
+            {
+              "id": "c325",
+              "description": "BowlingBall requires PlayBowling"
+            },
+            {
+              "id": "c275",
+              "description": "BowlingPin requires BowlingBall"
+            },
+            {
+              "id": "c303",
+              "description": "BowlingBall excludes Edge"
+            },
+            {
+              "id": "c993",
+              "description": "BricklesGameMenu excludes ScoreBoard"
+            },
+            {
+              "id": "c1587",
+              "description": "PlayBowling excludes ScoreBoard"
+            },
+            {
+              "id": "c1542",
+              "description": "Leftpong excludes Pucksupply"
+            },
+            {
+              "id": "c1722",
+              "description": "Pucksupply excludes ScoreBoard"
+            },
+            {
+              "id": "c567",
+              "description": "BowlingPin excludes EndofAlley"
+            },
+            {
+              "id": "c1344",
+              "description": "Floorbrickles excludes ScoreBoard"
+            },
+            {
+              "id": "c450",
+              "description": "BowlingBoard excludes TopPaddle"
+            },
+            {
+              "id": "c1219",
+              "description": "Edge requires PongBoard"
+            },
+            {
+              "id": "c1155",
+              "description": "DividingLine excludes PlayBrickles"
+            },
+            {
+              "id": "c1207",
+              "description": "Edge requires PlayBowling"
+            },
+            {
+              "id": "c126",
+              "description": "BottomPaddle excludes Gutter"
+            },
+            {
+              "id": "c1143",
+              "description": "DividingLine excludes Lane"
+            },
+            {
+              "id": "c1065",
+              "description": "Ceilingpong excludes DividingLine"
+            },
+            {
+              "id": "c1095",
+              "description": "Ceilingpong excludes PlayBrickles"
+            },
+            {
+              "id": "c1557",
+              "description": "Leftpong excludes TopPaddle"
+            },
+            {
+              "id": "c1405",
+              "description": "Gutter requires PlayBowling"
+            },
+            {
+              "id": "c1261",
+              "description": "EndofAlley requires PlayBowling"
+            },
+            {
+              "id": "c159",
+              "description": "BottomPaddle excludes RackofPins"
+            },
+            {
+              "id": "c1254",
+              "description": "EndofAlley excludes Lane"
+            },
+            {
+              "id": "c895",
+              "description": "BricklesBoard requires PlayBrickles"
+            },
+            {
+              "id": "c1311",
+              "description": "Floorbrickles excludes Leftpong"
+            },
+            {
+              "id": "c1440",
+              "description": "Gutter excludes TopPaddle"
+            },
+            {
+              "id": "c1513",
+              "description": "Leftbrickles requires Rightpont"
+            },
+            {
+              "id": "c892",
+              "description": "BricklesBoard requires PlayBowling"
+            },
+            {
+              "id": "c1182",
+              "description": "DividingLine excludes ScoreBoard"
+            },
+            {
+              "id": "c1420",
+              "description": "Gutter requires PongGameMenu"
+            },
+            {
+              "id": "c1417",
+              "description": "Gutter requires PongBoard"
+            },
+            {
+              "id": "c1030",
+              "description": "Ceilingbrickles requires PlayBrickles"
+            },
+            {
+              "id": "c711",
+              "description": "BrickPile excludes BricklesGameMenu"
+            },
+            {
+              "id": "c891",
+              "description": "BricklesBoard excludes Leftpong"
+            },
+            {
+              "id": "c1482",
+              "description": "Lane excludes TopPaddle"
+            },
+            {
+              "id": "c71",
+              "description": "GameMenu --alternative--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+            },
+            {
+              "id": "c927",
+              "description": "BricklesBoard excludes TopPaddle"
+            },
+            {
+              "id": "c20",
+              "description": "PlayGame --optional--> PlayGame_1"
+            },
+            {
+              "id": "c945",
+              "description": "BricklesGameMenu excludes Floorbrickles"
+            },
+            {
+              "id": "c550",
+              "description": "BowlingPin requires BricklesGameMenu"
+            },
+            {
+              "id": "c1260",
+              "description": "EndofAlley excludes Leftpong"
+            },
+            {
+              "id": "c1068",
+              "description": "Ceilingpong excludes Edge"
+            },
+            {
+              "id": "c1131",
+              "description": "DividingLine excludes EndofAlley"
+            },
+            {
+              "id": "c1550",
+              "description": "Rightpont requires Leftpong"
+            },
+            {
+              "id": "c996",
+              "description": "BricklesGameMenu excludes TopPaddle"
+            },
+            {
+              "id": "c1488",
+              "description": "Leftbrickles excludes PlayBowling"
+            },
+            {
+              "id": "c1020",
+              "description": "Ceilingbrickles excludes Lane"
+            },
+            {
+              "id": "c465",
+              "description": "BowlingGameMenu excludes BricklesBoard"
+            },
+            {
+              "id": "c1697",
+              "description": "RackofPins requires PongGameMenu"
+            },
+            {
+              "id": "c474",
+              "description": "BowlingGameMenu excludes Ceilingpong"
+            },
+            {
+              "id": "c1608",
+              "description": "PlayBrickles excludes RackofPins"
+            },
+            {
+              "id": "c93",
+              "description": "BottomPaddle excludes BrickPile"
+            },
+            {
+              "id": "c348",
+              "description": "BowlingBall excludes RackofPins"
+            },
+            {
+              "id": "c273",
+              "description": "BowlingBall excludes BowlingGameMenu"
+            },
+            {
+              "id": "c640",
+              "description": "Brick requires DividingLine"
+            },
+            {
+              "id": "c111",
+              "description": "BottomPaddle excludes DividingLine"
+            },
+            {
+              "id": "c81",
+              "description": "BottomPaddle excludes BowlingBoard"
+            },
+            {
+              "id": "c1212",
+              "description": "Edge excludes PlayBrickles"
+            },
+            {
+              "id": "c1047",
+              "description": "Ceilingbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c637",
+              "description": "Brick requires Ceilingpong"
+            },
+            {
+              "id": "c1625",
+              "description": "PongBoard requires PlayPong"
+            },
+            {
+              "id": "c1545",
+              "description": "Leftpong excludes RackofPins"
+            },
+            {
+              "id": "c1622",
+              "description": "Pong requires PlayPong"
+            },
+            {
+              "id": "c964",
+              "description": "BricklesGameMenu requires PlayBrickles"
+            },
+            {
+              "id": "c1296",
+              "description": "EndofAlley excludes TopPaddle"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "Ceilingbrickles requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "TopPaddle requires Pong"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --optional--> Pucksupply"
+            },
+            {
+              "id": null,
+              "description": "Brick requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "BowlingBall requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "BrickPile requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "Floorpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Rightpont requires Pong"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+            },
+            {
+              "id": null,
+              "description": "Pucksupply requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "PlayGame --mandatory--> PlayGame_1"
+            },
+            {
+              "id": null,
+              "description": "BowlingBoard requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "Gutter requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
+            },
+            {
+              "id": null,
+              "description": "UseCases --optional--> SaveScore"
+            },
+            {
+              "id": null,
+              "description": "ScoreBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Edge requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> UninstallGame"
+            },
+            {
+              "id": null,
+              "description": "UseCases --optional--> CheckPreviousBestScore"
+            },
+            {
+              "id": null,
+              "description": "GameMenu --or--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+            },
+            {
+              "id": null,
+              "description": "DividingLine requires Pong"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --mandatory--> Menu"
+            },
+            {
+              "id": null,
+              "description": "BricklesBoard requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "BottomPaddle requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> PlayGame"
+            },
+            {
+              "id": null,
+              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": null,
+              "description": "BricklesGameMenu requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "EndofAlley requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "Ceilingpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Floorbrickles requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "Leftpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "GameSprite --optional--> SpritePair"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
+            },
+            {
+              "id": null,
+              "description": "BowlingPin requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "PongBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Rightbrickles requires Brickles"
+            }
+          ]
+        },
+        "clause": {
+          "metrics": {
+            "accuracy": 0.9039106145251397,
+            "precision": 0.41025641025641024,
+            "recall": 0.7384615384615385,
+            "f1_score": 0.5274725274725275,
+            "specificity": 0.9168674698795181,
+            "true_positives": 96,
+            "true_negatives": 1522,
+            "false_positives": 138,
+            "false_negatives": 34
+          },
+          "tp": [
+            {
+              "id": "c61",
+              "description": "ClassDiagram --mandatory--> Board"
+            },
+            {
+              "id": "c9",
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": "c823",
+              "description": "Brickles requires PlayBrickles"
+            },
+            {
+              "id": "c39",
+              "description": "GameSprite --mandatory--> GameSprite_3"
+            },
+            {
+              "id": "c54",
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            },
+            {
+              "id": "c33",
+              "description": "GameSprite --mandatory--> Rectangle"
+            },
+            {
+              "id": "c22",
+              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+            },
+            {
+              "id": "c55",
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": "c7",
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": "c48",
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
+            },
+            {
+              "id": "c25",
+              "description": "PlayGame --mandatory--> AnimationLoop"
+            },
+            {
+              "id": "c69",
+              "description": "ClassDiagram --mandatory--> GameMenu"
+            },
+            {
+              "id": "c43",
+              "description": "MovableSprite --mandatory--> Velocity"
+            },
+            {
+              "id": "c1621",
+              "description": "PlayPong requires Pong"
+            },
+            {
+              "id": "c15",
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": "c35",
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": "c254",
+              "description": "RackofPins requires Bowling"
+            },
+            {
+              "id": "c42",
+              "description": "GameSprite_3 --or--> ['MovableSprite', 'StationarySprite']"
+            },
+            {
+              "id": "c29",
+              "description": "ClassDiagram --mandatory--> GameSprite"
+            },
+            {
+              "id": "c68",
+              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+            },
+            {
+              "id": "c63",
+              "description": "Board --alternative--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+            },
+            {
+              "id": "c52",
+              "description": "StationarySprite --optional--> Wall"
+            },
+            {
+              "id": "c232",
+              "description": "Bowling requires PlayBowling"
+            },
+            {
+              "id": "c49",
+              "description": "Paddle --alternative--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": "c179",
+              "description": "BowlingGameMenu requires Bowling"
+            },
+            {
+              "id": "c58",
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": "c824",
+              "description": "PlayBrickles requires Brickles"
+            },
+            {
+              "id": "c27",
+              "description": "ArcadeGame --mandatory--> ClassDiagram"
+            },
+            {
+              "id": "c1",
+              "description": "ArcadeGame --mandatory--> UseCases"
+            },
+            {
+              "id": "c45",
+              "description": "MovableSprite --mandatory--> MovableSprite_2"
+            },
+            {
+              "id": "c224",
+              "description": "Lane requires Bowling"
+            },
+            {
+              "id": "c233",
+              "description": "PlayBowling requires Bowling"
+            },
+            {
+              "id": "c37",
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": "c71",
+              "description": "GameMenu --alternative--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+            },
+            {
+              "id": "c20",
+              "description": "PlayGame --optional--> PlayGame_1"
+            },
+            {
+              "id": "c815",
+              "description": "Leftbrickles requires Brickles"
+            },
+            {
+              "id": "c1622",
+              "description": "Pong requires PlayPong"
+            },
+            {
+              "id": "c23",
+              "description": "PlayGame --mandatory--> Initialization"
+            },
+            {
+              "id": "c1652",
+              "description": "PongGameMenu requires Pong"
+            },
+            {
+              "id": "c11",
+              "description": "UseCases --mandatory--> InstallGame"
+            }
+          ],
+          "fp": [
+            {
+              "id": "c123",
+              "description": "BottomPaddle excludes Floorpong"
+            },
+            {
+              "id": "c744",
+              "description": "BrickPile excludes Leftpong"
+            },
+            {
+              "id": "c1140",
+              "description": "DividingLine excludes Gutter"
+            },
+            {
+              "id": "c1725",
+              "description": "Pucksupply excludes TopPaddle"
+            },
+            {
+              "id": "c1206",
+              "description": "Edge excludes Leftpong"
+            },
+            {
+              "id": "c156",
+              "description": "BottomPaddle excludes Pucksupply"
+            },
+            {
+              "id": "c1077",
+              "description": "Ceilingpong excludes Floorpong"
+            },
+            {
+              "id": "c1125",
+              "description": "Ceilingpong excludes TopPaddle"
+            },
+            {
+              "id": "c1188",
+              "description": "Edge excludes EndofAlley"
+            },
+            {
+              "id": "c1404",
+              "description": "Gutter excludes Leftpong"
+            },
+            {
+              "id": "c1059",
+              "description": "Ceilingbrickles excludes ScoreBoard"
+            },
+            {
+              "id": "c1514",
+              "description": "Rightpont requires Leftbrickles"
+            },
+            {
+              "id": "c1398",
+              "description": "Gutter excludes Lane"
+            },
+            {
+              "id": "c729",
+              "description": "BrickPile excludes Floorbrickles"
+            },
+            {
+              "id": "c435",
+              "description": "BowlingBoard excludes Pucksupply"
+            },
+            {
+              "id": "c135",
+              "description": "BottomPaddle excludes Leftpong"
+            },
+            {
+              "id": "c780",
+              "description": "BrickPile excludes TopPaddle"
+            },
+            {
+              "id": "c78",
+              "description": "BottomPaddle excludes BowlingBall"
+            },
+            {
+              "id": "c430",
+              "description": "BowlingBoard requires PongGameMenu"
+            },
+            {
+              "id": "c1359",
+              "description": "Floorpong excludes Leftpong"
+            },
+            {
+              "id": "c1197",
+              "description": "Edge excludes Gutter"
+            },
+            {
+              "id": "c1737",
+              "description": "RackofPins excludes TopPaddle"
+            },
+            {
+              "id": "c1715",
+              "description": "Rightbrickles requires Pucksupply"
+            },
+            {
+              "id": "c438",
+              "description": "BowlingBoard excludes RackofPins"
+            },
+            {
+              "id": "c522",
+              "description": "BowlingGameMenu excludes Pucksupply"
+            },
+            {
+              "id": "c1089",
+              "description": "Ceilingpong excludes Leftpong"
+            },
+            {
+              "id": "c777",
+              "description": "BrickPile excludes ScoreBoard"
+            },
+            {
+              "id": "c1113",
+              "description": "Ceilingpong excludes RackofPins"
+            },
+            {
+              "id": "c1062",
+              "description": "Ceilingbrickles excludes TopPaddle"
+            },
+            {
+              "id": "c108",
+              "description": "BottomPaddle excludes Ceilingpong"
+            },
+            {
+              "id": "c114",
+              "description": "BottomPaddle excludes Edge"
+            },
+            {
+              "id": "c120",
+              "description": "BottomPaddle excludes Floorbrickles"
+            },
+            {
+              "id": "c1462",
+              "description": "Lane requires PongGameMenu"
+            },
+            {
+              "id": "c765",
+              "description": "BrickPile excludes Pucksupply"
+            },
+            {
+              "id": "c1137",
+              "description": "DividingLine excludes Floorpong"
+            },
+            {
+              "id": "c1011",
+              "description": "Ceilingbrickles excludes Floorbrickles"
+            },
+            {
+              "id": "c1314",
+              "description": "Floorbrickles excludes PlayBowling"
+            },
+            {
+              "id": "c1122",
+              "description": "Ceilingpong excludes ScoreBoard"
+            },
+            {
+              "id": "c1284",
+              "description": "EndofAlley excludes RackofPins"
+            },
+            {
+              "id": "c408",
+              "description": "BowlingBoard excludes Lane"
+            },
+            {
+              "id": "c1428",
+              "description": "Gutter excludes RackofPins"
+            },
+            {
+              "id": "c415",
+              "description": "BowlingBoard requires PlayBowling"
+            },
+            {
+              "id": "c1039",
+              "description": "Ceilingbrickles requires PongBoard"
+            },
+            {
+              "id": "c930",
+              "description": "BricklesGameMenu excludes Ceilingbrickles"
+            },
+            {
+              "id": "c360",
+              "description": "BowlingBall excludes TopPaddle"
+            },
+            {
+              "id": "c1638",
+              "description": "PlayPong excludes Rightbrickles"
+            },
+            {
+              "id": "c1604",
+              "description": "Pucksupply requires PlayBrickles"
+            },
+            {
+              "id": "c345",
+              "description": "BowlingBall excludes Pucksupply"
+            },
+            {
+              "id": "c748",
+              "description": "BrickPile requires PlayBrickles"
+            },
+            {
+              "id": "c151",
+              "description": "BottomPaddle requires PongGameMenu"
+            },
+            {
+              "id": "c294",
+              "description": "BowlingBall excludes Ceilingbrickles"
+            },
+            {
+              "id": "c117",
+              "description": "BottomPaddle excludes EndofAlley"
+            },
+            {
+              "id": "c1173",
+              "description": "DividingLine excludes RackofPins"
+            },
+            {
+              "id": "c1362",
+              "description": "Floorpong excludes PlayBowling"
+            },
+            {
+              "id": "c1395",
+              "description": "Floorpong excludes TopPaddle"
+            },
+            {
+              "id": "c1410",
+              "description": "Gutter excludes PlayBrickles"
+            },
+            {
+              "id": "c300",
+              "description": "BowlingBall excludes DividingLine"
+            },
+            {
+              "id": "c714",
+              "description": "BrickPile excludes Ceilingbrickles"
+            },
+            {
+              "id": "c337",
+              "description": "BowlingBall requires PongBoard"
+            },
+            {
+              "id": "c483",
+              "description": "BowlingGameMenu excludes EndofAlley"
+            },
+            {
+              "id": "c1149",
+              "description": "DividingLine excludes Leftpong"
+            },
+            {
+              "id": "c105",
+              "description": "BottomPaddle excludes Ceilingbrickles"
+            },
+            {
+              "id": "c1315",
+              "description": "Floorbrickles requires PlayBrickles"
+            },
+            {
+              "id": "c387",
+              "description": "BowlingBoard excludes Ceilingpong"
+            },
+            {
+              "id": "c396",
+              "description": "BowlingBoard excludes EndofAlley"
+            },
+            {
+              "id": "c189",
+              "description": "Bowling excludes BrickPile"
+            },
+            {
+              "id": "c168",
+              "description": "BottomPaddle excludes ScoreBoard"
+            },
+            {
+              "id": "c1083",
+              "description": "Ceilingpong excludes Lane"
+            },
+            {
+              "id": "c1365",
+              "description": "Floorpong excludes PlayBrickles"
+            },
+            {
+              "id": "c1026",
+              "description": "Ceilingbrickles excludes Leftpong"
+            },
+            {
+              "id": "c325",
+              "description": "BowlingBall requires PlayBowling"
+            },
+            {
+              "id": "c275",
+              "description": "BowlingPin requires BowlingBall"
+            },
+            {
+              "id": "c303",
+              "description": "BowlingBall excludes Edge"
+            },
+            {
+              "id": "c993",
+              "description": "BricklesGameMenu excludes ScoreBoard"
+            },
+            {
+              "id": "c1587",
+              "description": "PlayBowling excludes ScoreBoard"
+            },
+            {
+              "id": "c1542",
+              "description": "Leftpong excludes Pucksupply"
+            },
+            {
+              "id": "c1722",
+              "description": "Pucksupply excludes ScoreBoard"
+            },
+            {
+              "id": "c567",
+              "description": "BowlingPin excludes EndofAlley"
+            },
+            {
+              "id": "c1344",
+              "description": "Floorbrickles excludes ScoreBoard"
+            },
+            {
+              "id": "c450",
+              "description": "BowlingBoard excludes TopPaddle"
+            },
+            {
+              "id": "c1219",
+              "description": "Edge requires PongBoard"
+            },
+            {
+              "id": "c1155",
+              "description": "DividingLine excludes PlayBrickles"
+            },
+            {
+              "id": "c1207",
+              "description": "Edge requires PlayBowling"
+            },
+            {
+              "id": "c126",
+              "description": "BottomPaddle excludes Gutter"
+            },
+            {
+              "id": "c1143",
+              "description": "DividingLine excludes Lane"
+            },
+            {
+              "id": "c1065",
+              "description": "Ceilingpong excludes DividingLine"
+            },
+            {
+              "id": "c1095",
+              "description": "Ceilingpong excludes PlayBrickles"
+            },
+            {
+              "id": "c1557",
+              "description": "Leftpong excludes TopPaddle"
+            },
+            {
+              "id": "c1405",
+              "description": "Gutter requires PlayBowling"
+            },
+            {
+              "id": "c1261",
+              "description": "EndofAlley requires PlayBowling"
+            },
+            {
+              "id": "c159",
+              "description": "BottomPaddle excludes RackofPins"
+            },
+            {
+              "id": "c1254",
+              "description": "EndofAlley excludes Lane"
+            },
+            {
+              "id": "c895",
+              "description": "BricklesBoard requires PlayBrickles"
+            },
+            {
+              "id": "c1311",
+              "description": "Floorbrickles excludes Leftpong"
+            },
+            {
+              "id": "c1440",
+              "description": "Gutter excludes TopPaddle"
+            },
+            {
+              "id": "c1513",
+              "description": "Leftbrickles requires Rightpont"
+            },
+            {
+              "id": "c892",
+              "description": "BricklesBoard requires PlayBowling"
+            },
+            {
+              "id": "c1182",
+              "description": "DividingLine excludes ScoreBoard"
+            },
+            {
+              "id": "c1420",
+              "description": "Gutter requires PongGameMenu"
+            },
+            {
+              "id": "c1417",
+              "description": "Gutter requires PongBoard"
+            },
+            {
+              "id": "c1030",
+              "description": "Ceilingbrickles requires PlayBrickles"
+            },
+            {
+              "id": "c711",
+              "description": "BrickPile excludes BricklesGameMenu"
+            },
+            {
+              "id": "c891",
+              "description": "BricklesBoard excludes Leftpong"
+            },
+            {
+              "id": "c1482",
+              "description": "Lane excludes TopPaddle"
+            },
+            {
+              "id": "c927",
+              "description": "BricklesBoard excludes TopPaddle"
+            },
+            {
+              "id": "c945",
+              "description": "BricklesGameMenu excludes Floorbrickles"
+            },
+            {
+              "id": "c550",
+              "description": "BowlingPin requires BricklesGameMenu"
+            },
+            {
+              "id": "c1260",
+              "description": "EndofAlley excludes Leftpong"
+            },
+            {
+              "id": "c1068",
+              "description": "Ceilingpong excludes Edge"
+            },
+            {
+              "id": "c1131",
+              "description": "DividingLine excludes EndofAlley"
+            },
+            {
+              "id": "c1550",
+              "description": "Rightpont requires Leftpong"
+            },
+            {
+              "id": "c996",
+              "description": "BricklesGameMenu excludes TopPaddle"
+            },
+            {
+              "id": "c1488",
+              "description": "Leftbrickles excludes PlayBowling"
+            },
+            {
+              "id": "c1020",
+              "description": "Ceilingbrickles excludes Lane"
+            },
+            {
+              "id": "c465",
+              "description": "BowlingGameMenu excludes BricklesBoard"
+            },
+            {
+              "id": "c1697",
+              "description": "RackofPins requires PongGameMenu"
+            },
+            {
+              "id": "c474",
+              "description": "BowlingGameMenu excludes Ceilingpong"
+            },
+            {
+              "id": "c1608",
+              "description": "PlayBrickles excludes RackofPins"
+            },
+            {
+              "id": "c93",
+              "description": "BottomPaddle excludes BrickPile"
+            },
+            {
+              "id": "c348",
+              "description": "BowlingBall excludes RackofPins"
+            },
+            {
+              "id": "c273",
+              "description": "BowlingBall excludes BowlingGameMenu"
+            },
+            {
+              "id": "c640",
+              "description": "Brick requires DividingLine"
+            },
+            {
+              "id": "c111",
+              "description": "BottomPaddle excludes DividingLine"
+            },
+            {
+              "id": "c81",
+              "description": "BottomPaddle excludes BowlingBoard"
+            },
+            {
+              "id": "c1212",
+              "description": "Edge excludes PlayBrickles"
+            },
+            {
+              "id": "c1047",
+              "description": "Ceilingbrickles excludes Pucksupply"
+            },
+            {
+              "id": "c637",
+              "description": "Brick requires Ceilingpong"
+            },
+            {
+              "id": "c1625",
+              "description": "PongBoard requires PlayPong"
+            },
+            {
+              "id": "c1545",
+              "description": "Leftpong excludes RackofPins"
+            },
+            {
+              "id": "c964",
+              "description": "BricklesGameMenu requires PlayBrickles"
+            },
+            {
+              "id": "c1296",
+              "description": "EndofAlley excludes TopPaddle"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-52, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 8]"
+            },
+            {
+              "id": null,
+              "description": "[-45, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-47, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-64, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-42, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-50, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-53, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-40, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-53, 17]"
+            },
+            {
+              "id": null,
+              "description": "[-35, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-30, 61]"
+            },
+            {
+              "id": null,
+              "description": "[-2, 10]"
+            },
+            {
+              "id": null,
+              "description": "[-38, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-3, 2]"
+            },
+            {
+              "id": null,
+              "description": "[-55, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-33, 59]"
+            },
+            {
+              "id": null,
+              "description": "[-56, 60]"
+            },
+            {
+              "id": null,
+              "description": "[-19, 18]"
+            },
+            {
+              "id": null,
+              "description": "[-51, 59]"
+            }
+          ]
+        },
+        "semantic": {
+          "metrics": {
+            "accuracy": 0.50390625,
+            "precision": 0.5058823529411764,
+            "recall": 0.9923076923076923,
+            "f1_score": 0.67012987012987,
+            "specificity": 0.0,
+            "true_positives": 129,
+            "true_negatives": 0,
+            "false_positives": 126,
+            "false_negatives": 1
+          },
+          "tp": [],
+          "fp": [
+            {
+              "id": "[-50, -33]",
+              "description": "[-50, -33]"
+            },
+            {
+              "id": "[-41, -35]",
+              "description": "[-41, -35]"
+            },
+            {
+              "id": "[-52, -45]",
+              "description": "[-52, -45]"
+            },
+            {
+              "id": "[-53, -32]",
+              "description": "[-53, -32]"
+            },
+            {
+              "id": "[-46, -35]",
+              "description": "[-46, -35]"
+            },
+            {
+              "id": "[-53, -33]",
+              "description": "[-53, -33]"
+            },
+            {
+              "id": "[-51, -50]",
+              "description": "[-51, -50]"
+            },
+            {
+              "id": "[-51, -32]",
+              "description": "[-51, -32]"
+            },
+            {
+              "id": "[-47, -46]",
+              "description": "[-47, -46]"
+            },
+            {
+              "id": "[-45, -35]",
+              "description": "[-45, -35]"
+            },
+            {
+              "id": "[-49, -42]",
+              "description": "[-49, -42]"
+            },
+            {
+              "id": "[-36, 37]",
+              "description": "[-36, 37]"
+            },
+            {
+              "id": "[-45, -44]",
+              "description": "[-45, -44]"
+            },
+            {
+              "id": "[-43, -41]",
+              "description": "[-43, -41]"
+            },
+            {
+              "id": "[-57, -53]",
+              "description": "[-57, -53]"
+            },
+            {
+              "id": "[-35, -33]",
+              "description": "[-35, -33]"
+            },
+            {
+              "id": "[-41, -32]",
+              "description": "[-41, -32]"
+            },
+            {
+              "id": "[-33, -30]",
+              "description": "[-33, -30]"
+            },
+            {
+              "id": "[-57, 63]",
+              "description": "[-57, 63]"
+            },
+            {
+              "id": "[-50, -35]",
+              "description": "[-50, -35]"
+            }
+          ],
+          "fn": [
+            {
+              "id": null,
+              "description": "[-2, 8]"
+            }
+          ]
+        }
+      }
     }
   ],
   "performance": {
@@ -3913,5 +10113,48 @@
       "max": 561
     }
   },
-  "summary": null
+  "summary": {
+    "description": {
+      "precision": {
+        "mean": 0.215996,
+        "std": 0.016285
+      },
+      "recall": {
+        "mean": 0.542857,
+        "std": 0.053452
+      },
+      "f1_score": {
+        "mean": 0.308961,
+        "std": 0.025056
+      }
+    },
+    "clause": {
+      "precision": {
+        "mean": 0.421177,
+        "std": 0.007993
+      },
+      "recall": {
+        "mean": 0.753846,
+        "std": 0.027377
+      },
+      "f1_score": {
+        "mean": 0.540317,
+        "std": 0.012222
+      }
+    },
+    "semantic": {
+      "precision": {
+        "mean": 0.497397,
+        "std": 0.009425
+      },
+      "recall": {
+        "mean": 0.958974,
+        "std": 0.023779
+      },
+      "f1_score": {
+        "mean": 0.65497,
+        "std": 0.012059
+      }
+    }
+  }
 }
