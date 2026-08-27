@@ -1,0 +1,972 @@
+{
+  "n_folds": 3,
+  "fold_accuracies": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "mean_accuracy": 1.0,
+  "std_accuracy": 0.0,
+  "total_runtime_ms": 4356486.694167019,
+  "intersected_kb": {
+    "kb_constraints": [
+      {
+        "id": "c251",
+        "description": "Ordermanagement --mandatory--> Fulfillment"
+      },
+      {
+        "id": "c271",
+        "description": "Eletronicgoodsfulfillment --mandatory--> Filerepository"
+      },
+      {
+        "id": "c273",
+        "description": "Eletronicgoodsfulfillment --mandatory--> Licensemanagement"
+      },
+      {
+        "id": "c311",
+        "description": "Discounts --mandatory--> Award"
+      },
+      {
+        "id": "c63",
+        "description": "Catalog --mandatory--> ProductInformation"
+      },
+      {
+        "id": "c69",
+        "description": "ProductInformation --mandatory--> Basicinformation"
+      }
+    ],
+    "bg_clauses": [
+      [
+        1
+      ]
+    ],
+    "n_kb": 6,
+    "evaluation": null
+  },
+  "folds": [
+    {
+      "fold_index": 0,
+      "accuracy": 1.0,
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "specificity": 1.0,
+        "true_positives": 36,
+        "true_negatives": 3,
+        "false_positives": 0,
+        "false_negatives": 0
+      },
+      "performance": {
+        "runtime_ms": 2329172.880584025,
+        "consistency_checks": 5006,
+        "memory_peak_mb": 71.05926609039307,
+        "quacq_runtime_ms": 2329051.7272499856,
+        "query_generation_runtime_ms": 43583.2376194885,
+        "findscope_runtime_ms": 14906324.672322836,
+        "findc_runtime_ms": 2567.8724533645436,
+        "dis_gen_runtime_ms": 942.2383707715198,
+        "reduce_runtime_ms": 74.44070908240974,
+        "solver_time_ms": 268004.8939998328,
+        "is_consistent_calls": 1326016,
+        "is_consistent_test_cases_calls": 0,
+        "quacq_calls": 1,
+        "query_generation_calls": 329,
+        "query_generation_consistency_checks": 50407,
+        "prune_calls": 1710,
+        "prune_is_consistent_calls": 1279206,
+        "findscope_calls": 6899,
+        "findc_calls": 293,
+        "findc_consistency_checks": 564,
+        "dis_gen_calls": 275,
+        "dis_gen_consistency_checks": 275,
+        "reduce_calls": 1,
+        "redundancy_consistency_checks": 20,
+        "profiler": {
+          "query_generation_consistency_checks": 50407,
+          "solver_time": {
+            "count": 1330472,
+            "total": 268.0048939998328,
+            "mean": 0.0002014359520529803,
+            "min": 5.999999999950489e-06,
+            "max": 0.001251000000138447,
+            "median": 0.00021299999991697405,
+            "stddev": 3.0677560510653595e-05
+          },
+          "solver_time_accum": 268.0048939998328,
+          "is_consistent_calls": 1326016,
+          "query_generation_runtime": {
+            "count": 329,
+            "total": 43.5832376194885,
+            "mean": 0.1324718468677462,
+            "min": 0.0005569589557126164,
+            "max": 2.046696041012183,
+            "median": 0.06507029104977846,
+            "stddev": 0.21128815430672412
+          },
+          "query_generation_calls": 329,
+          "paper_consistency_checks": 5006,
+          "prune_is_consistent_calls": 1279206,
+          "quacq_prune_complete_pruned": 1298,
+          "prune_calls": 1710,
+          "findscope_calls": 6899,
+          "findscope_runtime": {
+            "count": 6899,
+            "total": 14906.324672322837,
+            "mean": 2.1606500467202254,
+            "min": 5.334033630788326e-06,
+            "max": 16.380380207905546,
+            "median": 0.0028478329768404365,
+            "stddev": 3.0874735446103023
+          },
+          "quacq_prune_partial_pruned": 35,
+          "findc_consistency_checks": 564,
+          "findc_calls": 293,
+          "findc_runtime": {
+            "count": 293,
+            "total": 2.5678724533645436,
+            "mean": 0.008764069806704928,
+            "min": 0.0013577500358223915,
+            "max": 0.037866792059503496,
+            "median": 0.008811666979454458,
+            "stddev": 0.0041011638822841335
+          },
+          "dis_gen_consistency_checks": 275,
+          "dis_gen_calls": 275,
+          "dis_gen_runtime": {
+            "count": 275,
+            "total": 0.9422383707715198,
+            "mean": 0.0034263213482600722,
+            "min": 0.0013704999582841992,
+            "max": 0.013913083006627858,
+            "median": 0.0034474169369786978,
+            "stddev": 0.0013833287645736608
+          },
+          "quacq_findc_unconfirmed": 267,
+          "query_generation_repeat_skips": 3836,
+          "redundancy_consistency_checks": 20,
+          "reduce_calls": 1,
+          "reduce_runtime": {
+            "count": 1,
+            "total": 0.07444070908240974,
+            "mean": 0.07444070908240974,
+            "min": 0.07444070908240974,
+            "max": 0.07444070908240974
+          },
+          "quacq_calls": 1,
+          "quacq_runtime": {
+            "count": 1,
+            "total": 2329.0517272499856,
+            "mean": 2329.0517272499856,
+            "min": 2329.0517272499856,
+            "max": 2329.0517272499856
+          },
+          "quacq_total_time": {
+            "count": 1,
+            "total": 2329.172880584025,
+            "mean": 2329.172880584025,
+            "min": 2329.172880584025,
+            "max": 2329.172880584025
+          }
+        }
+      },
+      "kb_constraints": [
+        {
+          "id": "c293",
+          "description": "Advertisements --mandatory--> Advertisementsources"
+        },
+        {
+          "id": "c1726",
+          "description": "Registeredcheckout requires Registrationenforcement"
+        },
+        {
+          "id": "c160",
+          "description": "Checkouttype --or--> ['Registeredcheckout', 'Guestcheckout']"
+        },
+        {
+          "id": "c157",
+          "description": "Checkout --mandatory--> Checkouttype"
+        },
+        {
+          "id": "c311",
+          "description": "Discounts --mandatory--> Award"
+        },
+        {
+          "id": "c946",
+          "description": "Eletronicgoods requires Eletronicgoodsfulfillment"
+        },
+        {
+          "id": "c271",
+          "description": "Eletronicgoodsfulfillment --mandatory--> Filerepository"
+        },
+        {
+          "id": "c318",
+          "description": "Eligibilityrequirements --optional--> Customersegments"
+        },
+        {
+          "id": "c1768",
+          "description": "Registertobuy requires Registrationenforcement"
+        },
+        {
+          "id": "c78",
+          "description": "ProductInformation --optional--> Associatedassets"
+        },
+        {
+          "id": "c63",
+          "description": "Catalog --mandatory--> ProductInformation"
+        },
+        {
+          "id": "c303",
+          "description": "Discounts --mandatory--> Discountconditions"
+        },
+        {
+          "id": "c7",
+          "description": "Dynamiccontent --mandatory--> Contenttype"
+        },
+        {
+          "id": "c354",
+          "description": "Inventorytracking --optional--> Allowbackorders"
+        },
+        {
+          "id": "c69",
+          "description": "ProductInformation --mandatory--> Basicinformation"
+        },
+        {
+          "id": "c96",
+          "description": "ProductInformation --optional--> Customfields1"
+        },
+        {
+          "id": "c251",
+          "description": "Ordermanagement --mandatory--> Fulfillment"
+        },
+        {
+          "id": "c254",
+          "description": "Fulfillment --or--> ['Physicalgoodsfulfillment', 'Eletronicgoodsfulfillment', 'Servicesfulfillment']"
+        },
+        {
+          "id": "c273",
+          "description": "Eletronicgoodsfulfillment --mandatory--> Licensemanagement"
+        },
+        {
+          "id": "c86",
+          "description": "ProductInformation --optional--> Productvariants"
+        }
+      ],
+      "ne_constraints": [],
+      "bg_clauses": [
+        [
+          1
+        ]
+      ],
+      "redundant_constraints": [],
+      "statistics": {
+        "n_bias": 2079,
+        "n_mss": null,
+        "n_kb": 20,
+        "n_ne": 0
+      },
+      "train_size": {
+        "positive": 70,
+        "negative": 4
+      },
+      "test_size": {
+        "positive": 36,
+        "negative": 3
+      },
+      "n_queries": 5000,
+      "convergence_reason": "max_queries",
+      "evaluation": null
+    },
+    {
+      "fold_index": 1,
+      "accuracy": 1.0,
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "specificity": 1.0,
+        "true_positives": 35,
+        "true_negatives": 2,
+        "false_positives": 0,
+        "false_negatives": 0
+      },
+      "performance": {
+        "runtime_ms": 2672854.265291011,
+        "consistency_checks": 5007,
+        "memory_peak_mb": 84.04806613922119,
+        "quacq_runtime_ms": 2672707.489582943,
+        "query_generation_runtime_ms": 20116.519174422137,
+        "findscope_runtime_ms": 14057866.80547439,
+        "findc_runtime_ms": 895.5470861401409,
+        "dis_gen_runtime_ms": 302.2310382220894,
+        "reduce_runtime_ms": 116.7464170139283,
+        "solver_time_ms": 304775.0270000922,
+        "is_consistent_calls": 1501461,
+        "is_consistent_test_cases_calls": 0,
+        "quacq_calls": 1,
+        "query_generation_calls": 254,
+        "query_generation_consistency_checks": 51606,
+        "prune_calls": 1930,
+        "prune_is_consistent_calls": 1450186,
+        "findscope_calls": 6297,
+        "findc_calls": 221,
+        "findc_consistency_checks": 150,
+        "dis_gen_calls": 51,
+        "dis_gen_consistency_checks": 51,
+        "reduce_calls": 1,
+        "redundancy_consistency_checks": 32,
+        "profiler": {
+          "query_generation_consistency_checks": 51606,
+          "solver_time": {
+            "count": 1502025,
+            "total": 304.7750270000922,
+            "mean": 0.00020290942361151927,
+            "min": 8.000000001118224e-06,
+            "max": 0.0019530000000713699,
+            "median": 0.00021200000037424616,
+            "stddev": 2.7732238607769734e-05
+          },
+          "solver_time_accum": 304.7750270000922,
+          "is_consistent_calls": 1501461,
+          "query_generation_runtime": {
+            "count": 254,
+            "total": 20.116519174422137,
+            "mean": 0.07919889438748873,
+            "min": 0.0007333750836551189,
+            "max": 2.151929375017062,
+            "median": 0.007587917032651603,
+            "stddev": 0.2494208279303739
+          },
+          "query_generation_calls": 254,
+          "paper_consistency_checks": 5007,
+          "prune_is_consistent_calls": 1450186,
+          "quacq_prune_complete_pruned": 1228,
+          "prune_calls": 1930,
+          "findscope_calls": 6297,
+          "findscope_runtime": {
+            "count": 6297,
+            "total": 14057.86680547439,
+            "mean": 2.2324705106359204,
+            "min": 4.958012141287327e-06,
+            "max": 25.252196666901,
+            "median": 0.002163083991035819,
+            "stddev": 3.4890812462534484
+          },
+          "findc_consistency_checks": 150,
+          "dis_gen_consistency_checks": 51,
+          "dis_gen_calls": 51,
+          "dis_gen_runtime": {
+            "count": 51,
+            "total": 0.3022310382220894,
+            "mean": 0.00592609878866842,
+            "min": 0.0018610829720273614,
+            "max": 0.009304458973929286,
+            "median": 0.005446207942441106,
+            "stddev": 0.0021666669802334207
+          },
+          "quacq_findc_unconfirmed": 48,
+          "findc_calls": 221,
+          "findc_runtime": {
+            "count": 221,
+            "total": 0.8955470861401409,
+            "mean": 0.004052249258552674,
+            "min": 0.001297708018682897,
+            "max": 0.03506925003603101,
+            "median": 0.0013869579415768385,
+            "stddev": 0.005058864251990465
+          },
+          "quacq_prune_partial_pruned": 107,
+          "query_generation_repeat_skips": 248,
+          "redundancy_consistency_checks": 32,
+          "reduce_calls": 1,
+          "reduce_runtime": {
+            "count": 1,
+            "total": 0.1167464170139283,
+            "mean": 0.1167464170139283,
+            "min": 0.1167464170139283,
+            "max": 0.1167464170139283
+          },
+          "quacq_calls": 1,
+          "quacq_runtime": {
+            "count": 1,
+            "total": 2672.707489582943,
+            "mean": 2672.707489582943,
+            "min": 2672.707489582943,
+            "max": 2672.707489582943
+          },
+          "quacq_total_time": {
+            "count": 1,
+            "total": 2672.854265291011,
+            "mean": 2672.854265291011,
+            "min": 2672.854265291011,
+            "max": 2672.854265291011
+          }
+        }
+      },
+      "kb_constraints": [
+        {
+          "id": "c300",
+          "description": "Advertisements --optional--> Advertisementresponsetracking"
+        },
+        {
+          "id": "c223",
+          "description": "PhoneOrdering --mandatory--> DigitalDialing"
+        },
+        {
+          "id": "c421",
+          "description": "Availability requires Inventorytracking"
+        },
+        {
+          "id": "c2036",
+          "description": "Userbehaviourtrackinginformation requires Userbehaviourtracking"
+        },
+        {
+          "id": "c221",
+          "description": "Buypaths_4 --mandatory--> PhoneOrdering"
+        },
+        {
+          "id": "c243",
+          "description": "Userbehaviourtracking --mandatory--> Behaviourtracked"
+        },
+        {
+          "id": "c246",
+          "description": "Behaviourtracked --or--> ['Locallyvisitedpages', 'Externalreferringpages', 'Previouspurchases1']"
+        },
+        {
+          "id": "c946",
+          "description": "Eletronicgoods requires Eletronicgoodsfulfillment"
+        },
+        {
+          "id": "c271",
+          "description": "Eletronicgoodsfulfillment --mandatory--> Filerepository"
+        },
+        {
+          "id": "c273",
+          "description": "Eletronicgoodsfulfillment --mandatory--> Licensemanagement"
+        },
+        {
+          "id": "c160",
+          "description": "Checkouttype --or--> ['Registeredcheckout', 'Guestcheckout']"
+        },
+        {
+          "id": "c157",
+          "description": "Checkout --mandatory--> Checkouttype"
+        },
+        {
+          "id": "c377",
+          "description": "Businessmanagement --mandatory--> Administration"
+        },
+        {
+          "id": "c379",
+          "description": "Administration --mandatory--> Contentmanagement"
+        },
+        {
+          "id": "c385",
+          "description": "Contentmanagement --mandatory--> Generallayoutmanagement"
+        },
+        {
+          "id": "c352",
+          "description": "Businessmanagement --optional--> Inventorytracking"
+        },
+        {
+          "id": "c219",
+          "description": "Buypaths --mandatory--> Buypaths_4"
+        },
+        {
+          "id": "c98",
+          "description": "Catalog --optional--> Categories"
+        },
+        {
+          "id": "c197",
+          "description": "Customtaxation --mandatory--> Ammountspecification"
+        },
+        {
+          "id": "c311",
+          "description": "Discounts --mandatory--> Award"
+        },
+        {
+          "id": "c215",
+          "description": "Buypaths --mandatory--> Orderconfirmation"
+        },
+        {
+          "id": "c249",
+          "description": "Businessmanagement --mandatory--> Ordermanagement"
+        },
+        {
+          "id": "c203",
+          "description": "Checkout --mandatory--> Paymentoptions"
+        },
+        {
+          "id": "c251",
+          "description": "Ordermanagement --mandatory--> Fulfillment"
+        },
+        {
+          "id": "c383",
+          "description": "Contentmanagement --mandatory--> Presentationoptions"
+        },
+        {
+          "id": "c261",
+          "description": "Customshippingmethod --mandatory--> Pricing"
+        },
+        {
+          "id": "c263",
+          "description": "Pricing --mandatory--> Flatrate"
+        },
+        {
+          "id": "c69",
+          "description": "ProductInformation --mandatory--> Basicinformation"
+        },
+        {
+          "id": "c381",
+          "description": "Contentmanagement --mandatory--> Productdatabasemanagement"
+        },
+        {
+          "id": "c78",
+          "description": "ProductInformation --optional--> Associatedassets"
+        },
+        {
+          "id": "c63",
+          "description": "Catalog --mandatory--> ProductInformation"
+        },
+        {
+          "id": "c65",
+          "description": "ProductInformation --mandatory--> Producttype"
+        }
+      ],
+      "ne_constraints": [],
+      "bg_clauses": [
+        [
+          1
+        ]
+      ],
+      "redundant_constraints": [],
+      "statistics": {
+        "n_bias": 2079,
+        "n_mss": null,
+        "n_kb": 32,
+        "n_ne": 0
+      },
+      "train_size": {
+        "positive": 71,
+        "negative": 5
+      },
+      "test_size": {
+        "positive": 35,
+        "negative": 2
+      },
+      "n_queries": 5000,
+      "convergence_reason": "max_queries",
+      "evaluation": null
+    },
+    {
+      "fold_index": 2,
+      "accuracy": 1.0,
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "specificity": 1.0,
+        "true_positives": 35,
+        "true_negatives": 2,
+        "false_positives": 0,
+        "false_negatives": 0
+      },
+      "performance": {
+        "runtime_ms": 4355721.560583101,
+        "consistency_checks": 5006,
+        "memory_peak_mb": 91.62680149078369,
+        "quacq_runtime_ms": 4355588.020124938,
+        "query_generation_runtime_ms": 30212.454038788565,
+        "findscope_runtime_ms": 25356066.22845761,
+        "findc_runtime_ms": 1988.0094631807879,
+        "dis_gen_runtime_ms": 494.9669521301985,
+        "reduce_runtime_ms": 126.44954200368375,
+        "solver_time_ms": 386089.39599985996,
+        "is_consistent_calls": 1850799,
+        "is_consistent_test_cases_calls": 0,
+        "quacq_calls": 1,
+        "query_generation_calls": 251,
+        "query_generation_consistency_checks": 55492,
+        "prune_calls": 1990,
+        "prune_is_consistent_calls": 1796650,
+        "findscope_calls": 6345,
+        "findc_calls": 219,
+        "findc_consistency_checks": 455,
+        "dis_gen_calls": 155,
+        "dis_gen_consistency_checks": 155,
+        "reduce_calls": 1,
+        "redundancy_consistency_checks": 27,
+        "profiler": {
+          "query_generation_consistency_checks": 55492,
+          "solver_time": {
+            "count": 1852779,
+            "total": 386.08939599985996,
+            "mean": 0.00020838394433435393,
+            "min": 9.000000000369823e-06,
+            "max": 0.00112899999999172,
+            "median": 0.00021900000001551234,
+            "stddev": 2.9105468765924115e-05
+          },
+          "solver_time_accum": 386.08939599985996,
+          "is_consistent_calls": 1850799,
+          "query_generation_runtime": {
+            "count": 251,
+            "total": 30.212454038788565,
+            "mean": 0.12036834278401819,
+            "min": 0.0014039159286767244,
+            "max": 3.2049768751021475,
+            "median": 0.024723834008909762,
+            "stddev": 0.30681345720749237
+          },
+          "query_generation_calls": 251,
+          "paper_consistency_checks": 5006,
+          "prune_is_consistent_calls": 1796650,
+          "quacq_prune_complete_pruned": 1113,
+          "prune_calls": 1990,
+          "findscope_calls": 6345,
+          "findscope_runtime": {
+            "count": 6345,
+            "total": 25356.06622845761,
+            "mean": 3.996227931987015,
+            "min": 5.083042196929455e-06,
+            "max": 57.35603645897936,
+            "median": 0.0022651669569313526,
+            "stddev": 7.103983212366013
+          },
+          "findc_calls": 219,
+          "findc_runtime": {
+            "count": 219,
+            "total": 1.9880094631807879,
+            "mean": 0.009077668781647433,
+            "min": 0.0015392909990623593,
+            "max": 0.019841000088490546,
+            "median": 0.008656290941871703,
+            "stddev": 0.003979458699552996
+          },
+          "findc_consistency_checks": 455,
+          "quacq_prune_partial_pruned": 92,
+          "dis_gen_consistency_checks": 155,
+          "dis_gen_calls": 155,
+          "dis_gen_runtime": {
+            "count": 155,
+            "total": 0.4949669521301985,
+            "mean": 0.0031933351750335387,
+            "min": 0.0015719170914962888,
+            "max": 0.009177541942335665,
+            "median": 0.0029177500400692225,
+            "stddev": 0.0012525373005061653
+          },
+          "quacq_findc_unconfirmed": 155,
+          "query_generation_repeat_skips": 1545,
+          "redundancy_consistency_checks": 27,
+          "reduce_calls": 1,
+          "reduce_runtime": {
+            "count": 1,
+            "total": 0.12644954200368375,
+            "mean": 0.12644954200368375,
+            "min": 0.12644954200368375,
+            "max": 0.12644954200368375
+          },
+          "quacq_calls": 1,
+          "quacq_runtime": {
+            "count": 1,
+            "total": 4355.588020124938,
+            "mean": 4355.588020124938,
+            "min": 4355.588020124938,
+            "max": 4355.588020124938
+          },
+          "quacq_total_time": {
+            "count": 1,
+            "total": 4355.721560583101,
+            "mean": 4355.721560583101,
+            "min": 4355.721560583101,
+            "max": 4355.721560583101
+          }
+        }
+      },
+      "kb_constraints": [
+        {
+          "id": "c300",
+          "description": "Advertisements --optional--> Advertisementresponsetracking"
+        },
+        {
+          "id": "c293",
+          "description": "Advertisements --mandatory--> Advertisementsources"
+        },
+        {
+          "id": "c254",
+          "description": "Fulfillment --or--> ['Physicalgoodsfulfillment', 'Eletronicgoodsfulfillment', 'Servicesfulfillment']"
+        },
+        {
+          "id": "c273",
+          "description": "Eletronicgoodsfulfillment --mandatory--> Licensemanagement"
+        },
+        {
+          "id": "c1387",
+          "description": "Physicalgoods requires Physicalgoodsfulfillment"
+        },
+        {
+          "id": "c1882",
+          "description": "Services requires Servicesfulfillment"
+        },
+        {
+          "id": "c1621",
+          "description": "Quickcheckout requires Quickcheckoutprofile"
+        },
+        {
+          "id": "c118",
+          "description": "Browsing --optional--> Categorypage"
+        },
+        {
+          "id": "c497",
+          "description": "Categorypage requires Categories"
+        },
+        {
+          "id": "c99",
+          "description": "Categories --mandatory--> Catalog1"
+        },
+        {
+          "id": "c197",
+          "description": "Customtaxation --mandatory--> Ammountspecification"
+        },
+        {
+          "id": "c377",
+          "description": "Businessmanagement --mandatory--> Administration"
+        },
+        {
+          "id": "c379",
+          "description": "Administration --mandatory--> Contentmanagement"
+        },
+        {
+          "id": "c114",
+          "description": "Catalog --optional--> Browsing"
+        },
+        {
+          "id": "c251",
+          "description": "Ordermanagement --mandatory--> Fulfillment"
+        },
+        {
+          "id": "c271",
+          "description": "Eletronicgoodsfulfillment --mandatory--> Filerepository"
+        },
+        {
+          "id": "c94",
+          "description": "ProductInformation --optional--> Availability"
+        },
+        {
+          "id": "c63",
+          "description": "Catalog --mandatory--> ProductInformation"
+        },
+        {
+          "id": "c69",
+          "description": "ProductInformation --mandatory--> Basicinformation"
+        },
+        {
+          "id": "c65",
+          "description": "ProductInformation --mandatory--> Producttype"
+        },
+        {
+          "id": "c311",
+          "description": "Discounts --mandatory--> Award"
+        },
+        {
+          "id": "c321",
+          "description": "Discounts --mandatory--> Graduationby"
+        },
+        {
+          "id": "c421",
+          "description": "Availability requires Inventorytracking"
+        },
+        {
+          "id": "c249",
+          "description": "Businessmanagement --mandatory--> Ordermanagement"
+        },
+        {
+          "id": "c221",
+          "description": "Buypaths_4 --mandatory--> PhoneOrdering"
+        },
+        {
+          "id": "c219",
+          "description": "Buypaths --mandatory--> Buypaths_4"
+        },
+        {
+          "id": "c155",
+          "description": "Buypaths --mandatory--> Checkout"
+        }
+      ],
+      "ne_constraints": [],
+      "bg_clauses": [
+        [
+          1
+        ]
+      ],
+      "redundant_constraints": [],
+      "statistics": {
+        "n_bias": 2079,
+        "n_mss": null,
+        "n_kb": 27,
+        "n_ne": 0
+      },
+      "train_size": {
+        "positive": 71,
+        "negative": 5
+      },
+      "test_size": {
+        "positive": 35,
+        "negative": 2
+      },
+      "n_queries": 5000,
+      "convergence_reason": "max_queries",
+      "evaluation": null
+    }
+  ],
+  "performance": {
+    "n_runs": 3,
+    "runtime": {
+      "mean_ms": 3119249.568819379,
+      "std_ms": 1084516.695750064,
+      "min_ms": 2329172.880584025,
+      "max_ms": 4355721.560583101
+    },
+    "consistency_checks": {
+      "mean": 5006.333333333333,
+      "std": 0.5773502691896257,
+      "min": 5006,
+      "max": 5007
+    },
+    "memory": {
+      "mean_mb": 82.24471124013265,
+      "max_mb": 91.62680149078369
+    },
+    "quacq_runtime": {
+      "mean_ms": 3119115.745652622,
+      "std_ms": 1084514.9076431445,
+      "min_ms": 2329051.7272499856,
+      "max_ms": 4355588.020124938
+    },
+    "query_gen_runtime": {
+      "mean_ms": 31304.0702775664,
+      "std_ms": 11771.382168402191,
+      "min_ms": 20116.519174422137,
+      "max_ms": 43583.2376194885
+    },
+    "findscope_runtime": {
+      "mean_ms": 18106752.56875161,
+      "std_ms": 6292406.661250864,
+      "min_ms": 14057866.80547439,
+      "max_ms": 25356066.22845761
+    },
+    "findc_runtime": {
+      "mean_ms": 1817.1430008951575,
+      "std_ms": 849.1551945410588,
+      "min_ms": 895.5470861401409,
+      "max_ms": 2567.8724533645436
+    },
+    "dis_gen_runtime": {
+      "mean_ms": 579.8121203746026,
+      "std_ms": 328.3311946192065,
+      "min_ms": 302.2310382220894,
+      "max_ms": 942.2383707715198
+    },
+    "reduce_runtime": {
+      "mean_ms": 105.87888936667393,
+      "std_ms": 27.655144970350946,
+      "min_ms": 74.44070908240974,
+      "max_ms": 126.44954200368375
+    },
+    "solver_time": {
+      "mean_ms": 319623.105666595,
+      "std_ms": 60426.289669427795,
+      "min_ms": 268004.8939998328,
+      "max_ms": 386089.39599985996
+    },
+    "is_consistent_calls": {
+      "mean": 1559425.3333333333,
+      "std": 267150.1398583451,
+      "min": 1326016,
+      "max": 1850799
+    },
+    "is_consistent_test_cases_calls": {
+      "mean": 0,
+      "std": 0.0,
+      "min": 0,
+      "max": 0
+    },
+    "quacq_calls": {
+      "mean": 1,
+      "std": 0.0,
+      "min": 1,
+      "max": 1
+    },
+    "query_gen_calls": {
+      "mean": 278,
+      "std": 44.19275958796871,
+      "min": 251,
+      "max": 329
+    },
+    "query_gen_checks": {
+      "mean": 52501.666666666664,
+      "std": 2658.1892959932957,
+      "min": 50407,
+      "max": 55492
+    },
+    "prune_calls": {
+      "mean": 1876.6666666666667,
+      "std": 147.42229591663988,
+      "min": 1710,
+      "max": 1990
+    },
+    "prune_ic_calls": {
+      "mean": 1508680.6666666667,
+      "std": 263634.77161659335,
+      "min": 1279206,
+      "max": 1796650
+    },
+    "findscope_calls": {
+      "mean": 6513.666666666667,
+      "std": 334.5703712723727,
+      "min": 6297,
+      "max": 6899
+    },
+    "findc_calls": {
+      "mean": 244.33333333333334,
+      "std": 42.15843134336634,
+      "min": 219,
+      "max": 293
+    },
+    "findc_checks": {
+      "mean": 389.6666666666667,
+      "std": 214.59341400269798,
+      "min": 150,
+      "max": 564
+    },
+    "dis_gen_calls": {
+      "mean": 160.33333333333334,
+      "std": 112.09519763724641,
+      "min": 51,
+      "max": 275
+    },
+    "dis_gen_checks": {
+      "mean": 160.33333333333334,
+      "std": 112.09519763724641,
+      "min": 51,
+      "max": 275
+    },
+    "reduce_calls": {
+      "mean": 1,
+      "std": 0.0,
+      "min": 1,
+      "max": 1
+    },
+    "redundancy_consistency_checks": {
+      "mean": 26.333333333333332,
+      "std": 6.027713773341708,
+      "min": 20,
+      "max": 32
+    }
+  },
+  "summary": null
+}
