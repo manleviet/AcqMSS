@@ -59,6 +59,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--out', required=True)
+    ap.add_argument('--cv-dir',
+                    help="score CV files under this directory instead of "
+                         "data/results_sosym/<algorithm>/. Searched recursively, so it "
+                         "accepts the one-directory-per-cell layout a scratch re-run "
+                         "produces. Paths are written absolute — a scratch tree is not "
+                         "under the repo, so a repo-relative path would not resolve.")
     ap.add_argument('--kbs', nargs='+', help="restrict to these model stems")
     ap.add_argument('--algorithms', nargs='+', default=['congen', 'interactive'])
     args = ap.parse_args()
@@ -68,10 +74,17 @@ def main() -> int:
     written = []
 
     for algorithm in args.algorithms:
-        src = REPO / 'data' / 'results_sosym' / algorithm
-        if not src.is_dir():
+        if args.cv_dir:
+            src = Path(args.cv_dir)
+            candidates = sorted(src.rglob(f'*_cv_*.json'))
+            # rglob crosses every algorithm's directory at once; keep this block's own.
+            candidates = [c for c in candidates if c.parent.name == algorithm]
+        else:
+            src = REPO / 'data' / 'results_sosym' / algorithm
+            candidates = sorted(src.glob('*_cv_*.json')) if src.is_dir() else []
+        if not candidates:
             continue
-        for cv in sorted(src.glob('*_cv_*.json')):
+        for cv in candidates:
             stem = stem_of(cv.name)
             if stem is None:
                 print(f"  SKIP, no stem matched: {cv.name}", file=sys.stderr)
@@ -91,8 +104,11 @@ def main() -> int:
     for algorithm, rows in by_algo.items():
         text = HEADER
         for stem, cv in rows:
-            text += BLOCK.format(name=cv.stem, stem=stem,
-                                 cv_file=cv.relative_to(REPO))
+            try:
+                path = cv.relative_to(REPO)
+            except ValueError:
+                path = cv.resolve()
+            text += BLOCK.format(name=cv.stem, stem=stem, cv_file=path)
         path = out_dir / f"score_{algorithm}.toml"
         path.write_text(text)
         print(f"  {path}: {len(rows)} blocks")
