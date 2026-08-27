@@ -90,6 +90,24 @@ it otherwise; because the root axiom is deliberately excluded from that backgrou
 root-implied constraints remain learnable, NE is retained on knowledge bases whose
 negative examples turn on root.
 
+## Amended 2026-08-27 by the red-team pass
+
+See `red-team-ne-root-mechanism-260827-1607-controls-and-corrections-report.md`.
+Two corrections to this document:
+
+- **Retention is not the Definition 6 safety net.** B′ alone rejects 0/4, 0/23, 0/58
+  full negative examples without root. NE encodes ¬(QuickXplain-minimized conflict),
+  which is strictly stronger than ¬e⁻; Reduce asks whether that generalization is
+  entailed. The disclosure wording below stands; any reading of it as "NE is needed to
+  reject the negatives" does not.
+- **The rule is a theorem, not a 3-cell generalization.** ¬NE is the disjunction of the
+  eᵢ, so SAT iff some eᵢ is satisfiable. The falsifiable per-fold prediction is the
+  root-dependence classification.
+
+Unresolved item 1 below is also superseded: fix (a) alone reproduces the committed
+result exactly on all three cells; C12 is the whole effect, and only fqa moves
+(136 → 137 objects).
+
 ## Unresolved
 
 1. Part (b) — NE passed to Reduce as n separate constraints — now has a predicted,
