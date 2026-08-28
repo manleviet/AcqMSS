@@ -104,18 +104,24 @@ accuracy and runtime tables draw on the former.
 
 Measured per cell, which the paper reports only per knowledge base:
 
-| KB | \|E⁺\| train, by fold | \|E⁻\| train |
-|---|---|---|
-| REAL-FM-7 | 0, 0, 0 | 6, 6, 6 |
-| fqa | 0, 0, 0 | 10, 11, 11 |
-| arcade-game | 0, 1, 1 | 8, 9, 9 |
-| REAL-FM-4 | 0, 1, 1 | 11, 11, 12 |
-| busybox-1.18.0 | 0, 0, 0 | 14, 14, 14 |
+| KB | \|E⁺\| train | \|E⁻\| train | \|E⁺\| **test** | \|E⁻\| test |
+|---|---|---|---|---|
+| REAL-FM-7 | 0, 0, 0 | 6, 6, 6 | **0, 0, 0** | 3, 3, 3 |
+| fqa | 0, 0, 0 | 10, 11, 11 | **0, 0, 0** | 6, 5, 5 |
+| arcade-game | 0, 1, 1 | 8, 9, 9 | 1, 0, 0 | 5, 4, 4 |
+| REAL-FM-4 | 0, 1, 1 | 11, 11, 12 | 1, 0, 0 | 6, 6, 5 |
+| busybox-1.18.0 | 0, 0, 0 | 14, 14, 14 | **0, 0, 0** | 7, 7, 7 |
 
-Eight of fifteen folds have **no** positive training example and the remaining seven have
-exactly one. A passive learner that generalises from positives has nothing to generalise
-from, on any 2-COV fold of any model in the study. That is a measurable boundary condition
-rather than a remark about one cell.
+**Eleven of fifteen folds have no positive training example**, and the remaining four have
+exactly one. Across every 2-COV fold of every model in the study, |E⁺| ≤ 1. A passive
+learner that generalises from positive examples has nothing to generalise from.
+
+The test split closes the argument. On REAL-FM-7, fqa and busybox, **every 2-COV fold has
+zero positives in the test split as well as the training split**. Accuracy there is pure
+specificity: it measures only whether the theory rejects negatives, and cannot register
+anything about learning from positives in either direction. That is a construct-validity
+limit of the 2-COV condition, not a caveat about a cell — the metric is not measuring the
+quantity the comparison is about, and on three of five models it structurally cannot.
 
 ## Why this is disclosed
 
