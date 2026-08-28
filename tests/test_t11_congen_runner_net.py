@@ -19,6 +19,16 @@ reduce-dependent fields moved (``kb_constraints``/``kb_clauses``/``n_kb``/
 and the pinned counts held. From here it again gates against drift — the
 "do NOT regenerate to green" rule stands for any future red.
 
+**Re-baselined again (2026-08-28)** for the memorized-negative fixes: the negated
+form now asserts the example instead of switching off its guard, so a memorized
+fact can be judged redundant for the first time, and the memorized facts are
+reduced before the bias constraints. Only the affected fields moved — ``n_ne`` and
+``ne_constraints`` (this fold's fact is now discharged, correctly: its minimal
+conflict does not depend on the root axiom), and ``kb_constraints`` /
+``kb_clauses`` / ``redundant_constraints`` on the unshuffled path. ``n_bias``,
+``n_mss``, ``bg_clauses`` and every pinned count held, which is the check that
+made the regeneration admissible. The rule stands for any future red.
+
 Only deterministic fields are pinned. The six timing/memory fields (``runtime_ms``,
 ``memory_peak_mb``, ``*_runtime_ms``, ``solver_time_ms``) are deliberately NOT in
 the golden: pinning a wall-clock value makes a flaky net, and a flaky net gets

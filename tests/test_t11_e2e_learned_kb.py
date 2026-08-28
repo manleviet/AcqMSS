@@ -15,6 +15,11 @@ arm learns few/no constraints, so it pins the exact query TRAJECTORY
 (Oracle-mode LEARNING at a generous budget — non-empty KB, converges via
 no_query — is asserted separately in tests/test_quacq.py::TestQuAcqOracleProgress,
 after the liveness fix that stopped the FindC=⊥ spin.)
+
+**Re-baselined 2026-08-28** for the memorized-negative fixes. Only the ConGen
+entries moved (``n_kb`` 17→16 on rs, 15→17 on ff, and the assumption-id lists);
+the QuAcq entry held byte-for-byte, as it must — QuAcq builds no memorized
+negatives and never calls Reduce, so it shares no code path with the change.
 """
 import pytest
 

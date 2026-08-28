@@ -17,6 +17,10 @@ import pytest
 from tests import t11_e2e_harness as harness
 from tests.t11_oracle_net_helpers import FIXTURES_DIR, load_json
 
+# Re-baselined 2026-08-28: the negative examples are prepared as one constraint each
+# rather than folded into a single assumption, so ``set_neg_tv`` carries three ids on
+# the ff fixture instead of one and each gains a ``negation_map`` entry. The diagnosis
+# and QuAcq id layouts held, which is what says the change is confined to ConGen.
 _GOLDEN_PATH = FIXTURES_DIR / "layer23_prepared_and_e2e.json"
 
 
