@@ -77,11 +77,35 @@ machine, and no single set of runs is both.
 Cost of the decision: none. It uses runs that already exist rather than re-measuring 12 h
 of busybox serially.
 
+## Resolved 2026-08-28: re-time, rather than carry two sources
+
+Viet-Man's decision: re-run the 6 REAL-FM-4 example-first units sequentially once the
+machine is free, so there is one source rather than two to keep apart.
+
+That also settles the storage question, and it is worth recording why the obvious answer
+was wrong. Splitting the files into `sequential/` and `contended/` directories does not
+work: the loader keys results on `(model, strategy, mode, method)` and the path is not part
+of that key, so the same unit in two directories collapses to ONE entry and the loader
+silently drops the other — demonstrated, 2 files in, 1 entry out. Directory separation
+would reintroduce the exact collision fixed at `2157122`, one level deeper.
+
+Recording provenance INSIDE each file would work, following the `estimate_source`
+precedent, but it changes the CV schema for every consumer and still depends on someone
+setting the flag correctly. Re-timing removes the need for either: after it, the invariant
+is checkable rather than remembered —
+
+> every timing in `data/results_sosym/` comes from an exclusive run, verified by the
+> ledger overlap check (0 overlaps in 238 units).
+
+**The re-run is gated on a falsification, not run as a formality.** The deterministic
+content of each re-timed file — `kb_constraints`, `n_kb`, `n_ne`, fold accuracies — must be
+IDENTICAL to the committed file. If it is, the file is replaced: same numbers, clean
+timings, one source. If it is not, something is non-deterministic that should not be, and
+that finding matters more than the timings do; the re-run stops and reports rather than
+overwriting.
+
 ## Unresolved
 
-1. The 6 REAL-FM-4 example-first units have no uncontended timing at all — they are new
-   work, not a re-run, so there is no sequential measurement of them to fall back on. If
-   the runtime table needs those cells, they must be re-timed alone or the cells left out
-   and said so.
-2. `data/results_sosym/interactive/` now holds both sources in one directory. The
-   separation is recoverable from the ledger, but nothing in the filenames carries it.
+1. Nothing in the filenames carries provenance, and after the re-timing nothing needs to.
+   If a contended run is ever mixed in again, the ledger overlap check is what detects it,
+   so that check belongs in whatever gate precedes table generation.
