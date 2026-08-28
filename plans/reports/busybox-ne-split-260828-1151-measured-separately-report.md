@@ -39,6 +39,12 @@ semantic: the reduction order changes the surviving set by a couple of constrain
 couple of constraints out of ~600 is a much smaller relative change than out of 11. The
 largest knowledge base is the least disturbed.
 
+**This has a disclosure consequence.** The reduction-order effect shrinks with model size,
+so the "up to 0.09" figure is driven entirely by the small knowledge bases and is
+effectively invisible at scale: 0.0909 on a 14-feature model, 0.0027 on the 854-feature
+one. The reviewer who cares most about scale is the reviewer least affected by the change,
+and the disclosure should say so rather than leave the worst case standing unqualified.
+
 ## Exact equivalence and accuracy
 
 | | |
@@ -55,9 +61,27 @@ The NE recall interval being flat here is worth stating beside the other four, w
 42 folds moved and one moved by +0.7615. On busybox the bias constraints already entail
 everything the memorized fact would add, so the tiers understate nothing.
 
+### The two-background seam, in one pair of numbers
+
+busybox demonstrates the C6/C7 seam better than the argument for it does, because both
+halves are measured on the same 9 folds:
+
+| | |
+|---|---|
+| NE retained on every fold (`n_ne` = 1, never discharged) | in Reduce's context, ¬e⁻ is **not** entailed |
+| NE recall interval +0.0000 on every fold | in the delivered context, ¬e⁻ **is** entailed and adds nothing |
+
+The same fact, asked in two contexts, gets opposite answers — because Reduce reasons
+without the root axiom (deliberately, so root-implied constraints stay learnable) while the
+delivered theory ships it in `bg_clauses`. That is the two-object contract as a measurement
+rather than as a design note, and it is the strongest evidence for it in the dataset.
+
 ## Unresolved
 
-1. `rs_1n` is unmeasured — 3 folds, ~10.8 h, its own stretch. It is the busybox cell with
-   the largest example pool and the only one whose behaviour is not represented here.
+1. `rs_1n` is running (launched 2026-08-28 12:29, ~10.8 h). It is not extra coverage:
+   busybox ConGen is 4 samplings x 3 folds = 12, and 9 are measured here, so without it
+   3 of the 84 ConGen folds behind the final tables would come from a different code
+   state. Mixed-state tables are the failure this effort exists to prevent, so it is
+   required for coherence.
 2. `rs_2n` / `rs_3n` remain out of scope: never completed in the sweep, so there is no
    committed baseline to compare a re-run against.
