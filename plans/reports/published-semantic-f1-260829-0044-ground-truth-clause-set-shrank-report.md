@@ -1,3 +1,14 @@
+> **SUPERSEDED 2026-08-29 01:30 — the diagnosis below is wrong.** It reads the old
+> `tp+fn = 342` as the ground-truth extraction having over-counted. The extraction is
+> correct: a hand count from the `.uvl` agrees with it on all five models
+> (22 / 342 / 130 / 428 / 994). 342 is FQA's clause count, and the old arcade file was
+> scored against FQA's target theory — the `kb_dir` cross-model defect, not an extraction
+> change. See
+> `n-item-260829-0122-published-semantic-scored-against-the-wrong-model-report.md`.
+> Kept unedited as the record of how the wrong conclusion was reached: every number in it
+> is real, and the reasoning was sound up to the point where a coincidence — 342 being both
+> "the old count" and "FQA's count" — went unchecked.
+
 # Why the published .525 becomes 0.655, and a second defect in the same block
 
 Date 2026-08-29. Branch `feat/sosym-r1`. `evaluation.tex:363` reports semantic F1 **.525**
