@@ -48,6 +48,14 @@ class CrossValidationFoldResult:
     # (|KB| = n_kb + n_ne). Optional: only ConGen resolves them today.
     ne_constraints: List[str] = field(default_factory=list)
     n_ne: int = 0
+    # The ¬e⁻ blocking clauses and the ¬e⁻ Reduce discarded as entailed. Both are on
+    # ConGenRunResult and neither used to reach here: ne_clauses were consumed to build
+    # the theory for AccuracyCalculator and dropped, so the delivered theory could not
+    # be reconstructed from any saved artefact (which is what backfill_ne_clauses.py
+    # exists to work around), and without redundant_ne_constraints the |KB| accounting
+    # — prepared = kept + discarded — cannot be closed from a CV file at all.
+    ne_clauses: List[List[int]] = field(default_factory=list)
+    redundant_ne_constraints: List[str] = field(default_factory=list)
     # Interactive-only budget accounting (Tables 13/14): how many queries the fold
     # consumed and why it stopped. ``None`` on the passive algorithms, which have
     # neither — and a None is omitted from to_dict() rather than serialized, so the
@@ -69,8 +77,10 @@ class CrossValidationFoldResult:
             },
             'kb_constraints': self.kb_constraints,
             'ne_constraints': self.ne_constraints,
+            'ne_clauses': self.ne_clauses,
             'bg_clauses': self.bg_clauses,
             'redundant_constraints': self.redundant_constraints,
+            'redundant_ne_constraints': self.redundant_ne_constraints,
             'statistics': {
                 'n_bias': self.n_bias,
                 'n_mss': self.n_mss,
@@ -91,8 +101,10 @@ class CrossValidationFoldResult:
         return {
             'kb_constraints': self.kb_constraints,
             'ne_constraints': self.ne_constraints,
+            'ne_clauses': self.ne_clauses,
             'bg_clauses': self.bg_clauses,
             'redundant_constraints': self.redundant_constraints,
+            'redundant_ne_constraints': self.redundant_ne_constraints,
             'statistics': {
                 'n_bias': self.n_bias,
                 'n_mss': self.n_mss,
@@ -215,6 +227,9 @@ def _compute_fold(
         n_kb=run_result.n_kb,
         ne_constraints=list(getattr(run_result, 'ne_constraints', ()) or ()),
         n_ne=getattr(run_result, 'n_ne', 0),
+        ne_clauses=[list(c) for c in getattr(run_result, 'ne_clauses', ()) or ()],
+        redundant_ne_constraints=list(
+            getattr(run_result, 'redundant_ne_constraints', ()) or ()),
         n_train_pos=len(train_pos),
         n_train_neg=len(train_neg),
         n_test_pos=len(test_pos),

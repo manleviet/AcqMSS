@@ -134,7 +134,7 @@ class ConMinTaskPreparation(ConGenTaskPreparation):
         per_e_negations: Dict[int, int] = {}
         negated_ne_id = self._create_negated_ne(
             set_kb, assumptions, provider, ne_id, neg_tv_ids, alloc,
-            per_e_negations_out=per_e_negations)
+            per_e_negations_out=per_e_negations, ne_results=ne_results)
         negation_map[ne_id] = negated_ne_id
 
         # Critical fix: register each per-e⁻ ne_id's (already-built) negated form so a

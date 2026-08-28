@@ -110,6 +110,10 @@ def fold_result_from_dict(fold: Mapping, algorithm: str) -> CrossValidationFoldR
         n_mss=stats.get('n_mss'),
         ne_constraints=fold.get('ne_constraints', []),
         n_ne=stats.get('n_ne', 0),
+        # Round-tripped, or a resumed window would silently deliver folds without the
+        # ¬e⁻ clauses while a single-process run kept them — the merge would look fine.
+        ne_clauses=[list(c) for c in fold.get('ne_clauses', [])],
+        redundant_ne_constraints=fold.get('redundant_ne_constraints', []),
         n_queries=fold.get('n_queries'),
         convergence_reason=fold.get('convergence_reason'),
         profiler_data=profiler_data,

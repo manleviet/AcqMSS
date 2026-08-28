@@ -28,6 +28,10 @@ FM_PATH = DATA_DIR / "fms" / "REAL-FM-7.uvl"
 BIAS_PATH = DATA_DIR / "bias" / "REAL-FM-7-bias.json"
 EXAMPLES_RS_1N_PATH = DATA_DIR / "examples" / "REAL-FM-7_rs_1n.json"
 EXAMPLES_FF_PATH = DATA_DIR / "examples" / "REAL-FM-7_ff.json"
+# The only REAL-FM-7 cell that both KEEPS its ¬e⁻ through Reduce and has exactly one
+# negative. Both properties are load-bearing for the NE tests below; see their
+# docstrings.
+EXAMPLES_RS_M_PATH = DATA_DIR / "examples" / "REAL-FM-7_rs_m.json"
 
 
 @pytest.fixture
@@ -502,22 +506,37 @@ def test_root_implying_constraints_are_learnable():
 
 # --- C6: NE reported apart from bias constraints -------------------------------
 
-def test_ne_split_out_of_kb_names():
+@pytest.mark.parametrize("examples_path,ne_kept", [
+    (EXAMPLES_RS_M_PATH, True),
+    (EXAMPLES_RS_1N_PATH, False),
+], ids=["ne-kept", "ne-discharged"])
+def test_ne_split_out_of_kb_names(examples_path, ne_kept):
     """kb_constraints is bias-only; memorized ¬e⁻ facts go to ne_constraints.
 
     They used to share one name list, so an NE inflated n_kb (breaking byte-comparison
     with ConMin's ``size``) and entered the description/clause/semantic tiers, whose
     vocabulary is the bias. Asserts BOTH directions — no NE in kb, no bias in ne — so
     a split that merely moves the boundary the wrong way still goes red.
+
+    Run in both regimes. Reduce keeps a ¬e⁻ whose minimal conflict is root-dependent
+    (rs_m) and discharges one that is root-independent (rs_1n) — root sits outside the
+    reduction background by design, so a conflict that needs it is not provably
+    redundant there. A kept-NE cell alone leaves the discard path untested; a
+    discharged-NE cell alone makes the count assertion pass vacuously.
+
+    If acquisition changes character and a cell flips regime, this goes red loudly.
+    That is the good case, and it is why the regime is asserted rather than assumed:
+    the earlier version pinned a cell whose NE always survived, which held only
+    because Reduce could not discharge one at all.
     """
-    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, examples_path)):
         pytest.skip("REAL-FM-7 fixtures not found")
     import json
 
     from conacq.runners import ConGenRunner
 
     bias_names = set(BiasIO.load_from_json(str(BIAS_PATH)).to_constraint_map())
-    ex = json.loads(EXAMPLES_RS_1N_PATH.read_text())
+    ex = json.loads(examples_path.read_text())
     result = ConGenRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=False).run(
         [e["assignments"] for e in ex["positive"]],
         [e["assignments"] for e in ex["negative"]])
@@ -528,9 +547,14 @@ def test_ne_split_out_of_kb_names():
         f"bias names in ne_constraints: {sorted(set(result.ne_constraints) & bias_names)}"
     assert result.n_kb == len(result.kb_constraints)
     assert result.n_ne == len(result.ne_constraints)
-    # This fold memorizes at least one ¬e⁻, so the split is actually exercised —
-    # otherwise the assertions above would pass vacuously on an empty ne list.
-    assert result.n_ne > 0, "expected at least one memorized ¬e⁻ on rs_1n"
+    if ne_kept:
+        assert result.n_ne > 0, (
+            "fixture no longer memorizes a ¬e⁻, so the assertions above pass "
+            "vacuously on an empty ne list — pick a cell whose minimal conflict is "
+            "root-dependent")
+    else:
+        assert result.n_ne == 0 and result.redundant_ne_constraints, (
+            "fixture no longer discharges its ¬e⁻, so the discard path is untested")
 
 
 def test_ne_count_comes_from_the_post_reduce_kb():
@@ -587,9 +611,19 @@ def test_delivered_theory_carries_the_memorized_negatives():
     already reject the training negatives (on every REAL-FM-7 / fqa / arcade-game fold
     measured post-C7 they do, so the full-theory FP count does not discriminate here),
     but ¬e⁻ must reject them BY ITSELF, whatever the bias learned. That fails the moment
-    an NE is dropped, on any fixture.
+    an NE is dropped.
+
+    SCOPE, and it is narrow. rs_m is used because it is the only REAL-FM-7 cell that
+    both keeps its ¬e⁻ through Reduce and has exactly ONE negative. With more than one,
+    the negatives are folded into a single combined assumption whose resolved clause is
+    over an auxiliary variable and carries none of the exclusions — measured on ff
+    ([[732]], rejects 1 of 3), rs_3n ([[796]], 2 of 4) and 2cov ([[720]], 4 of 9). On
+    2cov the DELIVERED theory then accepts 2 of 9 training negatives, violating
+    Definition 6. That defect is in resolution, predates the NE negation fix (verified
+    against reverted code, identical numbers), and is not what this test guards.
+    A green run here therefore does NOT establish Definition 6 in general.
     """
-    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_M_PATH)):
         pytest.skip("REAL-FM-7 fixtures not found")
     import json
 
@@ -597,13 +631,15 @@ def test_delivered_theory_carries_the_memorized_negatives():
     from conacq.oracle import FMOracle
     from conacq.runners import ConGenRunner
 
-    ex = json.loads(EXAMPLES_RS_1N_PATH.read_text())
+    ex = json.loads(EXAMPLES_RS_M_PATH.read_text())
     pos = [e["assignments"] for e in ex["positive"]]
     neg = [e["assignments"] for e in ex["negative"]]
     assert neg, "fixture must have at least one negative or this proves nothing"
 
     result = ConGenRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=False).run(pos, neg)
-    assert result.n_ne > 0, "fixture must memorize at least one ¬e⁻"
+    assert result.n_ne > 0, (
+        "fixture must memorize at least one ¬e⁻ — Reduce discharged it, so pick a cell "
+        "whose minimal conflict is root-dependent")
     assert len(result.ne_clauses) == result.n_ne, "an NE was dropped from the theory"
 
     model = (ConGenModelBuilder.from_bias(str(BIAS_PATH))
@@ -636,12 +672,13 @@ def test_ne_accounting_closes_when_reduce_discards_an_ne():
     redundant_constraints, because the non-bias names were discarded when resolving
     redundant_ids. The NE simply vanished from the output.
 
-    No fixture makes Reduce discard an NE (measured: 0 dropped on all six REAL-FM-7
-    example sets), so the drop is driven synthetically here — moving a real NE id from
-    kb_assumption_ids to redundant_ids is exactly what Reduce does when it finds the NE
-    entailed. Synthetic input, real resolution path: the assertion can fail.
+    Driven synthetically: rs_m KEEPS its ¬e⁻ (its minimal conflict is root-dependent),
+    and moving that NE id from kb_assumption_ids to redundant_ids is exactly what Reduce
+    does when it finds one entailed. Synthetic input, real resolution path, so the
+    assertion can fail. The sibling test below covers the same accounting on a cell
+    where Reduce discards for real.
     """
-    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_M_PATH)):
         pytest.skip("REAL-FM-7 fixtures not found")
     import copy
     import json
@@ -649,7 +686,7 @@ def test_ne_accounting_closes_when_reduce_discards_an_ne():
     from conacq.oracle import FMOracle
     from explanation.checker.backend import SolverBackend, build_checker
 
-    ex = json.loads(EXAMPLES_RS_1N_PATH.read_text())
+    ex = json.loads(EXAMPLES_RS_M_PATH.read_text())
     pos = [e["assignments"] for e in ex["positive"]]
     neg = [e["assignments"] for e in ex["negative"]]
 
@@ -671,7 +708,9 @@ def test_ne_accounting_closes_when_reduce_discards_an_ne():
     n_prepared = len(task.set_neg_tv)
     assert n_prepared > 0, "fixture must prepare an NE or this proves nothing"
     ne_id = task.set_neg_tv[0]
-    assert ne_id in result.kb_assumption_ids, "fixture must keep the NE, to then drop it"
+    assert ne_id in result.kb_assumption_ids, (
+        "fixture must keep the NE, to then drop it — Reduce discharged it, so this "
+        "cell can no longer stage the synthetic drop")
 
     def resolve(res):
         return model.resolve_result(
@@ -692,3 +731,41 @@ def test_ne_accounting_closes_when_reduce_discards_an_ne():
         "an NE discarded by Reduce is not reported anywhere"
     assert len(ne_names2) + len(red_ne2) == n_prepared, \
         f"|KB| accounting does not close: {len(ne_names2)} + {len(red_ne2)} != {n_prepared}"
+
+
+def test_ne_accounting_closes_when_reduce_really_discards_an_ne():
+    """The same accounting, on a cell where Reduce discards the ¬e⁻ for real.
+
+    The sibling above stages the drop by hand because for most of this project's life
+    Reduce could not perform one: it tested the negated NE's auxiliary guard, which is
+    always satisfiable, so every ¬e⁻ survived — 79 of 79 folds with training negatives.
+    rs_1n's minimal conflict is root-independent, so with the negation asserting the
+    example instead of switching off its guard, Reduce now discharges it.
+
+    A discarded ¬e⁻ must still be REPORTED, or it vanishes from the output entirely:
+    not in kb_constraints (correct), not in ne_constraints (built from kept ids), and
+    not in redundant_constraints (bias-filtered). Then prepared != kept + discarded and
+    |KB| stops closing.
+    """
+    if not all(p.exists() for p in (FM_PATH, BIAS_PATH, EXAMPLES_RS_1N_PATH)):
+        pytest.skip("REAL-FM-7 fixtures not found")
+    import json
+
+    from conacq.runners import ConGenRunner
+
+    ex = json.loads(EXAMPLES_RS_1N_PATH.read_text())
+    neg = [e["assignments"] for e in ex["negative"]]
+    assert neg, "fixture must have a negative or this proves nothing"
+
+    result = ConGenRunner(str(BIAS_PATH), str(FM_PATH), use_incremental=False).run(
+        [e["assignments"] for e in ex["positive"]], neg)
+
+    assert result.n_ne == 0, (
+        "Reduce no longer discharges this ¬e⁻ — the real discard path is untested")
+    assert len(result.redundant_ne_constraints) == 1, (
+        "the discarded ¬e⁻ is reported nowhere: "
+        f"n_ne={result.n_ne}, redundant_ne={result.redundant_ne_constraints}")
+    assert result.n_ne + len(result.redundant_ne_constraints) == 1, \
+        "|KB| accounting does not close over the prepared ¬e⁻"
+    # It left kb_constraints too — a discarded NE must not linger as a bias name.
+    assert result.redundant_ne_constraints[0] not in result.kb_constraints

@@ -250,10 +250,31 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
         ne_id = self._combine_ne_constraints(
             set_kb, assumptions, set_neg_tv, provider, neg_tv_ids, descs, alloc)
 
+        per_e_negations: Dict[int, int] = {}
         negated_ne_id = self._create_negated_ne(
-            set_kb, assumptions, provider, ne_id, neg_tv_ids, alloc)
+            set_kb, assumptions, provider, ne_id, neg_tv_ids, alloc,
+            per_e_negations_out=per_e_negations, ne_results=ne_results)
 
         negation_map[ne_id] = negated_ne_id
+
+        # Reduce receives ONE constraint per e-, not the conjunction of all of them.
+        # Combined, redundancy is all-or-nothing over the bundle: a single e- whose
+        # minimal conflict the KB does not entail keeps every other memorized fact
+        # alive with it (measured on REAL-FM-4 rs_3n fold 0 -- 25 of 58 entailed, all
+        # 58 retained). Per-e-, each is tested on its own, so exactly the unentailed
+        # ones survive. Algorithm 3's KB <- B' u NE is a SET UNION, so this is what the
+        # pseudocode already says; the combine was an encoding convenience.
+        #
+        # Each per-e- id also resolves back to its own blocking clause over feature
+        # variables. The combined id resolves to an auxiliary-only clause carrying none
+        # of the exclusions, which is why the delivered theory could accept a training
+        # negative it had memorized.
+        if len(neg_tv_ids) > 1:
+            set_neg_tv[:] = list(neg_tv_ids)
+            for ne in ne_results:
+                assumptions.append(ne.ne_id)
+                provider.add_test_case_description(ne.ne_id, ne.desc)
+            negation_map.update(per_e_negations)
 
     @staticmethod
     def _combine_ne_constraints(
@@ -293,7 +314,8 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
             ne_id: int,
             neg_tv_ids: List[int],
             alloc: AssumptionIdAllocator,
-            per_e_negations_out: Optional[Dict[int, int]] = None
+            per_e_negations_out: Optional[Dict[int, int]] = None,
+            ne_results: Optional[List] = None
     ) -> int:
         """Create negated form of NE for REDUCE.
 
@@ -306,19 +328,35 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
         register per-e⁻ ``negation_map`` entries for the ¬e⁻ fallbacks WITHOUT allocating
         any new ids (Stage-1 golden unchanged).
         """
+        # ``negated_ne_id_i`` must ASSERT e_i, not switch off the clause that blocks it.
+        # It used to emit [-neg_tv_id, -negated_ne_id], i.e. negated_ne_id -> NOT
+        # neg_tv_id, which merely deactivates the blocking clause. Deactivating a guard
+        # is always satisfiable, so Reduce's test BG u (KB \ {NE}) u {NOT NE} was SAT
+        # unconditionally and NE could never be judged redundant — measured: NE survived
+        # on all 79 folds that had negatives, while every one of those negatives was
+        # already entailed by the delivered KB.
+        #
+        # e_i is the conjunction of the minimal-conflict literals, so asserting it is one
+        # clause per literal: negated_ne_id -> l_j. The literals come from the blocking
+        # clause itself, ne_clause = [-l_1 ... -l_k, -ne_id].
+        def _assert_example(negated_id: int, ne) -> None:
+            for lit in ne.ne_clause:
+                if lit != -ne.ne_id:
+                    set_kb.append([-negated_id, -lit])
+
         if len(neg_tv_ids) > 1:
             negated_ne_ids = []
-            for neg_tv_id in neg_tv_ids:
+            for ne in ne_results:
                 negated_ne_id = alloc.allocate()
-                set_kb.append([-neg_tv_id, -negated_ne_id])
+                _assert_example(negated_ne_id, ne)
                 negated_ne_ids.append(negated_ne_id)
                 if per_e_negations_out is not None:
-                    per_e_negations_out[neg_tv_id] = negated_ne_id
+                    per_e_negations_out[ne.ne_id] = negated_ne_id
             negated_ne_id = alloc.allocate()
             set_kb.append(negated_ne_ids + [-negated_ne_id])
         else:
             negated_ne_id = alloc.allocate()
-            set_kb.append([-ne_id, -negated_ne_id])
+            _assert_example(negated_ne_id, ne_results[0])
             if per_e_negations_out is not None:
                 per_e_negations_out[neg_tv_ids[0]] = negated_ne_id
 

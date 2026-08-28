@@ -46,10 +46,14 @@ class KBModel:
         could return a wrong remainder — the P3-Critical bug class) is REFUSED, not
         silently attempted.
 
-        NOTE on the FM/fallback split at the call site: multi-negative per-e⁻ ids are
-        left UNREGISTERED in ``describe`` (only the combined id is), so their
-        ``get_description`` returns ``str(id)`` — never a bias name (which are
-        ``c``-prefixed), so they classify as fallbacks correctly."""
+        NOTE on the FM/fallback split at the call site: per-e⁻ ids are registered in
+        ``describe`` with their own ``NOT(…)`` conflict text, which is never a bias name
+        (those are ``c``-prefixed), so they classify as fallbacks correctly. They used
+        to be left unregistered — only the combined id was — and resolving that combined
+        id returned a clause over an AUXILIARY variable carrying none of the exclusions,
+        so a delivered theory could accept a training negative it had memorized
+        (measured: REAL-FM-7 2cov accepted 2 of 9). Registering each e⁻ separately is
+        what makes the resolved clause a real one over feature variables."""
         neg = negation_map.get(ne_id)
         if neg is None:
             return None  # cannot safely disambiguate ne-clause vs negation clause
