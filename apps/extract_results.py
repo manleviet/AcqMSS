@@ -103,6 +103,10 @@ class CVResult:
     # it tells a reader that a high F1 does not mean the model was recovered.
     exact_equiv_attained: int = 0
     exact_equiv_scored: int = 0
+    # 'congen', or the QuAcq query mode ('example_only' / 'example_first'). Stored
+    # because the three are separate METHODS sharing one (model, strategy, mode) —
+    # without it they overwrite each other in the results dict.
+    method: str = 'congen'
     has_strategy_eval: bool = False
 
 
@@ -110,26 +114,43 @@ class CVResult:
 # Data Loading
 # =============================================================================
 
-_CV_PATTERN = re.compile(r'^(.+)_cv_(incremental|non-incremental)(?:_.+)?\.json$')
+# The trailing group is the QUERY MODE and it is CAPTURED. It used to be discarded, so
+# congen, example_only and example_first parsed to one identical key — and results are
+# stored by that key, so two of the three were silently overwritten by whichever file
+# loaded last. A directory holding all three produced one method's numbers with nothing
+# to say the others had been dropped.
+_CV_PATTERN = re.compile(r'^(.+)_cv_(incremental|non-incremental)(?:_(.+))?\.json$')
+
+_METHOD_CONGEN = 'congen'
 
 
-def parse_filename(filename: str) -> Optional[Tuple[str, str, str]]:
-    """Parse CV result filename → (model, strategy, mode) or None.
+def method_key(mode: str, method: str) -> str:
+    """Storage key for one (mode, method).
 
-    Handles both standard and interactive filenames:
-      model_cv_incremental.json
-      model_cv_incremental_example_only.json
+    ConGen keeps the bare mode, so a ConGen-only results directory — which is every
+    pre-existing caller — behaves exactly as before; the QuAcq methods get keys of
+    their own instead of colliding with it.
+    """
+    return mode if method == _METHOD_CONGEN else f'{mode}::{method}'
+
+
+def parse_filename(filename: str) -> Optional[Tuple[str, str, str, str]]:
+    """Parse CV result filename → (model, strategy, mode, method) or None.
+
+      model_cv_incremental.json                 -> method 'congen'
+      model_cv_incremental_example_only.json    -> method 'example_only'
+      model_cv_incremental_example_first.json   -> method 'example_first'
     """
     m = _CV_PATTERN.match(filename)
     if not m:
         return None
 
-    base, mode = m.group(1), m.group(2)
+    base, mode, method = m.group(1), m.group(2), m.group(3) or _METHOD_CONGEN
 
     for strategy in STRATEGIES:
         if base.endswith(f'_{strategy}'):
             model = base[:-len(f'_{strategy}')]
-            return (model, strategy, mode)
+            return (model, strategy, mode, method)
     return None
 
 
@@ -139,7 +160,7 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
     if not parsed:
         return None
 
-    model, strategy, mode = parsed
+    model, strategy, mode, method = parsed
 
     try:
         with open(filepath) as f:
@@ -199,7 +220,7 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
     equiv = (data.get('summary') or {}).get('exact_equiv') or {}
 
     return CVResult(
-        model=model, strategy=strategy, mode=mode,
+        model=model, strategy=strategy, mode=mode, method=method,
         n_folds=data.get('n_folds', 5),
         mean_accuracy=data.get('mean_accuracy', 0),
         std_accuracy=data.get('std_accuracy', 0),
@@ -307,7 +328,8 @@ def load_all_results(results_dir: Path) -> Dict[str, Dict[str, Dict[str, CVResul
                     result.sem_f1 = sem_eval.get('f1_score', result.sem_f1)
                     result.has_strategy_eval = True
 
-            results.setdefault(result.model, {}).setdefault(result.strategy, {})[result.mode] = result
+            key = method_key(result.mode, result.method)
+            results.setdefault(result.model, {}).setdefault(result.strategy, {})[key] = result
     return results
 
 
@@ -468,6 +490,38 @@ def generate_three_tier_f1_table(results: Dict, mode: str, fmt: str) -> str:
     return _compact_grid_latex(title, "three_tier_f1", results, mode, cell)
 
 
+def methods_present(results: Dict, mode: str) -> List[str]:
+    """Methods holding data for this solver mode, ConGen first then the QuAcq modes."""
+    found = set()
+    for strat_modes in results.values():
+        for modes in strat_modes.values():
+            for key, res in modes.items():
+                if key == mode or key.startswith(f'{mode}::'):
+                    found.add(res.method)
+    order = [_METHOD_CONGEN, 'example_only', 'example_first']
+    return [m for m in order if m in found] + sorted(found - set(order))
+
+
+def select_method(results: Dict, mode: str, method: str) -> Dict:
+    """Re-key one method's entries to the bare ``mode``.
+
+    The grid helpers index by mode, so handing them a single method's slice lets the
+    per-method tables reuse them unchanged rather than growing a fourth axis into a
+    layout that is already KB x sampling.
+    """
+    key = method_key(mode, method)
+    out: Dict = {}
+    for model, strats in results.items():
+        for strat, modes in strats.items():
+            if key in modes:
+                out.setdefault(model, {}).setdefault(strat, {})[mode] = modes[key]
+    return out
+
+
+_METHOD_LABEL = {_METHOD_CONGEN: 'ConGen', 'example_only': 'QuAcq (example-only)',
+                 'example_first': 'QuAcq (example-first)'}
+
+
 def generate_exact_equiv_table(results: Dict, mode: str, fmt: str) -> str:
     """Exact-equivalence attainment, folds attaining / folds scored, per KB x strategy.
 
@@ -476,7 +530,8 @@ def generate_exact_equiv_table(results: Dict, mode: str, fmt: str) -> str:
     and a column of zeros beside high F1 is the honest answer to that question.
     ``--`` marks a cell whose artefacts predate the field, which is not the same as zero.
     """
-    title = "Exact equivalence of the delivered theory (folds attaining / scored)"
+    title = ("Exact equivalence of the delivered theory (folds attaining / scored); "
+             "`--` = not measured, `0/n` = measured and none attained")
     cell = lambda r: (f"{r.exact_equiv_attained}/{r.exact_equiv_scored}"
                       if r.exact_equiv_scored else "--")
     if fmt == 'md':
@@ -830,13 +885,17 @@ def main():
         )
         if has_eval:
             md_content.append(f"\n# Strategy Evaluation ({mode.capitalize()})")
-            # The pair A5 settled on: three-tier F1, then the semantic tier in full.
-            md_content.append("\n" + generate_three_tier_f1_table(results, mode, 'md'))
-            latex_content.append("\n" + generate_three_tier_f1_table(results, mode, 'latex'))
-            md_content.append("\n" + generate_semantic_prf_table(results, mode, 'md'))
-            latex_content.append("\n" + generate_semantic_prf_table(results, mode, 'latex'))
-            md_content.append("\n" + generate_exact_equiv_table(results, mode, 'md'))
-            latex_content.append("\n" + generate_exact_equiv_table(results, mode, 'latex'))
+            # The pair A5 settled on, per METHOD: ConGen and the two QuAcq query modes
+            # are separate conditions, and the ConGen-versus-QuAcq contrast is what makes
+            # the equivalence column informative rather than decorative.
+            for meth in methods_present(results, mode):
+                slice_ = select_method(results, mode, meth)
+                label = _METHOD_LABEL.get(meth, meth)
+                for gen in (generate_three_tier_f1_table, generate_semantic_prf_table,
+                            generate_exact_equiv_table):
+                    md_content.append(f"\n### {label}\n"
+                                      + gen(slice_, mode, 'md'))
+                    latex_content.append("\n" + gen(slice_, mode, 'latex'))
             for eval_strat in ['description', 'clause', 'semantic']:
                 md_content.append("\n" + generate_strategy_eval_table(results, mode, 'md', eval_strat))
                 latex_content.append("\n" + generate_strategy_eval_table(results, mode, 'latex', eval_strat))

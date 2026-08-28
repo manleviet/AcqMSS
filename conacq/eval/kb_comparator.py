@@ -287,7 +287,13 @@ class KBComparator:
         """
         from .semantic_equivalence import SemanticEquivalenceChecker
 
-        # Build KB clause lists from bias (same as clause strategy)
+        # Bias-only, and deliberately so. The tiers ask "did we recover the right
+        # constraints from the bias vocabulary", so a memorized ¬e⁻ (no bias id) and the
+        # root axiom are excluded — they were given, not learned. Exact equivalence asks
+        # a different question, "does the delivered theory behave correctly", and so
+        # INCLUDES both (see run_compare.exact_equivalence). The two disagreeing is the
+        # design, not a defect: making them agree would collapse a two-object contract
+        # into one and destroy whichever question it was made to match.
         kb_clause_lists = []
         for cid in result.kb_constraints:
             if self.bias.has_constraint(cid):

@@ -79,7 +79,10 @@ def exact_equivalence(fold: dict, comparator: KBComparator, bias) -> Optional[bo
     """Is the DELIVERED theory logically equivalent to the target model?
 
     Delivered means Algorithm 3's KB u NE plus the background axiom — not the bias
-    constraints alone, which is what the three tiers score. The tiers exclude the
+    constraints alone, which is what the three tiers score (kb_comparator.py, where the
+    same asymmetry is commented from the other side). Two objects by contract: the tiers
+    measure what was LEARNED from the bias vocabulary and exclude the memorized ¬e⁻ and
+    the root axiom; equivalence measures what was DELIVERED and includes them. The tiers exclude the
     memorized ¬e⁻ deliberately (they measure what was learned), so a theory can score
     below 1 on every tier and still be equivalent, and can score high on all three and
     not be.
