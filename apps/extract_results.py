@@ -16,6 +16,7 @@ import json
 import logging
 import re
 import statistics
+import sys
 import tomllib
 from pathlib import Path
 
@@ -303,7 +304,14 @@ def load_all_results(results_dir: Path) -> Dict[str, Dict[str, Dict[str, CVResul
     Priority: embedded eval in unified JSON > separate *_eval.json > nothing
     """
     results = {}
-    for filepath in results_dir.glob('*_cv_*.json'):
+    # One level down as well as flat. The sweep writes ``<results>/<algorithm>/*.json``,
+    # so a flat glob at the documented ``--results-dir`` matches nothing — and matching
+    # nothing is silent: every table renders with '-' in every cell. That is not
+    # hypothetical. ``paper/tables/results_tables.tex`` has 0 rows with data in every
+    # INCREMENTAL table and full data in every non-incremental one, which is what a run
+    # that saw only part of the tree looks like.
+    for filepath in sorted(list(results_dir.glob('*_cv_*.json'))
+                           + list(results_dir.glob('*/*_cv_*.json'))):
         result = load_cv_result(filepath)
         if result:
             # Only look for external eval if embedded is absent
@@ -825,6 +833,16 @@ def main():
 
     logger.info("Loading results from: %s", results_dir)
     results = load_all_results(results_dir)
+    # Refuse to render nothing. An empty load prints a full set of tables with '-' in
+    # every cell, which is indistinguishable from a genuine table of missing cells and
+    # has already shipped once that way. Fail where the cause is visible.
+    if not results:
+        logger.error(
+            "no CV results under %s — nothing to tabulate. The sweep writes "
+            "<results>/<algorithm>/*_cv_*.json; this searches that level and the flat "
+            "one, so an empty match means the path is wrong or the runs are elsewhere.",
+            results_dir)
+        return 1
 
     # Summary
     logger.info("Loaded results:")
@@ -916,4 +934,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # Propagate the status. main() returns non-zero when it refuses to tabulate an
+    # empty load; dropping that made the refusal invisible to any caller that checks
+    # an exit code, which is the same silent-success shape as rendering a table of
+    # dashes.
+    sys.exit(main() or 0)
