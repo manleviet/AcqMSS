@@ -40,6 +40,41 @@ has a median spread of 0.0297. Semantic recall is the most order-stable quantity
 It is not a uniform multiple, and on the degenerate `2cov` cells (train_pos = 0) the
 ordering reaches semantic harder than it reaches description.
 
+### On the exclude-2-COV basis the pattern sharpens
+
+`apps/make_tables/filters.py:33` makes `exclude_2cov=True` the default aggregation for
+the sibling paper's tables, so reporting Table A on that basis uses an established
+convention rather than inventing one. (The convention is verified in the generator; the
+`appendix.tex:434` citation for it does not resolve — the repo's `paper/` holds
+`evaluation.tex` and PDFs, no `appendix.tex`.)
+
+| tier | metric | mean (all) | mean (excl 2cov) | max (all) | max (excl 2cov) |
+|---|---|---|---|---|---|
+| description | P | 0.1094 | 0.1170 | 0.5182 | 0.5182 |
+| description | R | 0.1106 | 0.1298 | 0.4615 | 0.4615 |
+| clause | P | 0.0915 | 0.0663 | 0.3262 | 0.3262 |
+| clause | R | 0.0744 | 0.0745 | 0.3636 | 0.3636 |
+| semantic | P | 0.0250 | **0.0087** | 0.3650 | **0.0562** |
+| semantic | R | 0.0556 | **0.0114** | 0.8385 | **0.0818** |
+
+Excluding 2cov leaves the description and clause tiers essentially unchanged — identical
+maxima — and collapses the semantic tier: worst-case spread falls from 0.8385 to 0.0818
+on recall and from 0.3650 to 0.0562 on precision. Reversals fall from **7/30 to 2/24**,
+and one of the two is `fqa rs_2n` f2 at 0.0022 semantic against 0.0000 description, which
+is a reversal only in the sense that zero is smaller than a rounding error. The other is
+REAL-FM-4 `rs_1n` f1 (0.0278 description against 0.0818 semantic).
+
+So on the paper's own aggregation basis the defensible statement is stronger than the
+all-cells one and still narrower than the withdrawn 17×:
+
+> Across 24 folds on eight cells and 20 reduction orders each, the semantic tier's
+> worst-case spread is 0.0818 (recall) and 0.0562 (precision), against 0.4615 and 0.5182
+> for the description tier. Semantic recall is unmoved on 18 of 24 folds.
+
+The desc:sem ratio is NOT the right summary on either basis — its median moves only
+2.4× → 2.7× and its range stays 0.0×–21.3×, because a ratio is unstable when the
+denominator is near zero. The max-spread comparison is what carries the claim.
+
 ### Where the shipped run sits
 
 Mean percentile of the shipped result within its own permutation distribution:
@@ -78,9 +113,12 @@ versus from the delivered theory, same folds.
 Over the 42 folds that deliver a ¬e⁻: recall Δ mean **+0.0399**, max **+0.7615**;
 precision Δ mean **+0.0096**, max **+0.1839**. Neither ever falls.
 
-**Every fold that moves lands on recall exactly 1.0000.** On those folds the delivered
-theory entails the whole target model, and the reported figure understates it by between
-0.008 and 0.762. The extreme is arcade `2cov` fold 0, a degenerate cell with
+**Every fold that moves lands on recall exactly 1.0000 — on those 14 folds the delivered
+theory entails the entire target theory.** That is a completeness statement about ConGen,
+reached from a different direction than exact equivalence: exact equivalence additionally
+requires the converse (nothing delivered that the target does not entail), which is why
+only one fold is exactly equivalent while fourteen are complete. The reported figure
+understates the delivered recall by between 0.008 and 0.762. The extreme is arcade `2cov` fold 0, a degenerate cell with
 train_pos = 0 where almost nothing is learned and the memorized negative carries the
 theory.
 
