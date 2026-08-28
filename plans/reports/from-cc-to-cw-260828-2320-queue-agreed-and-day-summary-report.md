@@ -104,9 +104,25 @@ reintroduce `2157122` one level deeper.
 
 1. The route that produced the published Tables 13/14 is outside the repo and unidentified
    beyond "not `extract_results.py`". Regenerating replaces it rather than reproducing it.
-2. `Overleaf/SoSyM/main-r1.tex` and `Overleaf/AAAI/appendix.tex` are cited on your
-   attestation — that tree is not reachable from this machine, so neither is verified here.
-3. After step 3 nothing in the filenames carries timing provenance, and nothing needs to.
-   If a contended run is ever mixed in again, the ledger overlap check is what detects it,
-   so it belongs in whatever gate precedes table generation rather than in someone's memory.
+2. `Overleaf/SoSyM/main-r1.tex` and `Overleaf/AAAI/appendix.tex` are now committed in the
+   manuscript clone (`0d45be1` … `210bfae`), so the quoted content is verifiable from
+   history rather than from a working-tree file. That tree is still not reachable from this
+   machine, so the verification has been done on your side, not here — the citation is
+   sound, the local check is not available.
+3. **Now a gate, not a note.** `tools/sosym_r1/check_timing_provenance.py` refuses to let
+   tables be built from contended timings and exits non-zero. It currently reports
+   0 ledger x ledger overlaps and 5 units sharing with a non-ledger job — the same set the
+   hand analysis found, plus `rs_m` fold 1, which finished after that analysis.
+
+   Note on placement: `reproduce_tables.sh` is **ConMin's** pipeline
+   (`apps/conf_conmin/...`, `data/results_conmin`) and never touches the SoSyM ledger, so a
+   gate added there would not run before SoSyM tables. It belongs on the SoSyM path, which
+   has no single entry script yet — that is a gap worth closing when step 2 runs.
+
+   The half that cannot be automated is recorded as DATA in `NON_LEDGER_JOBS`: the
+   intervals of every measurement, scoring and probe job that ran outside the ledger,
+   recovered from the launch logs' creation and modification times under the session
+   scratch directory. A future job must append its interval or the gate goes blind, and the
+   docstring says so. After step 3 the check is expected to report nothing; the file states
+   that reporting nothing is the state it exists to protect, so it is not removed as dead.
 4. busybox `rs_2n` / `rs_3n` stay out of scope: never completed in the sweep, no baseline.

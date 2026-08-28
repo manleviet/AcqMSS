@@ -22,7 +22,7 @@ from pathlib import Path
 
 from conacq.atomic_io import write_text_atomic
 from apps._harness import build_parser, load_config, setup_logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -104,6 +104,11 @@ class CVResult:
     # it tells a reader that a high F1 does not mean the model was recovered.
     exact_equiv_attained: int = 0
     exact_equiv_scored: int = 0
+    # Per-fold semantic precision/recall/F1, kept alongside the intersected-KB figures.
+    # A published F1 cannot be decomposed back into P and R, and the decomposition is
+    # what says whether a middling score is a theory that is too weak or one that is too
+    # strong. The folds carry it; only the tables dropped it.
+    fold_semantic: List[Dict] = field(default_factory=list)
     # 'congen', or the QuAcq query mode ('example_only' / 'example_first'). Stored
     # because the three are separate METHODS sharing one (model, strategy, mode) —
     # without it they overwrite each other in the results dict.
@@ -219,6 +224,17 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
     clause_eval = intersected_eval.get('clause', {}).get('metrics', {})
     sem_eval = intersected_eval.get('semantic', {}).get('metrics', {})
     equiv = (data.get('summary') or {}).get('exact_equiv') or {}
+    fold_semantic = []
+    for fold in data.get('folds', []):
+        sm = ((fold.get('evaluation') or {}).get('semantic') or {}).get('metrics')
+        if sm:
+            fold_semantic.append({
+                'fold': fold.get('fold_index'),
+                'precision': sm.get('precision', 0.0),
+                'recall': sm.get('recall', 0.0),
+                'f1_score': sm.get('f1_score', 0.0),
+                'exact_equiv': (fold.get('evaluation') or {}).get('exact_equiv'),
+            })
 
     return CVResult(
         model=model, strategy=strategy, mode=mode, method=method,
@@ -257,6 +273,7 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         sem_f1=sem_eval.get('f1_score', 0.0),
         exact_equiv_attained=equiv.get('attained', 0),
         exact_equiv_scored=equiv.get('scored', 0),
+        fold_semantic=fold_semantic,
         has_strategy_eval=has_strategy_eval,
     )
 
@@ -528,6 +545,36 @@ def select_method(results: Dict, mode: str, method: str) -> Dict:
 
 _METHOD_LABEL = {_METHOD_CONGEN: 'ConGen', 'example_only': 'QuAcq (example-only)',
                  'example_first': 'QuAcq (example-first)'}
+
+
+def generate_semantic_folds_md(results: Dict, mode: str) -> str:
+    """Per-fold semantic recall / precision / F1, one row per fold.
+
+    The cell-level tables report the intersected KB, which is one number per cell; this
+    is the fold-level decomposition behind it. Recall leads, per the precision-denominator
+    caveat. ``eq`` is the fold's exact-equivalence verdict: ``1``/``0`` measured,
+    ``--`` not measured.
+    """
+    lines = [f"## Table: Semantic tier per fold — R/P/F1 ({mode.capitalize()} Mode)", "",
+             "| Method | KB | Strategy | Fold | R | P | F1 | eq |",
+             "|:---|:---|:---|---:|---:|---:|---:|:---:|"]
+    rows = 0
+    for model in sorted(results):
+        for strat in sorted(results[model]):
+            for key, r in sorted(results[model][strat].items()):
+                if not (key == mode or key.startswith(f'{mode}::')):
+                    continue
+                for fs in r.fold_semantic:
+                    eq = fs.get('exact_equiv')
+                    lines.append(
+                        f"| {_METHOD_LABEL.get(r.method, r.method)} | {model} | {strat} "
+                        f"| {fs['fold']} | {fs['recall']:.4f} | {fs['precision']:.4f} "
+                        f"| {fs['f1_score']:.4f} "
+                        f"| {'--' if eq is None else int(bool(eq))} |")
+                    rows += 1
+    if not rows:
+        return ""
+    return "\n".join(lines)
 
 
 def generate_exact_equiv_table(results: Dict, mode: str, fmt: str) -> str:
@@ -914,6 +961,9 @@ def main():
                     md_content.append(f"\n### {label}\n"
                                       + gen(slice_, mode, 'md'))
                     latex_content.append("\n" + gen(slice_, mode, 'latex'))
+            folds_md = generate_semantic_folds_md(results, mode)
+            if folds_md:
+                md_content.append("\n" + folds_md)
             for eval_strat in ['description', 'clause', 'semantic']:
                 md_content.append("\n" + generate_strategy_eval_table(results, mode, 'md', eval_strat))
                 latex_content.append("\n" + generate_strategy_eval_table(results, mode, 'latex', eval_strat))
