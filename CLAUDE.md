@@ -57,12 +57,14 @@ PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
 - **Checker building**: Checker is built from a Task via `build_checker(task, backend=...)` (imported from `explanation.api`); models are pure KB containers with no checker protocol
 - **Test control**: `ENABLED_TESTS` and `ENABLED_PARAMS` dicts at top of test files toggle specific tests
 - **Known pytest warnings**: `TestSuiteReader` triggers PytestCollectionWarning (has `__init__`). The `slow` marker is registered in `pyproject.toml` `[tool.pytest.ini_options]`; shared fixtures/paths live in `tests/conftest.py` + `tests/resource_paths.py`.
-- **Suite baseline — `623 passed, 1 skipped`** (624 collected), measured at commit
-  `f3266c7` on 2026-08-23. `../explanation` is `275 passed, 0 skipped` (re-measured
-  the same day, unchanged).
-  (Was `617 passed, 1 skipped` at `37e6537`; the pre-sweep gates added six cases —
-  two for C7's root-axiom split, two for C6's NE/bias name split, two for C10's
-  AdmPoolMSS solver-call accounting.)
+- **Suite baseline — `683 passed, 1 skipped`** (684 collected), measured at commit
+  `c0f448f` on 2026-08-28 under the environment below. `../explanation` is
+  `275 passed, 0 skipped` (measured 2026-08-23, unchanged since).
+  (Was `623 passed, 1 skipped` at `f3266c7` on 2026-08-23. The 60 added cases are
+  the fold-partial resume layer, the semantic-scorer positive control, and the
+  negative-example work: the NE split test now runs in both regimes and a sibling
+  covers the discard path that was unreachable while no memorized fact could be
+  discharged.)
 
   **Record the commit and the environment whenever you move this number.** The
   previous baseline (`507 passed + 1 skipped`) died precisely because neither was
