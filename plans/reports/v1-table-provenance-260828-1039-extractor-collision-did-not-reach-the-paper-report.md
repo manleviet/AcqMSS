@@ -27,15 +27,23 @@ kept example-first. Filesystem order, not a choice.
 
 ## But it never reached the paper — two independent reasons
 
-**1. The published mode-split tables are not extractor output.** `evaluation.tex` builds
-them from row groups — `\multicolumn{5}{l}{\textit{Iterative -- example-only}}` at lines
-339 / 368 / 410 and the example-first counterparts. Nothing in the repo emits that
-structure: `grep -rl "Iterative -- example" apps/ tools/` returns nothing. A collapsed
-load cannot produce a table that distinguishes the two modes, and these do; they were
-assembled by a route outside the repo.
+**1. The published mode-split tables are not extractor output.** They are built from
+hand-written row groups — `\multicolumn{5}{l}{\textit{Iterative -- example-only}}` and its
+example-first counterpart — in `tab:iterative_accuracy` and `tab:iterative_semantic`.
+Nothing in this repo emits that structure: `grep -rl "Iterative -- example" apps/ tools/`
+returns nothing, and that half of the argument is tracked code. A collapsed load cannot
+produce a table distinguishing the two modes, and these do.
 
-**2. The extractor's committed output has no incremental data at all.**
-`paper/tables/results_tables.tex` (untracked, written 2026-07-17):
+*Source discipline.* The local `paper/evaluation.tex` shows the same row groups, but
+`paper/` has **0 tracked files**, so it cannot corroborate anything about the past — it is
+a working-tree artefact of unknown age. The citation of record is
+`Overleaf/SoSyM/main-r1.tex`, which is tracked in the manuscript repository; that tree is
+not reachable from this machine, so it is recorded on Viet-Man's attestation rather than
+verified here.
+
+**2. The extractor's own output has no incremental data at all.**
+`paper/tables/results_tables.tex` — **untracked**, written 2026-07-17, so this is an
+observation about the working tree and carries no history of its own:
 
 | tables | rows with data |
 |---|---|
@@ -64,12 +72,31 @@ Fixed, with both halves falsified:
   **exits 1** (previously `main()`'s status was discarded at the `__main__` guard, so even
   an explicit refusal would have exited 0 — the same silent-success shape).
 
-## What this changes
+## An exit status that reports success while refusing
 
-Nothing for N10's disclosure: no published number is the wrong mode's. The provenance
-statement gains a sentence — the SoSyM chain `run_cv → run_compare → extract_results →
-paper/tables/` was never exercised end to end for v1; the comparison tables came from
-another route, and the extractor's committed output is empty on the incremental half.
+Worth naming on its own. `main()` returned non-zero on the refusal and the `__main__`
+guard discarded it, so an explicit, logged refusal exited **0**. Every wrapper, `&&`
+chain and CI step downstream reads that as success.
+
+It is the same family as `missing = []`, the truthiness filter, the hollow guard test and
+`--diff-filter=D`: a failure that cannot be observed by the thing downstream of it. This
+instance is the worst of them, because the exit code is the channel the other fixes rely
+on to be noticed — a guard that cannot report its own refusal disarms every guard behind
+it.
+
+## What this changes for N10
+
+No published number is the wrong mode's, and staleness is not the sharp end. Both
+`paper/tables/` and `paper/evaluation.tex` are untracked: **the published tables have no
+provenance in the repository at all**, and the route that produced them is not recorded
+anywhere we ship. That is what a reproducibility statement has to say, and it is more
+uncomfortable than "the numbers are stale".
+
+The honest positive belongs in the same paragraph. The revision is the first version in
+which the documented pipeline actually produces the tables: `run_cv → run_compare →
+extract_results → paper/tables/` now runs end to end on the revision's own data, refuses
+loudly when it loads nothing, and exits non-zero when it refuses. That is a real
+improvement to disclose, not a caveat to bury.
 
 ## Unresolved
 
