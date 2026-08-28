@@ -21,7 +21,7 @@ import logging
 import statistics
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from conacq.atomic_io import write_json_atomic
 from apps._harness import setup_logging
@@ -75,6 +75,32 @@ def compare_entry(entry: dict, comparator: KBComparator,
     return eval_dict
 
 
+def exact_equivalence(fold: dict, comparator: KBComparator, bias) -> Optional[bool]:
+    """Is the DELIVERED theory logically equivalent to the target model?
+
+    Delivered means Algorithm 3's KB u NE plus the background axiom — not the bias
+    constraints alone, which is what the three tiers score. The tiers exclude the
+    memorized ¬e⁻ deliberately (they measure what was learned), so a theory can score
+    below 1 on every tier and still be equivalent, and can score high on all three and
+    not be.
+
+    Returns None when the fold predates the ``ne_clauses`` field, so an old artefact
+    reports "not measured" rather than silently claiming a theory it cannot reconstruct.
+    """
+    from conacq.eval.semantic_equivalence import SemanticEquivalenceChecker
+
+    if 'ne_clauses' not in fold:
+        return None
+    ids = [c['id'] if isinstance(c, dict) else c for c in fold.get('kb_constraints', [])]
+    kb = [list(c) for cid in ids if bias.has_constraint(cid)
+          for c in bias.get_clauses(cid)]
+    kb += [list(c) for c in fold.get('ne_clauses', [])]
+    ct = [list(c) for c in comparator.ground_truth.clauses]
+    bg = [list(c) for c in fold.get('bg_clauses', [])]
+    return bool(SemanticEquivalenceChecker(kb_clauses=kb, ct_clauses=ct,
+                                           bg_clauses=bg).check_equivalence().is_equivalent)
+
+
 def _mean_std(values: list) -> dict:
     """Compute mean and population std."""
     if not values:
@@ -102,6 +128,13 @@ def compute_summary(data: dict, strategies: List[ComparationStrategy]) -> dict:
             'recall': _mean_std(recalls),
             'f1_score': _mean_std(f1s),
         }
+    # Attainment counts, not a mean: a rate over 3 folds is less readable than "1/3",
+    # and an all-zero cell is a result to print rather than a gap to hide.
+    verdicts = [f['evaluation'].get('exact_equiv') for f in data.get('folds', [])
+                if isinstance(f.get('evaluation'), dict)]
+    scored = [v for v in verdicts if v is not None]
+    summary['exact_equiv'] = {'attained': sum(1 for v in scored if v),
+                              'scored': len(scored)}
     return summary
 
 
@@ -161,6 +194,7 @@ def compare_model_unified(model, strategies):
             label = f"Fold {fold.get('fold_index', '?')}: "
             fold['evaluation'] = compare_entry(
                 fold, comparator, bias, strategies, label)
+            fold['evaluation']['exact_equiv'] = exact_equivalence(fold, comparator, bias)
 
         # Compare intersected KB
         ik = data.get('intersected_kb', {})
@@ -171,6 +205,11 @@ def compare_model_unified(model, strategies):
         # Compute summary
         data['summary'] = compute_summary(data, strategies)
         for key, vals in data['summary'].items():
+            # summary carries the per-tier P/R/F1 blocks AND the exact-equivalence
+            # counts, which have a different shape. Select by shape, not by name, so a
+            # future non-tier entry does not crash the log line.
+            if 'precision' not in vals:
+                continue
             p, r, f1 = vals['precision'], vals['recall'], vals['f1_score']
             logger.debug("    Summary(%s): "
                          "P=%.4f+/-%.4f, R=%.4f+/-%.4f, F1=%.4f+/-%.4f",

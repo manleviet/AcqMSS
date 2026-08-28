@@ -89,6 +89,20 @@ class CVResult:
     clause_precision: float = 0.0
     clause_recall: float = 0.0
     clause_f1: float = 0.0
+    # Strategy evaluation on intersected KB (semantic strategy). Reported as its own
+    # table rather than as three more columns on the three-tier one: adding P and R to
+    # that table makes it 27 columns, which does not fit even as ``table*``, and moving
+    # Desc/Clause to an appendix to make room would remove the comparison the three-tier
+    # question is about.
+    sem_accuracy: float = 0.0
+    sem_precision: float = 0.0
+    sem_recall: float = 0.0
+    sem_f1: float = 0.0
+    # Exact equivalence of the DELIVERED theory (KB u NE u BG) to the target model,
+    # as folds attaining / folds scored. An all-zero cell is the result, not a gap:
+    # it tells a reader that a high F1 does not mean the model was recovered.
+    exact_equiv_attained: int = 0
+    exact_equiv_scored: int = 0
     has_strategy_eval: bool = False
 
 
@@ -181,6 +195,8 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
     has_strategy_eval = bool(intersected_eval)
     desc_eval = intersected_eval.get('description', {}).get('metrics', {})
     clause_eval = intersected_eval.get('clause', {}).get('metrics', {})
+    sem_eval = intersected_eval.get('semantic', {}).get('metrics', {})
+    equiv = (data.get('summary') or {}).get('exact_equiv') or {}
 
     return CVResult(
         model=model, strategy=strategy, mode=mode,
@@ -213,6 +229,12 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         clause_precision=clause_eval.get('precision', 0.0),
         clause_recall=clause_eval.get('recall', 0.0),
         clause_f1=clause_eval.get('f1_score', 0.0),
+        sem_accuracy=sem_eval.get('accuracy', 0.0),
+        sem_precision=sem_eval.get('precision', 0.0),
+        sem_recall=sem_eval.get('recall', 0.0),
+        sem_f1=sem_eval.get('f1_score', 0.0),
+        exact_equiv_attained=equiv.get('attained', 0),
+        exact_equiv_scored=equiv.get('scored', 0),
         has_strategy_eval=has_strategy_eval,
     )
 
@@ -270,6 +292,7 @@ def load_all_results(results_dir: Path) -> Dict[str, Dict[str, Dict[str, CVResul
                 if ext_eval:
                     desc_eval = ext_eval.get('description', {}).get('metrics', {})
                     clause_eval = ext_eval.get('clause', {}).get('metrics', {})
+                    sem_eval = ext_eval.get('semantic', {}).get('metrics', {})
                     result.desc_accuracy = desc_eval.get('accuracy', result.desc_accuracy)
                     result.desc_precision = desc_eval.get('precision', result.desc_precision)
                     result.desc_recall = desc_eval.get('recall', result.desc_recall)
@@ -278,6 +301,10 @@ def load_all_results(results_dir: Path) -> Dict[str, Dict[str, Dict[str, CVResul
                     result.clause_precision = clause_eval.get('precision', result.clause_precision)
                     result.clause_recall = clause_eval.get('recall', result.clause_recall)
                     result.clause_f1 = clause_eval.get('f1_score', result.clause_f1)
+                    result.sem_accuracy = sem_eval.get('accuracy', result.sem_accuracy)
+                    result.sem_precision = sem_eval.get('precision', result.sem_precision)
+                    result.sem_recall = sem_eval.get('recall', result.sem_recall)
+                    result.sem_f1 = sem_eval.get('f1_score', result.sem_f1)
                     result.has_strategy_eval = True
 
             results.setdefault(result.model, {}).setdefault(result.strategy, {})[result.mode] = result
@@ -402,22 +429,76 @@ def generate_checks_compact(results: Dict, mode: str) -> str:
 
 def generate_strategy_eval_table(results: Dict, mode: str, fmt: str, eval_strategy: str) -> str:
     """Strategy evaluation on intersected KB (Acc/Prec/Rec/F1)."""
-    title = f"Strategy Eval ({eval_strategy.capitalize()}) on Intersected KB"
+    title = f"Strategy Eval ({eval_strategy.capitalize()}) on Intersected KB — R/P/F1"
 
-    if eval_strategy == 'description':
-        cell = lambda r: (
-            f"{r.desc_precision:.2f}/{r.desc_recall:.2f}/{r.desc_f1:.2f}"
-            if r.has_strategy_eval else "-"
-        )
-    else:
-        cell = lambda r: (
-            f"{r.clause_precision:.2f}/{r.clause_recall:.2f}/{r.clause_f1:.2f}"
-            if r.has_strategy_eval else "-"
-        )
+    # Recall first. Semantic precision denominators are not comparable across methods:
+    # the comparator expands a named constraint into its clauses while a learned rule is
+    # one clause, so the expansion factor (1.06-2.03 across the knowledge bases, worst on
+    # fqa) inflates one side's denominator and not the other's. Recall is comparable
+    # throughout, so it leads here and in every table below.
+    _CELL = {
+        'description': lambda r: (r.desc_recall, r.desc_precision, r.desc_f1),
+        'clause': lambda r: (r.clause_recall, r.clause_precision, r.clause_f1),
+        'semantic': lambda r: (r.sem_recall, r.sem_precision, r.sem_f1),
+    }[eval_strategy]
+    cell = lambda r: (
+        "/".join(f"{v:.2f}" for v in _CELL(r)) if r.has_strategy_eval else "-"
+    )
 
     if fmt == 'md':
         return _compact_grid_md(f"Table: {title}", results, mode, cell)
     return _compact_grid_latex(title, f"eval_{eval_strategy}", results, mode, cell)
+
+
+def generate_three_tier_f1_table(results: Dict, mode: str, fmt: str) -> str:
+    """F1 for all three tiers side by side — the comparison the tiers exist to support.
+
+    Kept to F1 alone so the three tiers fit one table. Precision and recall for the
+    semantic tier are carried by ``generate_semantic_prf_table``; adding them here
+    would take the table to 27 columns, and dropping Desc/Clause to make room would
+    remove the very comparison this table is for.
+    """
+    title = "Three-tier F1 on Intersected KB (Desc / Clause / Sem)"
+    cell = lambda r: (
+        f"{r.desc_f1:.2f}/{r.clause_f1:.2f}/{r.sem_f1:.2f}"
+        if r.has_strategy_eval else "-"
+    )
+    if fmt == 'md':
+        return _compact_grid_md(f"Table: {title}", results, mode, cell)
+    return _compact_grid_latex(title, "three_tier_f1", results, mode, cell)
+
+
+def generate_exact_equiv_table(results: Dict, mode: str, fmt: str) -> str:
+    """Exact-equivalence attainment, folds attaining / folds scored, per KB x strategy.
+
+    Reported even when every cell is zero — especially then. F1 answers "how close",
+    and a reader has no way to turn 0.95 into "is this the model?"; this column does,
+    and a column of zeros beside high F1 is the honest answer to that question.
+    ``--`` marks a cell whose artefacts predate the field, which is not the same as zero.
+    """
+    title = "Exact equivalence of the delivered theory (folds attaining / scored)"
+    cell = lambda r: (f"{r.exact_equiv_attained}/{r.exact_equiv_scored}"
+                      if r.exact_equiv_scored else "--")
+    if fmt == 'md':
+        return _compact_grid_md(f"Table: {title}", results, mode, cell)
+    return _compact_grid_latex(title, "exact_equiv", results, mode, cell)
+
+
+def generate_semantic_prf_table(results: Dict, mode: str, fmt: str) -> str:
+    """Recall / precision / F1 for the semantic tier — the second table of the pair.
+
+    Recall leads. The semantic precision denominator is not comparable between methods
+    that deliver named constraints and methods that deliver single clauses, because the
+    comparator expands a constraint into its clauses; recall is comparable throughout.
+    """
+    title = "Semantic tier on Intersected KB — R/P/F1"
+    cell = lambda r: (
+        f"{r.sem_recall:.2f}/{r.sem_precision:.2f}/{r.sem_f1:.2f}"
+        if r.has_strategy_eval else "-"
+    )
+    if fmt == 'md':
+        return _compact_grid_md(f"Table: {title}", results, mode, cell)
+    return _compact_grid_latex(title, "semantic_prf", results, mode, cell)
 
 
 # =============================================================================
@@ -749,7 +830,14 @@ def main():
         )
         if has_eval:
             md_content.append(f"\n# Strategy Evaluation ({mode.capitalize()})")
-            for eval_strat in ['description', 'clause']:
+            # The pair A5 settled on: three-tier F1, then the semantic tier in full.
+            md_content.append("\n" + generate_three_tier_f1_table(results, mode, 'md'))
+            latex_content.append("\n" + generate_three_tier_f1_table(results, mode, 'latex'))
+            md_content.append("\n" + generate_semantic_prf_table(results, mode, 'md'))
+            latex_content.append("\n" + generate_semantic_prf_table(results, mode, 'latex'))
+            md_content.append("\n" + generate_exact_equiv_table(results, mode, 'md'))
+            latex_content.append("\n" + generate_exact_equiv_table(results, mode, 'latex'))
+            for eval_strat in ['description', 'clause', 'semantic']:
                 md_content.append("\n" + generate_strategy_eval_table(results, mode, 'md', eval_strat))
                 latex_content.append("\n" + generate_strategy_eval_table(results, mode, 'latex', eval_strat))
 
