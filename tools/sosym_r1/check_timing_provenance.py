@@ -21,6 +21,13 @@ Two checks, and only the first is automatable from the record alone.
    That is the honest limit of this gate and the reason the list is explicit rather than
    inferred.
 
+THE ANSWER HAS A SHELF LIFE. A unit is only testable once it has BOTH timestamps, so a
+unit still running is invisible to the overlap test and joins the contended set the moment
+it finishes. Read at 01:30 this check said five units; read at 01:55, six — one fold had
+closed its interval in between, under a job that was still running. Re-run it at the moment
+the re-timing list is drawn up. A count carried over from an earlier run is a list that is
+short by however many units finished since, and nothing downstream can tell.
+
 AFTER the 6 contended units are re-timed sequentially this check is expected to pass with
 nothing flagged. It is then a guard against recurrence, NOT leftover cleanup — do not
 remove it because it reports nothing. Reporting nothing is the state it exists to protect.
@@ -79,8 +86,14 @@ def main() -> int:
         return 0
 
     raw = json.loads(Path(args.ledger).read_text()).get('units', {})
-    units = [u for u in (raw.values() if isinstance(raw, dict) else raw)
-             if isinstance(u, dict) and u.get('started_utc') and u.get('finished_utc')]
+    all_units = [u for u in (raw.values() if isinstance(raw, dict) else raw)
+                 if isinstance(u, dict) and u.get('started_utc')]
+    units = [u for u in all_units if u.get('finished_utc')]
+    # Started but not finished: no interval to test yet, so this check cannot see them.
+    # They are named rather than skipped silently — a unit running right now alongside
+    # something else will be contended, and leaving it out of the re-time list is the
+    # error this gate exists to prevent.
+    in_flight = [u['id'] for u in all_units if not u.get('finished_utc')]
     iv = [(_utc(u['started_utc']), _utc(u['finished_utc']), u['id']) for u in units]
 
     pairs = []
@@ -97,15 +110,28 @@ def main() -> int:
             if us < je and js < ue:
                 external.append((uid, what))
 
-    print(f"units with timestamps: {len(iv)}")
-    print(f"ledger x ledger overlaps:      {len(pairs)}")
-    print(f"units sharing with a non-ledger job: {len(external)}")
-    for uid, what in external:
-        print(f"  {uid}  <-> {what}")
+    # external holds (unit, job) PAIRS — one unit can overlap several jobs — so the
+    # re-time list is the DISTINCT units, not the pair count. Conflating the two would
+    # silently shorten or lengthen that list, and nothing downstream would notice.
+    contended = sorted({uid for uid, _ in external})
+    print(f"units with a completed interval: {len(iv)}")
+    print(f"ledger x ledger overlaps (pairs): {len(pairs)}")
+    print(f"unit x non-ledger-job overlaps (pairs): {len(external)}")
+    print(f"DISTINCT UNITS TO RE-TIME: {len(contended)}")
+    for uid in contended:
+        jobs = sorted({w for u, w in external if u == uid})
+        print(f"  {uid}")
+        for w in jobs:
+            print(f"      <-> {w}")
+    if in_flight:
+        print(f"\nstill running, interval not yet closed — check again when they finish: "
+              f"{len(in_flight)}")
+        for uid in in_flight:
+            print(f"  {uid}")
     for a, b in pairs:
         print(f"  OVERLAP {a}  <->  {b}")
 
-    if pairs or external:
+    if pairs or contended or in_flight:
         print("\nFAIL: at least one unit's timing was measured on a shared machine. "
               "Re-time those units alone, or build the runtime table from the units that "
               "were not affected and say so.", file=sys.stderr)
