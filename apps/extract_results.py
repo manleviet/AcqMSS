@@ -127,6 +127,15 @@ class CVResult:
     # apart, and the larger of the two is the one the tables were silent about.
     fold_runtimes_ms: List[float] = field(default_factory=list)
     fold_semantic: List[Dict] = field(default_factory=list)
+    # Positive share of the test split, in BOTH senses, because they differ by 15 points
+    # here and an unlabelled one is a trap. ``pos_share_fold_mean`` is the mean over folds
+    # of each fold's share: that is what an accept-everything knowledge base scores as a
+    # CELL, since the paper's accuracy cell is itself a mean over folds, so it is the
+    # trivial baseline the accuracy numbers must be read against. ``pos_share_pooled``
+    # merges every test example into one set first — a different quantity, comparable to
+    # nothing else in the tables.
+    pos_share_fold_mean: float = 0.0
+    pos_share_pooled: float = 0.0
     # 'congen', or the QuAcq query mode ('example_only' / 'example_first'). Stored
     # because the three are separate METHODS sharing one (model, strategy, mode) —
     # without it they overwrite each other in the results dict.
@@ -264,6 +273,16 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
     intersect_share = (intersect_n / statistics.mean(fold_kb_sizes)
                        if fold_kb_sizes and statistics.mean(fold_kb_sizes) else 0.0)
     equiv = (data.get('summary') or {}).get('exact_equiv') or {}
+    _shares, _P, _N = [], 0, 0
+    for fold in data.get('folds', []):
+        t = fold.get('test_size') or {}
+        pos, neg = t.get('positive', 0), t.get('negative', 0)
+        _P += pos
+        _N += neg
+        if pos + neg:
+            _shares.append(pos / (pos + neg))
+    pos_share_fold_mean = statistics.mean(_shares) if _shares else 0.0
+    pos_share_pooled = _P / (_P + _N) if (_P + _N) else 0.0
     fold_semantic = []
     for fold in data.get('folds', []):
         sm = ((fold.get('evaluation') or {}).get('semantic') or {}).get('metrics')
@@ -325,6 +344,8 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         exact_equiv_attained=equiv.get('attained', 0),
         exact_equiv_scored=equiv.get('scored', 0),
         fold_semantic=fold_semantic,
+        pos_share_fold_mean=pos_share_fold_mean,
+        pos_share_pooled=pos_share_pooled,
         has_strategy_eval=has_strategy_eval,
     )
 
@@ -641,6 +662,38 @@ def generate_semantic_folds_md(results: Dict, mode: str) -> str:
     if not rows:
         return ""
     return "\n".join(lines)
+
+
+def generate_trivial_baseline_md(results: Dict, mode: str) -> str:
+    """The accept-everything baseline each accuracy cell has to beat.
+
+    A knowledge base that accepts every configuration scores, on fold i, exactly that
+    fold's positive share. The paper's accuracy cell is the mean over folds, so the
+    baseline for that cell is the MEAN OF THE FOLD SHARES — not the pooled share, which
+    merges the test splits first and is comparable to nothing else in the tables. Over
+    the ConGen results the two are 74.62% and 89.41%: fifteen points apart, wider than
+    most effects the tables discuss, which is why both are printed and neither is called
+    "the positive share".
+    """
+    lines = [f"## Table: Trivial baseline — accept-everything accuracy ({mode.capitalize()} Mode)",
+             "", "`baseline` = mean over folds of the test split's positive share; an "
+             "accept-everything KB scores exactly this. `pooled` merges the test splits "
+             "first and is shown for reference only — it is not what an accuracy cell is "
+             "compared against.", "",
+             "| Method | KB | Strategy | baseline (fold mean) | pooled | reported accuracy |",
+             "|:---|:---|:---|---:|---:|---:|"]
+    rows = 0
+    for model in sorted(results):
+        for strat in sorted(results[model]):
+            for key, r in sorted(results[model][strat].items()):
+                if not (key == mode or key.startswith(f'{mode}::')):
+                    continue
+                lines.append(
+                    f"| {_METHOD_LABEL.get(r.method, r.method)} | {model} | {strat} "
+                    f"| {r.pos_share_fold_mean:.4f} | {r.pos_share_pooled:.4f} "
+                    f"| {r.mean_accuracy:.4f} |")
+                rows += 1
+    return "\n".join(lines) if rows else ""
 
 
 def generate_fold_agreement_md(results: Dict, mode: str) -> str:
@@ -1089,6 +1142,9 @@ def main():
                     md_content.append(f"\n### {label}\n"
                                       + gen(slice_, mode, 'md'))
                     latex_content.append("\n" + gen(slice_, mode, 'latex'))
+            base_md = generate_trivial_baseline_md(results, mode)
+            if base_md:
+                md_content.append("\n" + base_md)
             agree_md = generate_fold_agreement_md(results, mode)
             if agree_md:
                 md_content.append("\n" + agree_md)
