@@ -99,6 +99,14 @@ class CVResult:
     sem_precision: float = 0.0
     sem_recall: float = 0.0
     sem_f1: float = 0.0
+    # Absolute counts beside the rates. With recall saturated the practitioner-facing
+    # quantity stops being a ratio and becomes a workload: fp is how many delivered
+    # constraints are not entailed by the target and must be reviewed away, fn how many
+    # must still be authored. |Cτ| = tp + fn, so the target size comes free and the
+    # "reached only on the smallest instance" claim becomes checkable from the table.
+    sem_tp: int = 0
+    sem_fp: int = 0
+    sem_fn: int = 0
     # Exact equivalence of the DELIVERED theory (KB u NE u BG) to the target model,
     # as folds attaining / folds scored. An all-zero cell is the result, not a gap:
     # it tells a reader that a high F1 does not mean the model was recovered.
@@ -233,6 +241,9 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
                 'precision': sm.get('precision', 0.0),
                 'recall': sm.get('recall', 0.0),
                 'f1_score': sm.get('f1_score', 0.0),
+                'tp': sm.get('true_positives', 0),
+                'fp': sm.get('false_positives', 0),
+                'fn': sm.get('false_negatives', 0),
                 'exact_equiv': (fold.get('evaluation') or {}).get('exact_equiv'),
             })
 
@@ -271,6 +282,9 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         sem_precision=sem_eval.get('precision', 0.0),
         sem_recall=sem_eval.get('recall', 0.0),
         sem_f1=sem_eval.get('f1_score', 0.0),
+        sem_tp=sem_eval.get('true_positives', 0),
+        sem_fp=sem_eval.get('false_positives', 0),
+        sem_fn=sem_eval.get('false_negatives', 0),
         exact_equiv_attained=equiv.get('attained', 0),
         exact_equiv_scored=equiv.get('scored', 0),
         fold_semantic=fold_semantic,
@@ -351,6 +365,9 @@ def load_all_results(results_dir: Path) -> Dict[str, Dict[str, Dict[str, CVResul
                     result.sem_precision = sem_eval.get('precision', result.sem_precision)
                     result.sem_recall = sem_eval.get('recall', result.sem_recall)
                     result.sem_f1 = sem_eval.get('f1_score', result.sem_f1)
+                    result.sem_tp = sem_eval.get('true_positives', result.sem_tp)
+                    result.sem_fp = sem_eval.get('false_positives', result.sem_fp)
+                    result.sem_fn = sem_eval.get('false_negatives', result.sem_fn)
                     result.has_strategy_eval = True
 
             key = method_key(result.mode, result.method)
@@ -556,8 +573,9 @@ def generate_semantic_folds_md(results: Dict, mode: str) -> str:
     ``--`` not measured.
     """
     lines = [f"## Table: Semantic tier per fold — R/P/F1 ({mode.capitalize()} Mode)", "",
-             "| Method | KB | Strategy | Fold | R | P | F1 | eq |",
-             "|:---|:---|:---|---:|---:|---:|---:|:---:|"]
+             "| Method | KB | Strategy | Fold | \\|Cτ\\| | tp | fp | fn "
+             "| R | P | F1 | eq |",
+             "|:---|:---|:---|---:|---:|---:|---:|---:|---:|---:|---:|:---:|"]
     rows = 0
     for model in sorted(results):
         for strat in sorted(results[model]):
@@ -568,13 +586,45 @@ def generate_semantic_folds_md(results: Dict, mode: str) -> str:
                     eq = fs.get('exact_equiv')
                     lines.append(
                         f"| {_METHOD_LABEL.get(r.method, r.method)} | {model} | {strat} "
-                        f"| {fs['fold']} | {fs['recall']:.4f} | {fs['precision']:.4f} "
+                        f"| {fs['fold']} | {fs['tp'] + fs['fn']} | {fs['tp']} "
+                        f"| {fs['fp']} | {fs['fn']} "
+                        f"| {fs['recall']:.4f} | {fs['precision']:.4f} "
                         f"| {fs['f1_score']:.4f} "
                         f"| {'--' if eq is None else int(bool(eq))} |")
                     rows += 1
     if not rows:
         return ""
     return "\n".join(lines)
+
+
+def generate_semantic_counts_md(results: Dict, mode: str) -> str:
+    """Absolute semantic counts per cell, with the target size.
+
+    Rates alone stop being informative once recall saturates: a precision of 0.50 could
+    be five surplus constraints or five hundred. ``fp`` is the review workload — delivered
+    constraints the target does not entail — and ``fn`` the authoring workload. |Cτ| is
+    ``tp + fn``, so the target size needs no oracle here and the claim that exact
+    equivalence is reached only on the smallest instance can be checked from the table
+    rather than taken on trust.
+    """
+    lines = [f"## Table: Semantic tier — absolute counts ({mode.capitalize()} Mode)", "",
+             "`|Cτ|` = target clauses = tp + fn. `fp` = delivered but not entailed "
+             "(review workload). `fn` = entailed by the target but missing (authoring "
+             "workload).", "",
+             "| Method | KB | Strategy | \|Cτ\| | tp | fp | fn | R | P | F1 |",
+             "|:---|:---|:---|---:|---:|---:|---:|---:|---:|---:|"]
+    rows = 0
+    for model in sorted(results):
+        for strat in sorted(results[model]):
+            for key, r in sorted(results[model][strat].items()):
+                if not (key == mode or key.startswith(f'{mode}::')) or not r.has_strategy_eval:
+                    continue
+                lines.append(
+                    f"| {_METHOD_LABEL.get(r.method, r.method)} | {model} | {strat} "
+                    f"| {r.sem_tp + r.sem_fn} | {r.sem_tp} | {r.sem_fp} | {r.sem_fn} "
+                    f"| {r.sem_recall:.4f} | {r.sem_precision:.4f} | {r.sem_f1:.4f} |")
+                rows += 1
+    return "\n".join(lines) if rows else ""
 
 
 def generate_exact_equiv_table(results: Dict, mode: str, fmt: str) -> str:
@@ -961,6 +1011,9 @@ def main():
                     md_content.append(f"\n### {label}\n"
                                       + gen(slice_, mode, 'md'))
                     latex_content.append("\n" + gen(slice_, mode, 'latex'))
+            counts_md = generate_semantic_counts_md(results, mode)
+            if counts_md:
+                md_content.append("\n" + counts_md)
             folds_md = generate_semantic_folds_md(results, mode)
             if folds_md:
                 md_content.append("\n" + folds_md)
