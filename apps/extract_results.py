@@ -120,6 +120,12 @@ class CVResult:
     # A published F1 cannot be decomposed back into P and R, and the decomposition is
     # what says whether a middling score is a theory that is too weak or one that is too
     # strong. The folds carry it; only the tables dropped it.
+    # Per-fold runtimes, kept so the table can show dispersion. A bare mean is not usable
+    # here: within one cell the folds span a factor of 2.8 (REAL-FM-4 2cov, 1.65 h to
+    # 4.64 h measured on an idle machine), which is an order of magnitude larger than the
+    # ~5% that machine contention costs. A reader given only the mean cannot tell those
+    # apart, and the larger of the two is the one the tables were silent about.
+    fold_runtimes_ms: List[float] = field(default_factory=list)
     fold_semantic: List[Dict] = field(default_factory=list)
     # 'congen', or the QuAcq query mode ('example_only' / 'example_first'). Stored
     # because the three are separate METHODS sharing one (model, strategy, mode) —
@@ -281,6 +287,9 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         fold_accuracies=data.get('fold_accuracies', []),
         runtime_mean_ms=runtime.get('mean_ms', 0),
         runtime_std_ms=runtime.get('std_ms', 0),
+        fold_runtimes_ms=[(f.get('performance') or {}).get('runtime_ms')
+                          for f in data.get('folds', [])
+                          if (f.get('performance') or {}).get('runtime_ms') is not None],
         checks_mean=checks.get('mean', 0),
         checks_std=checks.get('std', 0),
         memory_max_mb=memory.get('max_mb', 0),
@@ -505,12 +514,21 @@ def generate_fold_metrics_table(results: Dict, mode: str, fmt: str) -> str:
 
 
 def generate_runtime_compact(results: Dict, mode: str) -> str:
-    """Compact runtime table (MD only)."""
+    """Compact runtime table, mean with the fold range beneath it (MD only).
+
+    Never a bare mean. Fold-to-fold spread inside a single cell reaches 2.8x, so a mean
+    on its own hides more variation than any effect the tables discuss.
+    """
+    def fmt(ms):
+        return f"{ms/1000:.2f}s" if ms > 1000 else f"{ms:.0f}"
+
     def cell(r):
-        if r.runtime_mean_ms > 1000:
-            return f"{r.runtime_mean_ms/1000:.2f}s"
-        return f"{r.runtime_mean_ms:.0f}"
-    return _compact_grid_md("Table: Runtime (ms)", results, mode, cell, align='---:')
+        if not r.fold_runtimes_ms:
+            return fmt(r.runtime_mean_ms)
+        lo, hi = min(r.fold_runtimes_ms), max(r.fold_runtimes_ms)
+        return f"{fmt(r.runtime_mean_ms)} [{fmt(lo)}–{fmt(hi)}]"
+    return _compact_grid_md("Table: Runtime, mean [min–max over folds]",
+                            results, mode, cell, align='---:')
 
 
 def generate_checks_compact(results: Dict, mode: str) -> str:
