@@ -109,3 +109,31 @@ overwriting.
 1. Nothing in the filenames carries provenance, and after the re-timing nothing needs to.
    If a contended run is ever mixed in again, the ledger overlap check is what detects it,
    so that check belongs in whatever gate precedes table generation.
+
+## Closed 2026-08-29: the re-timing, and what it measured
+
+The six units were re-run sequentially on an idle machine, 02:01:43 to 17:23:27
+(15.36 h). The gate now reports **0 ledger×ledger overlaps, 0 unit×job overlaps, 0 units
+to re-time** — the state the file says it exists to protect.
+
+**The falsification passed before anything was replaced.** All six folds reproduced
+identical `kb_constraints`, `n_kb`, `n_ne`, `n_mss`, accuracy, `n_queries` and
+`convergence_reason`. Only then were the CV files replaced and the ledger's intervals
+rewritten to the clean measurement, each unit carrying a note naming its earlier
+contended figure.
+
+| cell | contended | exclusive | Δ |
+|---|---|---|---|
+| 2cov fold 0 | 4.98 h | 4.64 h | −7% |
+| 2cov fold 1 | 1.86 h | 1.65 h | −11% |
+| 2cov fold 2 | 2.25 h | 2.20 h | −2% |
+| rs_m fold 0 | 3.01 h | 2.71 h | −10% |
+| rs_m fold 1 | 1.78 h | 1.70 h | −4.5% |
+| **rs_m fold 2** | 2.34 h | **2.45 h** | **+4.7%** |
+| total | 16.22 h | **15.36 h** | −5.3% |
+
+**One fold of six ran SLOWER alone.** That is the honest shape of the result: contention
+costs about 5% in aggregate, and that is smaller than the fold-to-fold spread within a
+single cell — 2cov ranges 1.65 h to 4.64 h, a factor of 2.8. So the correction was worth
+making for provenance, not because the numbers were badly wrong, and rs_m fold 2 is the
+measurement that says so rather than a result to explain away.

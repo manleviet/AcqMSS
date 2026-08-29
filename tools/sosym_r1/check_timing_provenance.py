@@ -57,7 +57,7 @@ NON_LEDGER_JOBS = [
     ('2026-08-28 02:04', '2026-08-28 02:10', 'run_compare scoring pass'),
     ('2026-08-28 09:21', '2026-08-28 11:51', 'busybox NE measurement, 3 cells'),
     ('2026-08-28 09:30', '2026-08-28 09:40', 'Reduce order-sensitivity study'),
-    ('2026-08-28 12:29', None, 'busybox rs_1n NE measurement'),  # None = still running
+    ('2026-08-28 12:29', '2026-08-29 01:06', 'busybox rs_1n NE measurement'),
 ]
 
 _LOCAL_OFFSET_H = 2  # Europe/Vienna, CEST
