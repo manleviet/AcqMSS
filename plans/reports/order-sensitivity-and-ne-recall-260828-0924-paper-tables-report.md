@@ -42,11 +42,11 @@ ordering reaches semantic harder than it reaches description.
 
 ### On the exclude-2-COV basis the pattern sharpens
 
-`apps/make_tables/filters.py:33` makes `exclude_2cov=True` the default aggregation for
-the sibling paper's tables, so reporting Table A on that basis uses an established
-convention rather than inventing one. (The convention is verified in the generator; the
-`appendix.tex:434` citation for it does not resolve — the repo's `paper/` holds
-`evaluation.tex` and PDFs, no `appendix.tex`.)
+Two independent warrants, implemented and published: `exclude_2cov=True` is the default
+in `apps/make_tables/filters.py:33`, and ConMin's submitted appendix states the
+convention in the text (`Overleaf/AAAI/appendix.tex:434` — outside this repo, which is
+why a search of `paper/` finds only `evaluation.tex` and PDFs). Adopting it here is
+therefore following an established convention, not inventing one to improve a number.
 
 | tier | metric | mean (all) | mean (excl 2cov) | max (all) | max (excl 2cov) |
 |---|---|---|---|---|---|
@@ -71,9 +71,11 @@ all-cells one and still narrower than the withdrawn 17×:
 > worst-case spread is 0.0818 (recall) and 0.0562 (precision), against 0.4615 and 0.5182
 > for the description tier. Semantic recall is unmoved on 18 of 24 folds.
 
-The desc:sem ratio is NOT the right summary on either basis — its median moves only
-2.4× → 2.7× and its range stays 0.0×–21.3×, because a ratio is unstable when the
-denominator is near zero. The max-spread comparison is what carries the claim.
+**Never state this as a ratio, on any basis.** The desc:sem quotient has median 2.4×
+(all) / 2.7× (excl 2cov) and range 0.0×–21.3× on both, because the denominator approaches
+zero — semantic recall is unmoved on 18 of 24 folds, so the ratio is dividing by noise.
+That is exactly what manufactured the withdrawn 17×. Compare the spreads side by side;
+the max-spread comparison is what carries the claim.
 
 ### Where the shipped run sits
 
