@@ -107,6 +107,10 @@ class CVResult:
     sem_tp: int = 0
     sem_fp: int = 0
     sem_fn: int = 0
+    # Fold-agreement, NOT a quality score: |intersection of the folds' KBs| over the mean
+    # fold KB size. Reported separately and never mixed into the tiers.
+    intersect_n_kb: int = 0
+    intersect_share: float = 0.0
     # Exact equivalence of the DELIVERED theory (KB u NE u BG) to the target model,
     # as folds attaining / folds scored. An all-zero cell is the result, not a gap:
     # it tells a reader that a high F1 does not mean the model was recovered.
@@ -218,19 +222,41 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
     f1_m, f1_s = _mean_std(fold_f1s)
     spec_m, spec_s = _mean_std(fold_specificities)
 
-    # Extract strategy evaluation on intersected KB
-    # Priority: unified format (intersected_kb.evaluation) > old embedded format
+    # A cell is the MEAN OVER FOLDS, not the intersected KB.
+    #
+    # Two different objects were being reported under one name. ``intersected_kb`` is the
+    # set intersection of the folds' knowledge bases; the per-fold mean is what both
+    # papers actually report, and what ``summary.<tier>.f1_score.mean`` holds. They differ
+    # substantially — arcade rs_1n scores 0.524859 as a fold mean and 0.443966
+    # intersected, and it is the fold mean that is in print. The intersection is a subset
+    # of every fold's KB, so its recall can only fall and its value shrinks as the fold
+    # count grows: a quantity that moves with k is not a property of the method, and it is
+    # kept below as a stability statistic rather than a quality score.
+    def _fold_mean(tier: str, key: str) -> float:
+        vals = [((f.get('evaluation') or {}).get(tier) or {}).get('metrics', {}).get(key)
+                for f in data.get('folds', [])]
+        vals = [v for v in vals if v is not None]
+        return statistics.mean(vals) if vals else 0.0
+
+    has_strategy_eval = any((f.get('evaluation') or {}).get('semantic')
+                            or (f.get('evaluation') or {}).get('description')
+                            for f in data.get('folds', []))
+    desc_eval = {k: _fold_mean('description', k) for k in
+                 ('accuracy', 'precision', 'recall', 'f1_score')}
+    clause_eval = {k: _fold_mean('clause', k) for k in
+                   ('accuracy', 'precision', 'recall', 'f1_score')}
+    sem_eval = {k: _fold_mean('semantic', k) for k in
+                ('accuracy', 'precision', 'recall', 'f1_score',
+                 'true_positives', 'false_positives', 'false_negatives')}
+
+    # Retained, relabelled: how much of a delivered KB survives in EVERY fold. It says how
+    # much of the result is an artefact of which examples landed in the training split.
     intersected_data = data.get('intersected_kb', {})
-    if isinstance(intersected_data, dict):
-        intersected_eval = intersected_data.get('evaluation') or {}
-    else:
-        intersected_eval = {}
-    if not intersected_eval:
-        intersected_eval = data.get('intersected_evaluation', {})
-    has_strategy_eval = bool(intersected_eval)
-    desc_eval = intersected_eval.get('description', {}).get('metrics', {})
-    clause_eval = intersected_eval.get('clause', {}).get('metrics', {})
-    sem_eval = intersected_eval.get('semantic', {}).get('metrics', {})
+    intersected_data = intersected_data if isinstance(intersected_data, dict) else {}
+    fold_kb_sizes = [f.get('statistics', {}).get('n_kb', 0) for f in data.get('folds', [])]
+    intersect_n = intersected_data.get('n_kb', 0)
+    intersect_share = (intersect_n / statistics.mean(fold_kb_sizes)
+                       if fold_kb_sizes and statistics.mean(fold_kb_sizes) else 0.0)
     equiv = (data.get('summary') or {}).get('exact_equiv') or {}
     fold_semantic = []
     for fold in data.get('folds', []):
@@ -282,9 +308,11 @@ def load_cv_result(filepath: Path) -> Optional[CVResult]:
         sem_precision=sem_eval.get('precision', 0.0),
         sem_recall=sem_eval.get('recall', 0.0),
         sem_f1=sem_eval.get('f1_score', 0.0),
-        sem_tp=sem_eval.get('true_positives', 0),
-        sem_fp=sem_eval.get('false_positives', 0),
-        sem_fn=sem_eval.get('false_negatives', 0),
+        sem_tp=round(sem_eval.get('true_positives', 0)),
+        sem_fp=round(sem_eval.get('false_positives', 0)),
+        sem_fn=round(sem_eval.get('false_negatives', 0)),
+        intersect_n_kb=intersect_n,
+        intersect_share=intersect_share,
         exact_equiv_attained=equiv.get('attained', 0),
         exact_equiv_scored=equiv.get('scored', 0),
         fold_semantic=fold_semantic,
@@ -595,6 +623,38 @@ def generate_semantic_folds_md(results: Dict, mode: str) -> str:
     if not rows:
         return ""
     return "\n".join(lines)
+
+
+def generate_fold_agreement_md(results: Dict, mode: str) -> str:
+    """How much of a delivered KB survives in EVERY fold — a reliability statistic.
+
+    NOT a quality score, and it must never be mixed into the tiers. The intersection is a
+    subset of every fold's knowledge base, so its recall can only fall, and it shrinks as
+    the fold count grows: a quantity that moves with k is a property of the protocol, not
+    of the method. What it does say is how much of a result is an artefact of which
+    examples happened to land in the training split — 80% agreement and 29% agreement are
+    very different claims about the same reported score.
+    """
+    lines = [f"## Table: Fold agreement ({mode.capitalize()} Mode)", "",
+             "Share of the delivered knowledge base present in ALL folds "
+             "(|intersection| / mean fold |KB|). A reliability statistic, not a quality "
+             "score: the intersection is a subset of every fold's KB, so its recall can "
+             "only fall, and it shrinks as the number of folds grows.", "",
+             "| Method | KB | Strategy | mean \|KB\| | in all folds | agreement |",
+             "|:---|:---|:---|---:|---:|---:|"]
+    rows = 0
+    for model in sorted(results):
+        for strat in sorted(results[model]):
+            for key, r in sorted(results[model][strat].items()):
+                if not (key == mode or key.startswith(f'{mode}::')) or not r.intersect_n_kb:
+                    continue
+                mean_kb = (r.intersect_n_kb / r.intersect_share) if r.intersect_share else 0
+                lines.append(
+                    f"| {_METHOD_LABEL.get(r.method, r.method)} | {model} | {strat} "
+                    f"| {mean_kb:.1f} | {r.intersect_n_kb} "
+                    f"| {r.intersect_share * 100:.0f}% |")
+                rows += 1
+    return "\n".join(lines) if rows else ""
 
 
 def generate_semantic_counts_md(results: Dict, mode: str) -> str:
@@ -1011,6 +1071,9 @@ def main():
                     md_content.append(f"\n### {label}\n"
                                       + gen(slice_, mode, 'md'))
                     latex_content.append("\n" + gen(slice_, mode, 'latex'))
+            agree_md = generate_fold_agreement_md(results, mode)
+            if agree_md:
+                md_content.append("\n" + agree_md)
             counts_md = generate_semantic_counts_md(results, mode)
             if counts_md:
                 md_content.append("\n" + counts_md)
