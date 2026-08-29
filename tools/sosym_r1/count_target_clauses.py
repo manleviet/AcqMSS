@@ -22,6 +22,18 @@ an extraction defect there inflates rather than shifts, which is the shape of a 
 comes out far too large. arcade-game has none, so it cannot exercise that path; busybox,
 fqa and REAL-FM-7 do.
 
+THE VALIDATING INSTANCE MUST BE ABLE TO EXERCISE THE RISKY PATH. The ground-truth question
+was first settled against arcade-game, which has zero alternative groups — so the one term
+that could be wrong, the C(n,2) exclusions, never fired, and a formula missing it entirely
+would have agreed anyway. An independent hand count written without that term returned
+21 / 257 / 971 for REAL-FM-7 / fqa / busybox against the correct 22 / 342 / 994, and
+reproduced arcade-game and REAL-FM-4 exactly, because neither has an alternative group.
+Agreement on an instance that cannot reach the defect is not evidence about the defect.
+
+Two implementations now agree on all five models, and they were written separately with
+different structure — that is what makes the agreement evidence rather than one blind spot
+run twice.
+
     count_target_clauses.py                    # all five knowledge bases
     count_target_clauses.py --fm arcade-game   # one
 """
