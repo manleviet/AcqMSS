@@ -174,6 +174,18 @@ EXAMPLE_FIRST_BY_SAMPLING: Dict[str, float] = {
     'arcade|rs_2n': 0.0991, 'arcade|rs_3n': 0.0991, 'arcade|ff': 0.4359,
     'REAL-FM-4|2cov': 4.0224, 'REAL-FM-4|rs_m': 4.0224, 'REAL-FM-4|rs_1n': 0.3352,
     'REAL-FM-4|rs_2n': 0.3352, 'REAL-FM-4|rs_3n': 0.3352, 'REAL-FM-4|ff': 1.6173,
+    # busybox at the 1,000-query cap. MEASURED, fold 0 of each: 2cov 2.238 h, ff 2.289 h.
+    #
+    # A single fold is a weak basis in general — it is the mistake this table's header
+    # warns about — but here the two cells measured differ by 2% while their example
+    # pools differ 19-fold (2cov has 14 examples, ff has 267). Both stop on max_queries,
+    # never on pool exhaustion, so the cost is the cap times the per-query cost (~8.1 s)
+    # and the sampling barely enters. That is the opposite of arcade, where the pool
+    # governed and one cell missed by 21x. rs_1n and rs_m are carried at the larger of
+    # the two measurements on that reasoning, and the queue records the actual on first
+    # run.
+    'busybox|2cov': 2.238, 'busybox|ff': 2.289,
+    'busybox|rs_1n': 2.289, 'busybox|rs_m': 2.289,
 }
 
 
