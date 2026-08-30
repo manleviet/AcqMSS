@@ -314,6 +314,63 @@ check('2-COV max |E+| over all folds', max_pos, 1)
 check('2-COV folds with no positive TEST example', te_zero, 13)
 
 # ---------------------------------------------------------------------------
+# 8. Cap sensitivity of the iterative baseline. This is the evidence that the
+#    baseline was not starved: the budget was raised 20x and the return per
+#    query collapsed, with nothing converging at any budget.
+#
+#    ⚠ EVERY VALUE HERE IS A PER-FOLD MEAN. Quoting fold 0 understated
+#    REAL-FM-4 (its least responsive fold, 3->4) and overstated arcade (its most
+#    responsive, 10->45) — wrong twice, in opposite directions, which reads as
+#    consistent. That is the fifth instance this week of the same hazard:
+#    fold-0 vs mean, pooled vs mean, intersected vs mean. Quote the aggregation
+#    the paper uses, and say which one it is.
+# ---------------------------------------------------------------------------
+print('\n8. cap sensitivity of the iterative baseline (per-fold means)')
+import re as _re
+
+cap_rows: dict[tuple[str, str], dict[int, float]] = {}
+stop_reasons: dict[str, int] = {}
+for f in sorted(glob.glob(str(REPO / 'data' / 'results_sosym' / 'cap_probe*' / '**' / '*.json'),
+                          recursive=True)):
+    if '/partials/' in f:
+        continue
+    m = _re.search(r'/([^/]+?)_(rs_1n|rs_m|2cov|ff)_example_first_cap(\d+)/', f)
+    if not m:
+        continue
+    try:
+        d = json.load(open(f))
+    except Exception:
+        continue
+    ks = [fo['statistics']['n_kb'] for fo in d.get('folds', [])
+          if fo.get('statistics', {}).get('n_kb') is not None]
+    for fo in d.get('folds', []):
+        cr = fo.get('convergence_reason') or (fo.get('performance') or {}).get('convergence_reason')
+        if cr:
+            stop_reasons[cr] = stop_reasons.get(cr, 0) + 1
+    if ks:
+        cap_rows.setdefault((m.group(1), m.group(2)), {})[int(m.group(3))] = statistics.mean(ks)
+
+for (model, samp), caps in sorted(cap_rows.items()):
+    lo, hi = min(caps), max(caps)
+    print(f'  {model} {samp}: cap {lo} -> {hi}, mean |KB| {caps[lo]:.2f} -> {caps[hi]:.2f}'
+          f'  ({caps[hi] / caps[lo]:.2f}x for {hi // lo}x budget)')
+
+check('REAL-FM-4 rs_1n, mean |KB| at cap 250', cap_rows.get(('REAL-FM-4', 'rs_1n'), {}).get(250, -1), 4.33, tol=0.01)
+check('REAL-FM-4 rs_1n, mean |KB| at cap 5000', cap_rows.get(('REAL-FM-4', 'rs_1n'), {}).get(5000, -1), 12.33, tol=0.01)
+check('arcade rs_1n, mean |KB| at cap 250', cap_rows.get(('arcade-game', 'rs_1n'), {}).get(250, -1), 11.0, tol=0.01)
+check('arcade rs_1n, mean |KB| at cap 5000', cap_rows.get(('arcade-game', 'rs_1n'), {}).get(5000, -1), 32.67, tol=0.01)
+check('fqa rs_1n, doubling 10k -> 20k buys under one constraint',
+      cap_rows.get(('fqa', 'rs_1n'), {}).get(20000, 0) - cap_rows.get(('fqa', 'rs_1n'), {}).get(10000, 0),
+      0.67, tol=0.01)
+
+# The invariant the whole argument rests on: nothing converged, at any budget.
+# If a future probe ever stops for another reason, the "lower bound" framing in
+# A5 and A7 has to be re-examined rather than repeated.
+check('every cap-probe fold stopped on max_queries, none converged',
+      sorted(stop_reasons), ['max_queries'])
+check('   ... folds observed', stop_reasons.get('max_queries', 0), 42)
+
+# ---------------------------------------------------------------------------
 print(f'\n{"=" * 70}')
 if failures:
     print(f'FAIL: {len(failures)} of {checks} numbers no longer match the notes:')
