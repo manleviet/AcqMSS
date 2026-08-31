@@ -7,6 +7,14 @@ writes evaluation and summary back into the same file (idempotent).
 
 CLI mode compares standalone KB files and saves separate eval JSONs.
 
+-o/--output-dir applies to CLI mode ONLY. Config mode ignores it and writes to
+the file named by kb_dir, so -o cannot redirect the output away from the input.
+The way to score without touching the source tree is to copy the CV files
+elsewhere and point kb_dir at the copies -- see make_score_configs.py --cv-dir.
+Worth knowing because a run that re-scores in place leaves the old numbers
+unreproducible from the tree that produced them, and nothing marks that they
+moved.
+
 Usage:
     # Config mode (batch all models — unified CV flow)
     python -m apps.run_compare apps/conf/run_compare_config.toml -v
