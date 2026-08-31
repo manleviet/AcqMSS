@@ -1,3 +1,18 @@
+> **SUPERSEDED 2026-08-31 11:05 — the gap table below reproduces from no tree.**
+> Its "cũ" column reproduces exactly from `data/results`. Its "đúng" column pairs a
+> corrected ConGen column with an **uncorrected** iterative one, so the combination
+> matches neither `data/results_sosym` nor `data/results_sosym_r1`. The tell is visible
+> in the table itself: arcade rs_3n shows the same iterative value under both modes,
+> which is the lost-method-axis signature fixed at `2157122`.
+> Neither exception it names survives re-derivation. REAL-FM-7 2-COV does not invert
+> (+0.3842 / +0.1692, both positive), and arcade RS(3n) does not narrow to +0.4958
+> (+0.4668 example-only, −0.1538 example-first). The fqa control moves on all eight
+> comparisons rather than none. See
+> `corrected-gap-table-260831-1057-mode-collapse-and-the-single-baseline-win-report.md`.
+> Kept unedited as the record of how it happened: the failure was not a wrong value but
+> a PAIRING of objects from two code states, and that is the second time this effort has
+> hit that shape.
+
 # N-item: the structural comparison scored four of five models against the wrong model's ground truth
 
 Date 2026-08-29. Branch `feat/sosym-r1`.
