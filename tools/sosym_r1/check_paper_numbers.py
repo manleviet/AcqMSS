@@ -371,6 +371,63 @@ check('every cap-probe fold stopped on max_queries, none converged',
 check('   ... folds observed', stop_reasons.get('max_queries', 0), 42)
 
 # ---------------------------------------------------------------------------
+# 9. The passive-vs-active comparison, as INVARIANTS. Per-cell gaps are
+#    deliberately NOT asserted: the models do not share a query budget (REAL-FM-7
+#    stops on no_query at 953-2,386, busybox ran at 1,000, the rest at 5,000), so
+#    a gap is only readable beside its own budget. What is asserted here is what
+#    no budget policy can move.
+#
+#    The tree paths are asserted too. The defect this replaces was a PAIRING --
+#    a corrected ConGen column beside an uncorrected iterative one -- so a future
+#    run silently reading a third tree is the failure mode to catch.
+# ---------------------------------------------------------------------------
+print('\n9. passive vs active: the invariants, not the per-cell gaps')
+sys.path.insert(0, str(REPO / 'tools' / 'sosym_r1'))
+from measure_corrected_gap_table import (  # noqa: E402
+    TREES, STEMS, SAMPLINGS, MODES, cell, collapsed, published)
+
+check('OLD tree is data/results', str(TREES['old'].relative_to(REPO)), 'data/results')
+check('NEW tree is data/results_sosym_r1',
+      str(TREES['new'].relative_to(REPO)), 'data/results_sosym_r1')
+
+new_cells = [(st_, sm) for st_ in STEMS for sm in SAMPLINGS
+             if all(cell(TREES['new'], st_, sm, m) for m in MODES)]
+check('cells in NEW', len(new_cells), 28)
+check('of those, published in OLD (correctable)',
+      sum(1 for st_, sm in new_cells if published(st_, sm)), 18)
+
+gaps = {(st_, sm): {m: cell(TREES['new'], st_, sm, m)['gap'] for m in MODES}
+        for st_, sm in new_cells}
+check('cells where the baseline wins in BOTH modes',
+      sum(1 for g in gaps.values() if all(v < 0 for v in g.values())), 0)
+check('cells where example-only beats ConGen',
+      sum(1 for g in gaps.values() if g['example_only'] < 0), 0)
+check('cells where example-first beats ConGen',
+      sum(1 for g in gaps.values() if g['example_first'] < 0), 1)
+
+# Mode collapse: identical iterative F1 under both modes, the lost-method-axis
+# signature. The published comparison was uninformative exactly there.
+old_cells = [(st_, sm) for st_, sm in new_cells if published(st_, sm)]
+check('mode-collapsed cells in OLD', sum(1 for c in old_cells if collapsed(TREES['old'], *c)), 11)
+check('mode-collapsed cells in NEW', sum(1 for c in new_cells if collapsed(TREES['new'], *c)), 0)
+
+# Three stopping rules, three different kinds of fact. no_query is the strong one:
+# the active baseline asked every question available to it and still lost.
+stops: dict = {}
+for _b, _d, fo in folds_of('*_cv_*.json', REPO / 'data' / 'results_sosym_r1' / 'interactive'):
+    r = fo.get('convergence_reason')
+    stops[r] = stops.get(r, 0) + 1
+check('folds stopping on max_queries (budget-limited)', stops.get('max_queries'), 66)
+check('folds stopping on no_query (asked everything available)', stops.get('no_query'), 18)
+check('folds stopping on pool_exhausted (data-limited)', stops.get('pool_exhausted'), 84)
+check('interactive folds total', sum(stops.values()), 168)
+
+# The one number in the comparison no re-score can move.
+cg_with_queries = sum(
+    1 for _b, _d, fo in folds_of('*_cv_*.json', R1) if fo.get('n_queries') is not None)
+check('ConGen folds issuing oracle queries', cg_with_queries, 0)
+
+# ---------------------------------------------------------------------------
 print(f'\n{"=" * 70}')
 if failures:
     print(f'FAIL: {len(failures)} of {checks} numbers no longer match the notes:')

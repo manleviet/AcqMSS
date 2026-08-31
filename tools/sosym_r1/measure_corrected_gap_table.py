@@ -18,10 +18,21 @@ cells are marked: the published active-vs-passive comparison there was uninforma
 rather than merely mis-scored, and the distinction matters when deciding what a
 corrected number overturns.
 
-QUERIES. ConGen issues no oracle queries -- it is passive, and its folds record no
-n_queries at all. The baseline's count is read per fold and averaged. The query axis
-belongs beside the F1s because it is the axis the surviving claim rests on: an equal
-F1 bought with 1,000 queries is not an equal result.
+QUERIES AND STOPPING RULE, together. ConGen issues no oracle queries -- it is passive,
+and its folds record no n_queries at all. The baseline's count is read per fold and
+averaged, and the stopping rule sits beside it because the three rules mean three
+different things and an F1 cannot tell them apart:
+
+    max_queries    (66 folds) budget-limited -- a lower bound, could improve with more
+    no_query       (18 folds) converged: it asked every question available to it
+    pool_exhausted (84 folds) data-limited -- bounded by the example pool, not the budget
+
+A gap at no_query is a stronger result than a gap at max_queries: there, the active
+baseline ran out of questions and still lost.
+
+SCOPE. The correction table covers only the 18 cells that exist in OLD -- those are the
+published ones, the only rows a correction can supersede. busybox and REAL-FM-4 exist
+in NEW alone; they correct nothing and are reported separately as new evidence.
 
     measure_corrected_gap_table.py                 # every cell in both trees
     measure_corrected_gap_table.py --tree new      # the corrected table alone
@@ -81,57 +92,81 @@ def collapsed(tree: Path, stem: str, samp: str) -> bool:
     return a is not None and b is not None and abs(a - b) < 1e-12
 
 
+def published(stem: str, samp: str) -> bool:
+    """Is the whole cell in OLD? Only those can be superseded.
+
+    BOTH halves must exist: data/results/congen carries REAL-FM-4 files with no
+    interactive counterpart, so a congen-only check counts cells whose old gap was
+    never computable and puts un-correctable rows in a correction table.
+    """
+    return _row('old', stem, samp) is not None
+
+
+def _row(tree_name: str, stem: str, samp: str):
+    cs = {m: cell(TREES[tree_name], stem, samp, m) for m in MODES}
+    return None if any(v is None for v in cs.values()) else cs
+
+
+def _fmt(c: dict) -> str:
+    q = f"{c['queries']:.0f}" if c['queries'] is not None else '—'
+    stop = ','.join(sorted(x for x in c['stops'] if x)) or '—'
+    return f"{c['iterative']:7.4f} {c['gap']:+8.4f} {q:>6s} {stop:14s}"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--tree', choices=['old', 'new', 'both'], default='both')
+    ap.add_argument('--section', choices=['correction', 'new', 'wins', 'all'], default='all')
     args = ap.parse_args()
 
-    trees = ['old', 'new'] if args.tree == 'both' else [args.tree]
-    print(f"semantic F1, mean over folds. gap = ConGen - iterative. "
-          f"ConGen issues 0 oracle queries.\n")
-    for name in trees:
-        print(f"{'='*96}\n{name.upper()} = {TREES[name].relative_to(REPO)}\n{'='*96}")
-        print(f"{'cell':26s} {'mode':6s} {'ConGen':>7s} {'iter':>7s} {'gap':>8s} "
-              f"{'iter q':>8s}  stop")
-        for stem in STEMS:
-            for samp in SAMPLINGS:
-                mark = '  [mode-collapsed]' if collapsed(TREES[name], stem, samp) else ''
+    cells = [(s, m) for s in STEMS for m in SAMPLINGS if _row('new', s, m)]
+    hdr = (f"{'cell':22s} {'mode':6s} {'ConGen':>7s} | {'iter':>7s} {'gap':>8s} "
+           f"{'q':>6s} {'stop':14s}")
+
+    if args.section in ('correction', 'all'):
+        pub = [(s, m) for s, m in cells if published(s, m)]
+        print(f"{'='*92}\nCORRECTION TABLE -- the {len(pub)} published cells\n"
+              f"OLD = {TREES['old'].relative_to(REPO)}   "
+              f"NEW = {TREES['new'].relative_to(REPO)}\n{'='*92}")
+        for stem, samp in pub:
+            col = ' [mode-collapsed in OLD]' if collapsed(TREES['old'], stem, samp) else ''
+            print(f"\n{stem} {samp}{col}")
+            print('  ' + hdr)
+            for tree in ('old', 'new'):
+                r = _row(tree, stem, samp)
                 for mode in MODES:
-                    c = cell(TREES[name], stem, samp, mode)
-                    if c is None:
-                        continue
-                    q = f"{c['queries']:8.0f}" if c['queries'] is not None else '       -'
-                    stops = ','.join(sorted(s for s in c['stops'] if s)) or '-'
-                    print(f"{stem+' '+samp:26s} {mode[8:]:6s} {c['congen']:7.4f} "
-                          f"{c['iterative']:7.4f} {c['gap']:+8.4f} {q}  {stops}{mark}")
-                    mark = ''
-        print()
+                    print(f"  {tree.upper():22s} {mode[8:]:6s} "
+                          f"{r[mode]['congen']:7.4f} | {_fmt(r[mode])}")
 
-    # Where does the baseline win, and does it win with a fixed pool or only with an oracle?
-    tree = TREES['new']
-    both, first_only = [], []
-    for stem in STEMS:
-        for samp in SAMPLINGS:
-            cs = {m: cell(tree, stem, samp, m) for m in MODES}
-            if any(v is None for v in cs.values()):
-                continue
-            wins = [m for m in MODES if cs[m]['gap'] < 0]
-            if len(wins) == 2:
-                both.append((stem, samp, cs))
-            elif wins == ['example_first']:
-                first_only.append((stem, samp, cs))
+    if args.section in ('new', 'all'):
+        new = [(s, m) for s, m in cells if not published(s, m)]
+        print(f"\n{'='*92}\nNEW EVIDENCE -- {len(new)} cells absent from OLD, "
+              f"superseding nothing\n{'='*92}")
+        print(hdr)
+        for stem, samp in new:
+            r = _row('new', stem, samp)
+            for mode in MODES:
+                print(f"{stem+' '+samp:22s} {mode[8:]:6s} "
+                      f"{r[mode]['congen']:7.4f} | {_fmt(r[mode])}")
 
-    print(f"{'='*96}\nWHERE THE BASELINE WINS, in NEW\n{'='*96}")
-    print(f"both modes: {len(both)} cells")
-    for stem, samp, cs in both:
-        print(f"  {stem} {samp}: only {cs['example_only']['gap']:+.4f}, "
-              f"first {cs['example_first']['gap']:+.4f}")
-    print(f"example-first only (needs an oracle to win): {len(first_only)} cells")
-    for stem, samp, cs in first_only:
-        print(f"  {stem} {samp}: only {cs['example_only']['gap']:+.4f} "
-              f"({cs['example_only']['queries']:.0f} q), first "
-              f"{cs['example_first']['gap']:+.4f} ({cs['example_first']['queries']:.0f} q)")
+    if args.section in ('wins', 'all'):
+        both = [(s, m) for s, m in cells
+                if all(_row('new', s, m)[x]['gap'] < 0 for x in MODES)]
+        first = [(s, m) for s, m in cells
+                 if _row('new', s, m)['example_only']['gap'] >= 0
+                 and _row('new', s, m)['example_first']['gap'] < 0]
+        print(f"\n{'='*92}\nWHERE THE BASELINE WINS, in NEW ({len(cells)} cells)\n{'='*92}")
+        print(f"both modes: {len(both)}    example-first only: {len(first)}")
+        for stem, samp in first:
+            r = _row('new', stem, samp)
+            print(f"\n  {stem} {samp} -- the win refutes itself on the query axis:")
+            print('  ' + hdr)
+            for mode in MODES:
+                print(f"  {'':22s} {mode[8:]:6s} {r[mode]['congen']:7.4f} | {_fmt(r[mode])}")
+            o, f = r['example_only'], r['example_first']
+            print(f"    the cheap configuration LOSES by {o['gap']:+.4f} at "
+                  f"{o['queries']:.0f} queries; the winning one needs "
+                  f"{f['queries']:.0f} to gain {-f['gap']:.4f}, against ConGen's 0.")
     return 0
 
 
