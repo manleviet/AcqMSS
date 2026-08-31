@@ -152,18 +152,61 @@ Same cell, adjacent rows, one observation: the cheap configuration **loses by +0
 The claim the data supports: **passive beats active-with-a-fixed-pool on all 28 cells, and loses to active-with-an-oracle on exactly one.**
 
 
-## 6. What this breaks
+## 6. What this changes
 
-- Iterative example-first reaches **0.7493** (arcade rs_3n). Any claim the baseline stays below ~0.06 is false against NEW; that figure came from collapsed cells.
+**The defect is not a mis-scored cell. The published tables ran an experiment designed to measure what an oracle buys, and then reported a column that could not measure it.**
 
-- arcade rs_1n gap is **+0.0297**, not an order of magnitude. arcade rs_2n is **+0.0156**.
+The two modes exist to separate two questions: `example_only` shows how QuAcq fares on the same inputs ConGen gets; `example_first` shows what an oracle adds on top. That example-first beats example-only is the *designed purpose* of running both — not a threat to the paper.
 
-- arcade rs_3n example-first is **−0.1538**: ConGen loses.
+But on **11 of 18 published cells the two modes reported the identical F1**, so the oracle benefit read as exactly **+0.0000**. The experiment was run and the answer was discarded by the extractor.
 
-- The fqa control does **not** hold across trees: all 8 comparisons move (−0.0064 to −0.1422). It was +0.0000 only against the collapsed column.
+| cell | oracle benefit, OLD | oracle benefit, NEW |
+|---|---|---|
+| REAL-FM-7 rs_1n | +0.0216 | +0.2012 |
+| REAL-FM-7 rs_2n | +0.0000 ⚠ | +0.1323 |
+| REAL-FM-7 rs_3n | +0.0280 | +0.2373 |
+| REAL-FM-7 rs_m | +0.0000 ⚠ | +0.1454 |
+| REAL-FM-7 2cov | +0.0482 | +0.2150 |
+| REAL-FM-7 ff | +0.0000 ⚠ | +0.1384 |
+| arcade-game rs_1n | +0.0000 ⚠ | +0.5655 |
+| arcade-game rs_2n | +0.0000 ⚠ | +0.4950 |
+| arcade-game rs_3n | +0.0000 ⚠ | +0.6206 |
+| arcade-game rs_m | +0.0000 ⚠ | +0.4605 |
+| arcade-game 2cov | +0.0000 ⚠ | +0.2897 |
+| arcade-game ff | +0.0000 ⚠ | +0.5004 |
+| fqa rs_1n | +0.0110 | +0.1468 |
+| fqa rs_2n | +0.0019 | +0.1382 |
+| fqa rs_3n | +0.0000 ⚠ | +0.1114 |
+| fqa rs_m | +0.0000 ⚠ | +0.1555 |
+| fqa 2cov | +0.0111 | +0.0919 |
+| fqa ff | +0.0218 | +0.1467 |
 
-- Neither exception named in the superseded report survives: REAL-FM-7 2cov does not invert (**+0.3842 / +0.1692**, both positive); arcade rs_3n does not narrow to +0.4958.
+**OLD: 11 of 18 cells show zero benefit. NEW: 0 of 18**, with the benefit ranging **+0.0919 to +0.6206**.
 
+So the 20× rise in the iterative column is not a loss of margin — it is **the oracle benefit becoming visible for the first time**. `example_first` was made to look useless when it is not.
+
+
+### The one wording fix
+
+The abstract's *"consistently below 0.06"* is a claim about **both** modes and is false against NEW:
+
+| | below 0.06, OLD | below 0.06, NEW |
+|---|---|---|
+| example-only | 18/18 | 12/28 |
+| example-first | 15/18 | **0/28** (range 0.0768–0.7493) |
+
+Nearly true of the old tree, which is why it was written. Not one corrected example-first cell falls below 0.06.
+
+
+### What is unaffected — and load-bearing
+
+The query-cost result does not depend on any of the above:
+
+- **example-only never beats ConGen — 0 of 28 cells.**
+
+- The single example-first win costs **5,000 oracle queries against ConGen's zero**, and the same baseline on the same cell loses by +0.4668 at 118 queries.
+
+- On REAL-FM-7 the active baseline **exhausted every askable question** (`no_query`, 18 folds) and still lost, by +0.2014 to +0.3378.
 
 ## Unresolved
 
@@ -171,5 +214,5 @@ The claim the data supports: **passive beats active-with-a-fixed-pool on all 28 
 
 2. OLD records no `n_queries` at all, so the published comparison cannot be restated in query-cost terms.
 
-3. busybox ran at cap 1,000 while the one ConGen-beating cell had 5,000 — busybox is the model most exposed to an "under-resourced baseline" reading. The cap-5,000 busybox rs_1n fold addresses exactly this.
+3. busybox ran at cap 1,000 while the one ConGen-beating cell had 5,000 — busybox is the model most exposed to an "under-resourced baseline" reading. A cap-5,000 busybox rs_1n fold is running to make busybox two budget points instead of one; it stands as a **cap-sensitivity row**, not a cell in the table above, being one fold rather than three.
 

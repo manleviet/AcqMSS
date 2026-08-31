@@ -422,6 +422,23 @@ check('folds stopping on no_query (asked everything available)', stops.get('no_q
 check('folds stopping on pool_exhausted (data-limited)', stops.get('pool_exhausted'), 84)
 check('interactive folds total', sum(stops.values()), 168)
 
+# The abstract's "consistently below 0.06" is a claim about BOTH modes. It was
+# nearly true of the old tree (18/18 example-only, 15/18 example-first) and is
+# false of the corrected one for example-first: not one cell of 28.
+below = {m: sum(1 for st_, sm in new_cells
+                if cell(TREES['new'], st_, sm, m)['iterative'] < 0.06)
+         for m in MODES}
+check('NEW example-first cells with iterative F1 below 0.06', below['example_first'], 0)
+check('NEW example-only cells with iterative F1 below 0.06', below['example_only'], 12)
+
+# The oracle benefit the two modes exist to measure. OLD reported exactly zero of
+# it on the mode-collapsed cells; every corrected cell shows some.
+benefit = [cell(TREES['new'], st_, sm, 'example_first')['iterative']
+           - cell(TREES['new'], st_, sm, 'example_only')['iterative']
+           for st_, sm in new_cells if published(st_, sm)]
+check('published cells showing ZERO oracle benefit, NEW', sum(1 for b in benefit if abs(b) < 1e-12), 0)
+check('smallest oracle benefit across published cells, NEW', min(benefit), 0.0919, tol=1e-3)
+
 # The one number in the comparison no re-score can move.
 cg_with_queries = sum(
     1 for _b, _d, fo in folds_of('*_cv_*.json', R1) if fo.get('n_queries') is not None)
