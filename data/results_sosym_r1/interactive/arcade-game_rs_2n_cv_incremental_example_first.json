@@ -149,19 +149,15 @@
         "fn": [
           {
             "id": null,
-            "description": "PongGameMenu requires Pong"
+            "description": "Pucksupply requires Brickles"
           },
           {
             "id": null,
-            "description": "UseCases --optional--> CheckPreviousBestScore"
+            "description": "UseCases --mandatory--> PlayGame"
           },
           {
             "id": null,
-            "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
-          },
-          {
-            "id": null,
-            "description": "ClassDiagram --optional--> Pucksupply"
+            "description": "BottomPaddle requires Pong"
           },
           {
             "id": null,
@@ -169,47 +165,7 @@
           },
           {
             "id": null,
-            "description": "Rectangle --mandatory--> Size"
-          },
-          {
-            "id": null,
-            "description": "Rectangle --mandatory--> Point"
-          },
-          {
-            "id": null,
-            "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
-          },
-          {
-            "id": null,
-            "description": "Rightpont requires Pong"
-          },
-          {
-            "id": null,
-            "description": "PlayGame --mandatory--> PlayGame_1"
-          },
-          {
-            "id": null,
-            "description": "PlayBowling requires Bowling"
-          },
-          {
-            "id": null,
             "description": "MovableSprite --mandatory--> MovableSprite_2"
-          },
-          {
-            "id": null,
-            "description": "UseCases --mandatory--> SaveGame"
-          },
-          {
-            "id": null,
-            "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
-          },
-          {
-            "id": null,
-            "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
-          },
-          {
-            "id": null,
-            "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
           },
           {
             "id": null,
@@ -217,19 +173,7 @@
           },
           {
             "id": null,
-            "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
-          },
-          {
-            "id": null,
-            "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
-          },
-          {
-            "id": null,
-            "description": "GameSprite --optional--> SpritePair"
-          },
-          {
-            "id": null,
-            "description": "PlayGame --mandatory--> AnimationLoop"
+            "description": "UseCases --optional--> CheckPreviousBestScore"
           },
           {
             "id": null,
@@ -241,11 +185,11 @@
           },
           {
             "id": null,
-            "description": "UseCases --mandatory--> ListGame"
+            "description": "Ceilingpong requires Pong"
           },
           {
             "id": null,
-            "description": "BottomPaddle requires Pong"
+            "description": "PongBoard requires Pong"
           },
           {
             "id": null,
@@ -253,39 +197,7 @@
           },
           {
             "id": null,
-            "description": "MovableSprite --mandatory--> Velocity"
-          },
-          {
-            "id": null,
-            "description": "TopPaddle requires Pong"
-          },
-          {
-            "id": null,
-            "description": "UseCases --mandatory--> InstallGame"
-          },
-          {
-            "id": null,
-            "description": "ScoreBoard requires Pong"
-          },
-          {
-            "id": null,
-            "description": "UseCases --optional--> SaveScore"
-          },
-          {
-            "id": null,
-            "description": "Pucksupply requires Brickles"
-          },
-          {
-            "id": null,
-            "description": "RackofPins requires Bowling"
-          },
-          {
-            "id": null,
-            "description": "Floorpong requires Pong"
-          },
-          {
-            "id": null,
-            "description": "Lane requires Bowling"
+            "description": "GameSprite --mandatory--> GameSprite_3"
           },
           {
             "id": null,
@@ -293,7 +205,39 @@
           },
           {
             "id": null,
+            "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+          },
+          {
+            "id": null,
+            "description": "StationarySprite --optional--> Wall"
+          },
+          {
+            "id": null,
+            "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+          },
+          {
+            "id": null,
+            "description": "ScoreBoard requires Pong"
+          },
+          {
+            "id": null,
+            "description": "BrickPile requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
+          },
+          {
+            "id": null,
             "description": "PlayBrickles requires Brickles"
+          },
+          {
+            "id": null,
+            "description": "Lane requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "Rectangle --mandatory--> Size"
           },
           {
             "id": null,
@@ -301,11 +245,39 @@
           },
           {
             "id": null,
-            "description": "ClassDiagram --mandatory--> Menu"
+            "description": "StationarySprite --mandatory--> StationarySprite_2"
           },
           {
             "id": null,
-            "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            "description": "Rectangle --mandatory--> Point"
+          },
+          {
+            "id": null,
+            "description": "UseCases --mandatory--> InstallGame"
+          },
+          {
+            "id": null,
+            "description": "PlayGame --mandatory--> AnimationLoop"
+          },
+          {
+            "id": null,
+            "description": "PlayPong requires Pong"
+          },
+          {
+            "id": null,
+            "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+          },
+          {
+            "id": null,
+            "description": "PlayBowling requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "GameSprite --optional--> SpritePair"
+          },
+          {
+            "id": null,
+            "description": "Rightbrickles requires Brickles"
           },
           {
             "id": null,
@@ -317,35 +289,15 @@
           },
           {
             "id": null,
-            "description": "PlayPong requires Pong"
+            "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
           },
           {
             "id": null,
-            "description": "BowlingBoard requires Bowling"
+            "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
           },
           {
             "id": null,
-            "description": "PongBoard requires Pong"
-          },
-          {
-            "id": null,
-            "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
-          },
-          {
-            "id": null,
-            "description": "StationarySprite --mandatory--> StationarySprite_2"
-          },
-          {
-            "id": null,
-            "description": "GameSprite --mandatory--> GameSprite_3"
-          },
-          {
-            "id": null,
-            "description": "Leftpong requires Pong"
-          },
-          {
-            "id": null,
-            "description": "Ceilingpong requires Pong"
+            "description": "PlayGame --mandatory--> PlayGame_1"
           },
           {
             "id": null,
@@ -353,27 +305,23 @@
           },
           {
             "id": null,
-            "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            "description": "Floorpong requires Pong"
           },
           {
             "id": null,
-            "description": "Gutter requires Bowling"
+            "description": "PongGameMenu requires Pong"
           },
           {
             "id": null,
-            "description": "BrickPile requires Brickles"
+            "description": "UseCases --optional--> SaveScore"
           },
           {
             "id": null,
-            "description": "StationarySprite --optional--> Wall"
+            "description": "MovableSprite --mandatory--> Velocity"
           },
           {
             "id": null,
-            "description": "PlayGame --mandatory--> Initialization"
-          },
-          {
-            "id": null,
-            "description": "UseCases --mandatory--> PlayGame"
+            "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
           },
           {
             "id": null,
@@ -381,7 +329,59 @@
           },
           {
             "id": null,
-            "description": "Rightbrickles requires Brickles"
+            "description": "ClassDiagram --mandatory--> Menu"
+          },
+          {
+            "id": null,
+            "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+          },
+          {
+            "id": null,
+            "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+          },
+          {
+            "id": null,
+            "description": "BowlingBoard requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "TopPaddle requires Pong"
+          },
+          {
+            "id": null,
+            "description": "RackofPins requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "UseCases --mandatory--> ListGame"
+          },
+          {
+            "id": null,
+            "description": "ClassDiagram --optional--> Pucksupply"
+          },
+          {
+            "id": null,
+            "description": "Rightpont requires Pong"
+          },
+          {
+            "id": null,
+            "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+          },
+          {
+            "id": null,
+            "description": "Gutter requires Bowling"
+          },
+          {
+            "id": null,
+            "description": "UseCases --mandatory--> SaveGame"
+          },
+          {
+            "id": null,
+            "description": "PlayGame --mandatory--> Initialization"
+          },
+          {
+            "id": null,
+            "description": "Leftpong requires Pong"
           }
         ]
       },
@@ -995,43 +995,19 @@
           "fn": [
             {
               "id": null,
-              "description": "PongGameMenu requires Pong"
-            },
-            {
-              "id": null,
-              "description": "UseCases --mandatory--> InstallGame"
-            },
-            {
-              "id": null,
-              "description": "ScoreBoard requires Pong"
-            },
-            {
-              "id": null,
-              "description": "UseCases --optional--> CheckPreviousBestScore"
-            },
-            {
-              "id": null,
-              "description": "UseCases --optional--> SaveScore"
-            },
-            {
-              "id": null,
               "description": "Pucksupply requires Brickles"
             },
             {
               "id": null,
-              "description": "RackofPins requires Bowling"
+              "description": "Rightbrickles requires Brickles"
             },
             {
               "id": null,
-              "description": "Floorpong requires Pong"
+              "description": "UseCases --mandatory--> PlayGame"
             },
             {
               "id": null,
-              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
-            },
-            {
-              "id": null,
-              "description": "ClassDiagram --optional--> Pucksupply"
+              "description": "BottomPaddle requires Pong"
             },
             {
               "id": null,
@@ -1039,91 +1015,7 @@
             },
             {
               "id": null,
-              "description": "Rectangle --mandatory--> Size"
-            },
-            {
-              "id": null,
-              "description": "UseCases --mandatory--> ExitGame"
-            },
-            {
-              "id": null,
-              "description": "Rectangle --mandatory--> Point"
-            },
-            {
-              "id": null,
-              "description": "ClassDiagram --mandatory--> Menu"
-            },
-            {
-              "id": null,
-              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
-            },
-            {
-              "id": null,
-              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
-            },
-            {
-              "id": null,
-              "description": "DividingLine requires Pong"
-            },
-            {
-              "id": null,
-              "description": "Edge requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "PlayPong requires Pong"
-            },
-            {
-              "id": null,
-              "description": "PlayGame --mandatory--> PlayGame_1"
-            },
-            {
-              "id": null,
-              "description": "PlayBowling requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "BowlingBoard requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "PongBoard requires Pong"
-            },
-            {
-              "id": null,
-              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
-            },
-            {
-              "id": null,
               "description": "MovableSprite --mandatory--> MovableSprite_2"
-            },
-            {
-              "id": null,
-              "description": "UseCases --mandatory--> SaveGame"
-            },
-            {
-              "id": null,
-              "description": "StationarySprite --mandatory--> StationarySprite_2"
-            },
-            {
-              "id": null,
-              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
-            },
-            {
-              "id": null,
-              "description": "GameSprite --mandatory--> GameSprite_3"
-            },
-            {
-              "id": null,
-              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
-            },
-            {
-              "id": null,
-              "description": "Leftpong requires Pong"
-            },
-            {
-              "id": null,
-              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
             },
             {
               "id": null,
@@ -1131,23 +1023,7 @@
             },
             {
               "id": null,
-              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
-            },
-            {
-              "id": null,
-              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
-            },
-            {
-              "id": null,
-              "description": "GameSprite --optional--> SpritePair"
-            },
-            {
-              "id": null,
-              "description": "EndofAlley requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+              "description": "UseCases --optional--> CheckPreviousBestScore"
             },
             {
               "id": null,
@@ -1159,15 +1035,23 @@
             },
             {
               "id": null,
-              "description": "UseCases --mandatory--> ListGame"
+              "description": "GameSprite --optional--> SpritePair"
             },
             {
               "id": null,
-              "description": "BrickPile requires Brickles"
+              "description": "Edge requires Bowling"
             },
             {
               "id": null,
-              "description": "BottomPaddle requires Pong"
+              "description": "PongBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "DividingLine requires Pong"
+            },
+            {
+              "id": null,
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
             },
             {
               "id": null,
@@ -1175,11 +1059,47 @@
             },
             {
               "id": null,
+              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
+            },
+            {
+              "id": null,
+              "description": "PlayGame --mandatory--> PlayGame_1"
+            },
+            {
+              "id": null,
+              "description": "GameSprite --mandatory--> GameSprite_3"
+            },
+            {
+              "id": null,
+              "description": "EndofAlley requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": null,
+              "description": "Floorpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "PongGameMenu requires Pong"
+            },
+            {
+              "id": null,
+              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+            },
+            {
+              "id": null,
               "description": "StationarySprite --optional--> Wall"
             },
             {
               "id": null,
-              "description": "UseCases --mandatory--> PlayGame"
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            },
+            {
+              "id": null,
+              "description": "UseCases --optional--> SaveScore"
             },
             {
               "id": null,
@@ -1187,11 +1107,91 @@
             },
             {
               "id": null,
+              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
+            },
+            {
+              "id": null,
+              "description": "ScoreBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "BrickPile requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --mandatory--> Menu"
+            },
+            {
+              "id": null,
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+            },
+            {
+              "id": null,
+              "description": "BowlingBoard requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": null,
               "description": "TopPaddle requires Pong"
             },
             {
               "id": null,
-              "description": "Rightbrickles requires Brickles"
+              "description": "RackofPins requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --optional--> Pucksupply"
+            },
+            {
+              "id": null,
+              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": null,
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> InstallGame"
+            },
+            {
+              "id": null,
+              "description": "Leftpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "PlayPong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+            },
+            {
+              "id": null,
+              "description": "PlayBowling requires Bowling"
             }
           ]
         },
@@ -1482,8 +1482,9 @@
             }
           ]
         },
-        "exact_equiv": null
-      }
+        "exact_equiv": false
+      },
+      "ne_clauses": []
     },
     {
       "fold_index": 1,
@@ -1929,35 +1930,7 @@
           "fn": [
             {
               "id": null,
-              "description": "PongGameMenu requires Pong"
-            },
-            {
-              "id": null,
-              "description": "UseCases --mandatory--> InstallGame"
-            },
-            {
-              "id": null,
-              "description": "ScoreBoard requires Pong"
-            },
-            {
-              "id": null,
-              "description": "UseCases --optional--> CheckPreviousBestScore"
-            },
-            {
-              "id": null,
-              "description": "UseCases --optional--> SaveScore"
-            },
-            {
-              "id": null,
-              "description": "RackofPins requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
-            },
-            {
-              "id": null,
-              "description": "ClassDiagram --optional--> Pucksupply"
+              "description": "UseCases --mandatory--> PlayGame"
             },
             {
               "id": null,
@@ -1965,95 +1938,11 @@
             },
             {
               "id": null,
-              "description": "Lane requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "Rectangle --mandatory--> Size"
-            },
-            {
-              "id": null,
-              "description": "UseCases --mandatory--> ExitGame"
-            },
-            {
-              "id": null,
-              "description": "Rectangle --mandatory--> Point"
-            },
-            {
-              "id": null,
-              "description": "PlayBrickles requires Brickles"
-            },
-            {
-              "id": null,
-              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
-            },
-            {
-              "id": null,
-              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
-            },
-            {
-              "id": null,
-              "description": "Rightpont requires Pong"
-            },
-            {
-              "id": null,
-              "description": "PlayGame --mandatory--> PlayGame_1"
-            },
-            {
-              "id": null,
-              "description": "PongBoard requires Pong"
-            },
-            {
-              "id": null,
               "description": "MovableSprite --mandatory--> MovableSprite_2"
             },
             {
               "id": null,
-              "description": "UseCases --mandatory--> SaveGame"
-            },
-            {
-              "id": null,
-              "description": "StationarySprite --mandatory--> StationarySprite_2"
-            },
-            {
-              "id": null,
-              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
-            },
-            {
-              "id": null,
-              "description": "Leftpong requires Pong"
-            },
-            {
-              "id": null,
-              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
-            },
-            {
-              "id": null,
-              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
-            },
-            {
-              "id": null,
-              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
-            },
-            {
-              "id": null,
-              "description": "GameSprite --optional--> SpritePair"
-            },
-            {
-              "id": null,
-              "description": "EndofAlley requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
-            },
-            {
-              "id": null,
-              "description": "Gutter requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "PlayGame --mandatory--> AnimationLoop"
+              "description": "UseCases --optional--> CheckPreviousBestScore"
             },
             {
               "id": null,
@@ -2061,7 +1950,11 @@
             },
             {
               "id": null,
-              "description": "UseCases --mandatory--> ListGame"
+              "description": "PongBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
             },
             {
               "id": null,
@@ -2069,11 +1962,35 @@
             },
             {
               "id": null,
-              "description": "PlayGame --mandatory--> Initialization"
+              "description": "Board --or--> ['PongBoard', 'BricklesBoard', 'BowlingBoard']"
             },
             {
               "id": null,
-              "description": "UseCases --mandatory--> PlayGame"
+              "description": "PlayGame --mandatory--> PlayGame_1"
+            },
+            {
+              "id": null,
+              "description": "EndofAlley requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": null,
+              "description": "PongGameMenu requires Pong"
+            },
+            {
+              "id": null,
+              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+            },
+            {
+              "id": null,
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
+            },
+            {
+              "id": null,
+              "description": "UseCases --optional--> SaveScore"
             },
             {
               "id": null,
@@ -2081,7 +1998,91 @@
             },
             {
               "id": null,
+              "description": "ScoreBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
+            },
+            {
+              "id": null,
+              "description": "PlayBrickles requires Brickles"
+            },
+            {
+              "id": null,
               "description": "ClassDiagram --mandatory--> Board"
+            },
+            {
+              "id": null,
+              "description": "Lane requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+            },
+            {
+              "id": null,
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": null,
+              "description": "RackofPins requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --optional--> Pucksupply"
+            },
+            {
+              "id": null,
+              "description": "Rightpont requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Gutter requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> InstallGame"
+            },
+            {
+              "id": null,
+              "description": "PlayGame --mandatory--> AnimationLoop"
+            },
+            {
+              "id": null,
+              "description": "PlayGame --mandatory--> Initialization"
+            },
+            {
+              "id": null,
+              "description": "Leftpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "GameSprite --optional--> SpritePair"
             }
           ]
         },
@@ -2416,8 +2417,9 @@
             }
           ]
         },
-        "exact_equiv": null
-      }
+        "exact_equiv": false
+      },
+      "ne_clauses": []
     },
     {
       "fold_index": 2,
@@ -2799,43 +2801,19 @@
           "fn": [
             {
               "id": null,
-              "description": "PongGameMenu requires Pong"
-            },
-            {
-              "id": null,
-              "description": "UseCases --mandatory--> InstallGame"
-            },
-            {
-              "id": null,
-              "description": "ScoreBoard requires Pong"
-            },
-            {
-              "id": null,
-              "description": "UseCases --optional--> CheckPreviousBestScore"
-            },
-            {
-              "id": null,
-              "description": "UseCases --optional--> SaveScore"
-            },
-            {
-              "id": null,
               "description": "Pucksupply requires Brickles"
             },
             {
               "id": null,
-              "description": "RackofPins requires Bowling"
+              "description": "Rightbrickles requires Brickles"
             },
             {
               "id": null,
-              "description": "Floorpong requires Pong"
+              "description": "UseCases --mandatory--> PlayGame"
             },
             {
               "id": null,
-              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
-            },
-            {
-              "id": null,
-              "description": "ClassDiagram --optional--> Pucksupply"
+              "description": "BottomPaddle requires Pong"
             },
             {
               "id": null,
@@ -2843,83 +2821,7 @@
             },
             {
               "id": null,
-              "description": "Rectangle --mandatory--> Size"
-            },
-            {
-              "id": null,
-              "description": "UseCases --mandatory--> ExitGame"
-            },
-            {
-              "id": null,
-              "description": "Rectangle --mandatory--> Point"
-            },
-            {
-              "id": null,
-              "description": "PlayBrickles requires Brickles"
-            },
-            {
-              "id": null,
-              "description": "GameMenu --or--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
-            },
-            {
-              "id": null,
-              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
-            },
-            {
-              "id": null,
-              "description": "Edge requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "DividingLine requires Pong"
-            },
-            {
-              "id": null,
-              "description": "Rightpont requires Pong"
-            },
-            {
-              "id": null,
-              "description": "PlayPong requires Pong"
-            },
-            {
-              "id": null,
-              "description": "PlayGame --mandatory--> PlayGame_1"
-            },
-            {
-              "id": null,
-              "description": "PlayBowling requires Bowling"
-            },
-            {
-              "id": null,
-              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
-            },
-            {
-              "id": null,
               "description": "MovableSprite --mandatory--> MovableSprite_2"
-            },
-            {
-              "id": null,
-              "description": "UseCases --mandatory--> SaveGame"
-            },
-            {
-              "id": null,
-              "description": "StationarySprite --mandatory--> StationarySprite_2"
-            },
-            {
-              "id": null,
-              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
-            },
-            {
-              "id": null,
-              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
-            },
-            {
-              "id": null,
-              "description": "Leftpong requires Pong"
-            },
-            {
-              "id": null,
-              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
             },
             {
               "id": null,
@@ -2927,11 +2829,7 @@
             },
             {
               "id": null,
-              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
-            },
-            {
-              "id": null,
-              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+              "description": "UseCases --optional--> CheckPreviousBestScore"
             },
             {
               "id": null,
@@ -2943,19 +2841,15 @@
             },
             {
               "id": null,
-              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+              "description": "Edge requires Bowling"
             },
             {
               "id": null,
-              "description": "PlayGame --mandatory--> AnimationLoop"
+              "description": "DividingLine requires Pong"
             },
             {
               "id": null,
-              "description": "UseCases --mandatory--> ListGame"
-            },
-            {
-              "id": null,
-              "description": "BottomPaddle requires Pong"
+              "description": "MovableSprite_2 --or--> ['Paddle', 'Puck', 'BowlingBall', 'BowlingPin']"
             },
             {
               "id": null,
@@ -2963,15 +2857,35 @@
             },
             {
               "id": null,
+              "description": "PlayGame --mandatory--> PlayGame_1"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> ExitGame"
+            },
+            {
+              "id": null,
+              "description": "Floorpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "PongGameMenu requires Pong"
+            },
+            {
+              "id": null,
+              "description": "PlayGame_1 --or--> ['PlayBrickles', 'PlayPong', 'PlayBowling']"
+            },
+            {
+              "id": null,
               "description": "StationarySprite --optional--> Wall"
             },
             {
               "id": null,
-              "description": "PlayGame --mandatory--> Initialization"
+              "description": "Wall --or--> ['Leftpong', 'Rightpont', 'Leftbrickles', 'Rightbrickles']"
             },
             {
               "id": null,
-              "description": "UseCases --mandatory--> PlayGame"
+              "description": "UseCases --optional--> SaveScore"
             },
             {
               "id": null,
@@ -2979,11 +2893,99 @@
             },
             {
               "id": null,
+              "description": "(Constraint 5) OR[PlayBowling][NOT[Bowling][]]"
+            },
+            {
+              "id": null,
+              "description": "ScoreBoard requires Pong"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 1) OR[PlayBrickles][NOT[Brickles][]]"
+            },
+            {
+              "id": null,
+              "description": "PlayBrickles requires Brickles"
+            },
+            {
+              "id": null,
+              "description": "StationarySprite_2 --or--> ['Brick', 'BrickPile', 'Ceilingbrickles', 'Floorbrickles', 'Lane', 'Gutter', 'Edge', 'EndofAlley', 'RackofPins', 'ScoreBoard', 'Floorpong', 'Ceilingpong', 'DividingLine']"
+            },
+            {
+              "id": null,
+              "description": "(Constraint 3) OR[PlayPong][NOT[Pong][]]"
+            },
+            {
+              "id": null,
+              "description": "Rectangle --mandatory--> Size"
+            },
+            {
+              "id": null,
+              "description": "GameMenu --or--> ['PongGameMenu', 'BricklesGameMenu', 'BowlingGameMenu']"
+            },
+            {
+              "id": null,
               "description": "TopPaddle requires Pong"
             },
             {
               "id": null,
-              "description": "Rightbrickles requires Brickles"
+              "description": "RackofPins requires Bowling"
+            },
+            {
+              "id": null,
+              "description": "StationarySprite --mandatory--> StationarySprite_2"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> ListGame"
+            },
+            {
+              "id": null,
+              "description": "ClassDiagram --optional--> Pucksupply"
+            },
+            {
+              "id": null,
+              "description": "Rightpont requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Paddle --or--> ['TopPaddle', 'BottomPaddle']"
+            },
+            {
+              "id": null,
+              "description": "Rectangle --mandatory--> Point"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> SaveGame"
+            },
+            {
+              "id": null,
+              "description": "UseCases --mandatory--> InstallGame"
+            },
+            {
+              "id": null,
+              "description": "PlayGame --mandatory--> AnimationLoop"
+            },
+            {
+              "id": null,
+              "description": "PlayGame --mandatory--> Initialization"
+            },
+            {
+              "id": null,
+              "description": "PlayPong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Leftpong requires Pong"
+            },
+            {
+              "id": null,
+              "description": "Menu --or--> ['Pong', 'Brickles', 'Bowling']"
+            },
+            {
+              "id": null,
+              "description": "PlayBowling requires Bowling"
             }
           ]
         },
@@ -3286,8 +3288,9 @@
             }
           ]
         },
-        "exact_equiv": null
-      }
+        "exact_equiv": false
+      },
+      "ne_clauses": []
     }
   ],
   "performance": {
@@ -3480,7 +3483,7 @@
     },
     "exact_equiv": {
       "attained": 0,
-      "scored": 0
+      "scored": 3
     }
   }
 }

@@ -15,12 +15,25 @@ same machinery as the original: a different negative ORDER lets QuickXplain mini
 a different but equally valid conflict, so determinism here is a property of the path,
 not of the algorithm.
 
-Falsification, not inspection: every fold must produce exactly ``train_size.negative``
-NE clauses. Five folds across the sweep have zero training negatives and must produce
-none. A mismatch names the fold and stops.
+This is a RECOVERY path, not the provenance of any committed tree. Since
+cross_validation.py:230 stores ne_clauses natively from the run result, a fold produced
+by current code already carries them and must not be regenerated over.
+
+Two different quantities share the name. GenerateNE produces one blocking clause per
+training negative; Reduce then discharges most of them, and what a fold STORES is what
+survived — ``statistics.n_ne``, which is 1 where 11 negatives were seen. So the
+regeneration invariant is stated against train_size.negative, and the stored field is
+not that number. A fold whose record says n_ne == 0 therefore needs no regeneration at
+all: its NE is empty by record, and filling it reads a stored fact rather than
+recomputing one.
+
+Algorithms differ here. QuAcqTaskInput carries only oracle_data, so the iterative
+baseline never sees an example and cannot memorise one; every interactive fold records
+n_ne == 0 and takes the record path below. Regenerating NE for those folds would
+manufacture a theory the algorithm never delivered.
 
     backfill_ne_clauses.py --dry-run          # check the invariant, write nothing
-    backfill_ne_clauses.py                    # check, then write ne_clauses into folds
+    backfill_ne_clauses.py --cv-dir <dir>     # target a copied tree, never the source
 """
 
 from __future__ import annotations
@@ -140,10 +153,18 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--kbs', nargs='+')
+    ap.add_argument('--cv-dir', required=True,
+                    help="directory of CV files to fill, searched recursively. Required "
+                         "and deliberately so: this tool rewrites what it is pointed at, "
+                         "and the default it used to carry pointed into the tree every "
+                         "comparison in the effort measures against. Point it at copies.")
     args = ap.parse_args()
 
-    cv_files = sorted((REPO / 'data' / 'results_sosym' / 'congen').glob('*_cv_*.json'))
-    failures, checked, written = [], 0, 0
+    cv_files = sorted(Path(args.cv_dir).rglob('*_cv_*.json'))
+    if not cv_files:
+        print(f"no CV files under {args.cv_dir}", file=sys.stderr)
+        return 1
+    failures, checked, written, from_record = [], 0, 0, 0
 
     by_stem: dict = {}
     for cv in cv_files:
@@ -170,13 +191,24 @@ def main() -> int:
                 data = json.loads(cv.read_text())
                 for fold in data['folds']:
                     idx = fold['fold_index']
-                    clauses = ne_clauses_for_fold(model, oracle, pos, neg, fold_data, idx)
-                    expected = fold['train_size']['negative']
                     checked += 1
+
+                    # The record already answers it: no NE survived Reduce, so the
+                    # delivered theory carries none. Reading that beats regenerating,
+                    # which for an algorithm that never memorises would invent clauses
+                    # it did not deliver.
+                    if fold['statistics']['n_ne'] == 0:
+                        fold['ne_clauses'] = []
+                        from_record += 1
+                        continue
+
+                    clauses, _, _ = ne_clauses_for_fold(
+                        model, oracle, pos, neg, fold_data, idx)
+                    expected = fold['train_size']['negative']
                     if len(clauses) != expected:
                         failures.append(
-                            f"{cv.name} fold{idx}: {len(clauses)} NE clauses, "
-                            f"expected {expected} (train negatives)")
+                            f"{cv.name} fold{idx}: regenerated {len(clauses)} NE "
+                            f"clauses, expected {expected} (train negatives)")
                     fold['ne_clauses'] = clauses
                 if not args.dry_run:
                     cv.write_text(json.dumps(data, indent=2))
@@ -187,14 +219,20 @@ def main() -> int:
         finally:
             oracle.cleanup()
 
-    print(f"\nchecked {checked} folds, wrote {written} files"
+    print(f"\nchecked {checked} folds ({from_record} empty by record, "
+          f"{checked - from_record} regenerated), wrote {written} files"
           f"{' (dry run)' if args.dry_run else ''}")
     if failures:
         print(f"\nINVARIANT VIOLATED on {len(failures)} fold(s):")
         for f in failures:
             print(f"  {f}")
         return 1
-    print("invariant holds: every fold produced exactly train_size.negative NE clauses")
+    if checked == from_record:
+        print("nothing regenerated: every fold recorded n_ne == 0, so every ne_clauses "
+              "came from the fold's own record. The invariant below was not exercised.")
+    else:
+        print(f"invariant holds: each of the {checked - from_record} regenerated folds "
+              f"produced exactly train_size.negative NE clauses")
     return 0
 
 

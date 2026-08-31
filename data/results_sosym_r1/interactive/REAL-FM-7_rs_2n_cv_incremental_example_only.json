@@ -177,43 +177,7 @@
             },
             {
               "id": null,
-              "description": "jplug --optional--> gui_builder"
-            },
-            {
-              "id": null,
-              "description": "gui_builder --mandatory--> java"
-            },
-            {
-              "id": null,
               "description": "gui_builder --optional--> qt"
-            },
-            {
-              "id": null,
-              "description": "compiler --or--> ['javac', 'mvc']"
-            },
-            {
-              "id": null,
-              "description": "gui_builder excludes sdi"
-            },
-            {
-              "id": null,
-              "description": "diagram_builder --optional--> petri_net"
-            },
-            {
-              "id": null,
-              "description": "jplug --optional--> model_code_synch"
-            },
-            {
-              "id": null,
-              "description": "model_code_synch requires diagram_builder"
-            },
-            {
-              "id": null,
-              "description": "jplug --optional--> diagram_builder"
-            },
-            {
-              "id": null,
-              "description": "jplug --mandatory--> interface"
             },
             {
               "id": null,
@@ -222,6 +186,42 @@
             {
               "id": null,
               "description": "jplug --optional--> compiler"
+            },
+            {
+              "id": null,
+              "description": "compiler --or--> ['javac', 'mvc']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --optional--> petri_net"
+            },
+            {
+              "id": null,
+              "description": "gui_builder --mandatory--> java"
+            },
+            {
+              "id": null,
+              "description": "gui_builder excludes sdi"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> model_code_synch"
+            },
+            {
+              "id": null,
+              "description": "jplug --mandatory--> interface"
+            },
+            {
+              "id": null,
+              "description": "model_code_synch requires diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> gui_builder"
             }
           ]
         },
@@ -403,8 +403,9 @@
             }
           ]
         },
-        "exact_equiv": null
-      }
+        "exact_equiv": false
+      },
+      "ne_clauses": []
     },
     {
       "fold_index": 1,
@@ -564,43 +565,7 @@
             },
             {
               "id": null,
-              "description": "jplug --optional--> gui_builder"
-            },
-            {
-              "id": null,
-              "description": "gui_builder --mandatory--> java"
-            },
-            {
-              "id": null,
               "description": "gui_builder --optional--> qt"
-            },
-            {
-              "id": null,
-              "description": "compiler --or--> ['javac', 'mvc']"
-            },
-            {
-              "id": null,
-              "description": "gui_builder excludes sdi"
-            },
-            {
-              "id": null,
-              "description": "diagram_builder --optional--> petri_net"
-            },
-            {
-              "id": null,
-              "description": "jplug --optional--> model_code_synch"
-            },
-            {
-              "id": null,
-              "description": "model_code_synch requires diagram_builder"
-            },
-            {
-              "id": null,
-              "description": "jplug --optional--> diagram_builder"
-            },
-            {
-              "id": null,
-              "description": "jplug --mandatory--> interface"
             },
             {
               "id": null,
@@ -609,6 +574,42 @@
             {
               "id": null,
               "description": "jplug --optional--> compiler"
+            },
+            {
+              "id": null,
+              "description": "compiler --or--> ['javac', 'mvc']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --optional--> petri_net"
+            },
+            {
+              "id": null,
+              "description": "gui_builder --mandatory--> java"
+            },
+            {
+              "id": null,
+              "description": "gui_builder excludes sdi"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> model_code_synch"
+            },
+            {
+              "id": null,
+              "description": "jplug --mandatory--> interface"
+            },
+            {
+              "id": null,
+              "description": "model_code_synch requires diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> gui_builder"
             }
           ]
         },
@@ -790,8 +791,9 @@
             }
           ]
         },
-        "exact_equiv": null
-      }
+        "exact_equiv": false
+      },
+      "ne_clauses": []
     },
     {
       "fold_index": 2,
@@ -953,43 +955,7 @@
             },
             {
               "id": null,
-              "description": "jplug --optional--> gui_builder"
-            },
-            {
-              "id": null,
-              "description": "gui_builder --mandatory--> java"
-            },
-            {
-              "id": null,
               "description": "gui_builder --optional--> qt"
-            },
-            {
-              "id": null,
-              "description": "compiler --or--> ['javac', 'mvc']"
-            },
-            {
-              "id": null,
-              "description": "gui_builder excludes sdi"
-            },
-            {
-              "id": null,
-              "description": "diagram_builder --optional--> petri_net"
-            },
-            {
-              "id": null,
-              "description": "jplug --optional--> model_code_synch"
-            },
-            {
-              "id": null,
-              "description": "model_code_synch requires diagram_builder"
-            },
-            {
-              "id": null,
-              "description": "jplug --optional--> diagram_builder"
-            },
-            {
-              "id": null,
-              "description": "jplug --mandatory--> interface"
             },
             {
               "id": null,
@@ -998,6 +964,42 @@
             {
               "id": null,
               "description": "jplug --optional--> compiler"
+            },
+            {
+              "id": null,
+              "description": "compiler --or--> ['javac', 'mvc']"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "diagram_builder --optional--> petri_net"
+            },
+            {
+              "id": null,
+              "description": "gui_builder --mandatory--> java"
+            },
+            {
+              "id": null,
+              "description": "gui_builder excludes sdi"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> model_code_synch"
+            },
+            {
+              "id": null,
+              "description": "jplug --mandatory--> interface"
+            },
+            {
+              "id": null,
+              "description": "model_code_synch requires diagram_builder"
+            },
+            {
+              "id": null,
+              "description": "jplug --optional--> gui_builder"
             }
           ]
         },
@@ -1179,8 +1181,9 @@
             }
           ]
         },
-        "exact_equiv": null
-      }
+        "exact_equiv": false
+      },
+      "ne_clauses": []
     }
   ],
   "performance": {
@@ -1373,7 +1376,7 @@
     },
     "exact_equiv": {
       "attained": 0,
-      "scored": 0
+      "scored": 3
     }
   }
 }
