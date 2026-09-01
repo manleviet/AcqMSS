@@ -478,6 +478,44 @@ cg_with_queries = sum(
 check('ConGen folds issuing oracle queries', cg_with_queries, 0)
 
 # ---------------------------------------------------------------------------
+# 10. C9's significance tests. Asserted through significance_tests.compute() so
+#     the suite checks THOSE numbers, not a second implementation of them.
+#
+#     The invariant that matters is the last one. Claim 2 is excluded from the
+#     Holm family because at n=5 the exact test's floor p is 0.0625, so no
+#     outcome could reach alpha -- it is untestable by design, not a negative
+#     result. If the design ever grows enough instances to make it testable,
+#     that check fails and forces the question, instead of leaving the claim
+#     quietly excluded forever. An absence rendered as a result is the failure
+#     mode this whole effort has been about.
+# ---------------------------------------------------------------------------
+print('\n10. significance: medians, Holm rejections, and what cannot be tested')
+try:
+    from significance_tests import compute as _sig_compute, holm as _holm, floor_p, ALPHA
+except ImportError as exc:                      # scipy absent, or the tool moved
+    failures.append(f'significance tests unavailable ({exc}) -- checks skipped')
+else:
+    sig = {r['name'].split()[0]: r for r in _sig_compute()}
+    for claim, n, med in (('1a', 28, 0.6312), ('1b', 28, 0.3142), ('3', 28, 0.3568),
+                          ('5', 28, 0.1461), ('2', 5, 0.0445)):
+        check(f'claim {claim}: n', sig[claim]['n'], n)
+        check(f'claim {claim}: median difference', sig[claim]['median'], med, tol=5e-5)
+    check('claim 1a wins', sig['1a']['wins'], 28)
+    check('claim 1b wins (the one instance against)', sig['1b']['wins'], 27)
+
+    fam = _holm(_sig_compute())
+    check('claims in the Holm family', len(fam), 4)
+    check('Holm rejections', sum(1 for r in fam if r['reject']), 4)
+    check('Holm adjusted p is non-decreasing (step-down)',
+          all(a['holm'] <= b['holm'] + 1e-18 for a, b in zip(fam, fam[1:])), True)
+
+    # Untestable by design, and it must STAY that way or be re-examined.
+    check('claim 2 is excluded from the family', '2' not in {r['name'].split()[0] for r in fam}, True)
+    check('claim 2 floor p exceeds alpha (cannot reject at any outcome)',
+          floor_p(sig['2']['n']) > ALPHA, True)
+    check('claim 2 floor p', floor_p(sig['2']['n']), 0.0625, tol=1e-9)
+
+# ---------------------------------------------------------------------------
 print(f'\n{"=" * 70}')
 if failures:
     print(f'FAIL: {len(failures)} of {checks} numbers no longer match the notes:')
