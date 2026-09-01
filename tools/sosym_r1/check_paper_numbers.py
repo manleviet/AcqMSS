@@ -30,7 +30,9 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import statistics
+import subprocess
 import sys
 from pathlib import Path
 
@@ -528,6 +530,33 @@ else:
     check('claim 2 floor p exceeds alpha (cannot reject at any outcome)',
           floor_p(sig['2']['n']) > ALPHA, True)
     check('claim 2 floor p', floor_p(sig['2']['n']), 0.0625, tol=1e-9)
+
+# ---------------------------------------------------------------------------
+# 11. The package must work on a machine that is not this one.
+#
+#     score_interactive.toml shipped with 56 kb_dir values hardcoding one
+#     developer's checkout. It was noticed and judged harmless because the run
+#     worked HERE -- which answers whether the path resolves on this machine,
+#     not whether the package resolves anywhere else. The rule below is what
+#     would have caught it without anyone noticing: no tracked config may name
+#     an absolute or home-relative path, on any platform.
+# ---------------------------------------------------------------------------
+print('\n11. portability: no tracked config names a path only this machine has')
+_abs = re.compile(r'=\s*"(?:[/~]|[A-Za-z]:[\\/])')
+try:
+    _tomls = subprocess.run(['git', 'ls-files', '*.toml'], cwd=REPO,
+                            capture_output=True, text=True, check=True).stdout.split()
+except Exception as exc:                        # not a git checkout
+    failures.append(f'portability scan unavailable ({exc}) -- check skipped')
+else:
+    offenders = [t for t in _tomls
+                 if any(_abs.search(ln) for ln in (REPO / t).read_text().splitlines())]
+    check('tracked .toml files scanned', len(_tomls) > 0, True)
+    if offenders:
+        print('   machine-specific paths in:')
+        for o in offenders[:10]:
+            print(f'     {o}')
+    check('tracked configs naming an absolute path', len(offenders), 0)
 
 # ---------------------------------------------------------------------------
 print(f'\n{"=" * 70}')
