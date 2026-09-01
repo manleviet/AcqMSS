@@ -24,7 +24,11 @@ OFFICIAL=1
 
 for a in "$@"; do
   case "$a" in
-    --draft) OFFICIAL=0; TABLES_DIR="/tmp/tables-sosym-draft" ;;
+    # mktemp -d, not a fixed /tmp path: a predictable name can be pre-created by
+    # another user as a symlink, and mkdir -p then succeeds and writes through it.
+    # The cost is that the draft directory changes between runs, so the path is
+    # echoed at both the generate step and DONE.
+    --draft) OFFICIAL=0; TABLES_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tables-sosym-draft.XXXXXX")" ;;
     -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
     *) echo "unknown flag: $a" >&2; exit 2 ;;
   esac
