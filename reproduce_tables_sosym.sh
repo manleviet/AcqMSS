@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# Reproduce every table in the SoSyM revision, end to end, from one command.
+#
+#   ./reproduce_tables_sosym.sh            # from the committed trees   (~1 min)
+#   ./reproduce_tables_sosym.sh --draft    # tables to a scratch dir, nothing official
+#
+# Output: data/results_sosym_r1/tables/ — results_tables.{md,tex}, corrected-gap-table.md,
+#         significance.md, target-clause-counts.md, PROVENANCE.md
+#
+# Every step is gated. The script stops at the first failure and says which one;
+# it never emits tables from inputs it could not verify. Both gates existed before
+# this script and nothing called them, which is why a stale timing figure or a
+# number that had quietly moved could reach a table unchallenged.
+#
+# The sweep is NOT re-runnable from here, deliberately. It took three weeks of
+# machine time and one busybox fold alone is 15.5 h; the acquisition results are
+# committed evidence, not something a table script should be able to overwrite.
+# See tools/sosym_r1/sweep_queue.py if a sweep genuinely has to be redone.
+set -euo pipefail
+
+R1="data/results_sosym_r1"
+TABLES_DIR="$R1/tables"
+OFFICIAL=1
+
+for a in "$@"; do
+  case "$a" in
+    --draft) OFFICIAL=0; TABLES_DIR="/tmp/tables-sosym-draft" ;;
+    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
+    *) echo "unknown flag: $a" >&2; exit 2 ;;
+  esac
+done
+
+cd "$(dirname "$0")"
+export PYTHONPATH=.
+
+say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+die() { printf '\n\033[31mFAILED: %s\033[0m\n' "$*" >&2; exit 1; }
+
+# ---------------------------------------------------------------- 0. environment
+say "0/5  environment"
+python3 -c "import sys; assert sys.version_info >= (3,11), sys.version" \
+  || die "Python >= 3.11 required"
+python3 -c "import explanation, flamapy" 2>/dev/null \
+  || die "the canonical 'explanation' package is not importable — run: pip install -e ../explanation"
+python3 -c "import conacq" 2>/dev/null || die "conacq not importable (run from the repo root)"
+python3 -c "import scipy" 2>/dev/null \
+  || die "scipy missing — the significance tests and 18 of the verifier's checks need it (pip install -e .)"
+echo "  ok: $(python3 -V), explanation + conacq + scipy importable"
+
+# ---------------------------------------------------------------- 1. the evidence
+say "1/5  the two trees this revision rests on"
+# OLD and NEW are the pairing the N item rests on, and their paths are asserted by
+# the verifier. Named here so a reader sees which is which before any table appears.
+[ -d "data/results" ] \
+  || die "data/results missing — that is OLD, the tree the published tables came from"
+{ [ -d "$R1/congen" ] && [ -d "$R1/interactive" ]; } \
+  || die "$R1 incomplete — that is NEW, the re-scored tree"
+echo "  OLD = data/results        $(ls data/results/congen/*_cv_*.json 2>/dev/null | wc -l | tr -d ' ') congen, $(ls data/results/interactive/*_cv_*.json 2>/dev/null | wc -l | tr -d ' ') interactive"
+echo "  NEW = $R1  $(ls $R1/congen/*_cv_*.json | wc -l | tr -d ' ') congen, $(ls $R1/interactive/*_cv_*.json | wc -l | tr -d ' ') interactive"
+
+# ---------------------------------------------------------------- 2. timing gate
+say "2/5  timing provenance gate"
+echo "  Refuses a timing figure measured while another sweep unit was in flight."
+python3 tools/sosym_r1/check_timing_provenance.py \
+  || die "timing provenance — a reported runtime overlaps another run; re-time those units first"
+
+# ---------------------------------------------------------------- 3. numbers gate
+say "3/5  paper-numbers gate"
+echo "  Every number quoted in the revision, recomputed from the committed data."
+python3 tools/sosym_r1/check_paper_numbers.py \
+  || die "paper numbers — a quoted number no longer reproduces. Update the note to the
+       measurement, never the assertion to the number you hoped for."
+
+# --porcelain, not `git diff`: diff does not see UNTRACKED files, so a brand-new
+# generator module would slip past and PROVENANCE would record a SHA that does not
+# contain the code that made the tables. An unseen file passing a check is the same
+# shape as a skipped assertion reading like a passing one.
+#
+# Checked BEFORE generating, not after: a run that fails this at the end has already
+# written tables from code it cannot name, and those files outlive the failure.
+# This script is itself part of the generator, so it is in the list -- it decides
+# which tools run and with which trees.
+dirty=$(git status --porcelain -- apps/ tools/sosym_r1/ "$(basename "$0")" || true)
+if [ "$OFFICIAL" = "1" ] && [ -n "$dirty" ]; then
+  printf '%s\n' "$dirty" >&2
+  die "the generator has uncommitted or untracked changes (above). Commit the
+       GENERATOR first, then re-run: the recorded SHA must name the code that produced
+       these tables, never a commit that merely happened to be HEAD. Use --draft to iterate."
+fi
+
+# ---------------------------------------------------------------- 4. tables
+say "4/5  generate tables -> $TABLES_DIR"
+mkdir -p "$TABLES_DIR"
+python3 -m apps.extract_results --results-dir "$R1" --output-dir "$TABLES_DIR" \
+  || die "extract_results"
+python3 tools/sosym_r1/measure_corrected_gap_table.py > "$TABLES_DIR/corrected-gap-table.md" \
+  || die "gap table"
+python3 tools/sosym_r1/significance_tests.py > "$TABLES_DIR/significance.md" \
+  || die "significance tests"
+python3 tools/sosym_r1/count_target_clauses.py > "$TABLES_DIR/target-clause-counts.md" \
+  || die "target clause counts"
+
+# ---------------------------------------------------------------- 5. verify
+say "5/5  verify the emitted artifacts"
+sha=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+[ "$sha" = "unknown" ] && die "could not record a git SHA (git unavailable?)"
+for f in results_tables.md results_tables.tex corrected-gap-table.md significance.md \
+         target-clause-counts.md; do
+  [ -s "$TABLES_DIR/$f" ] || die "missing or empty artifact: $TABLES_DIR/$f"
+done
+echo "  ok: five artifacts present and non-empty"
+
+# An artifact must state the state at generation time, never a plan.
+if grep -qniE 'pending|tonight|overnight|TODO|FIXME' "$TABLES_DIR"/*.md; then
+  grep -niE 'pending|tonight|overnight|TODO|FIXME' "$TABLES_DIR"/*.md || true
+  die "artifact hygiene — a generated artifact states a plan rather than a measurement"
+fi
+echo "  ok: no plan strings"
+
+cat > "$TABLES_DIR/PROVENANCE.md" <<EOF
+# Provenance
+
+Generated by \`reproduce_tables_sosym.sh\` at generator git SHA \`$sha\`$([ "$OFFICIAL" = "1" ] && echo ", clean" || echo " (DRAFT — generator may be dirty)").
+
+## Trees
+
+| role | path | meaning |
+|---|---|---|
+| OLD | \`data/results\` | the tree the published tables were computed from |
+| NEW | \`$R1\` | re-scored ConGen + interactive, each fold against its own oracle |
+
+Both are required. The correction rests on the PAIRING of the two, and a table
+that mixes a column from one with a column from the other reproduces from
+neither. That defect is what the N-item report was superseded for.
+
+## Gates passed
+
+- \`check_timing_provenance.py\` — no reported runtime overlaps another run
+- \`check_paper_numbers.py\` — every quoted number recomputes from committed data
+
+## Not re-runnable from here
+
+The acquisition sweep is committed evidence, not a table input. One busybox fold
+at cap 5,000 is 15.5 h and the full sweep took three weeks of machine time.
+EOF
+echo "  ok: PROVENANCE.md written"
+
+printf '\n\033[32mDONE\033[0m — artifacts in %s\n' "$TABLES_DIR"
