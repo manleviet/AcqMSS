@@ -422,6 +422,39 @@ check('folds stopping on no_query (asked everything available)', stops.get('no_q
 check('folds stopping on pool_exhausted (data-limited)', stops.get('pool_exhausted'), 84)
 check('interactive folds total', sum(stops.values()), 168)
 
+# busybox at two budgets. The strongest form of "the baseline was not starved":
+# not a similar score, the SAME fourteen constraints. One fold, same split and
+# seed as the cap-1,000 run, so it compares against that fold and nothing else.
+BB5 = (REPO / 'data' / 'results_sosym' / 'cap_probe_busybox'
+       / 'busybox-1.18.0_rs_1n_example_first_cap5000' / 'interactive'
+       / 'busybox-1.18.0_rs_1n_fold0_example_first_cap5000.json')
+# Both sides live under cap_probe_busybox rather than the sweep's partials/, which
+# is gitignored: an assertion whose input a fresh clone lacks is one that skips
+# silently, and a skipped check reads exactly like a passing one.
+BB1 = (REPO / 'data' / 'results_sosym' / 'cap_probe_busybox'
+       / 'busybox-1.18.0_rs_1n_example_first_cap1000' / 'interactive'
+       / 'busybox-1.18.0_rs_1n_fold0_example_first_cap1000.json')
+if not (BB5.exists() and BB1.exists()):
+    failures.append('busybox cap-sensitivity inputs missing -- checks skipped')
+else:
+    def _kb(path):
+        fo = json.load(open(path))['fold']
+        ids = {c['id'] if isinstance(c, dict) else c for c in fo['kb_constraints']}
+        return fo, ids
+    f5, k5 = _kb(BB5)
+    f1, k1 = _kb(BB1)
+    check('busybox cap 5000 stopped on max_queries, not the guard',
+          f5['convergence_reason'], 'max_queries')
+    check('busybox cap 5000 queries', f5['n_queries'], 5000)
+    check('busybox cap 1000 queries', f1['n_queries'], 1000)
+    check('busybox |KB| at cap 1000', len(k1), 14)
+    check('busybox |KB| at cap 5000', len(k5), 14)
+    check('busybox KB is the IDENTICAL SET at both caps', k5 == k1, True)
+    check('busybox cap 5000 wall clock, hours',
+          f5['performance']['runtime_ms'] / 3.6e6, 15.53, tol=0.02)
+    check('busybox cap 1000 wall clock, hours',
+          f1['performance']['runtime_ms'] / 3.6e6, 2.12, tol=0.02)
+
 # The abstract's "consistently below 0.06" is a claim about BOTH modes. It was
 # nearly true of the old tree (18/18 example-only, 15/18 example-first) and is
 # false of the corrected one for example-first: not one cell of 28.
