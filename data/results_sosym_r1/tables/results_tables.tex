@@ -1,0 +1,508 @@
+% Evaluation Results
+% KB Mapping: KB1=REAL-FM-7, KB2=fqa, KB3=arcade, KB4=REAL-FM-4
+\usepackage{booktabs}
+
+
+% AcqMSS \#consistency checks and runtime (msec) - Incremental
+\begin{table}[htbp]
+\centering
+\caption{AcqMSS \#consistency checks and runtime (msec) - Incremental}
+\label{tab:table7_incremental}
+\begin{tabular}{lrrcccc}
+\toprule
+Strategy & $|E^+|$ & $|E^-|$ & KB1 & KB2 & KB3 & KB4 \\
+\midrule
+RS(1n) & 8 & 0 & 515 / 194.3 & 706 / 5187.9 & - & 3591 / 186496.3 \\
+RS(2n) & 17 & 1 & 538 / 394.3 & 713 / 16508.8 & - & 3751 / 668106.7 \\
+RS(3n) & 25 & 2 & 544 / 623.5 & 744 / 34085.5 & - & 3786 / 1550234.0 \\
+RS(m) & 5 & 0 & 466 / 124.7 & 476 / 239.1 & - & 2526 / 4754.8 \\
+2-COV & 0 & 6 & 10 / 75.1 & 10 / 715.0 & - & 1612 / 1823.4 \\
+FF & 4 & 2 & 464 / 124.8 & 641 / 1423.3 & - & 3427 / 41809.8 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Accuracy with Random Sampling (RS) - Incremental
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with Random Sampling (RS) - Incremental}
+\label{tab:table9_incremental}
+\begin{tabular}{lcccc}
+\toprule
+Strategy & KB1 & KB2 & KB3 & KB4 \\
+\midrule
+RS(1n) & 0.2778 $\pm$ 0.0481 & 0.8543 $\pm$ 0.0693 & - & 0.8243 $\pm$ 0.0742 \\
+RS(2n) & 0.5583 $\pm$ 0.2184 & 0.9271 $\pm$ 0.0430 & - & 0.8934 $\pm$ 0.0419 \\
+RS(3n) & 0.8603 $\pm$ 0.1430 & 0.9665 $\pm$ 0.0057 & - & 0.9244 $\pm$ 0.0225 \\
+RS(m) & 0.1944 $\pm$ 0.1735 & 0.3667 $\pm$ 0.1528 & - & 0.2175 $\pm$ 0.0614 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Accuracy with 2-COV - Incremental
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with 2-COV - Incremental}
+\label{tab:table10_incremental}
+\begin{tabular}{lc}
+\toprule
+KB & Accuracy \\
+\midrule
+KB1 & 1.0000 $\pm$ 0.0000 \\
+KB2 & 1.0000 $\pm$ 0.0000 \\
+KB3 & - \\
+KB4 & 0.9524 $\pm$ 0.0825 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Accuracy with FF - Incremental
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with FF - Incremental}
+\label{tab:table11_incremental}
+\begin{tabular}{lc}
+\toprule
+KB & Accuracy \\
+\midrule
+KB1 & 0.3333 $\pm$ 0.0000 \\
+KB2 & 0.8134 $\pm$ 0.0688 \\
+KB3 & - \\
+KB4 & 0.7159 $\pm$ 0.0615 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Precision / Recall / F1 (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Precision / Recall / F1 (Incremental)}
+\label{tab:fold_metrics_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 1.00/0.23/0.38 & 1.00/0.53/0.68 & 1.00/0.85/0.91 & 0.33/0.11/0.17 & 0.00/0.00/0.00 & 0.00/0.00/0.00 \\
+KB2 & 1.00/0.84/0.91 & 1.00/0.92/0.96 & 1.00/0.96/0.98 & 1.00/0.33/0.49 & 0.00/0.00/0.00 & 1.00/0.79/0.88 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 1.00/0.81/0.89 & 1.00/0.88/0.94 & 1.00/0.92/0.96 & 1.00/0.18/0.30 & 0.00/0.00/0.00 & 1.00/0.70/0.82 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Accuracy by Sampling Strategy (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy by Sampling Strategy (Incremental)}
+\label{tab:accuracy_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.2778 $\pm$ 0.0481 & 0.5583 $\pm$ 0.2184 & 0.8603 $\pm$ 0.1430 & 0.1944 $\pm$ 0.1735 & 1.0000 $\pm$ 0.0000 & 0.3333 $\pm$ 0.0000 \\
+KB2 & 0.8543 $\pm$ 0.0693 & 0.9271 $\pm$ 0.0430 & 0.9665 $\pm$ 0.0057 & 0.3667 $\pm$ 0.1528 & 1.0000 $\pm$ 0.0000 & 0.8134 $\pm$ 0.0688 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.8243 $\pm$ 0.0742 & 0.8934 $\pm$ 0.0419 & 0.9244 $\pm$ 0.0225 & 0.2175 $\pm$ 0.0614 & 0.9524 $\pm$ 0.0825 & 0.7159 $\pm$ 0.0615 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Performance Metrics (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Performance Metrics (Incremental)}
+\label{tab:performance_incremental}
+\begin{tabular}{llrrrrrr}
+\toprule
+KB & Strategy & Runtime (ms) & \#Checks & Memory (MB) & $|B|$ & $|MSS|$ & $|KB|$ \\
+\midrule
+KB1 & RS(1n) & 194.30 $\pm$ 9.92 & 515 $\pm$ 10 & 0.35 & 295 & 91.7 & 18.3 \\
+ & RS(2n) & 394.31 $\pm$ 25.81 & 538 $\pm$ 6 & 0.50 & 295 & 69.0 & 18.7 \\
+ & RS(3n) & 623.50 $\pm$ 29.71 & 544 $\pm$ 7 & 0.63 & 295 & 61.7 & 13.7 \\
+ & RS(m) & 124.74 $\pm$ 15.94 & 466 $\pm$ 9 & 0.32 & 295 & 131.7 & 18.7 \\
+ & 2-COV & 75.11 $\pm$ 16.28 & 10 $\pm$ 0 & 0.34 & 295 & 294.0 & 9.7 \\
+ & FF & 124.84 $\pm$ 19.39 & 464 $\pm$ 31 & 0.35 & 295 & 133.3 & 17.0 \\
+\midrule
+KB2 & RS(1n) & 5187.85 $\pm$ 248.75 & 706 $\pm$ 19 & 8.24 & 459 & 224.7 & 130.7 \\
+ & RS(2n) & 16508.77 $\pm$ 470.56 & 713 $\pm$ 22 & 15.32 & 459 & 216.0 & 135.0 \\
+ & RS(3n) & 34085.51 $\pm$ 1431.44 & 744 $\pm$ 5 & 22.38 & 459 & 201.3 & 136.0 \\
+ & RS(m) & 239.13 $\pm$ 34.86 & 476 $\pm$ 29 & 1.60 & 459 & 344.3 & 108.3 \\
+ & 2-COV & 715.03 $\pm$ 82.63 & 10 $\pm$ 0 & 1.35 & 459 & 458.0 & 104.3 \\
+ & FF & 1423.34 $\pm$ 32.02 & 641 $\pm$ 10 & 3.90 & 459 & 269.3 & 120.7 \\
+\midrule
+KB4 & RS(1n) & 186496.28 $\pm$ 3159.81 & 3591 $\pm$ 101 & 23.81 & 2079 & 715.3 & 243.7 \\
+ & RS(2n) & 668106.67 $\pm$ 13400.43 & 3751 $\pm$ 25 & 45.84 & 2079 & 565.0 & 249.7 \\
+ & RS(3n) & 1550234.04 $\pm$ 64675.39 & 3786 $\pm$ 40 & 68.04 & 2079 & 509.0 & 238.0 \\
+ & RS(m) & 4754.85 $\pm$ 260.77 & 2526 $\pm$ 68 & 4.28 & 2079 & 1421.0 & 222.0 \\
+ & 2-COV & 1823.38 $\pm$ 383.20 & 1612 $\pm$ 1385 & 3.35 & 2079 & 1678.7 & 139.0 \\
+ & FF & 41809.77 $\pm$ 1090.09 & 3427 $\pm$ 114 & 10.82 & 2079 & 869.0 & 231.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% KB Summary (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{KB Summary (Incremental)}
+\label{tab:kb_summary_incremental}
+\begin{tabular}{llrrrr}
+\toprule
+KB & Strategy & $|B|$ & $|KB|$ (mean) & $|KB_{\cap}|$ & Reduction \\
+\midrule
+KB1 & RS(1n) & 295 & 18.3 & 1 & 93.8\% \\
+ & RS(2n) & 295 & 18.7 & 3 & 93.7\% \\
+ & RS(3n) & 295 & 13.7 & 1 & 95.4\% \\
+ & RS(m) & 295 & 18.7 & 0 & 93.7\% \\
+ & 2-COV & 295 & 9.7 & 0 & 96.7\% \\
+ & FF & 295 & 17.0 & 0 & 94.2\% \\
+\midrule
+KB2 & RS(1n) & 459 & 130.7 & 104 & 71.5\% \\
+ & RS(2n) & 459 & 135.0 & 113 & 70.6\% \\
+ & RS(3n) & 459 & 136.0 & 124 & 70.4\% \\
+ & RS(m) & 459 & 108.3 & 80 & 76.4\% \\
+ & 2-COV & 459 & 104.3 & 41 & 77.3\% \\
+ & FF & 459 & 120.7 & 92 & 73.7\% \\
+\midrule
+KB4 & RS(1n) & 2079 & 243.7 & 171 & 88.3\% \\
+ & RS(2n) & 2079 & 249.7 & 184 & 88.0\% \\
+ & RS(3n) & 2079 & 238.0 & 180 & 88.6\% \\
+ & RS(m) & 2079 & 222.0 & 139 & 89.3\% \\
+ & 2-COV & 2079 & 139.0 & 0 & 93.3\% \\
+ & FF & 2079 & 231.3 & 156 & 88.9\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Three-tier F1 on Intersected KB (Desc / Clause / Sem) (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Three-tier F1 on Intersected KB (Desc / Clause / Sem) (Incremental)}
+\label{tab:three_tier_f1_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.30/0.71/0.87 & 0.40/0.77/0.90 & 0.38/0.77/0.96 & 0.19/0.52/0.78 & 0.00/0.13/0.85 & 0.23/0.60/0.85 \\
+KB2 & 0.78/0.94/0.95 & 0.76/0.94/0.94 & 0.78/0.95/0.95 & 0.76/0.93/0.94 & 0.41/0.76/0.87 & 0.74/0.91/0.92 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.63/0.77/0.82 & 0.67/0.82/0.88 & 0.69/0.83/0.90 & 0.58/0.75/0.80 & 0.32/0.54/0.93 & 0.57/0.75/0.81 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Semantic tier on Intersected KB — R/P/F1 (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Semantic tier on Intersected KB — R/P/F1 (Incremental)}
+\label{tab:semantic_prf_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 1.00/0.78/0.87 & 1.00/0.82/0.90 & 0.98/0.93/0.96 & 0.89/0.68/0.78 & 0.94/0.77/0.85 & 1.00/0.74/0.85 \\
+KB2 & 1.00/0.90/0.95 & 1.00/0.88/0.94 & 1.00/0.91/0.95 & 1.00/0.88/0.94 & 1.00/0.77/0.87 & 1.00/0.85/0.92 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.97/0.70/0.82 & 1.00/0.78/0.88 & 1.00/0.81/0.90 & 1.00/0.67/0.80 & 1.00/0.87/0.93 & 1.00/0.68/0.81 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Exact equivalence of the delivered theory (folds attaining / scored); `--` = not measured, `0/n` = measured and none attained (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Exact equivalence of the delivered theory (folds attaining / scored); `--` = not measured, `0/n` = measured and none attained (Incremental)}
+\label{tab:exact_equiv_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0/3 & 0/3 & 1/3 & 0/3 & 0/3 & 0/3 \\
+KB2 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Three-tier F1 on Intersected KB (Desc / Clause / Sem) (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Three-tier F1 on Intersected KB (Desc / Clause / Sem) (Incremental)}
+\label{tab:three_tier_f1_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.10/0.14/0.46 & 0.00/0.09/0.43 & 0.00/0.09/0.43 & 0.00/0.09/0.43 & 0.10/0.14/0.46 & 0.09/0.19/0.50 \\
+KB2 & 0.03/0.03/0.05 & 0.06/0.04/0.06 & 0.05/0.04/0.06 & 0.00/0.01/0.03 & 0.02/0.02/0.05 & 0.04/0.02/0.05 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.03/0.03/0.04 & 0.03/0.03/0.04 & 0.03/0.03/0.04 & 0.00/0.00/0.01 & 0.01/0.01/0.04 & 0.01/0.01/0.02 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Semantic tier on Intersected KB — R/P/F1 (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Semantic tier on Intersected KB — R/P/F1 (Incremental)}
+\label{tab:semantic_prf_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.30/1.00/0.46 & 0.27/1.00/0.43 & 0.27/1.00/0.43 & 0.27/1.00/0.43 & 0.30/1.00/0.46 & 0.33/1.00/0.50 \\
+KB2 & 0.03/1.00/0.05 & 0.03/1.00/0.06 & 0.03/1.00/0.06 & 0.02/1.00/0.03 & 0.03/1.00/0.05 & 0.03/1.00/0.05 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.02/1.00/0.04 & 0.02/1.00/0.04 & 0.02/1.00/0.04 & 0.01/1.00/0.01 & 0.02/1.00/0.04 & 0.01/1.00/0.02 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Exact equivalence of the delivered theory (folds attaining / scored); `--` = not measured, `0/n` = measured and none attained (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Exact equivalence of the delivered theory (folds attaining / scored); `--` = not measured, `0/n` = measured and none attained (Incremental)}
+\label{tab:exact_equiv_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 \\
+KB2 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Three-tier F1 on Intersected KB (Desc / Clause / Sem) (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Three-tier F1 on Intersected KB (Desc / Clause / Sem) (Incremental)}
+\label{tab:three_tier_f1_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.33/0.43/0.67 & 0.17/0.28/0.56 & 0.33/0.43/0.67 & 0.16/0.30/0.57 & 0.37/0.45/0.68 & 0.29/0.39/0.64 \\
+KB2 & 0.25/0.18/0.20 & 0.26/0.18/0.20 & 0.22/0.15/0.18 & 0.22/0.17/0.19 & 0.16/0.12/0.14 & 0.25/0.17/0.20 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.10/0.10/0.11 & 0.25/0.24/0.25 & 0.08/0.08/0.09 & 0.09/0.08/0.09 & 0.04/0.05/0.08 & 0.21/0.20/0.21 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Semantic tier on Intersected KB — R/P/F1 (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Semantic tier on Intersected KB — R/P/F1 (Incremental)}
+\label{tab:semantic_prf_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.50/1.00/0.67 & 0.39/1.00/0.56 & 0.50/1.00/0.67 & 0.41/1.00/0.57 & 0.52/1.00/0.68 & 0.47/1.00/0.64 \\
+KB2 & 0.11/1.00/0.20 & 0.12/1.00/0.20 & 0.10/1.00/0.18 & 0.11/1.00/0.19 & 0.08/1.00/0.14 & 0.11/1.00/0.20 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.06/1.00/0.11 & 0.15/0.99/0.25 & 0.05/1.00/0.09 & 0.05/1.00/0.09 & 0.04/1.00/0.08 & 0.12/1.00/0.21 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Exact equivalence of the delivered theory (folds attaining / scored); `--` = not measured, `0/n` = measured and none attained (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Exact equivalence of the delivered theory (folds attaining / scored); `--` = not measured, `0/n` = measured and none attained (Incremental)}
+\label{tab:exact_equiv_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 \\
+KB2 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 & 0/3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Strategy Eval (Description) on Intersected KB — R/P/F1 (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Strategy Eval (Description) on Intersected KB — R/P/F1 (Incremental)}
+\label{tab:eval_description_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.36/0.26/0.30 & 0.49/0.35/0.40 & 0.38/0.38/0.38 & 0.23/0.16/0.19 & 0.00/0.00/0.00 & 0.26/0.21/0.23 \\
+KB2 & 0.89/0.69/0.78 & 0.89/0.67/0.76 & 0.91/0.68/0.78 & 0.79/0.74/0.76 & 0.42/0.41/0.41 & 0.81/0.69/0.74 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.66/0.60/0.63 & 0.71/0.63/0.67 & 0.72/0.67/0.69 & 0.58/0.58/0.58 & 0.31/0.42/0.32 & 0.58/0.56/0.57 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Strategy Eval (Clause) on Intersected KB — R/P/F1 (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Strategy Eval (Clause) on Intersected KB — R/P/F1 (Incremental)}
+\label{tab:eval_clause_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.76/0.66/0.71 & 0.83/0.72/0.77 & 0.74/0.81/0.77 & 0.55/0.51/0.52 & 0.09/0.20/0.13 & 0.61/0.59/0.60 \\
+KB2 & 1.00/0.90/0.94 & 1.00/0.88/0.94 & 1.00/0.91/0.95 & 0.97/0.88/0.93 & 0.80/0.72/0.76 & 0.99/0.85/0.91 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.89/0.68/0.77 & 0.89/0.75/0.82 & 0.89/0.79/0.83 & 0.90/0.65/0.75 & 0.56/0.71/0.54 & 0.88/0.65/0.75 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Strategy Eval (Semantic) on Intersected KB — R/P/F1 (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Strategy Eval (Semantic) on Intersected KB — R/P/F1 (Incremental)}
+\label{tab:eval_semantic_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 1.00/0.78/0.87 & 1.00/0.82/0.90 & 0.98/0.93/0.96 & 0.89/0.68/0.78 & 0.94/0.77/0.85 & 1.00/0.74/0.85 \\
+KB2 & 1.00/0.90/0.95 & 1.00/0.88/0.94 & 1.00/0.91/0.95 & 1.00/0.88/0.94 & 1.00/0.77/0.87 & 1.00/0.85/0.92 \\
+KB3 & - & - & - & - & - & - \\
+KB4 & 0.97/0.70/0.82 & 1.00/0.78/0.88 & 1.00/0.81/0.90 & 1.00/0.67/0.80 & 1.00/0.87/0.93 & 1.00/0.68/0.81 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% AcqMSS \#consistency checks and runtime (msec) - Non-incremental
+\begin{table}[htbp]
+\centering
+\caption{AcqMSS \#consistency checks and runtime (msec) - Non-incremental}
+\label{tab:table7_non-incremental}
+\begin{tabular}{lrrcccc}
+\toprule
+Strategy & $|E^+|$ & $|E^-|$ & KB1 & KB2 & KB3 & KB4 \\
+\midrule
+RS(1n) & - & - & - & - & - & - \\
+RS(2n) & - & - & - & - & - & - \\
+RS(3n) & - & - & - & - & - & - \\
+RS(m) & - & - & - & - & - & - \\
+2-COV & - & - & - & - & - & - \\
+FF & - & - & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Accuracy with Random Sampling (RS) - Non-incremental
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with Random Sampling (RS) - Non-incremental}
+\label{tab:table9_non-incremental}
+\begin{tabular}{lcccc}
+\toprule
+Strategy & KB1 & KB2 & KB3 & KB4 \\
+\midrule
+RS(1n) & - & - & - & - \\
+RS(2n) & - & - & - & - \\
+RS(3n) & - & - & - & - \\
+RS(m) & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Accuracy with 2-COV - Non-incremental
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with 2-COV - Non-incremental}
+\label{tab:table10_non-incremental}
+\begin{tabular}{lc}
+\toprule
+KB & Accuracy \\
+\midrule
+KB1 & - \\
+KB2 & - \\
+KB3 & - \\
+KB4 & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Accuracy with FF - Non-incremental
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with FF - Non-incremental}
+\label{tab:table11_non-incremental}
+\begin{tabular}{lc}
+\toprule
+KB & Accuracy \\
+\midrule
+KB1 & - \\
+KB2 & - \\
+KB3 & - \\
+KB4 & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Precision / Recall / F1 (Non-incremental)
+\begin{table}[htbp]
+\centering
+\caption{Precision / Recall / F1 (Non-incremental)}
+\label{tab:fold_metrics_non-incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & - & - & - & - & - & - \\
+KB2 & - & - & - & - & - & - \\
+KB3 & - & - & - & - & - & - \\
+KB4 & - & - & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Accuracy by Sampling Strategy (Non-incremental)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy by Sampling Strategy (Non-incremental)}
+\label{tab:accuracy_non-incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & - & - & - & - & - & - \\
+KB2 & - & - & - & - & - & - \\
+KB3 & - & - & - & - & - & - \\
+KB4 & - & - & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Performance Metrics (Non-incremental)
+\begin{table}[htbp]
+\centering
+\caption{Performance Metrics (Non-incremental)}
+\label{tab:performance_non-incremental}
+\begin{tabular}{llrrrrrr}
+\toprule
+KB & Strategy & Runtime (ms) & \#Checks & Memory (MB) & $|B|$ & $|MSS|$ & $|KB|$ \\
+\midrule
+\bottomrule
+\end{tabular}
+\end{table}
+
+% KB Summary (Non-incremental)
+\begin{table}[htbp]
+\centering
+\caption{KB Summary (Non-incremental)}
+\label{tab:kb_summary_non-incremental}
+\begin{tabular}{llrrrr}
+\toprule
+KB & Strategy & $|B|$ & $|KB|$ (mean) & $|KB_{\cap}|$ & Reduction \\
+\midrule
+\bottomrule
+\end{tabular}
+\end{table}
