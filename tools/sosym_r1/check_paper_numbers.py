@@ -509,7 +509,21 @@ else:
     check('Holm adjusted p is non-decreasing (step-down)',
           all(a['holm'] <= b['holm'] + 1e-18 for a, b in zip(fam, fam[1:])), True)
 
-    # Untestable by design, and it must STAY that way or be re-examined.
+    # The exact test must be the one we chose, not the one the data selected, and
+    # it must actually apply. scipy's method='exact' computes the exact
+    # distribution even when ties make it invalid, silently -- so the tie count is
+    # the check that matters, and the pinned method is what keeps it meaningful.
+    for claim in ('1a', '1b', '3', '5', '2'):
+        check(f'claim {claim}: method is pinned exact', sig[claim]['method'], 'exact')
+        check(f'claim {claim}: tied or zero differences', sig[claim]['ties'], 0)
+
+    # DESIGNED TO FAIL ON SUCCESS. This is the only check in the suite that goes
+    # red when the project improves, and that is deliberate -- do not "fix" it by
+    # relaxing it. Claim 2 sits outside the Holm family because at n=5 the exact
+    # test cannot reach alpha whatever the data says. Add a sixth model and
+    # floor_p(6) = 0.03125 < alpha: the claim becomes testable, this check fails,
+    # and someone has to decide whether to test it. Without that, the exclusion
+    # outlives its own justification and an untested claim reads as a settled one.
     check('claim 2 is excluded from the family', '2' not in {r['name'].split()[0] for r in fam}, True)
     check('claim 2 floor p exceeds alpha (cannot reject at any outcome)',
           floor_p(sig['2']['n']) > ALPHA, True)

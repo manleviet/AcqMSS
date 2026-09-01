@@ -40,6 +40,13 @@ REPO = Path(__file__).resolve().parents[2]
 T = REPO / 'data' / 'results_sosym_r1'
 ALPHA = 0.05
 
+# Pinned, not left to 'auto'. scipy's auto picks exact or asymptotic based on
+# whether the DIFFERENCES contain ties, so the method would be chosen by the data:
+# one re-score producing two equal differences would silently change the method and
+# the p-value by 508x, and the paper's "smallest attainable at this sample size"
+# would quietly become false. Pin the method and count the ties separately.
+METHOD = 'exact'
+
 
 def cell_mean(path: Path, tier: str = 'semantic', key: str = 'f1_score'):
     """Per-fold mean for one cell. Per-fold, never intersected — see hub 7a."""
@@ -51,6 +58,20 @@ def cell_mean(path: Path, tier: str = 'semantic', key: str = 'f1_score'):
          for fo in d.get('folds', [])]
     v = [x for x in v if x is not None]
     return statistics.mean(v) if v else None
+
+
+def count_ties(diff) -> int:
+    """Tied |differences| plus zeros -- the two things that invalidate the exact test.
+
+    This has to be counted here because scipy will NOT tell us. Measured on 1.17.1:
+    with one tied pair at n=28, method='auto' returns 3.786883e-06 while
+    method='exact' returns 7.450581e-09 and issues no warning at all -- it computes
+    the exact distribution as though the tie were not there. So pinning the method
+    without this counter would replace a visible 508x change with a silent wrong
+    number, which is the opposite of what pinning is for.
+    """
+    nz = [abs(d) for d in diff if d != 0]
+    return (len(diff) - len(nz)) + (len(nz) - len(set(nz)))
 
 
 def floor_p(n: int) -> float:
@@ -82,9 +103,11 @@ def compute() -> list:
         pairs = [(D[c][a], D[c][b]) for c in cells
                  if D[c].get(a) is not None and D[c].get(b) is not None]
         diff = [x - y for x, y in pairs]
-        stat, p = wilcoxon([x for x, _ in pairs], [y for _, y in pairs])
+        stat, p = wilcoxon([x for x, _ in pairs], [y for _, y in pairs],
+                           method=METHOD)
         results.append({'name': name, 'n': len(pairs), 'median': statistics.median(diff),
-                        'wins': sum(1 for d in diff if d > 0), 'p': p, 'W': stat})
+                        'wins': sum(1 for d in diff if d > 0), 'p': p, 'W': stat,
+                        'method': METHOD, 'ties': count_ties(diff)})
 
     paired('1a ConGen vs iterative, no oracle', 'cg', 'eo')
     paired('1b ConGen vs iterative, with oracle', 'cg', 'ef')
@@ -104,10 +127,11 @@ def compute() -> list:
             pairs.append((D[c]['cg'], statistics.mean(rnd)))
     if pairs:
         diff = [x - y for x, y in pairs]
-        stat, p = wilcoxon([x for x, _ in pairs], [y for _, y in pairs])
+        stat, p = wilcoxon([x for x, _ in pairs], [y for _, y in pairs], method=METHOD)
         results.append({'name': '2  2-COV vs random sampling', 'n': len(pairs),
                         'median': statistics.median(diff),
-                        'wins': sum(1 for d in diff if d > 0), 'p': p, 'W': stat})
+                        'wins': sum(1 for d in diff if d > 0), 'p': p, 'W': stat,
+                        'method': METHOD, 'ties': count_ties(diff)})
 
     return results
 
@@ -130,6 +154,9 @@ def main() -> int:
         note = ''
         if fl > ALPHA:
             note = f'UNTESTABLE: floor p={fl:.4f} > {ALPHA}'
+        elif r['ties']:
+            note = (f'INVALID: {r["ties"]} tied/zero difference(s) -- the exact test '
+                    f'does not apply and scipy will not say so')
         elif abs(r['p'] - fl) < 1e-15:
             note = f'at the exact-test floor (2/2^{r["n"]}) — report as p < 1e-7'
         print(f"{r['name']:40}{r['n']:>4}{r['median']:>+11.4f}"
