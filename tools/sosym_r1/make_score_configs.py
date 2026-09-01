@@ -104,10 +104,16 @@ def main() -> int:
     for algorithm, rows in by_algo.items():
         text = HEADER
         for stem, cv in rows:
+            # resolve() FIRST. rglob over a relative --cv-dir yields relative paths,
+            # and relative_to(REPO) against an absolute REPO then raises, falling
+            # through to an absolute path that hardcodes one machine's checkout. That
+            # is how score_interactive.toml came to carry 56 such paths while every
+            # config generated before it was relative. A tree inside the repo must
+            # emit a repo-relative path whatever form the caller passed.
             try:
-                path = cv.relative_to(REPO)
+                path = cv.resolve().relative_to(REPO)
             except ValueError:
-                path = cv.resolve()
+                path = cv.resolve()          # genuinely outside the repo: a scratch tree
             text += BLOCK.format(name=cv.stem, stem=stem, cv_file=path)
         path = out_dir / f"score_{algorithm}.toml"
         path.write_text(text)
