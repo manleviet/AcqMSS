@@ -65,13 +65,13 @@ echo "  NEW = $R1  $(ls $R1/congen/*_cv_*.json | wc -l | tr -d ' ') congen, $(ls
 # ---------------------------------------------------------------- 2. timing gate
 say "2/5  timing provenance gate"
 echo "  Refuses a timing figure measured while another sweep unit was in flight."
-python3 tools/sosym_r1/check_timing_provenance.py \
+python3 apps/sosym_r1/check_timing_provenance.py \
   || die "timing provenance — a reported runtime overlaps another run; re-time those units first"
 
 # ---------------------------------------------------------------- 3. numbers gate
 say "3/5  paper-numbers gate"
 echo "  Every number quoted in the revision, recomputed from the committed data."
-python3 tools/sosym_r1/check_paper_numbers.py \
+python3 apps/sosym_r1/check_paper_numbers.py \
   || die "paper numbers — a quoted number no longer reproduces. Update the note to the
        measurement, never the assertion to the number you hoped for."
 
@@ -97,11 +97,11 @@ say "4/5  generate tables -> $TABLES_DIR"
 mkdir -p "$TABLES_DIR"
 python3 -m apps.extract_results --results-dir "$R1" --output-dir "$TABLES_DIR" \
   || die "extract_results"
-python3 tools/sosym_r1/measure_corrected_gap_table.py > "$TABLES_DIR/corrected-gap-table.md" \
+python3 apps/sosym_r1/measure_corrected_gap_table.py > "$TABLES_DIR/corrected-gap-table.md" \
   || die "gap table"
-python3 tools/sosym_r1/significance_tests.py > "$TABLES_DIR/significance.md" \
+python3 apps/sosym_r1/significance_tests.py > "$TABLES_DIR/significance.md" \
   || die "significance tests"
-python3 tools/sosym_r1/count_target_clauses.py > "$TABLES_DIR/target-clause-counts.md" \
+python3 apps/sosym_r1/count_target_clauses.py > "$TABLES_DIR/target-clause-counts.md" \
   || die "target clause counts"
 
 # ---------------------------------------------------------------- 5. verify

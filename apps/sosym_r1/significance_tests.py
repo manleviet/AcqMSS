@@ -20,7 +20,7 @@ TWO THINGS THIS SCRIPT PRINTS THAT A PLAIN p-VALUE TABLE WOULD HIDE
    design never let it speak. The script flags these as UNTESTABLE rather than
    letting them read as negative results.
 
-Run: PYTHONPATH=. python3 tools/sosym_r1/significance_tests.py
+Run: PYTHONPATH=. python3 apps/sosym_r1/significance_tests.py
 """
 from __future__ import annotations
 

@@ -19,7 +19,7 @@ dependencies = [
     # did not already happen to have PyYAML. Found 2026-08-01 when the AAAI supplementary bundle was
     # installed into a fresh venv — the first time this repo was ever built from nothing.
     "PyYAML~=6.0",
-    # Required by tools/sosym_r1/significance_tests.py, whose Wilcoxon results are
+    # Required by apps/sosym_r1/significance_tests.py, whose Wilcoxon results are
     # asserted by check_paper_numbers.py -- 18 of its checks do not run without it.
     # It was present only as a transitive dependency of flamapy-sat, so a fresh
     # clone of the reproducibility package would have failed that part of the

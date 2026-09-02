@@ -22,7 +22,7 @@ It ASSERTS rather than prints, so it doubles as a regression test: if a future
 re-run moves a number that reached the paper, this fails loudly instead of
 letting the paper and the data drift apart silently.
 
-Run:  PYTHONPATH=. python3 tools/sosym_r1/check_paper_numbers.py
+Run:  PYTHONPATH=. python3 apps/sosym_r1/check_paper_numbers.py
 Exit: 0 = every number in the notes still holds. 1 = at least one moved.
 """
 from __future__ import annotations
@@ -384,7 +384,14 @@ check('   ... folds observed', stop_reasons.get('max_queries', 0), 42)
 #    run silently reading a third tree is the failure mode to catch.
 # ---------------------------------------------------------------------------
 print('\n9. passive vs active: the invariants, not the per-cell gaps')
-sys.path.insert(0, str(REPO / 'tools' / 'sosym_r1'))
+# The siblings live beside this file. Named explicitly and checked, so a move that
+# breaks the path reports WHICH path broke rather than an ImportError traceback --
+# a relocation is exactly when this class of failure recurs.
+_SIBLINGS = REPO / 'apps' / 'sosym_r1'
+if not (_SIBLINGS / 'measure_corrected_gap_table.py').exists():
+    sys.exit(f'FATAL: sibling tools not found under {_SIBLINGS}. If they moved, update '
+             f'this path and reproduce_tables_sosym.sh together.')
+sys.path.insert(0, str(_SIBLINGS))
 from measure_corrected_gap_table import (  # noqa: E402
     TREES, STEMS, SAMPLINGS, MODES, cell, collapsed, published)
 
