@@ -164,7 +164,7 @@ CONMIN_METRICS: Tuple[MetricSpec, ...] = (
     MetricSpec('shared_admpool_checks', 'shared_admpool_checks', Kind.COUNTER, 'shared_admpool_checks'),
     MetricSpec('conmin_cover_rejection_checks', 'conmin_cover_rejection_checks', Kind.COUNTER, 'conmin_cover_rejection_checks'),
     MetricSpec('conmin_cover_quickxplain_checks', 'conmin_cover_quickxplain_checks', Kind.COUNTER, 'conmin_cover_quickxplain_checks'),
-    # AcqMinCover diagnostics from ConMinResult (via ``extra``) — coarse counts,
+    # Cover-step diagnostics from the cover result (via ``extra``) — coarse counts,
     # mean only. NOT the §9c per-phase check taxonomy (that is P4e).
     MetricSpec('n_components', 'n_components', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
     MetricSpec('largest_component', 'largest_component', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),

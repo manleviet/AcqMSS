@@ -16,7 +16,7 @@ dependencies = [
     # Required by conacq/bias/config_loader.py, which reads the YAML bias configurations in
     # data/bias-config/. It was missing from this list: the module hard-imports `yaml`, but a clean
     # environment never installed it, so `apps.run_conmin_eval` failed at import on any machine that
-    # did not already happen to have PyYAML. Found 2026-08-01 when the AAAI supplementary bundle was
+    # did not already happen to have PyYAML. Found 2026-08-01 when a supplementary bundle was
     # installed into a fresh venv — the first time this repo was ever built from nothing.
     "PyYAML~=6.0",
     # Required by apps/sosym_r1/significance_tests.py, whose Wilcoxon results are

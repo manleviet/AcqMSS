@@ -77,7 +77,7 @@ class GenerateNE:
             alloc: assumption-id allocator (ids for the per-testcase probes + NE)
             capture_assignments: when True (ConMin), persist each e-'s per-assignment
                 guard clause into result_set_kb and return its full-config assignment
-                aids on NEPerTestcase (for AcqMinCover's rejection test). Default False
+                aids on NEPerTestcase (for the cover rejection test). Default False
                 keeps ConGen's behaviour and result_set_kb byte-identical.
 
         Returns:

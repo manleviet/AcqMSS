@@ -85,7 +85,7 @@ class AcqMSS:
             # Same check at ATOMIC granularity: is_consistent_test_cases issues one
             # solver call PER positive when stop_at_first_violation=False, so the batch
             # counter above understates the real work by |E′⁺| per node. Count the
-            # is_consistent_calls DELTA, exactly as AcqMinCover does for QuickXplain
+            # is_consistent_calls DELTA, exactly as the cover step does for QuickXplain
             # (GAP A) — never +1, which would just duplicate the batch counter. Additive:
             # a new key, the two counters above are untouched.
             self.profiler.increment(
