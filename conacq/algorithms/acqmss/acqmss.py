@@ -78,7 +78,7 @@ class AcqMSS:
                 set_b + set_neg_tv + set_bg, set_tc, False
             )
             self.profiler.increment("paper_consistency_checks")
-            # §9c AdmPoolMSS check at BATCH granularity (+1 per IsConsistent call, to
+            # §9c Stage-1 MSS check at BATCH granularity (+1 per IsConsistent call, to
             # match ConGen's paper_consistency_checks). shared_ prefix — ConGen also
             # runs AcqMSS (ADR-0018); additive, so ConGen's counters stay byte-identical.
             self.profiler.increment("shared_admpool_checks")
