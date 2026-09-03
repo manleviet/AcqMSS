@@ -161,6 +161,25 @@ All applications use TOML configuration files in `apps/conf/`. See [docs/codebas
 | [docs/quacq.md](docs/quacq.md) | QuAcq algorithm documentation (IJCAI 2013) |
 | [docs/congen.md](docs/congen.md) | ConGen algorithm documentation (MSS-based acquisition) |
 
+## Publishing the ConGen artifact
+
+The public evaluation artifact (`ConGenEvaluation`) is carved out of this repository.
+Before publishing a carve, run the release-hygiene checker **from here, against it**:
+
+```bash
+./scripts/check-release-hygiene.sh <path-to-carved-repo>
+```
+
+Five checks: four scan the carve's working tree for terminology belonging to unrelated
+work, and the fifth scans its full commit history — which the other four cannot, since
+`git grep` only sees the working tree, so a repository can pass all four while shipping
+in history exactly what they exist to remove.
+
+⚠ The checker lives **here, not in the artifact**. It enumerates the terms it forbids,
+so shipping it would make the artifact contain the disclosure the checks exist to
+prevent — and, being inside the tree it scanned, it had to exempt itself and reported
+green while doing so. Run it before the push; do not copy it into the carve.
+
 ## Contributing
 
 1. Follow code standards in `docs/code-standards.md`
