@@ -574,5 +574,16 @@ if failures:
     print('\nA number that moved is a finding. Update the notes to the measurement,')
     print('never the assertion to the number you hoped for.')
     sys.exit(1)
+# A pass is a POSITIVE COUNT, never the absence of a failure. With zero checks this
+# script would otherwise print "OK: all 0 numbers" and exit 0 -- and an empty run is
+# indistinguishable from a clean one to anything reading the exit code. The same shape
+# passed an artifact whose test suite had not run at all, because pytest was absent and
+# `grep FAILED` found nothing.
+MINIMUM_CHECKS = 90
+if checks < MINIMUM_CHECKS:
+    print(f'FAIL: only {checks} checks ran; expected at least {MINIMUM_CHECKS}.')
+    print('An empty or truncated run is not a pass. Something above exited early or')
+    print('skipped a section -- find it rather than lowering this number.')
+    sys.exit(1)
 print(f'OK: all {checks} numbers quoted in the SoSyM notes reproduce from the data.')
 sys.exit(0)

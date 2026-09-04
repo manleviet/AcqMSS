@@ -90,6 +90,12 @@ observe the failure it existed to prevent:
   `exists()` guard turning an absent input into a pass.
 - **Byte-identity is not a reason to drop a file; "who reads it" is.** See §3.
 - **A gate that is red on day one gets relaxed until it checks nothing.** See §6.
+- **A pass is a positive count, never the absence of a negative.** A suite reported an
+  empty set of failures because pytest was not installed; a targeted run reported success
+  against a test file that did not exist. Both exited 0. Naming this did not stop it
+  recurring an hour later, so it is now a gate in two places: `check_paper_numbers.py`
+  refuses a run of fewer than 90 checks, and `reproduce_tables_sosym.sh` refuses a tree
+  whose tests cannot be collected.
 - **Measure the radius before trusting a force.** `git add -A -f` is safe here because
   exactly one tracked file is also matched by `.gitignore` — measured with
   `git ls-files | git check-ignore --no-index --stdin`, not assumed. At forty files it

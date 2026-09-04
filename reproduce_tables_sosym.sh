@@ -92,6 +92,21 @@ if [ "$OFFICIAL" = "1" ] && [ -n "$dirty" ]; then
        these tables, never a commit that merely happened to be HEAD. Use --draft to iterate."
 fi
 
+# A pass must be a positive count, not the absence of a failure. This caught nothing
+# here and exists because it caught something twice elsewhere: a suite reported an
+# empty set of failures while pytest was not installed, and a targeted run reported
+# success against a test file that did not exist. Both exited 0. Collection is cheap;
+# certifying a tree whose tests cannot even be collected is not.
+say "3b/5  the suite is collectable"
+if command -v python3 >/dev/null && python3 -c "import pytest" 2>/dev/null; then
+  n=$(python3 -m pytest tests/ --collect-only -q 2>/dev/null | grep -cE '::')
+  [ "${n:-0}" -ge 1 ] \
+    || die "pytest collected $n tests. An empty collection is not a passing suite."
+  echo "  ok: $n tests collectable"
+else
+  echo "  pytest not installed - skipping (install with: pip install '.[dev]')"
+fi
+
 # ---------------------------------------------------------------- 4. tables
 say "4/5  generate tables -> $TABLES_DIR"
 mkdir -p "$TABLES_DIR"
