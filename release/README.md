@@ -136,6 +136,22 @@ observe the failure it existed to prevent:
   documented recipe is that its numbers match a committed reference** — here `n_kb` 16 and
   semantic F1 0.8462/0.8462/0.8627 — never that the command exits `0`, which is precisely
   what concealed this.
+- **Every command an error branch prints must run verbatim, for every input shape that
+  reaches that branch.** State it as an invariant and enumerate against it; a list of
+  cases is the defect, not the cure. This one arrived three times wearing different
+  clothes — process vocabulary fixed at the sites anyone could remember, then a hardcoded
+  `score_congen.toml`, then a directory-name precondition nobody had stated — and each
+  round closed the instance while the class survived. Enumerating the shipped tree found
+  **6 sites that print a command**, of which **2 could not run**: a usage string saying
+  `python generate_bias_files.py <config.toml>` (wrong path, wrong interpreter — `rc=2,
+  can't open file`), and an install hint saying `pip install -e ../explanation` in an
+  artifact that has no sibling checkout.
+  **Enumerate until you run out of input shapes, not until you run out of ideas.** The
+  two are different, and the difference is what kept returning: the `scratch/mycell/`
+  shape was found by someone else, after the `interactive` shape had already been fixed.
+  Parse, do not grep, when looking for these — the first enumeration classified line by
+  line and so missed the commands inside a multi-line `logger.error`, which was the very
+  site that prompted it.
 - **A warning that forbids a hazard must not forbid the only working path.** The same
   README banned config mode outright to avoid its write-back. But writing back is correct
   when `kb_dir` names your own scratch copy, and config mode is the only entry point that

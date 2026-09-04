@@ -1,5 +1,5 @@
 diff --git a/reproduce_tables_sosym.sh b/reproduce_tables_sosym.sh
-index c27d974..4daedbe 100755
+index 451a4da..c17305a 100755
 --- a/reproduce_tables_sosym.sh
 +++ b/reproduce_tables_sosym.sh
 @@ -30,11 +30,10 @@ for a in "$@"; do
@@ -18,3 +18,12 @@ index c27d974..4daedbe 100755
      --print-fingerprint) PRINT_FP=1 ;;
      -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
      *) echo "unknown flag: $a" >&2; exit 2 ;;
+@@ -85,7 +84,7 @@ say "0/6  environment"
+ python3 -c "import sys; assert sys.version_info >= (3,11), sys.version" \
+   || die "Python >= 3.11 required"
+ python3 -c "import explanation, flamapy" 2>/dev/null \
+-  || die "the canonical 'explanation' package is not importable — run: pip install -e ../explanation"
++  || die "the 'explanation' package is not importable — run: pip install ."
+ python3 -c "import conacq" 2>/dev/null || die "conacq not importable (run from the repo root)"
+ python3 -c "import scipy" 2>/dev/null \
+   || die "scipy missing — the significance tests and 18 of the verifier's checks need it (pip install -e .)"

@@ -315,7 +315,8 @@ Example TOML config file:
     config_path = args.config or args.config_flag
 
     if not config_path:
-        parser.error("Configuration file is required. Use: python generate_bias_files.py <config.toml>")
+        parser.error("Configuration file is required. "
+                     "Use: python3 -m apps.generate_bias_files <config.toml>")
 
     return config_path
 

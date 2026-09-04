@@ -57,6 +57,12 @@ parent directory, because `make_score_configs` selects by that name and writes
 commands fail with "no CV files matched", so the message now states that the file must
 sit in a directory called `congen` or `interactive`.
 
+This was found as the third instance of one class, not as a case: **every command an
+error branch prints must run verbatim, for every input shape that reaches that branch.**
+Enumerating the shipped tree against that invariant found 6 sites printing a command and
+2 that could not run — this one, and an install hint naming a sibling checkout the
+artifact does not have. Both are fixed.
+
 The better design is for `make_score_configs` to read the algorithm from the JSON instead
 of inferring it from a path. That is deferred: it is roughly twenty lines of new code at
 the end of a release, against one sentence of documentation, and the measured defect rate
