@@ -705,8 +705,8 @@ max_calls = config['settings']['max_solver_calls']
 
 ```toml
 [input]
-bias_file = "data/bias/<model>-bias.json"
-examples_file = "data/examples/<model>_<sampling>.json"
+bias_file = "data/bias/arcade-game.json"
+examples_file = "data/examples/arcade-game_RS_100.json"
 
 [settings]
 incremental = true
@@ -715,8 +715,8 @@ max_solver_calls = 10000
 timeout_seconds = 300.0
 
 [output]
-result_file = "data/results/<model>_cv_incremental.json"
-profiling_file = "data/results/<model>_profile.json"
+result_file = "data/results/arcade-game_CONGEN.json"
+profiling_file = "data/results/arcade-game_profile.json"
 ```
 
 ## Performance Considerations

@@ -73,7 +73,7 @@ def main() -> None:
             bg_clauses = [list(c) for c in oracle.oracle_data.get_root_clauses()]
         finally:
             # Release the oracle's solver now rather than at GC. Every other caller in
-            # the repo does this explicitly (base_runner, the passive evaluator); the
+            # the repo does this explicitly (base_runner, conmin_cv_evaluator); the
             # __del__ fallback exists but its timing is not guaranteed, and this loop
             # builds one oracle per model.
             oracle.cleanup()

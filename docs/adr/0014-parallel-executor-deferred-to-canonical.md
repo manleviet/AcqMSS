@@ -18,7 +18,7 @@ The two documents conflict. This ADR reconciles them: **the defer decision wins.
 Evidence gathered on the redesign branch (`feat/redesign-abc-v2`, HEAD after T17) confirms the roadmap's premises still hold:
 
 - **`executor.py` was never built** on this branch — there is no `ProcessExecutor`/`MemoizingExecutor` to finish.
-- **`FastDiagP` is test-only** — exactly one consumer, `the canonical explanation repository's diagnosis tests`. No runner, app, or production diagnosis path uses it. Production diagnosis is serial `FastDiag` via the HSDAG labeler.
+- **`FastDiagP` is test-only** — exactly one consumer, `tests/test_diagnosis_fastdiag.py`. No runner, app, or production diagnosis path uses it. Production diagnosis is serial `FastDiag` via the HSDAG labeler.
 - **HSDAG is fully sequential** — one `self.labeler` instance, no node-level parallelism, no executor hook.
 - **`IHSLabelable.get_instance` is 0-caller** repo-wide, and **`ProfilerMode.MULTI_PROCESS`** (the `Manager.dict` path in `profiling/core.py`) has no caller that passes `MULTI_PROCESS`.
 

@@ -205,7 +205,7 @@ def save_kb_result(
         redundant_constraints: List of redundant constraint IDs
         n_bias: Original number of bias constraints
         n_mss: Size of MSS before REDUCE
-        n_kb: Final KB size — bias constraints ONLY (byte-comparable with the
+        n_kb: Final KB size — bias constraints ONLY (byte-comparable with ConMin's
             ``size``); the memorized ¬e⁻ facts are counted in ``n_ne``, |KB| = n_kb + n_ne
         output_path: Path to save JSON file
         bg_clauses: Background knowledge clauses (e.g., [[1]] for root)

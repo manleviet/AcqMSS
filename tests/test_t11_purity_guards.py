@@ -219,7 +219,7 @@ def test_prepare_task_is_unified_across_models():
         params = list(sig.parameters)
         # The FACADE is the required prefix: every model is callable as
         # prepare_task(task_input) and nothing else is mandatory. Extra parameters are
-        # allowed only if optional — a sibling model already carries `minimize`/`profiler`
+        # allowed only if optional — ConMinModel already carries `minimize`/`profiler`
         # this way, and ConGen takes an optional `profiler` so GenerateNE's preprocessing
         # QuickXplain is counted. A NEW REQUIRED parameter is what the guard forbids,
         # because that is what would fork the facade.

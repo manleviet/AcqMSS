@@ -59,7 +59,7 @@ class CrossValidationFoldResult:
     # Interactive-only budget accounting (Tables 13/14): how many queries the fold
     # consumed and why it stopped. ``None`` on the passive algorithms, which have
     # neither — and a None is omitted from to_dict() rather than serialized, so the
-    # The passive algorithms' on-disk schema is unchanged by their presence here.
+    # ConGen/ConMin on-disk schema is unchanged by their presence here.
     n_queries: Optional[int] = None
     convergence_reason: Optional[str] = None
     # Full profiler snapshot (pass-through, not aggregated)

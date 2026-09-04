@@ -30,7 +30,7 @@ class NEPerTestcase:
     ne_clause: List[int]  # blocking clause with assumption literal
     desc: str  # description string
     # Full-config assignment-assumption IDs for this e-, captured ONLY when a caller
-    # the other passive algorithm asks via capture_assignments. Empty for ConGen — additive,
+    # (ConMin) asks via capture_assignments. Empty for ConGen (default) — additive,
     # so the return shape and every existing caller are unchanged.
     assignment_aids: Tuple[int, ...] = ()
 
@@ -75,7 +75,7 @@ class GenerateNE:
             result_set_kb: Task KB (mutated: NE clauses appended)
             result_assumptions: Task assumptions (read-only snapshot per iteration)
             alloc: assumption-id allocator (ids for the per-testcase probes + NE)
-            capture_assignments: when True, persist each e-'s per-assignment
+            capture_assignments: when True (ConMin), persist each e-'s per-assignment
                 guard clause into result_set_kb and return its full-config assignment
                 aids on NEPerTestcase (for the cover rejection test). Default False
                 keeps ConGen's behaviour and result_set_kb byte-identical.
@@ -128,7 +128,7 @@ class GenerateNE:
             assumptions.append(aid)
             set_kb.append([var, -1 * aid])
             if capture_assignments:
-                # Persist the guard clause (aid ⇒ var) into the TASK KB so the caller's
+                # Persist the guard clause (aid ⇒ var) into the TASK KB so ConMin's
                 # checker can activate this e-'s assignment for the rejection test.
                 # Vacuous when aid is inactive (¬aid ∨ var), so Stage-1 MSS is unchanged.
                 result_set_kb.append([var, -1 * aid])

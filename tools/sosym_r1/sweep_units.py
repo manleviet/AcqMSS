@@ -11,7 +11,7 @@ would make the reported memory a function of the scheduling rather than of the
 knowledge base.
 
 Estimates are per fold, and every one of them is a FLOOR: they are derived from
-the condition-A reference CSVs, which measure AcqMss alone, whereas
+``data/results_conmin/*_long.csv`` condition A, which is AcqMss alone, whereas
 ConGen is AcqMss plus Reduce. Step 2 measures the real ratio and writes it into
 the ledger as a multiplier; until then the runner's safety factor is doing all the
 work. Do not treat any number here as a prediction.
@@ -34,7 +34,7 @@ KBS: Dict[str, str] = {
 }
 
 # Per-fold hours, condition A (AcqMss only), read off
-# the condition-A reference CSVs as mean(total_ms)/3.6e6 over the three folds.
+# ``data/results_conmin/*_long.csv`` as mean(total_ms)/3.6e6 over the three folds.
 # These are the measured reference values, not rounded bounds: rounding them up
 # made the cheap cells look ~50x more expensive than they are, which reads as a
 # calibration signal when it is only the rounding. None = never measured.
