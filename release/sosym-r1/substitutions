@@ -36,6 +36,7 @@ not in the ConMin subclass	not in the subclass
 a subclass (ConMin) can return	a subclass can return
 ConMin passes a dict	the subclass passes a dict
 with ConMin's ``size``	with the sibling's ``size``
+byte-comparable with ConMin's	byte-comparable with the sibling's
 the same contract ConMin	the same contract the other
 the ConMin	the sibling's
 (base_runner, conmin_cv_evaluator)	(base_runner, the passive evaluator)
