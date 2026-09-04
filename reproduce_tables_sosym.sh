@@ -99,10 +99,30 @@ fi
 # certifying a tree whose tests cannot even be collected is not.
 say "3b/5  the suite is collectable"
 if command -v python3 >/dev/null && python3 -c "import pytest" 2>/dev/null; then
-  n=$(python3 -m pytest tests/ --collect-only -q 2>/dev/null | grep -cE '::')
+  # A SMOKE CHECK, deliberately, and it says so rather than inventing a floor. The
+  # count differs between repositories (681 here, 343 in the artifact), so any minimum
+  # would be a chosen number needing a per-target patch -- and a reader has no baseline
+  # to compare it against anyway. The gate that catches a partially-broken suite is
+  # running it with its expected count, which is a separate acceptance criterion.
+  #
+  # What this MUST not do is discard pytest's own signal. A broken conftest.py kills a
+  # directory and still collects the rest: measured, 2 collected from a 3-test tree,
+  # which passes any low floor. But pytest exits 2. Suppressing stderr and reading only
+  # a grep count threw that away -- the failure was visible and the check was not looking.
+  # `|| collect_rc=$?` is required, not stylistic: under `set -e` a failing command
+  # substitution aborts the script before the next line runs, so the die below never
+  # printed and the run exited 2 with no explanation -- a gate that fails silently is
+  # worse than none.
+  collect_rc=0
+  collect_out=$(python3 -m pytest tests/ --collect-only -q 2>&1) || collect_rc=$?
+  n=$(printf '%s\n' "$collect_out" | grep -cE '::')
+  [ "$collect_rc" -eq 0 ] || { printf '%s\n' "$collect_out" | tail -5 >&2
+    die "pytest exited $collect_rc while collecting. Collection errors hide whole
+       directories -- the remaining tests still collect, and any count-based check
+       passes."; }
   [ "${n:-0}" -ge 1 ] \
     || die "pytest collected $n tests. An empty collection is not a passing suite."
-  echo "  ok: $n tests collectable"
+  echo "  ok: $n tests collectable, collection clean"
 else
   echo "  pytest not installed - skipping (install with: pip install '.[dev]')"
 fi
