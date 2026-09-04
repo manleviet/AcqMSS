@@ -1,0 +1,24 @@
+diff --git a/apps/run_cv.py b/apps/run_cv.py
+index 374230b..89b762c 100644
+--- a/apps/run_cv.py
++++ b/apps/run_cv.py
+@@ -56,8 +56,8 @@ def parse_fold_indices(spec: Optional[str]) -> Optional[List[int]]:
+         raise SystemExit(f"--folds expects comma-separated integers, got {spec!r}")
+ 
+ 
+-# The results C2 must regenerate deliberately, and that
+-# tools/sosym_r1/congen_check_unit_factors.py reads.
++# The committed results, regenerated only deliberately, and read by
++# tools/sosym_r1/congen_check_unit_factors.py.
+ COMMITTED_RESULTS_DIR = Path(__file__).resolve().parent.parent / 'data' / 'results'
+ ALLOW_DEFAULT_OUTPUT_ENV = 'ACQMSS_ALLOW_DEFAULT_OUTPUT'
+ 
+@@ -71,7 +71,7 @@ def guard_committed_output(base_dir: Path) -> None:
+     resolved path rather than on whether ``-o`` was passed, so ``-o data/results``
+     is caught too -- it is the destination that matters, not the spelling.
+ 
+-    C2's deliberate regeneration sets the environment variable once, explicitly.
++    A deliberate regeneration sets the environment variable once, explicitly.
+     """
+     if base_dir.resolve() != COMMITTED_RESULTS_DIR.resolve():
+         return

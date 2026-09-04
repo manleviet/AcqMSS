@@ -1,0 +1,13 @@
+diff --git a/tests/test_oracle_protocols.py b/tests/test_oracle_protocols.py
+index 658cc57..31abd89 100644
+--- a/tests/test_oracle_protocols.py
++++ b/tests/test_oracle_protocols.py
+@@ -52,7 +52,7 @@ def test_fm_oracle_satisfies_answer_protocols(fm_oracle, protocol):
+ @pytest.mark.parametrize("protocol", _PROVISION_PROTOCOLS, ids=lambda p: p.__name__)
+ def test_fm_oracle_does_not_satisfy_provision_protocols(fm_oracle, protocol):
+     """The oracle does NOT provision (job ②) — that surface moved to the frozen
+-    OracleData snapshot (ADR-0009). The structural expression of A6's cure."""
++    OracleData snapshot (ADR-0009). The structural expression of that cure."""
+     assert not isinstance(fm_oracle, protocol)
+ 
+ 

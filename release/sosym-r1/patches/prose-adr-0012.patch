@@ -1,0 +1,26 @@
+diff --git a/docs/adr/0012-immutability-at-construction-not-at-read.md b/docs/adr/0012-immutability-at-construction-not-at-read.md
+index 74f7d93..f991742 100644
+--- a/docs/adr/0012-immutability-at-construction-not-at-read.md
++++ b/docs/adr/0012-immutability-at-construction-not-at-read.md
+@@ -23,7 +23,7 @@ T11c.2 coerces the list-valued solve fields to tuples in `__post_init__`. It was
+ | `run()` **+0.58%**, `prepare_task` **+1.30%**, `is_valid` **+1.85%** | single-shot, one run per arm | **Refuted.** Same code, same input, 7 runs of `run()`: **4926–5962 ms**, spread **20.08%**, sd **6.94%**. The claimed effect (31.6 ms) is **33× smaller than the noise**. Re-measured with min-primary, warm-up 8, `gc.disable()`, n≥8: `run()` **sign-flipped to −3.0%** |
+ | tuple penalty in FastDiag | — | n=61, min-primary: **−0.00%** (config task) and **−1.65%** (FM task). No penalty at any input size tried |
+ 
+-Two independent measurements (Cowork and Claude Code), both reaching **"cannot measure"**, one of them by refuting its own prior numbers.
++Two independent measurements, made separately, both reaching **"cannot measure"**, one of them by refuting its own prior numbers.
+ 
+ **Nothing mutates a `Task` field.** Runtime instrumentation — every field wrapped in a recording `list`/`dict` subclass with taint propagation through `+`, slicing and `copy()`, so the recorder follows the value **into the algorithms' parameters** — over 13 scenarios (FastDiag ×2, QuickXPlain ×2, KBDiag ×2, KBDiag+neg ×2, QXP+TestCases ×2, WipeOutR_FM, WipeOutR_T, HSDAG+FastDiag):
+ 
+@@ -115,9 +115,9 @@ Eliminating the entry `list()` costs more than it saves. **Immutability buys saf
+ 
+ **Verdict: rejected.** Not because it is infeasible (it was built, and it is *functionally identical* — same md5), and not because "S1 was already done" (that was inertia, and it was named as such). **Because it is a measured 3.5% regression with no payoff.**
+ 
+-> ⚠️ **Two spec errors of Cowork's cost real work here, and are recorded so the next reader does not repeat them:**
+-> 1. **Under-spec:** the S3 brief said *"internals: Tuple"* but omitted **`return [] → return ()`**. The implementer followed the letter and hit **178 red tests**. The Cowork-built S3 that *did* run had the `return ()` — a change Cowork made and never wrote down. **Measured one thing, specified another.**
+-> 2. **Over-spec:** the S4 brief said `@dataclass(frozen=True)` **+** `Tuple` fields for `AbstractHSParameters`. **`frozen` was Cowork's own addition** — "tuple everywhere" does not require it. It collided with `parameters.set_tcp = ...` in `get_label`, which the code's own comment explains is a **cache passed to the node's children** (*"update the parameters, which will be used by the children's nodes"*). Freezing it deletes that cache ⇒ re-run `find_diagnosis` per child ⇒ a real regression. The implementer correctly reported this as an **S4-killer** — **correct, against a wrong spec**. Dropping `frozen` and keeping `Tuple` leaves the rebind working: no bridge, no cache loss, and the conversions still vanish. **The corrected S4 is the one measured above, and it still lost.**
++> ⚠️ **Two errors in the design brief cost real work here, and are recorded so the next reader does not repeat them:**
++> 1. **Under-spec:** the S3 brief said *"internals: Tuple"* but omitted **`return [] → return ()`**. The implementer followed the letter and hit **178 red tests**. The S3 that *did* run had the `return ()` — a change the brief's author made and never wrote down. **Measured one thing, specified another.**
++> 2. **Over-spec:** the S4 brief said `@dataclass(frozen=True)` **+** `Tuple` fields for `AbstractHSParameters`. **`frozen` was the brief's own addition** — "tuple everywhere" does not require it. It collided with `parameters.set_tcp = ...` in `get_label`, which the code's own comment explains is a **cache passed to the node's children** (*"update the parameters, which will be used by the children's nodes"*). Freezing it deletes that cache ⇒ re-run `find_diagnosis` per child ⇒ a real regression. The implementer correctly reported this as an **S4-killer** — **correct, against a wrong spec**. Dropping `frozen` and keeping `Tuple` leaves the rebind working: no bridge, no cache loss, and the conversions still vanish. **The corrected S4 is the one measured above, and it still lost.**
+ >
+ > **Root cause of both: two properties fused into one spec link** ("tuple" ≠ "frozen"; "tuple internals" ≠ "tuple base case"). **Read a type spec as a coherent system, not a checklist:** *"if I do all N links, is there anywhere a tuple still meets a list?"* and *"does any link demand two things — split it."*
+ 

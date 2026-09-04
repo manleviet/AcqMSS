@@ -1,3 +1,5 @@
+diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_numbers.py
+index 3754da5..a19f744 100644
 --- a/apps/sosym_r1/check_paper_numbers.py
 +++ b/apps/sosym_r1/check_paper_numbers.py
 @@ -1,29 +1,19 @@
@@ -11,9 +13,7 @@
 -live in committed scripts; CW's counter-measurements were ad-hoc snippets typed
 -into a chat, and the numbers they produced went straight into `~SoSyM revision.md`
 -and the paper drafts. Several of those numbers are load-bearing:
-+A number that nobody can recompute cannot be re-checked, only re-asserted. Several of
-+the figures the paper quotes are load-bearing:
- 
+-
 -  * |Cτ| = 130 for arcade-game is the hand count that decided the ground-truth
 -    question. The whole "four of five models were scored against fqa's Cτ"
 -    disclosure rests on it.
@@ -23,24 +23,28 @@
 -re-asserted. This project already adopted the rule ("scratch is local, evidence
 -is committed"; "you may call something scratch only if you can name what
 -reconstructs it") and this file is CW complying with it.
-+  * |Ctau| = 130 for arcade-game is the hand count that settled the ground-truth
-+    question, and the disclosure that four of five models had been scored against
-+    another model's target theory rests on it.
-+  * 74.62 %, 18/28, 1/84 and the 29-80 % agreement range appear in the paper.
- 
+-
 -It ASSERTS rather than prints, so it doubles as a regression test: if a future
 -re-run moves a number that reached the paper, this fails loudly instead of
 -letting the paper and the data drift apart silently.
 -
 -Run:  PYTHONPATH=. python3 apps/sosym_r1/check_paper_numbers.py
 -Exit: 0 = every number in the notes still holds. 1 = at least one moved.
++A number that nobody can recompute cannot be re-checked, only re-asserted. Several of
++the figures the paper quotes are load-bearing:
++
++  * |Ctau| = 130 for arcade-game is the hand count that settled the ground-truth
++    question, and the disclosure that four of five models had been scored against
++    another model's target theory rests on it.
++  * 74.62 %, 18/28, 1/84 and the 29-80 % agreement range appear in the paper.
++
 +Each is recomputed here from the committed data, so the number moves visibly if the
 +data moves. When one fails, the finding is that a number changed: update the paper to
 +the measurement, never the assertion to the number you hoped for.
  """
  from __future__ import annotations
  
-@@ -64,8 +54,9 @@
+@@ -64,8 +54,9 @@ def semantic(fold: dict) -> dict:
  
      NOTE the nesting: evaluation.semantic.METRICS.recall. Reading one level
      shallower returns a .get() default of 0 on every fold, which is exactly how
@@ -52,7 +56,7 @@
      """
      return ((fold.get('evaluation') or {}).get('semantic') or {}).get('metrics') or {}
  
-@@ -97,14 +88,14 @@
+@@ -97,14 +88,14 @@ def count_ctau_from_uvl(path: Path) -> int:
      ALTERNATIVE group !ci v !cj   C(n,2) per group  <-- see below
      cross-tree                    1 each
  
@@ -69,3 +73,12 @@
      itself: alternative groups are the encoding path most likely to be wrong,
      and the model used to validate the count could not exercise it.
      """
+@@ -487,7 +478,7 @@ cg_with_queries = sum(
+ check('ConGen folds issuing oracle queries', cg_with_queries, 0)
+ 
+ # ---------------------------------------------------------------------------
+-# 10. C9's significance tests. Asserted through significance_tests.compute() so
++# 10. The significance tests. Asserted through significance_tests.compute() so
+ #     the suite checks THOSE numbers, not a second implementation of them.
+ #
+ #     The invariant that matters is the last one. Claim 2 is excluded from the

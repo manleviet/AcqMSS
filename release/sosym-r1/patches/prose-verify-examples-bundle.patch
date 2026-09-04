@@ -1,0 +1,13 @@
+diff --git a/tools/sosym_r1/verify_examples_bundle.py b/tools/sosym_r1/verify_examples_bundle.py
+index 718f40d..4b96c90 100644
+--- a/tools/sosym_r1/verify_examples_bundle.py
++++ b/tools/sosym_r1/verify_examples_bundle.py
+@@ -2,7 +2,7 @@
+ """
+ Independent verification of a generated example-set + CV-fold bundle.
+ 
+-Cowork-layer falsification harness for SoSyM C5. Reads only the produced JSON
++Falsification harness for a produced bundle. Reads only the produced JSON
+ files; imports nothing from the AcqMSS repo, so it cannot inherit a defect from
+ the code it is checking. Stdlib only.
+ 

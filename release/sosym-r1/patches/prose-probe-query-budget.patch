@@ -1,0 +1,15 @@
+diff --git a/apps/sosym_r1/probe_query_budget.py b/apps/sosym_r1/probe_query_budget.py
+index d5c0680..b896154 100644
+--- a/apps/sosym_r1/probe_query_budget.py
++++ b/apps/sosym_r1/probe_query_budget.py
+@@ -3,8 +3,8 @@
+ 
+ Two questions, and they are different. Whether raising the cap changes the learned
+ theory is a paper result: if the knowledge base is the same at 1,000 and at 5,000,
+-the active baseline is not being starved, which answers N1 and R2-Q13 better than a
+-larger number would. What raising it costs is a scheduling input and feeds B20.
++the active baseline is not being starved, which answers the starvation question
++better than a larger number would. What raising it costs is a scheduling input.
+ 
+ So this reports, per (kb, sampling, mode, cap):
+   - the learned constraint SET per fold, compared element-wise across caps.

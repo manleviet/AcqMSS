@@ -1,0 +1,13 @@
+diff --git a/docs/adr/0017-reduce-discards-mss-order.md b/docs/adr/0017-reduce-discards-mss-order.md
+index f39275b..6bdc19d 100644
+--- a/docs/adr/0017-reduce-discards-mss-order.md
++++ b/docs/adr/0017-reduce-discards-mss-order.md
+@@ -52,7 +52,7 @@ Although ADR-0016 and ADR-0017 are both "`set()` drops order" in the same conacq
+ The fix at `reduce.py:63` preserves the `gamma1 + gamma2` appearance order while de-duplicating (`dict.fromkeys(list(set_b_prime) + list(set_neg_tv))`, or an equivalent seen-set), never routing through `set()`. When the gated command runs, it MUST satisfy:
+ 
+ 1. **Prove the reorder now bites.** Add/point to a test showing the surviving redundant representative follows `gamma1+gamma2` order deterministically, distinguishable from the old hash-order outcome (if it can't be distinguished, the fix has not taken).
+-2. **Regenerate golden, itemized.** List exactly which golden file(s) changed and how many `n_kb` / `kb_reduction_ratio` / TP / FP cells moved; for each, show the move is caused by the reorder, not a new bug — a review artifact for Cowork *before* commit.
++2. **Regenerate golden, itemized.** List exactly which golden file(s) changed and how many `n_kb` / `kb_reduction_ratio` / TP / FP cells moved; for each, show the move is caused by the reorder, not a new bug — a review artifact produced *before* commit.
+ 3. **No collateral regression.** The rest of the suite (outside the regenerated AcqMSS/ConGen golden) stays green.
+ 4. **Close the loop.** Record here which golden was regenerated, and add a paper-regen note that the AcqMSS/ConGen numbers changed vs the old draft.
+ 

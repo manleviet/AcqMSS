@@ -1,0 +1,60 @@
+diff --git a/tools/sosym_r1/congen_check_unit_factors.py b/tools/sosym_r1/congen_check_unit_factors.py
+index b2253f7..66dbb53 100644
+--- a/tools/sosym_r1/congen_check_unit_factors.py
++++ b/tools/sosym_r1/congen_check_unit_factors.py
+@@ -3,8 +3,8 @@
+ Node-vs-solver-call unit factors, and the AcqMss positive-set shrink ratio,
+ derived from the committed ConGen cross-validation results.
+ 
+-Cowork-layer analysis harness for SoSyM checklist items **C10** (the R1-Q4 cost
+-accounting) and **B17** (the positive-example pruning in Algorithm 2). Reads only
++Analysis harness for the cost accounting and for the positive-example pruning in
++Algorithm 2. Reads only
+ the produced JSON files and imports nothing from the AcqMSS repo, so it cannot
+ inherit a defect from the code it measures. Stdlib only.
+ 
+@@ -38,15 +38,14 @@ WHAT IT DOES NOT COMPUTE
+ The **preprocessing** (GenerateNE / QuickXplain) share. ConGen calls GenerateNE
+ with ``profiler=None`` (``generate_ne.py``), so those solves are not counted in
+ ``is_consistent_calls`` at all. ``acq_calls`` above therefore excludes them, and
+-the phase is simply absent from this data. Closing that is checklist item
+-C10(a). Until then, treat ``acq_calls`` as "AcqMss only" rather than
++the phase is simply absent from this data. Closing that would mean
++instrumenting those solves. Until then, treat ``acq_calls`` as "AcqMss only" rather than
+ "everything except Reduce".
+ 
+ STALENESS
+ ---------
+ ``data/results/congen/`` predates ADR-0015 (unseeded example-mode pool),
+-ADR-0016 (QuAcq bias order), ADR-0017 (Reduce dedup order) and checklist items
+-C6, C7, C11. The **KB contents** these runs produced are therefore not the
++ADR-0016 (QuAcq bias order) and ADR-0017 (Reduce dedup order). The **KB contents** these runs produced are therefore not the
+ numbers the revision will publish. The ratios here are expected to be more
+ robust than the contents, because they are structural properties of the
+ recursion rather than of which constraints survive it, but that is an
+@@ -197,14 +196,14 @@ def render(agg: list[dict], rows: list[dict], prov: list[dict],
+     add("Regenerate with `python3 tools/sosym_r1/congen_check_unit_factors.py .`")
+     add("")
+     add("⚠ **Stale inputs.** These results predate ADR-0015, ADR-0016, ADR-0017 "
+-        "and checklist items C6, C7, C11, so the knowledge bases they produced "
++        "so the knowledge bases they produced "
+         "are not what the revision will publish. The ratios are expected to be "
+         "more robust than the contents, since they are structural properties of "
+         "the recursion, but that is an expectation. Re-run after the sweep.")
+     add("")
+     add("⚠ **Preprocessing is absent.** ConGen calls GenerateNE with "
+         "`profiler=None`, so its solves never reach `is_consistent_calls`. "
+-        "`acq_calls` is AcqMss only. Closing that gap is checklist item C10(a).")
++        "`acq_calls` is AcqMss only. Closing it means instrumenting those solves.")
+     add("")
+     add("## Per knowledge base and sampling (mean over folds)")
+     add("")
+@@ -251,7 +250,7 @@ def render(agg: list[dict], rows: list[dict], prov: list[dict],
+         add(f"  On the {tested} knowledge base(s) where all three are present, "
+             "the ratio barely moves while \\|E+\\| triples, yet differs "
+             "substantially between knowledge bases. That supports reporting "
+-            "B17's pruning **per knowledge base** rather than as a single "
++            "this pruning **per knowledge base** rather than as a single "
+             "hedged number. It is not established for a knowledge base whose "
+             "RS family is incomplete.")
+         add("")
