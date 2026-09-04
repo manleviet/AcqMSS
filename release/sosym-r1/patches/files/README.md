@@ -1,9 +1,13 @@
 # ConGen — evaluation artifact
 
-Source code, data and result tables for the ConGen paper. This repository contains the
-ConGen implementation **as evaluated in the paper**, together with every input the
-reported numbers were computed from. Ongoing development happens elsewhere; nothing here
-is intended as a maintained library.
+Source code, data and result tables for the ConGen paper. This repository is the **frozen
+evaluation artifact**: the ConGen implementation as evaluated in the paper, together with
+every input the reported numbers were computed from.
+
+Ongoing development continues in a private working repository referred to in the code as
+`AcqMSS`; nothing here depends on it, and nothing here is intended as a maintained
+library. Comments, tests and documentation throughout this tree refer to `AcqMSS` — that
+is the repository they mean.
 
 ## Install
 

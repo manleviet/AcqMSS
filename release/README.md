@@ -111,6 +111,22 @@ observe the failure it existed to prevent:
   standing in for a missing key, a suite that "passed" with pytest uninstalled, and a
   targeted run that succeeded against a test file that did not exist. Every gate added
   during this release was deliberately made to fail once before being believed.
+- **A new gate must prove it can catch, not merely that it runs.** Proving it runs is the
+  weaker claim and looks identical from the outside. The process-vocabulary patterns were
+  written with `\b` for word boundaries — PCRE syntax handed to `git grep -E`, which is
+  POSIX ERE and has no `\b`. They matched **zero files** in a tree containing `R3-Q5`,
+  `R2-Q13`, `C2's` and `C9's`: a measurement that could not go red, reporting green. The
+  patterns were only trusted after being forced red against constructed positives, and
+  that exercise immediately surfaced two sites nobody had enumerated (`A6's`, `B17's`).
+  `scripts/falsify_hygiene_patterns.sh` is that proof kept runnable, and it also refuses
+  to pass if its pattern list has drifted from the gate's — a falsification of yesterday's
+  pattern proves nothing about today's.
+- **A gate matches a shape, not a vocabulary, wherever the vocabulary is legitimate
+  elsewhere.** A blacklist of forbidden codes would have to contain `B1` and `B2`, which
+  are the bias subsets in the paper's own pseudocode (`B1, B2 = split(B)`). A gate that
+  goes red on the published algorithm is switched off within the week, and then it
+  protects nothing. Matching "a code used as an actor" catches the disclosure and never
+  fires on an equation.
 - **A named exception inside a check will grow; a named patch fails loudly when it is
   wrong.** When a gate fires on a case you believe legitimate, put the exception
   *outside* the gate. Offered a carve-out for one file under `data/`, the right answer
