@@ -29,6 +29,12 @@ for a in "$@"; do
     # The cost is that the draft directory changes between runs, so the path is
     # echoed at both the generate step and DONE.
     --draft) OFFICIAL=0; TABLES_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tables-sosym-draft.XXXXXX")" ;;
+    # Used by release/carve.sh to stamp the carved tree's own fingerprint into its
+    # committed PROVENANCE.md. It must be THIS implementation and not a copy: the
+    # carved generator differs from the source generator wherever a patch touched it,
+    # so a second implementation would drift silently and reintroduce exactly the
+    # mismatch this flag exists to remove.
+    --print-fingerprint) PRINT_FP=1 ;;
     -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
     *) echo "unknown flag: $a" >&2; exit 2 ;;
   esac
@@ -39,6 +45,39 @@ export PYTHONPATH=.
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 die() { printf '\n\033[31mFAILED: %s\033[0m\n' "$*" >&2; exit 1; }
+
+# The five files whose bytes ARE the generator. Hashed rather than resolved to a
+# commit; see the long note at the fingerprint's use below.
+GENERATOR_FILES="reproduce_tables_sosym.sh
+apps/extract_results.py
+apps/sosym_r1/measure_corrected_gap_table.py
+apps/sosym_r1/significance_tests.py
+apps/sosym_r1/count_target_clauses.py"
+
+compute_fingerprint() {
+  # Each file asserted present before hashing. A missing file would otherwise hash to
+  # nothing and still yield a confident-looking fingerprint — the empty-set-reads-as-a-
+  # pass shape that has already produced two false greens in this project.
+  while IFS= read -r gf; do
+    [ -f "$gf" ] || die "generator file missing, cannot fingerprint: $gf"
+  done <<< "$GENERATOR_FILES"
+  printf '%s\n' "$GENERATOR_FILES" | python3 -c '
+import hashlib, pathlib, sys
+h = hashlib.sha256()
+for name in sys.stdin.read().split():
+    h.update(name.encode())
+    h.update(pathlib.Path(name).read_bytes())
+print(h.hexdigest()[:12])'
+}
+
+# Answered before the environment checks: the carve needs this in a tree that has no
+# venv and no installed dependencies, and the fingerprint depends on neither.
+if [ "${PRINT_FP:-0}" = "1" ]; then
+  fp=$(compute_fingerprint)
+  [ -n "$fp" ] || die "could not compute the generator fingerprint"
+  printf '%s\n' "$fp"
+  exit 0
+fi
 
 # ---------------------------------------------------------------- 0. environment
 say "0/5  environment"
@@ -155,24 +194,7 @@ say "5/5  verify the emitted artifacts"
 # it and gets back the committed value. The source commit is not recorded here at all,
 # because nothing regenerable can hold it — it lives in this repository's root commit
 # message, which no reproduction can overwrite.
-GENERATOR_FILES="reproduce_tables_sosym.sh
-apps/extract_results.py
-apps/sosym_r1/measure_corrected_gap_table.py
-apps/sosym_r1/significance_tests.py
-apps/sosym_r1/count_target_clauses.py"
-# Each file asserted present before hashing. A missing file would otherwise hash to
-# nothing and still yield a confident-looking fingerprint — the empty-set-reads-as-a-
-# pass shape that has already produced two false greens in this project.
-while IFS= read -r gf; do
-  [ -f "$gf" ] || die "generator file missing, cannot fingerprint: $gf"
-done <<< "$GENERATOR_FILES"
-fingerprint=$(printf '%s\n' "$GENERATOR_FILES" | python3 -c '
-import hashlib, pathlib, sys
-h = hashlib.sha256()
-for name in sys.stdin.read().split():
-    h.update(name.encode())
-    h.update(pathlib.Path(name).read_bytes())
-print(h.hexdigest()[:12])')
+fingerprint=$(compute_fingerprint)
 [ -n "$fingerprint" ] || die "could not compute the generator fingerprint"
 for f in results_tables.md results_tables.tex corrected-gap-table.md significance.md \
          target-clause-counts.md; do
