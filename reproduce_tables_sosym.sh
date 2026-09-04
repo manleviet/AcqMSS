@@ -3,6 +3,7 @@
 #
 #   ./reproduce_tables_sosym.sh            # from the committed trees   (~1 min)
 #   ./reproduce_tables_sosym.sh --draft    # tables to a scratch dir, nothing official
+#   ./reproduce_tables_sosym.sh --print-fingerprint   # the generator's hash, nothing else
 #
 # Output: data/results_sosym_r1/tables/ — results_tables.{md,tex}, corrected-gap-table.md,
 #         significance.md, target-clause-counts.md, PROVENANCE.md
@@ -35,7 +36,7 @@ for a in "$@"; do
     # so a second implementation would drift silently and reintroduce exactly the
     # mismatch this flag exists to remove.
     --print-fingerprint) PRINT_FP=1 ;;
-    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
     *) echo "unknown flag: $a" >&2; exit 2 ;;
   esac
 done
@@ -115,8 +116,8 @@ python3 apps/sosym_r1/check_paper_numbers.py \
        measurement, never the assertion to the number you hoped for."
 
 # --porcelain, not `git diff`: diff does not see UNTRACKED files, so a brand-new
-# generator module would slip past and PROVENANCE would record a SHA that does not
-# contain the code that made the tables. An unseen file passing a check is the same
+# generator module would slip past and the fingerprint would be computed over a
+# generator that is not the one that ran. An unseen file passing a check is the same
 # shape as a skipped assertion reading like a passing one.
 #
 # Checked BEFORE generating, not after: a run that fails this at the end has already
@@ -127,8 +128,8 @@ dirty=$(git status --porcelain -- apps/ tools/sosym_r1/ "$(basename "$0")" || tr
 if [ "$OFFICIAL" = "1" ] && [ -n "$dirty" ]; then
   printf '%s\n' "$dirty" >&2
   die "the generator has uncommitted or untracked changes (above). Commit the
-       GENERATOR first, then re-run: the recorded SHA must name the code that produced
-       these tables, never a commit that merely happened to be HEAD. Use --draft to iterate."
+       GENERATOR first, then re-run: what is published must be a state someone else
+       can check out, not a working tree only you have. Use --draft to iterate."
 fi
 
 # A pass must be a positive count, not the absence of a failure. This caught nothing
