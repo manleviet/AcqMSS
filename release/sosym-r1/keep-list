@@ -17,10 +17,14 @@
 # conacq/ minus the ConMin algorithm, evaluator, scorer and runner. ConMin stays in
 # the development repository, where it works; it is simply not this artifact's subject.
 conacq/algorithms/__init__.py
+# ConGen itself. Every file is the subject of the paper.
 conacq/algorithms/acqmss/
+# The iterative baseline every comparison in the paper is against.
 conacq/algorithms/quacq/
 conacq/atomic_io.py
+# Bias construction; no algorithm-specific files live here.
 conacq/bias/
+# Config loading only; shared by both repositories unchanged.
 conacq/config/
 # conacq/eval file by file: a `conacq/eval/` prefix re-admits conmin_cv_evaluator.py
 # and conmin_slice_scorer.py.
@@ -35,8 +39,11 @@ conacq/eval/progressive_evaluation.py
 conacq/eval/report.py
 conacq/eval/result_loader.py
 conacq/eval/semantic_equivalence.py
+# Example IO. Generation and reading, no algorithm branches.
 conacq/examples/
+# Feature-model handling; nothing algorithm-specific.
 conacq/fm/
+# The oracle. Shared, and neutral between algorithms.
 conacq/oracle/
 conacq/runners/__init__.py
 conacq/runners/base_runner.py
@@ -50,7 +57,9 @@ conacq/__init__.py
 # table tools, the significance tests, and every measurement quoted in the text.
 apps/__init__.py
 apps/_harness.py
+# Created for this artifact: the two gates and every tool behind a number in the paper.
 apps/sosym_r1/
+# Run configs. Verified to contain no file naming a dropped cell.
 apps/conf/
 apps/extract_results.py
 apps/generate_bias_config.py
@@ -86,13 +95,21 @@ tools/sosym_r1/verify_examples_bundle.py
 # result. Sets for busybox RS(2n)/RS(3n) and the ea2468 family produced no number and
 # are 148.6 MB; the filter is mechanical, not a list, so it cannot drift.
 data/bias/
+# YAML bias configs; one per model, all of them still referenced.
 data/bias-config/
+# Filtered below by carve.sh to cells that have a result -- mechanically, not by list.
 data/examples/
+# The nine feature models. All are inputs to results that ship.
 data/fms/
+# Filtered with data/examples by the same mechanical rule.
 data/folds/
+# Three KB evaluation inputs, all still read.
 data/kb_eval/
+# OLD half of the old-vs-new pair the correction rests on.
 data/results/
+# The post-fix sweep, and the tree the timing ledger describes.
 data/results_sosym/
+# NEW half of the pair, plus the generated tables.
 data/results_sosym_r1/
 
 # ---- tests ----------------------------------------------------------------
