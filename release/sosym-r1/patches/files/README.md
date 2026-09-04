@@ -26,7 +26,13 @@ One command, from the committed data:
 
 It writes `data/results_sosym_r1/tables/` — `results_tables.{md,tex}`,
 `corrected-gap-table.md`, `significance.md`, `target-clause-counts.md`, and a
-`PROVENANCE.md` recording the generator's git SHA.
+`PROVENANCE.md` recording a fingerprint of the generator's own bytes.
+
+Running it here leaves the repository unchanged: `git status` stays clean, because every
+one of those files is regenerated identical to the committed copy. That is the check —
+if a file does change, the tables you are reading are not the ones this code produces.
+The fingerprint is a hash of the generator rather than a commit id precisely so that it
+survives this round trip; a commit id would name the checkout, not the code.
 
 Every step is gated and the script stops at the first failure. Two gates run before any
 table is written:

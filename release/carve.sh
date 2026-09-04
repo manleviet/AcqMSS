@@ -134,6 +134,35 @@ if [ -d "$T/patches/files" ]; then
   done
 fi
 
+# The carved generator is NOT the source generator -- every patch that touches one of
+# the five generator files changes its bytes -- so the fingerprint committed alongside
+# the tables has to be recomputed here, after patching and before the commit. Without
+# it the artifact ships this repository's fingerprint, a reader's very first
+# reproduction rewrites PROVENANCE.md, and the artifact greets them by reporting a
+# modified tree. That is not hypothetical: carve d9b542b did exactly that, and the
+# acceptance run caught it only because it compared `git status` rather than the tables.
+#
+# The value comes from the generator itself via --print-fingerprint, never from a copy
+# of the hashing logic living here. Two implementations of one hash drift silently, and
+# the drift would look identical to the bug being fixed.
+say "3b/6  stamp the carved tree's own generator fingerprint"
+FP=$(cd "$OUT" && bash reproduce_tables_sosym.sh --print-fingerprint) \
+  || die "could not compute the carved generator's fingerprint"
+PROV="$OUT/data/results_sosym_r1/tables/PROVENANCE.md"
+[ -f "$PROV" ] || die "carved tree has no tables PROVENANCE.md to stamp"
+python3 - "$PROV" "$FP" <<'PYEOF'
+import pathlib, re, sys
+path, fp = pathlib.Path(sys.argv[1]), sys.argv[2]
+text = path.read_text()
+# Exactly one, asserted. A zero would mean the wording moved and this step became a
+# silent no-op; a two would mean it is rewriting something it was never aimed at.
+new, n = re.subn(r'(generator fingerprint `)[0-9a-f]+(`)', rf'\g<1>{fp}\g<2>', text)
+if n != 1:
+    sys.exit(f"expected exactly 1 fingerprint to stamp in {path}, found {n}")
+path.write_text(new)
+print(f"  stamped {fp}")
+PYEOF
+
 # ---------------------------------------------------------------- 4. root commit
 say "4/6  one root commit"
 cd "$OUT"
