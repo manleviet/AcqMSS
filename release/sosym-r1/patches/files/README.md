@@ -42,17 +42,34 @@ The **whole sweep** is not re-runnable from here: it took weeks of machine time 
 busybox fold alone is 15.5 h. The results are committed evidence, not a table input.
 
 A **single cell** is a different matter, and worth trying — REAL-FM-7 completes in under
-a second and reproduces byte-for-byte. `data/results_sosym/configs/` holds one generated
-config per cell:
+a second. `data/results_sosym/configs/` holds one generated config per cell:
 
 ```bash
 python3 -m apps.run_cv data/results_sosym/configs/congen_REAL-FM-7_ff.toml -o /tmp/one-cell
-python3 -m apps.run_compare data/results_sosym_r1/compare_configs/score_congen.toml
 ```
 
-Cost scales enormously across cells — seconds for REAL-FM-7, hours for busybox — so read
-the cell name before launching one. `apps/conf/run_cv_config.toml` drives a batch rather
-than a single cell; the per-cell configs above are the ones to start from.
+To score that fold against its target theory, use `run_compare`'s CLI mode, which writes
+its evaluation to a separate file:
+
+```bash
+python3 -m apps.run_compare --kb /tmp/one-cell/congen/REAL-FM-7_ff_cv_incremental.json \
+    --oracle data/fms/REAL-FM-7.uvl --bias data/bias/REAL-FM-7-bias.json \
+    -o /tmp/one-cell
+```
+
+⚠ Do **not** point `run_compare`'s config mode at the committed trees to score a new
+fold: in that mode it writes each evaluation back into the file named by `kb_dir`, so it
+would re-score the 28 committed results in place and never touch your new one.
+
+**What matches on a re-run, and what does not.** The learned knowledge base, the
+accuracy, the negative examples, the metric values and the summary all reproduce
+exactly. The *byte layout* of a scored JSON does not: the scorer's output order depends
+on `PYTHONHASHSEED`, so element order within a result — and the timing block, which
+measures your machine — will differ between runs. This is expected. Compare values, not
+file hashes.
+
+Cost varies enormously across cells — seconds for REAL-FM-7, hours for busybox — so read
+the cell name before launching one.
 
 ## The two result trees
 
