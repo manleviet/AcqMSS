@@ -146,7 +146,9 @@ if diff <(cd "$OUT" && git ls-files) <(printf '%s\n' "${FILES[@]}" | sort) | gre
   diff <(cd "$OUT" && git ls-files) <(printf '%s\n' "${FILES[@]}" | sort) | grep '^<' >&2
   die "output contains files the allowlist did not select"
 fi
-./scripts/check-release-hygiene.sh "$OUT" || die "release hygiene"
+# Invoked through bash, not by exec bit: a checked-out mode is one more thing that
+# can differ between machines, and this gate must run everywhere.
+bash ./scripts/check-release-hygiene.sh "$OUT" || die "release hygiene"
 
 # ---------------------------------------------------------------- 6. provenance
 say "6/6  record provenance"
