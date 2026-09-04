@@ -49,6 +49,38 @@ for term in "AAAI" "conmin"; do
   fi
 done
 
+# PROCESS VOCABULARY. The test is DECODABILITY, not embarrassment: a reader who meets
+# `R2-Q13` can reconstruct that there is numbered correspondence with numbered
+# reviewers, and one who meets "the results C2 must regenerate" learns C2 is a person.
+# An opaque code -- C4, T11, A5 -- discloses nothing; it reads as an internal ticket,
+# which every real codebase carries. Those are deliberately NOT matched here.
+#
+# THE PATTERNS MATCH A SHAPE, NOT A VOCABULARY, and that is the whole design. A list of
+# forbidden codes would have to contain B1 and B2 -- which are the bias subsets in the
+# paper's own pseudocode, `B1, B2 = split(B)` in conacq/algorithms/acqmss/acqmss.py.
+# A gate that goes red on the published algorithm gets switched off within the week,
+# and then it is protecting nothing. Matching "a code used as an actor" instead catches
+# the disclosure wherever it appears and never fires on an equation.
+#
+# NO \b ANYWHERE, and that is not a style choice. `git grep -E` is POSIX ERE, where \b
+# is not a word boundary -- the first draft of these patterns used \b and matched ZERO
+# files in a tree containing R3-Q5, R2-Q13, C2's and C9's. It reported green because it
+# was testing nothing. Word boundaries are spelled out as explicit character classes so
+# the pattern means what it appears to mean under the engine that actually runs it.
+#
+# Each pattern is falsified before it is trusted: scripts/falsify_hygiene_patterns.sh
+# asserts every one matches a constructed positive AND leaves split(B) alone.
+for pat in "Cowork" "checklist item" "R[0-9]+-Q[0-9]+" \
+           "(^|[^A-Za-z0-9_])[A-C][0-9]{1,2}'s([^A-Za-z0-9_]|\$)" \
+           "(^|[^A-Za-z0-9_])[A-C][0-9]{1,2} (must|will|owns|is responsible)"; do
+  if git grep -nE "$pat" "$REV" -- . 2>/dev/null; then
+    echo "  ^ process vocabulary matching /$pat/ appears in the tree at $REV" >&2
+    echo "    A code naming an actor, or a reviewer/checklist reference, is decodable" >&2
+    echo "    by a reader. Reword the sentence; do not add an exception here." >&2
+    fail=1
+  fi
+done
+
 # Two numbers that must agree with something outside themselves. Both were found by
 # eye during review, which means the next drift is found the same way or not at all.
 #
