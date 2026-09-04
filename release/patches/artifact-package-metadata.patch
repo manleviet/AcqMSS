@@ -1,0 +1,26 @@
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -3,7 +3,7 @@
+ build-backend = "setuptools.build_meta"
+ 
+ [project]
+-name = "acqmss"
++name = "congen-evaluation"
+ version = "0.1.0"
+ requires-python = ">=3.11"
+ dependencies = [
+@@ -26,6 +26,14 @@
+     # evidence chain. Same failure as PyYAML above: available by accident, never
+     # declared. A package that fails loudly at install is still not reproducible.
+     "scipy>=1.11",
++    # The SAT infrastructure ConGen is built on. Pinned to a tag rather than a
++    # sibling checkout: AcqMSS assumes ../explanation is present and editable-
++    # installed, which is a two-repo development convention and not something a
++    # reader of this artifact can be expected to reproduce.
++    # v0.1.0 dereferences to commit dca7c1121fac3b5f6d2b333ac674cc08d9cab260.
++    # NOTE: v0.1.0 is an ANNOTATED tag, so `git ls-remote --tags` shows the tag
++    # object 6a51e5e, not the commit. Only `refs/tags/v0.1.0^{}` gives dca7c11.
++    "explanation @ git+https://github.com/manleviet/explanation.git@v0.1.0",
+ ]
+ 
+ [project.optional-dependencies]

@@ -1,0 +1,43 @@
+--- a/conacq/runners/metrics.py
++++ b/conacq/runners/metrics.py
+@@ -137,40 +137,6 @@
+ )
+ 
+ 
+-CONMIN_METRICS: Tuple[MetricSpec, ...] = (
+-    MetricSpec('runtime_ms', 'conmin_total_time', Kind.TIMER_SEC, 'runtime', '_ms'),
+-    # ONE canonical consistency-check total = the SUM of the §9c classified counters
+-    # (batch granularity, R1-Q4 complete: gate + admpool + cover + redundancy). The
+-    # ambiguous bare `consistency_checks` (paper_consistency_checks, which omits
+-    # cover+Reduce) is deliberately NOT exported for ConMin — computed in the runner.
+-    MetricSpec('consistency_checks_total', 'consistency_checks_total', Kind.COUNTER, 'consistency_checks'),
+-    _CORE[1],  # memory
+-    MetricSpec('n_mss', 'n_mss', Kind.GAUGE, 'kb_size', '', stats=('mean',)),
+-    MetricSpec('n_kb', 'n_kb', Kind.GAUGE, 'kb_size', '', stats=('mean',)),
+-    MetricSpec('conmin_runtime_ms', 'conmin_runtime', Kind.TIMER_SEC, 'conmin_runtime', '_ms'),
+-    MetricSpec('acqmss_runtime_ms', 'acqmss_runtime', Kind.TIMER_SEC, 'acqmss_runtime', '_ms'),
+-    MetricSpec('acqmss_calls', 'acqmss_calls', Kind.COUNTER, 'acqmss_calls'),
+-    MetricSpec('conmin_acqmincover_runtime_ms', 'conmin_acqmincover_runtime', Kind.TIMER_SEC, 'conmin_acqmincover_runtime', '_ms'),
+-    _CORE[2],  # reduce_runtime
+-    _CORE[3],  # solver_time
+-    _CORE[4],  # is_consistent_calls
+-    _CORE[5],  # is_consistent_test_cases_calls
+-    _CORE[6],  # redundancy_consistency_checks
+-    # §9c per-phase consistency-check taxonomy (classified counters; the reported
+-    # paper total per SoSyM R1-Q4 is their sum). conmin_ = ConMin-only call-sites;
+-    # shared_ = AcqMSS Stage-1 (ConGen also emits it — ADR-0018). Reduce's checks
+-    # are redundancy_consistency_checks above.
+-    MetricSpec('conmin_admpool_gate_checks', 'conmin_admpool_gate_checks', Kind.COUNTER, 'conmin_admpool_gate_checks'),
+-    MetricSpec('shared_admpool_checks', 'shared_admpool_checks', Kind.COUNTER, 'shared_admpool_checks'),
+-    MetricSpec('conmin_cover_rejection_checks', 'conmin_cover_rejection_checks', Kind.COUNTER, 'conmin_cover_rejection_checks'),
+-    MetricSpec('conmin_cover_quickxplain_checks', 'conmin_cover_quickxplain_checks', Kind.COUNTER, 'conmin_cover_quickxplain_checks'),
+-    # Cover-step diagnostics from the cover result (via ``extra``) — coarse counts,
+-    # mean only. NOT the §9c per-phase check taxonomy (that is P4e).
+-    MetricSpec('n_components', 'n_components', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
+-    MetricSpec('largest_component', 'largest_component', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
+-    MetricSpec('n_greedy_fallback', 'n_greedy_fallback', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
+-    MetricSpec('n_uncoverable', 'n_uncoverable', Kind.GAUGE, 'conmin_cover', '', stats=('mean',)),
+-)
+ 
+ 
+ # Profiler keys a run emits that are deliberately NOT exported as metrics — the

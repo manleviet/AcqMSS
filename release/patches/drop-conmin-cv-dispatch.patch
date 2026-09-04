@@ -1,0 +1,50 @@
+--- a/apps/run_cv.py
++++ b/apps/run_cv.py
+@@ -23,7 +23,6 @@
+ from conacq.eval.cv_partials import load_partials, write_partial
+ from conacq.eval import (
+     n_fold_cross_validation,
+-    n_fold_cross_validation_conmin,
+     n_fold_cross_validation_interactive,
+     generate_cv_report,
+     generate_unified_cv_dict,
+@@ -150,10 +149,6 @@
+     # cross_validation.n_fold_cross_validation_interactive for why the two must not be
+     # confused: max_queries is reproducible, this is not.
+     timeout_s = interactive_config.get('timeout_s') or None
+-
+-    # ConMin-specific settings
+-    conmin_config = eval_config.get('conmin', {})
+-    conmin_k = conmin_config.get('k', 1)
+ 
+     models = parse_models(config)
+     if not models:
+@@ -254,20 +249,6 @@
+ 
+                 if algorithm == 'congen':
+                     cv_result = n_fold_cross_validation(
+-                        positive_examples=pos,
+-                        negative_examples=neg,
+-                        n_folds=actual_n_folds,
+-                        bias_path=model_config.bias,
+-                        fm_path=model_config.oracle,
+-                        seed=seed,
+-                        solver_name=solver_name,
+-                        use_incremental=is_incremental,
+-                        fold_data=fold_data,
+-                        shuffle_bias=shuffle_bias,
+-                        fold_indices=todo, on_fold=on_fold, done_folds=done_folds
+-                    )
+-                elif algorithm == 'conmin':
+-                    cv_result = n_fold_cross_validation_conmin(
+                         positive_examples=pos,
+                         negative_examples=neg,
+                         n_folds=actual_n_folds,
+@@ -278,7 +259,6 @@
+                         use_incremental=is_incremental,
+                         fold_data=fold_data,
+                         shuffle_bias=shuffle_bias,
+-                        k=conmin_k,
+                         fold_indices=todo, on_fold=on_fold, done_folds=done_folds
+                     )
+                 elif algorithm == 'interactive':

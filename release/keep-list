@@ -1,0 +1,207 @@
+# Allowlist for the public ConGen evaluation artifact.
+#
+# ALLOWLIST, NEVER A BLOCKLIST. A blocklist fails silently on the file nobody thought
+# of; this project has proved that four times -- apps/conf/run_conmin_config.toml and
+# tests/test_make_tables.py matched no path filter anyone wrote, and one of them was
+# live in the working tree. An allowlist fails loudly instead: the omitted file is
+# simply absent, and reproduce_tables_sosym.sh stops.
+#
+# Each line is a path prefix relative to the repository root, matched against
+# `git ls-files`. Blank lines and lines starting with # are ignored.
+#
+# What this CANNOT do: remove a function from a file that is kept. Those are content
+# edits and live as named patches in release/patches/ -- see release/carve.sh. An
+# allowlist that silently also edited files would be the hand-editing it replaces.
+
+# ---- source ---------------------------------------------------------------
+# conacq/ minus the ConMin algorithm, evaluator, scorer and runner. ConMin stays in
+# the development repository, where it works; it is simply not this artifact's subject.
+conacq/algorithms/__init__.py
+conacq/algorithms/acqmss/
+conacq/algorithms/quacq/
+conacq/atomic_io.py
+conacq/bias/
+conacq/config/
+# conacq/eval file by file: a `conacq/eval/` prefix re-admits conmin_cv_evaluator.py
+# and conmin_slice_scorer.py.
+conacq/eval/__init__.py
+conacq/eval/accuracy.py
+conacq/eval/cross_validation.py
+conacq/eval/cv_partials.py
+conacq/eval/folds.py
+conacq/eval/kb_comparator.py
+conacq/eval/metrics.py
+conacq/eval/progressive_evaluation.py
+conacq/eval/report.py
+conacq/eval/result_loader.py
+conacq/eval/semantic_equivalence.py
+conacq/examples/
+conacq/fm/
+conacq/oracle/
+conacq/runners/__init__.py
+conacq/runners/base_runner.py
+conacq/runners/congen_runner.py
+conacq/runners/metrics.py
+conacq/runners/quacq_runner.py
+conacq/__init__.py
+
+# ---- entry points ---------------------------------------------------------
+# apps/sosym_r1/ is everything the paper's numbers come from -- the two gates, the
+# table tools, the significance tests, and every measurement quoted in the text.
+apps/__init__.py
+apps/_harness.py
+apps/sosym_r1/
+apps/conf/
+apps/extract_results.py
+apps/generate_bias_config.py
+apps/generate_bias_files.py
+apps/generate_cv_folds.py
+apps/generate_examples.py
+apps/run_baselines.py
+apps/run_compare.py
+apps/run_congen.py
+apps/run_cv.py
+apps/run_evaluation.py
+apps/run_quacq.py
+
+# ---- provenance, not reproduction -----------------------------------------
+# The sweep record. sweep-ledger.json is NOT inert: check_timing_provenance.py reads
+# it, and that gate runs before any table is emitted.
+tools/sosym_r1/README.md
+tools/sosym_r1/backfill_ne_clauses.py
+tools/sosym_r1/calibrate_multiplier.py
+tools/sosym_r1/congen_check_unit_factors.py
+tools/sosym_r1/make_score_configs.py
+tools/sosym_r1/measurements.jsonl
+tools/sosym_r1/sweep-ledger.json
+tools/sosym_r1/sweep_queue.py
+tools/sosym_r1/sweep_units.py
+tools/sosym_r1/verify_examples_bundle.py
+
+# ---- data -----------------------------------------------------------------
+# data/results and data/results_sosym_r1 are a PAIR: the correction rests on comparing
+# them, and shipping one without the other makes the disclosure unverifiable.
+#
+# data/examples and data/folds are filtered by carve.sh to the cells that have a
+# result. Sets for busybox RS(2n)/RS(3n) and the ea2468 family produced no number and
+# are 148.6 MB; the filter is mechanical, not a list, so it cannot drift.
+data/bias/
+data/bias-config/
+data/examples/
+data/fms/
+data/folds/
+data/kb_eval/
+data/results/
+data/results_sosym/
+data/results_sosym_r1/
+
+# ---- tests ----------------------------------------------------------------
+# tests/ file by file. Thirty are dropped: the ConMin and make_tables tests, and
+# files byte-identical with ../explanation/tests/ that nothing here still reads.
+#
+# Byte-identical was NOT the test -- "who reads it" was, and it saved four files:
+#   tests/__init__.py                     tests/ is imported as a package by
+#                                         conftest.py and five others
+#   resources/incomplete_catalog.cnf      test_transformations_characterization.py
+#   resources/prod_1_1.cnf                resource_paths.py
+#   resources/smartwatch_inconsistent.fide  resource_paths.py
+tests/__init__.py
+tests/conftest.py
+tests/fixtures/t11_oracle_net/congen_runner.json
+tests/fixtures/t11_oracle_net/layer23_prepared_and_e2e.json
+tests/fixtures/t11_oracle_net/queries_REAL-FM-7.json
+tests/fixtures/t11_oracle_net/queries_arcade-game.json
+tests/fixtures/t11_oracle_net/queries_busybox-1.18.0.json
+tests/fixtures/t11_oracle_net/trace_REAL-FM-7.json
+tests/fixtures/t11_oracle_net/trace_arcade-game.json
+tests/fixtures/t11_oracle_net/trace_busybox-1.18.0.json
+tests/resource_paths.py
+tests/resources/incomplete_catalog.cnf
+tests/resources/prod_1_1.cnf
+tests/resources/smartwatch_inconsistent.fide
+tests/resources/t9_extraction_golden/results_tables.md
+tests/resources/t9_extraction_golden/results_tables.tex
+tests/t11_e2e_harness.py
+tests/t11_oracle_net_helpers.py
+tests/test_apps_logging.py
+tests/test_assumption_slicer.py
+tests/test_atomic_io.py
+tests/test_baselines_feature_table.py
+tests/test_baselines_learners.py
+tests/test_baselines_rule_cnf.py
+tests/test_baselines_tree_rules.py
+tests/test_bias_io.py
+tests/test_boundary_guard.py
+tests/test_congen.py
+tests/test_cv_fold_partials.py
+tests/test_encoding.py
+tests/test_evaluation.py
+tests/test_example_generators_rng_guard.py
+tests/test_feature_frequency_reachable_coverage.py
+tests/test_fmoracle_partial_query.py
+tests/test_generator_characterization.py
+tests/test_oracle_model.py
+tests/test_oracle_protocols.py
+tests/test_quacq.py
+tests/test_query_converter.py
+tests/test_semantic_equivalence.py
+tests/test_semantic_scorer_positive_control.py
+tests/test_t11_congen_runner_net.py
+tests/test_t11_e2e_learned_kb.py
+tests/test_t11_oracle_trace_net.py
+tests/test_t11_prepared_task_ids.py
+tests/test_t11_purity_guards.py
+tests/test_t9_metrics_safety_net.py
+tests/test_task_immutability.py
+tests/test_transformations_characterization.py
+
+# ---- root -----------------------------------------------------------------
+# NOT uv.lock: it pins name = "acqmss" and flamapy 2.0.1 with no explanation, which
+# contradicts the rewritten pyproject.toml. `uv sync` would build the wrong
+# environment and say nothing.
+#
+# NOT reproduce_tables.sh or freshness_gate.py: those belong to the other project.
+#
+# NOT scripts/check-release-hygiene.sh: a checker that enumerates the terms it forbids
+# is, inside the artifact, the disclosure it exists to prevent. It stays in the
+# development repository and runs against the carve from there.
+LICENSE
+pyproject.toml
+reproduce_tables_sosym.sh
+
+# ---- docs -----------------------------------------------------------------
+# Listed file by file, not as `docs/`. Four documents do not ship:
+#   adr/0018-profiler-counter-naming-convention.md  -- names the other project's terms
+#   codebase-summary.md                             -- describes the shared repository
+#   eval-pipeline.md                                -- opens by disclaiming itself, then
+#                                                      points at files this repo lacks
+#   journals/260726-make-tables-generator-build.md  -- build log for a dropped generator
+# A `docs/` prefix would quietly re-admit all four the next time someone re-carves.
+docs/README.md
+# Each ADR by name. A `docs/adr/` prefix would re-admit 0018 -- and the
+# output-equals-allowlist gate could not catch that, because the allowlist
+# would be the thing saying to include it.
+docs/adr/0001-redesign-from-baseline.md
+docs/adr/0002-three-package-layering.md
+docs/adr/0003-profiling-as-top-level-package.md
+docs/adr/0004-checker-is-the-port-backend-is-the-adapter.md
+docs/adr/0005-oracle-bias-builder-lives-in-conacq.md
+docs/adr/0006-evaluation-stays-inside-conacq.md
+docs/adr/0007-no-runtime-read-only-views.md
+docs/adr/0008-run-result-and-result-data-stay-separate.md
+docs/adr/0009-the-oracle-answers-it-does-not-provision.md
+docs/adr/0010-roles-are-declared-not-inferred.md
+docs/adr/0011-completion-bypasses-the-checker-port.md
+docs/adr/0012-immutability-at-construction-not-at-read.md
+docs/adr/0013-is-consistent-and-find-model-are-two-questions.md
+docs/adr/0014-parallel-executor-deferred-to-canonical.md
+docs/adr/0015-example-mode-pool-shuffle-must-be-seeded.md
+docs/adr/0016-shuffle-bias-is-a-no-op-for-quacq.md
+docs/adr/0017-reduce-discards-mss-order.md
+docs/adr/README.md
+docs/code-standards.md
+docs/congen.md
+docs/project-overview-pdr.md
+docs/project-roadmap.md
+docs/quacq.md
+docs/system-architecture.md

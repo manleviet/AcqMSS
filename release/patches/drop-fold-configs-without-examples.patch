@@ -1,0 +1,44 @@
+--- a/apps/conf/generate_cv_folds_config.toml
++++ b/apps/conf/generate_cv_folds_config.toml
+@@ -127,14 +127,6 @@
+ examples = "data/examples/busybox-1.18.0_rs_1n.json"
+ 
+ [[models]]
+-name = "busybox-1.18.0_rs_2n"
+-examples = "data/examples/busybox-1.18.0_rs_2n.json"
+-
+-[[models]]
+-name = "busybox-1.18.0_rs_3n"
+-examples = "data/examples/busybox-1.18.0_rs_3n.json"
+-
+-[[models]]
+ name = "busybox-1.18.0_rs_m"
+ examples = "data/examples/busybox-1.18.0_rs_m.json"
+ 
+@@ -151,26 +143,3 @@
+ # gitignored (95/190/285 MB, over GitHub's 100 MB per-file limit) and must be
+ # fetched out of band before folds can be regenerated for those three.
+ # =============================================================================
+-[[models]]
+-name = "ea2468_rs_1n"
+-examples = "data/examples/ea2468_rs_1n.json"
+-
+-[[models]]
+-name = "ea2468_rs_2n"
+-examples = "data/examples/ea2468_rs_2n.json"
+-
+-[[models]]
+-name = "ea2468_rs_3n"
+-examples = "data/examples/ea2468_rs_3n.json"
+-
+-[[models]]
+-name = "ea2468_rs_m"
+-examples = "data/examples/ea2468_rs_m.json"
+-
+-[[models]]
+-name = "ea2468_2cov"
+-examples = "data/examples/ea2468_2cov.json"
+-
+-[[models]]
+-name = "ea2468_ff"
+-examples = "data/examples/ea2468_ff.json"

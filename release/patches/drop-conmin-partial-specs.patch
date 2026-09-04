@@ -1,0 +1,19 @@
+--- a/conacq/eval/cv_partials.py
++++ b/conacq/eval/cv_partials.py
+@@ -22,7 +22,7 @@
+ 
+ from conacq.atomic_io import write_json_atomic
+ from conacq.runners.metrics import (
+-    CONGEN_METRICS, CONMIN_METRICS, QUACQ_METRICS, MetricSpec, RunMetrics,
++    CONGEN_METRICS, QUACQ_METRICS, MetricSpec, RunMetrics,
+ )
+ 
+ from .cross_validation import CrossValidationFoldResult
+@@ -37,7 +37,6 @@
+ 
+ _SPECS: Dict[str, Tuple[MetricSpec, ...]] = {
+     'congen': CONGEN_METRICS,
+-    'conmin': CONMIN_METRICS,
+     'interactive': QUACQ_METRICS,
+ }
+ 
