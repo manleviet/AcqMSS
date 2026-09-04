@@ -2,7 +2,7 @@
 """Measure the ConGen / condition-A ratio from finished ledger units.
 
 Every estimate in the ledger is a condition-A figure -- AcqMss alone, read off
-``data/results_conmin/*_long.csv``. ConGen is AcqMss plus Reduce, so the estimates
+the condition-A reference CSVs. ConGen is AcqMss plus Reduce, so the estimates
 are floors and the question is how loose. This reports the observed ratio per cell
 and per knowledge base rather than as one number, because a single global ratio
 fitted on cells that take milliseconds says nothing about the cells that take

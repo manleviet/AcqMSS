@@ -75,10 +75,10 @@ _CORE: Tuple[MetricSpec, ...] = (
                'redundancy_consistency_checks'),
 )
 
-# Keys the MSS-based passive algorithms (ConGen + ConMin) both emit — each builds an
+# Keys the MSS-based passive algorithms both emit — each builds an
 # admissible MSS, calls AcqMSS, and reports a final KB size — so they are shared by
 # meaning. Kept OUT of COMMON_KEYS on purpose: COMMON_KEYS stays the NARROW core so
-# the ConGen∩QuAcq guard still trips if QuAcq ever grows an MSS key; the ConMin
+# the ConGen∩QuAcq guard still trips if QuAcq ever grows an MSS key; the sibling
 # disjointness test allows these via ``COMMON_KEYS | _MSS_SHARED`` instead.
 _MSS_SHARED: frozenset = frozenset(
     {'n_mss', 'n_kb', 'acqmss_runtime_ms', 'acqmss_calls'}

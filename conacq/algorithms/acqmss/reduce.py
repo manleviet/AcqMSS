@@ -60,7 +60,7 @@ class Reduce:
         logging.debug('REDUCE [B\'=%s, NE=%s, BG=%s]', set_b_prime, set_neg_tv, set_bg)
 
         # Normalize set_bg to a list: it is concatenated with lists below, and callers
-        # may pass a frozen tuple (QuAcq passes the task's tuple set_b). ConGen/ConMin
+        # may pass a frozen tuple (QuAcq passes the task's tuple set_b). The passive
         # already pass lists, so list(list) is a no-op → their numbers stay identical.
         set_bg = list(set_bg)
 
@@ -77,7 +77,8 @@ class Reduce:
         # It is also what keeps |KB| reportable. With NE assembled last, each ¬e⁻ faces a
         # KB already stripped of the constraints that would entail it, and n_ne climbs to
         # 6 (132 facts retained over 72 folds); assembled first they discharge each other
-        # and n_ne stays in {0, 1} (42 retained). ConMin assembles F -> S -> C likewise.
+        # and n_ne stays in {0, 1} (42 retained). The cover-based variant assembles
+        # F -> S -> C likewise.
         #
         # dict.fromkeys dedups (first occurrence wins) without going through set(), which
         # would iterate in hash order and make the surviving representative of mutually

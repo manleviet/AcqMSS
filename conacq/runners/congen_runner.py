@@ -203,7 +203,7 @@ class ConGenRunner(BaseRunner):
 
             # ``result.n_kb`` counts the post-Reduce KB as a whole (B′ ∪ NE). Report
             # the two populations apart: ``n_kb`` is bias constraints only, so it
-            # compares byte-for-byte with ConMin's ``size``, and ``n_ne`` carries the
+            # compares byte-for-byte with the sibling's ``size``, and ``n_ne`` carries the
             # memorized ¬e⁻ facts. |KB| = n_kb + n_ne. Both are read off the resolved
             # POST-Reduce ids, never off the prepared task — Reduce runs on B′ ∪ NE and
             # can drop an NE as entailed, which an at-prep count would miss.

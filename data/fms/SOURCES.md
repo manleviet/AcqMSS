@@ -32,7 +32,7 @@ preserved unchanged.
 
 `ea2468.uvl` and `linux-2.6.33.3.uvl` are kept because the repository's scalability notes refer to
 them. They contribute **no number to any table in the paper** — the evaluation config
-(`apps/conf_conmin/run_conmin_eval_config.toml`) lists exactly the five knowledge bases above.
+lists exactly the five knowledge bases above.
 
 ## Licensing
 

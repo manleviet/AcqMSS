@@ -36,9 +36,23 @@ table is written:
 - **`apps/sosym_r1/check_paper_numbers.py`** — recomputes every number quoted in the
   paper from the committed data. 93 checks.
 
-The acquisition sweep is **not** re-runnable from here, deliberately. It took weeks of
-machine time, and one busybox fold alone is 15.5 h. The results are committed evidence,
-not a table input.
+### Re-running the acquisition itself
+
+The **whole sweep** is not re-runnable from here: it took weeks of machine time and one
+busybox fold alone is 15.5 h. The results are committed evidence, not a table input.
+
+A **single cell** is a different matter, and worth trying — REAL-FM-7 completes in under
+a second and reproduces byte-for-byte. `data/results_sosym/configs/` holds one generated
+config per cell:
+
+```bash
+python3 -m apps.run_cv data/results_sosym/configs/congen_REAL-FM-7_ff.toml -o /tmp/one-cell
+python3 -m apps.run_compare data/results_sosym_r1/compare_configs/score_congen.toml
+```
+
+Cost scales enormously across cells — seconds for REAL-FM-7, hours for busybox — so read
+the cell name before launching one. `apps/conf/run_cv_config.toml` drives a batch rather
+than a single cell; the per-cell configs above are the ones to start from.
 
 ## The two result trees
 

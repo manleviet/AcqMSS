@@ -75,7 +75,7 @@ class ConGenModel(KBModel):
         ``kb_names`` is bias constraints ONLY and ``ne_names`` the memorized ¬e⁻
         facts, reported apart. They used to share one list, which put NE names into
         the KB name-space: it inflated ``n_kb`` (so it no longer compared byte-for-byte
-        with ConMin's ``size``) and fed NE into the description/clause/semantic tiers,
+        with the sibling passive algorithm's ``size``) and fed NE into the description/clause/semantic tiers,
         whose vocabulary is the bias. The ids resolved here are POST-Reduce, so an NE
         that Reduce dropped as entailed is not counted — it surfaces in
         ``redundant_ne_names`` instead. Both redundant lists are split the same way as
@@ -98,7 +98,7 @@ class ConGenModel(KBModel):
             describe, result.kb_assumption_ids)
 
         # Resolve each NE id back to its blocking clause. Fail loud rather than deliver
-        # a theory that silently omits a memorized ¬e⁻ — the same contract ConMin
+        # a theory that silently omits a memorized ¬e⁻ — the same contract the other
         # applies to its ¬e⁻ fallbacks, using the shared resolver on KBModel.
         ne_clauses: List[List[int]] = []
         for aid in result.kb_assumption_ids:

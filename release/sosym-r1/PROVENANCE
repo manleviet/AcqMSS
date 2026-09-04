@@ -1,7 +1,7 @@
 target:     sosym-r1
-carved:     2026-09-04T10:55:14Z
-source:     AcqMSS 758f9aa (feat/sosym-r1)
-artifact:   ac5d3d2
+carved:     2026-09-04T11:00:54Z
+source:     AcqMSS 6275955 (feat/sosym-r1)
+artifact:   b3ba5cc
 files:      914 selected by keep-list, before the example/fold filter
 
 gitignore radius: 1 tracked file(s) also matched by .gitignore
@@ -13,5 +13,13 @@ a count would not say which, and three deleted looks like three broken:
   test_explanation_imports_profiling_only_through_facade
   test_explanation_never_imports_conacq
   test_profiling_is_a_leaf
-  (each scanned REPO_ROOT/explanation or /profiling, absent since 4b47c9b,
-   so all three asserted over an empty list)
+  Each scanned REPO_ROOT/explanation or /profiling, gone since 4b47c9b, so
+  none of them could fail: three green lights wired to nothing. An empty
+  assertion is worse than an absent one -- it is a promise of protection
+  that does not exist, and it reads as coverage in every report.
+
+  The rules themselves are NOT abandoned. All three live in the canonical
+  explanation repository, which does contain those packages:
+    test_explanation_imports_profiling_only_through_facade
+    test_explanation_never_imports_an_application  (generalised: no single app there)
+    test_profiling_is_a_leaf

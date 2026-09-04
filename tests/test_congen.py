@@ -514,7 +514,7 @@ def test_ne_split_out_of_kb_names(examples_path, ne_kept):
     """kb_constraints is bias-only; memorized ¬e⁻ facts go to ne_constraints.
 
     They used to share one name list, so an NE inflated n_kb (breaking byte-comparison
-    with ConMin's ``size``) and entered the description/clause/semantic tiers, whose
+    with the sibling's ``size``) and entered the description/clause/semantic tiers, whose
     vocabulary is the bias. Asserts BOTH directions — no NE in kb, no bias in ne — so
     a split that merely moves the boundary the wrong way still goes red.
 

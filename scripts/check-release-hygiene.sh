@@ -29,14 +29,12 @@ REV=HEAD
 # CASE-SENSITIVE, and only three terms. Each is a proper noun coined by the other
 # project's paper, so a person searching for it is looking for that paper.
 #
-# `conmin` is deliberately ABSENT, and this note exists so nobody adds it back.
-# Case-insensitively it matches fifteen comments in ConGen's own algorithm files that
-# say a sibling algorithm exists and how the shared code path is shaped for it --
-# `# ConMin assembles F -> S -> C likewise`. None names the venue, the title, or the
-# review. That is the line: a proper noun from the paper is blocked; the bare fact that
-# a sibling algorithm exists is not. Adding `conmin` makes this gate red on day one,
-# and a gate that is red on day one gets relaxed until it checks nothing. Two such
-# relaxations were removed from this file already.
+# `conmin` WAS removed from this list, and putting it back is the correction. The
+# observation behind the removal was true -- it matched 26 lines and would have been red
+# on day one -- but the conclusion was wrong: the answer to a true red is to fix what it
+# points at, not to stop asking. Silencing the bell instead of putting out the fire.
+# Those 26 lines are now reworded (they named a sibling algorithm) or cleared (they
+# pointed at paths this artifact does not contain), and the check is back on.
 for term in "AdmPoolMSS" "AcqMinCover" "maximally general"; do
   if git grep -n "$term" "$REV" -- . 2>/dev/null; then
     echo "  ^ '$term' appears in the tree at $REV" >&2
@@ -44,10 +42,12 @@ for term in "AdmPoolMSS" "AcqMinCover" "maximally general"; do
   fi
 done
 
-if git grep -in "AAAI" "$REV" -- . 2>/dev/null; then
-  echo "  ^ 'AAAI' appears in the tree at $REV" >&2
-  fail=1
-fi
+for term in "AAAI" "conmin"; do
+  if git grep -in "$term" "$REV" -- . 2>/dev/null; then
+    echo "  ^ '$term' appears in the tree at $REV (case-insensitive)" >&2
+    fail=1
+  fi
+done
 
 # No path in ANY commit belongs to the other project. With a single root commit this is
 # cheap, but it stays because it is the only check that would survive a return to

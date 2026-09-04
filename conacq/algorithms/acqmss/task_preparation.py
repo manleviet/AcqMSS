@@ -116,8 +116,8 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
         """``profiler`` (optional) counts GenerateNE's PREPROCESSING QuickXplain apart
         from acquisition (GAP B). ConGen used to leave it None, so the reduction paper
         l.299 performs outside the acquisition procedure was invisible in ConGen runs
-        while ConMin counted it — the two pipelines disagreed on preprocessing cost for
-        the same work. Owned here, not in the ConMin subclass, so both share it."""
+        while the other pipeline counted it — the two disagreed on preprocessing cost for
+        the same work. Owned here, not in the subclass, so both share it."""
         super().__init__()
         self._profiler = profiler
 
@@ -218,7 +218,7 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
         return PreparedTask(task, provider)
 
     def _make_task(self, **fields) -> TestCaseTask:
-        """Construct the task object. Factory hook so a subclass (ConMin) can return
+        """Construct the task object. Factory hook so a subclass can return
         its own task type with extra fields while reusing all of ``prepare``."""
         return ConGenTask(**fields)
 
@@ -324,7 +324,7 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
 
         ``per_e_negations_out`` (optional): when a dict is supplied, it is filled with
         ``{per-e⁻ ne_id: its already-built negated form}``. ConGen passes nothing (the
-        per-e⁻ negations exist in the KB but are unused); ConMin passes a dict so it can
+        per-e⁻ negations exist in the KB but are unused); the subclass passes a dict so it can
         register per-e⁻ ``negation_map`` entries for the ¬e⁻ fallbacks WITHOUT allocating
         any new ids (Stage-1 golden unchanged).
         """
