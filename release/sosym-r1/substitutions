@@ -1,71 +1,30 @@
 # Phrase substitutions applied to the carved tree, after file selection and before
 # the patches.
 #
-# WHY A TABLE AND NOT PATCHES. These are one-phrase edits scattered across twenty
-# comments. As context diffs they would break every time someone edits a neighbouring
-# line in the development repository -- a mechanism that fails whenever a colleague
-# writes a good comment is the wrong mechanism. A phrase substitution survives its
-# surroundings changing.
+# ⚠ IDENTIFIERS AND PATHS ONLY. A substitution table does not know grammar. Used on
+# prose it silently produced "a caller the caller asks", "the passive algorithms
+# on-disk schema", a lower-case sentence opening, and a dangling "the other" with no
+# antecedent -- each of them shipped, because a replacement that fires cleanly reports
+# success whatever nonsense it leaves behind. Every sentence-level edit now lives in
+# patches/, where a wrong assumption fails loudly instead of reading oddly.
 #
-# WHY THEY EXIST AT ALL, and this is the part worth getting right: `ConMin` in this
-# repository is not a rival paper's coined term, it is the name of a package that sits
-# next to ConGen. A comment pointing at a sibling module is correct documentation here.
-# It becomes wrong only in the artifact, which does not ship that module -- there the
-# name is a pointer to something absent, exactly like a stale file path. So the fix
-# belongs on the artifact side, and the upstream comments stay accurate.
+# WHY THEY EXIST AT ALL: `ConMin` in the development repository is not a rival paper's
+# coined term, it is the name of a package beside ConGen, and a comment pointing at a
+# sibling module is correct documentation there. It becomes wrong only in the artifact,
+# which does not ship that module -- there the name points at something absent, exactly
+# like a stale file path. So the fix belongs on the artifact side.
 #
-# ORDER MATTERS. Rules apply in file order, so a longer phrase must precede any
-# shorter phrase contained in it -- otherwise the short rule consumes the text and the
-# long one silently never fires. The match-at-least-once assertion is what surfaces
-# that: two shadowed rules were removed the first time it ran.
+# ORDER MATTERS: rules apply in file order, so a longer phrase must precede any shorter
+# phrase contained in it, or the short rule consumes the text and the long one never
+# fires. The match-at-least-once assertion is what surfaces that.
 #
 # FORMAT: one `find<TAB>replace` per line. Blank lines and # comments ignored.
 # Every entry must match at least once, and no `find` may survive: carve.sh asserts
-# both. An entry that matches nothing means the upstream wording moved, and the table
-# needs updating rather than quietly doing nothing.
-
-# --- the sibling algorithm, named by what it does ---------------------------
-ConGen/ConMin	the passive algorithms
-ConGen + ConMin	the MSS-based passive algorithms
-(ConMin) asks via capture_assignments	the caller asks via capture_assignments
-when True (ConMin), persist	when True, persist
-so ConMin's	so the caller's
-ConMin assembles F -> S -> C likewise	The cover-based variant assembles F -> S -> C likewise
-while ConMin counted it	while the other pipeline counted it
-not in the ConMin subclass	not in the subclass
-a subclass (ConMin) can return	a subclass can return
-ConMin passes a dict	the subclass passes a dict
-with ConMin's ``size``	with the sibling's ``size``
-byte-comparable with ConMin's	byte-comparable with the sibling's
-the same contract ConMin	the same contract the other
-the ConMin	the sibling's
-(base_runner, conmin_cv_evaluator)	(base_runner, the passive evaluator)
-common to ConGen, ConMin, and Interactive	common to every runner
-ConMinModel already carries	a sibling model already carries
+# both, and refuses any rule that would touch data/.
 
 # --- paths this artifact does not contain -----------------------------------
-# (the apps/conf_conmin reference lives in data/fms/SOURCES.md, which the data/
-#  guard puts out of reach -- it is a named patch instead, deliberately, rather
-#  than an exception carved into the guard.)
 `apps.run_conmin_eval`	an evaluation app
 ``data/results_conmin/*_long.csv``	the condition-A reference CSVs
 data/results_conmin/*_long.csv, condition A	the condition-A reference CSVs
 tests/test_diagnosis_fastdiag.py	the canonical explanation repository's diagnosis tests
 `plans/260710-redesign-abc-v2/B3-pending-revision.md`	an internal effort log, not shipped
-
-# --- collaboration vocabulary the artifact's reader has no access to ---------
-# True in the development repository -- this IS how the 93 numbers came about, and
-# deleting it there would destroy real provenance to make a copy look tidier. In the
-# artifact it points at a document and a working arrangement the reader does not have,
-# which makes it a dead pointer of the same kind as a stale file path.
-The checking layer was the one layer leaving no audit trail. CC's measurements	A number that nobody can recompute cannot be re-checked, only re-asserted. Measurements
-live in committed scripts; CW's counter-measurements were ad-hoc snippets typed	belong in committed code rather than in a transcript, so each figure the paper quotes is
-into a chat, and the numbers they produced went straight into `~SoSyM revision.md`	recomputed here from the committed data. Several are load-bearing:
-and the paper drafts. Several of those numbers are load-bearing:	
-reconstructs it") and this file is CW complying with it.	reconstructs it").
-R2-Q13	the query-budget question
-R3-Q5	the significance question
-every number the SoSyM revision notes quote.	every number the paper quotes.
-    CW came to report "the P/R do not exist anywhere in the repository" on	    a reviewer reported "the P/R do not exist anywhere in the repository" on
-The pairwise-exclusion term is the one CW's first hand count omitted. It	The pairwise-exclusion term is the one the first hand count omitted. It
-    The lesson is the one CW had already written to CC and not applied to	    The lesson was one already written down and not applied to

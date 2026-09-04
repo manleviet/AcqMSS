@@ -13,17 +13,25 @@
  requires-python = ">=3.11"
  dependencies = [
      "flamapy-fw==2.6.0.dev4",
-@@ -26,6 +28,13 @@
+@@ -26,6 +28,11 @@
      # evidence chain. Same failure as PyYAML above: available by accident, never
      # declared. A package that fails loudly at install is still not reproducible.
      "scipy>=1.11",
-+    # The SAT infrastructure ConGen is built on. Pinned to a tag rather than a
-+    # sibling checkout, which is a two-repo development convention a reader of this
-+    # artifact cannot be expected to reproduce.
-+    # v0.1.0 dereferences to commit dca7c1121fac3b5f6d2b333ac674cc08d9cab260.
-+    # NOTE: v0.1.0 is an ANNOTATED tag, so listing remote tags shows the tag object
-+    # 6a51e5e, not the commit; only the dereferenced form gives dca7c11.
++    # The SAT infrastructure ConGen is built on, pinned to a public tag so no sibling
++    # checkout is needed. v0.1.0 dereferences to commit
++    # dca7c1121fac3b5f6d2b333ac674cc08d9cab260; it is an ANNOTATED tag, so a plain
++    # remote tag listing shows the tag object 6a51e5e rather than the commit.
 +    "explanation @ git+https://github.com/manleviet/explanation.git@v0.1.0",
  ]
  
  [project.optional-dependencies]
+@@ -51,8 +58,7 @@
+ ]
+ 
+ [tool.setuptools.packages.find]
+-# explanation and profiling both come from the canonical ../explanation package
+-# (pip install -e ../explanation), not bundled here.
++# explanation and profiling come from the pinned dependency above, not bundled here.
+ include = ["conacq*", "apps*"]
+ 
+ [tool.pytest.ini_options]
