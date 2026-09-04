@@ -111,6 +111,21 @@ observe the failure it existed to prevent:
   standing in for a missing key, a suite that "passed" with pytest uninstalled, and a
   targeted run that succeeded against a test file that did not exist. Every gate added
   during this release was deliberately made to fail once before being believed.
+- **A named exception inside a check will grow; a named patch fails loudly when it is
+  wrong.** When a gate fires on a case you believe legitimate, put the exception
+  *outside* the gate. Offered a carve-out for one file under `data/`, the right answer
+  was a patch: the guard stays absolute with zero exemptions, and the single case fails
+  visibly if it drifts. Two exemptions had already been removed from the hygiene script
+  for exactly this reason.
+- **Line-based search is blind to a phrase that wraps.** `grep` and line-wise
+  substitution both miss `"byte-comparable with ConMin's\n  ``size``"`. This bit three
+  separate times in one day — a substitution rule that silently skipped a file, a
+  reviewer's grep that under-counted, and a check that reported clean. Where the answer
+  matters, search the joined text, not the lines.
+- **Report `git show --stat` of the commit, never the diff you intended.** Two commits
+  in this effort were described by what they were meant to contain: a staged revert had
+  already been picked up, so a message announcing a seven-line fix shipped twenty-three
+  files. Read back what git recorded, not what you asked for.
 - **Measure the radius before trusting a force.** `git add -A -f` is safe here because
   exactly one tracked file is also matched by `.gitignore` — measured with
   `git ls-files | git check-ignore --no-index --stdin`, not assumed. At forty files it
