@@ -121,6 +121,26 @@ observe the failure it existed to prevent:
   `scripts/falsify_hygiene_patterns.sh` is that proof kept runnable, and it also refuses
   to pass if its pattern list has drifted from the gate's — a falsification of yesterday's
   pattern proves nothing about today's.
+- **A prescribed mechanism must be measured on the real input before it is written into
+  instructions.** The artifact's README told reviewers to score a freshly produced fold
+  with `run_compare --kb`. CLI mode reads the single-knowledge-base schema, and a
+  cross-validation file keeps its constraints inside `folds[]` — so it scored an empty
+  knowledge base and reported `n_kb: 0` with precision and recall `0.0` on all three
+  strategies, exiting `0` with no warning. A reviewer following the instructions exactly
+  would have concluded that the paper's method learns nothing, and every signal available
+  to them would have agreed. The recipe had been chosen to avoid a real write-back hazard
+  in config mode, and was never once run against a CV file: the hazard was measured, the
+  remedy was not. This came from the reviewing layer, as did the `\b` patterns above, and
+  it is the same failure both times — specifying a mechanism without measuring that it can
+  do the job. Review judgement is not exempt from the rule it enforces. **Acceptance for a
+  documented recipe is that its numbers match a committed reference** — here `n_kb` 16 and
+  semantic F1 0.8462/0.8462/0.8627 — never that the command exits `0`, which is precisely
+  what concealed this.
+- **A warning that forbids a hazard must not forbid the only working path.** The same
+  README banned config mode outright to avoid its write-back. But writing back is correct
+  when `kb_dir` names your own scratch copy, and config mode is the only entry point that
+  scores a CV file at all. The warning was true of the committed trees and false as a
+  generalisation, and generalising it removed the reader's only route.
 - **A gate matches a shape, not a vocabulary, wherever the vocabulary is legitimate
   elsewhere.** A blacklist of forbidden codes would have to contain `B1` and `B2`, which
   are the bias subsets in the paper's own pseudocode (`B1, B2 = split(B)`). A gate that

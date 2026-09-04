@@ -55,21 +55,39 @@ A **single cell** is a different matter, and worth trying — REAL-FM-7 complete
 a second. `data/results_sosym/configs/` holds one generated config per cell:
 
 ```bash
-python3 -m apps.run_cv data/results_sosym/configs/congen_REAL-FM-7_ff.toml -o /tmp/one-cell
+python3 -m apps.run_cv data/results_sosym/configs/congen_REAL-FM-7_ff.toml -o scratch
 ```
 
-To score that fold against its target theory, use `run_compare`'s CLI mode, which writes
-its evaluation to a separate file:
+To score that fold against its target theory, use `run_compare`'s **config mode**, with a
+config whose `kb_dir` names your scratch copy:
 
 ```bash
-python3 -m apps.run_compare --kb /tmp/one-cell/congen/REAL-FM-7_ff_cv_incremental.json \
-    --oracle data/fms/REAL-FM-7.uvl --bias data/bias/REAL-FM-7-bias.json \
-    -o /tmp/one-cell
+python3 -m apps.run_compare data/results_sosym_r1/compare_configs/score_one_cell_example.toml
 ```
 
-⚠ Do **not** point `run_compare`'s config mode at the committed trees to score a new
-fold: in that mode it writes each evaluation back into the file named by `kb_dir`, so it
-would re-score the 28 committed results in place and never touch your new one.
+That config is 24 lines and points at `scratch/`; read it before running it. For any
+other cell, generate the equivalent rather than editing it by hand:
+
+```bash
+python3 tools/sosym_r1/make_score_configs.py --cv-dir scratch/congen --out scratch
+python3 -m apps.run_compare scratch/score_congen.toml
+```
+
+The evaluation is written back into the CV file itself, so read the results from
+`scratch/congen/REAL-FM-7_ff_cv_incremental.json` — each fold gains an `evaluation`
+block. For this cell they should read `n_kb` 16 and semantic F1 0.8462, 0.8462, 0.8627,
+matching `data/results_sosym_r1/congen/REAL-FM-7_ff_cv_incremental.json`.
+
+⚠ **Do not aim `kb_dir` at the committed trees.** Config mode writes each evaluation back
+into the file it names, which is what you want for your own scratch copy and destructive
+for `data/results_sosym_r1/` — it would re-score the committed results in place.
+
+⚠ **`--kb` CLI mode cannot score a cross-validation file, and does not say so.** It
+expects a single-knowledge-base file with `kb_constraints` at the top level; a CV file
+holds its constraints inside `folds[]`. Given one it scores an empty knowledge base and
+reports `n_kb: 0` with precision and recall `0.0` for every strategy, exiting `0` with no
+warning. Those zeros are an artefact of the wrong entry point, not a result. This is a
+known defect, recorded in `docs/adr/0019-known-defects-deferred-past-the-release.md`.
 
 **What matches on a re-run, and what does not.** The learned knowledge base, the
 accuracy, the negative examples, the metric values and the summary all reproduce

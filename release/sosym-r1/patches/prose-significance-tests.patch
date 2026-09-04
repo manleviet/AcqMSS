@@ -1,5 +1,5 @@
 diff --git a/apps/sosym_r1/significance_tests.py b/apps/sosym_r1/significance_tests.py
-index e5beeb6..36477c9 100644
+index e5beeb6..112950c 100644
 --- a/apps/sosym_r1/significance_tests.py
 +++ b/apps/sosym_r1/significance_tests.py
 @@ -1,7 +1,7 @@
@@ -8,7 +8,7 @@ index e5beeb6..36477c9 100644
 +"""Significance tests across instances, with the two cautions that matter.
  
 -R3-Q5 asks for statistical significance to be *discussed*. The design gives three
-+The revision asks for significance to be *discussed*. The design gives three
++The reviewers ask for significance to be *discussed*. The design gives three
  folds per cell, which has no power and whose folds share one example pool, so the
  unit of analysis is the **(knowledge base x sampling) instance**: one paired
  observation per cell, Wilcoxon signed-rank, Holm correction over the family.

@@ -1,5 +1,5 @@
 diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_numbers.py
-index 3754da5..a19f744 100644
+index 3754da5..36ebd22 100644
 --- a/apps/sosym_r1/check_paper_numbers.py
 +++ b/apps/sosym_r1/check_paper_numbers.py
 @@ -1,29 +1,19 @@
@@ -44,6 +44,24 @@ index 3754da5..a19f744 100644
  """
  from __future__ import annotations
  
+@@ -42,7 +32,7 @@ OLD = REPO / 'data' / 'results' / 'congen'
+ OLD_INT = REPO / 'data' / 'results' / 'interactive'
+ FMS = REPO / 'data' / 'fms'
+ 
+-TOL = 5e-3  # numbers are quoted to 3-4 significant figures in the notes
++TOL = 5e-3  # numbers are quoted to 3-4 significant figures in the paper
+ 
+ failures: list[str] = []
+ checks = 0
+@@ -54,7 +44,7 @@ def check(name: str, got, want, tol: float | None = None) -> None:
+     checks += 1
+     ok = (abs(got - want) <= (TOL if tol is None else tol)) if isinstance(want, float) else (got == want)
+     status = 'ok  ' if ok else 'FAIL'
+-    print(f'  [{status}] {name}: got {got!r}, notes say {want!r}')
++    print(f'  [{status}] {name}: got {got!r}, paper says {want!r}')
+     if not ok:
+         failures.append(name)
+ 
 @@ -64,8 +54,9 @@ def semantic(fold: dict) -> dict:
  
      NOTE the nesting: evaluation.semantic.METRICS.recall. Reading one level
@@ -56,7 +74,7 @@ index 3754da5..a19f744 100644
      """
      return ((fold.get('evaluation') or {}).get('semantic') or {}).get('metrics') or {}
  
-@@ -97,14 +88,14 @@ def count_ctau_from_uvl(path: Path) -> int:
+@@ -97,15 +88,15 @@ def count_ctau_from_uvl(path: Path) -> int:
      ALTERNATIVE group !ci v !cj   C(n,2) per group  <-- see below
      cross-tree                    1 each
  
@@ -69,10 +87,21 @@ index 3754da5..a19f744 100644
      models reproduce exactly, with no residual.
  
 -    The lesson is the one CW had already written to CC and not applied to
-+    The lesson had already been written down and not applied to
-     itself: alternative groups are the encoding path most likely to be wrong,
+-    itself: alternative groups are the encoding path most likely to be wrong,
++    The lesson had already been written down and was not applied to this
++    check: alternative groups are the encoding path most likely to be wrong,
      and the model used to validate the count could not exercise it.
      """
+     lines = path.read_text().split('\n')
+@@ -199,7 +190,7 @@ if old_int:
+ # ---------------------------------------------------------------------------
+ # 4. Numbers quoted in A5 / B7 / B20.
+ # ---------------------------------------------------------------------------
+-print('\n4. numbers quoted in the drafts')
++print('\n4. numbers quoted in the paper')
+ 
+ cells: dict[str, list[float]] = {}
+ eq_hits: list[tuple[str, int]] = []
 @@ -487,7 +478,7 @@ cg_with_queries = sum(
  check('ConGen folds issuing oracle queries', cg_with_queries, 0)
  
@@ -82,3 +111,23 @@ index 3754da5..a19f744 100644
  #     the suite checks THOSE numbers, not a second implementation of them.
  #
  #     The invariant that matters is the last one. Claim 2 is excluded from the
+@@ -568,10 +559,10 @@ else:
+ # ---------------------------------------------------------------------------
+ print(f'\n{"=" * 70}')
+ if failures:
+-    print(f'FAIL: {len(failures)} of {checks} numbers no longer match the notes:')
++    print(f'FAIL: {len(failures)} of {checks} numbers no longer match the paper:')
+     for f in failures:
+         print(f'  - {f}')
+-    print('\nA number that moved is a finding. Update the notes to the measurement,')
++    print('\nA number that moved is a finding. Update the paper to the measurement,')
+     print('never the assertion to the number you hoped for.')
+     sys.exit(1)
+ # A pass is a POSITIVE COUNT, never the absence of a failure. With zero checks this
+@@ -585,5 +576,5 @@ if checks < MINIMUM_CHECKS:
+     print('An empty or truncated run is not a pass. Something above exited early or')
+     print('skipped a section -- find it rather than lowering this number.')
+     sys.exit(1)
+-print(f'OK: all {checks} numbers quoted in the SoSyM notes reproduce from the data.')
++print(f'OK: all {checks} numbers quoted in the paper reproduce from the data.')
+ sys.exit(0)
