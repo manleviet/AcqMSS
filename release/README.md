@@ -96,6 +96,13 @@ observe the failure it existed to prevent:
   recurring an hour later, so it is now a gate in two places: `check_paper_numbers.py`
   refuses a run of fewer than 90 checks, and `reproduce_tables_sosym.sh` refuses a tree
   whose tests cannot be collected.
+- **A gate must stand on a measured number, not a chosen one.** If you find yourself
+  picking a threshold, first look for the real signal being thrown away. A proposed
+  minimum collection count would have differed per repository (681 here, 343 in the
+  artifact), needed a per-target patch to maintain, and given a reader no baseline to
+  compare against — a gate creating maintenance without creating information. Meanwhile
+  `pytest` was already reporting exit 2 on a broken `conftest.py`, and `2>/dev/null` was
+  discarding it. The same error produced the case-insensitive `conmin` proposal in §6.
 - **Measure the radius before trusting a force.** `git add -A -f` is safe here because
   exactly one tracked file is also matched by `.gitignore` — measured with
   `git ls-files | git check-ignore --no-index --stdin`, not assumed. At forty files it

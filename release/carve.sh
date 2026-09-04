@@ -189,6 +189,32 @@ say "6/6  record provenance"
   echo "source:     AcqMSS $SRC_SHA ($(git rev-parse --abbrev-ref HEAD))"
   echo "artifact:   $OUT_SHA"
   echo "files:      ${#FILES[@]} selected by keep-list, before the example/fold filter"
+  echo ""
+  # Measured at carve time, never transcribed. A number copied from a report is a claim;
+  # a number the script computes is a measurement, and only one of them stays true.
+  echo "gitignore radius: $(git ls-files | git check-ignore --no-index --stdin 2>/dev/null | wc -l | tr -d ' ') tracked file(s) also matched by .gitignore"
+  echo "                  (this is why the root commit uses \`git add -A -f\`; at forty it would be reckless)"
+  echo "escapes:    $(python3 - <<'EOF'
+import warnings, pathlib, subprocess
+files = subprocess.run(['git','ls-files','*.py'], capture_output=True, text=True).stdout.split()
+bad = 0
+for f in files:
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
+        try: compile(pathlib.Path(f).read_text(), f, 'exec')
+        except SyntaxError: bad += 1; continue
+        bad += sum(1 for x in w if 'escape' in str(x.message))
+print(f"{len(files)} .py compiled with warnings on, {bad} invalid escape(s)")
+EOF
+)"
+  echo ""
+  echo "boundary-guard rules removed from the source repository, by name --"
+  echo "a count would not say which, and three deleted looks like three broken:"
+  echo "  test_explanation_imports_profiling_only_through_facade"
+  echo "  test_explanation_never_imports_conacq"
+  echo "  test_profiling_is_a_leaf"
+  echo "  (each scanned REPO_ROOT/explanation or /profiling, absent since 4b47c9b,"
+  echo "   so all three asserted over an empty list)"
 } > "$T/PROVENANCE"
 cat "$T/PROVENANCE" | sed 's/^/  /'
 
