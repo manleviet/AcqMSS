@@ -3,7 +3,7 @@
 
 Two questions, and they are different. Whether raising the cap changes the learned
 theory is a paper result: if the knowledge base is the same at 1,000 and at 5,000,
-the active baseline is not being starved, which answers N1 a reviewer question better than a
+the active baseline is not being starved, which answers N1 and R2-Q13 better than a
 larger number would. What raising it costs is a scheduling input and feeds B20.
 
 So this reports, per (kb, sampling, mode, cap):
