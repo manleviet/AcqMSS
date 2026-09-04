@@ -711,7 +711,7 @@ def generate_fold_agreement_md(results: Dict, mode: str) -> str:
              "(|intersection| / mean fold |KB|). A reliability statistic, not a quality "
              "score: the intersection is a subset of every fold's KB, so its recall can "
              "only fall, and it shrinks as the number of folds grows.", "",
-             "| Method | KB | Strategy | mean \|KB\| | in all folds | agreement |",
+             "| Method | KB | Strategy | mean \\|KB\\| | in all folds | agreement |",
              "|:---|:---|:---|---:|---:|---:|"]
     rows = 0
     for model in sorted(results):
@@ -742,7 +742,7 @@ def generate_semantic_counts_md(results: Dict, mode: str) -> str:
              "`|Cτ|` = target clauses = tp + fn. `fp` = delivered but not entailed "
              "(review workload). `fn` = entailed by the target but missing (authoring "
              "workload).", "",
-             "| Method | KB | Strategy | \|Cτ\| | tp | fp | fn | R | P | F1 |",
+             "| Method | KB | Strategy | \\|Cτ\\| | tp | fp | fn | R | P | F1 |",
              "|:---|:---|:---|---:|---:|---:|---:|---:|---:|---:|"]
     rows = 0
     for model in sorted(results):
