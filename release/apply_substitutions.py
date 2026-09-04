@@ -43,8 +43,17 @@ def main() -> int:
         print("  substitution table is empty", file=sys.stderr)
         return 1
 
-    files = [f for f in out.rglob('*') if f.is_file() and f.suffix in SUFFIXES]
+    # data/ is OUT OF SCOPE, and that is an assertion rather than a filter. The trees
+    # under it are the paper's evidence, and .json is in SUFFIXES, so an unscoped rglob
+    # would give a string-rewriting machine write access to the results. No rule matched
+    # there today, but that was luck, not design -- and the byte-identical-tables gate
+    # cannot see it, because the tables derive from data/results_sosym_r1 alone: rewrite
+    # data/examples, data/folds or data/bias and every table still matches.
+    all_files = [f for f in out.rglob('*') if f.is_file() and f.suffix in SUFFIXES]
+    files = [f for f in all_files if 'data' not in f.relative_to(out).parts[:1]]
+    guarded = [f for f in all_files if f not in files]
     hits = {find: 0 for find, _ in rules}
+    per_file: dict[str, int] = {}
     for f in files:
         try:
             txt = orig = f.read_text(errors='ignore')
@@ -56,6 +65,24 @@ def main() -> int:
                 txt = txt.replace(find, repl)
         if txt != orig:
             f.write_text(txt)
+            per_file[str(f.relative_to(out))] = sum(
+                orig.count(find) for find, _ in rules if find in orig)
+
+    # Refuse loudly if a rule would have touched the evidence, naming the file. A
+    # silent skip would leave the table looking safe while being one edit away from
+    # rewriting a result.
+    intruders = []
+    for f in guarded:
+        txt = f.read_text(errors='ignore')
+        intruders += [(find, str(f.relative_to(out))) for find, _ in rules if find in txt]
+    if intruders:
+        print("  a substitution rule matches inside data/, which is the paper's evidence:",
+              file=sys.stderr)
+        for find, where in intruders[:10]:
+            print(f"    {find!r} in {where}", file=sys.stderr)
+        print("  Name the specific case and decide deliberately; do not widen the scope.",
+              file=sys.stderr)
+        return 1
 
     dead = [find for find, n in hits.items() if n == 0]
     if dead:
@@ -75,7 +102,10 @@ def main() -> int:
             print(f"    {find!r} in {where}", file=sys.stderr)
         return 1
 
-    print(f"  {len(rules)} rules, {sum(hits.values())} replacements, 0 residual")
+    print(f"  {len(rules)} rules, {sum(hits.values())} replacements, 0 residual, "
+          f"{len(guarded)} data/ files untouched")
+    for f, n in sorted(per_file.items(), key=lambda x: (-x[1], x[0])):
+        print(f"      {n:3d}  {f}")
     return 0
 
 
