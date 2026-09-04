@@ -1,0 +1,213 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║            QuAcq Assignment-to-Assumption Dicts: Data Flow                     ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              CREATION (Oracle)                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    FMOracleModel
+    ├─ constraint_map: Dict[str, List[List[int]]]
+    ├─ variables: Dict[str, int]  (feature_name → feature_id)
+    └─ prepare(configuration=None)
+
+            ↓ delegates to ↓
+
+    FMOracleTaskPreparation.prepare()
+    ├─ for each (feature_name, fid) in model.variables:
+    │  ├─ create a_pos = id_assumption++
+    │  ├─ create a_neg = id_assumption++
+    │  ├─ pos_assignment_to_assumption[feature_name] = a_pos
+    │  ├─ neg_assignment_to_assumption[feature_name] = a_neg
+    │  ├─ add unit clauses: [-a_pos, fid], [-a_neg, -fid]
+    │  └─ record descriptions via DescriptionProvider
+    │
+    └─ Package into:
+       ├─ FMOracleModel._pos_assignment_to_assumption (line 230)
+       ├─ FMOracleModel._neg_assignment_to_assumption (line 231)
+       ├─ BGData.pos_assignment_to_assumption (line 257)
+       └─ BGData.neg_assignment_to_assumption (line 258)
+
+═════════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        PROPAGATION (Oracle → QuAcq)                             │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    FeatureModelOracle
+    └─ get_bg_data() → BGData
+                    ├─ pos_assignment_to_assumption
+                    └─ neg_assignment_to_assumption
+
+                    ↓ passed to ↓
+
+    QuAcqTaskPreparation.prepare(model, oracle)
+    ├─ bg_data = oracle.get_bg_data()
+    ├─ result.pos_assignment_to_assumption = dict(bg_data.pos_assignment_to_assumption)  (line 106)
+    └─ result.neg_assignment_to_assumption = dict(bg_data.neg_assignment_to_assumption)  (line 107)
+
+═════════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          STORAGE (QuAcqTask)                                    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    QuAcqTask (dataclass, inherits DiagnosisTask)
+    ├─ set_c: List[int]                           (bias assumption IDs)
+    ├─ set_b: List[int]                           (BG assumption IDs)
+    ├─ set_kb: List[List[int]]                    (KB with guards)
+    ├─ background_clauses: List[List[int]]        (raw clauses, no guards)
+    ├─ feature_ids: Dict[str, int]                (feature_name → var_id)
+    ├─ id_to_feature: Dict[int, str]              (reverse mapping)
+    ├─ constraint_clauses: Dict[int, ...]         (assumption_id → raw clauses)
+    ├─ negated_clauses: Dict[int, ...]            (assumption_id → negated clauses)
+    ├─ assignment_clauses: List[List[int]]        (Part 4 unit clauses)
+    ├─ assignment_assumptions: List[int]          (Part 4 assumption IDs)
+    ├─ pos_assignment_to_assumption: Dict[str, int]    ← PART 4 (line 65)
+    └─ neg_assignment_to_assumption: Dict[str, int]    ← PART 4 (line 66)
+
+═════════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    PARAMETER PASSING (Task → QuAcq.learn)                       │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    QuAcqRunner._learn_params_from_task(task)  (line 51-65)
+    ├─ Extract from QuAcqTask:
+    │  ├─ set_c = task.set_c
+    │  ├─ set_b = task.set_b
+    │  ├─ feature_ids = task.feature_ids
+    │  ├─ constraint_clauses = task.constraint_clauses
+    │  ├─ pos_assignment_to_assumption = task.pos_assignment_to_assumption  (line 62)
+    │  └─ neg_assignment_to_assumption = task.neg_assignment_to_assumption  (line 63)
+    │
+    └─ QuAcq.learn(**task_data, mode='oracle')
+
+            ↓ passes to ↓
+
+    QuAcq.learn(
+        pos_assignment_to_assumption: Dict[str, int] = None,      (line 109)
+        neg_assignment_to_assumption: Dict[str, int] = None,      (line 110)
+        ...
+    )
+
+═════════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    CONSUMPTION (QuAcq Pruning Logic)                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    QuAcq.learn() main loop
+    ├─ if answer == True AND pos_assignment_to_assumption is not None:
+    │  │
+    │  └─ Call: _prune_rejecting_constraints(
+    │            remaining_bias, positive_example,
+    │            root_assumption,
+    │            pos_assignment_to_assumption,    ← parameter
+    │            neg_assignment_to_assumption)    ← parameter
+
+            ↓ (line 204-208)
+
+    QuAcq._prune_rejecting_constraints()  (line 300-320)
+    ├─ For each (feature, value) in positive_example:
+    │  └─ config_assumptions.append(
+    │        pos_map[feature] if value else neg_map[feature]
+    │     )  (line 311-313)
+    │
+    ├─ base = [root_assumption] + config_assumptions
+    ├─ For each constraint in remaining_bias:
+    │  └─ if NOT checker.is_consistent(base + [constraint]):
+    │        pruned.append(constraint)
+    │
+    └─ Remove pruned from remaining_bias
+
+═════════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│              SECONDARY CONSUMPTION (FMOracleModel Configuration)                │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    FMOracleModel._config_to_assumptions(configuration)  (line 108-119)
+    ├─ For each (feature, value) in configuration.items():
+    │  └─ assumptions.append(
+    │        _pos_assignment_to_assumption[feature] if value
+    │        else _neg_assignment_to_assumption[feature]
+    │     )
+    │
+    └─ Returns: [assumption_ids]
+
+            ↓ used by ↓
+
+    FMOracleModel.with_configuration(configuration)  (line 121-131)
+    ├─ self.task.set_c = self._base_set_c + self._config_to_assumptions(configuration)
+    └─ return self (fluent)
+
+═════════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        ASSUMPTION ID LAYOUT (Shared)                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    Part 1: Feature variable IDs (1..n)
+            ├─ Generated by: FmToDiagPysat (UVL reader)
+            └─ Example: {root→1, f1→2, f2→3, ...}
+
+    Part 2: Tseitin variables (negated FM constraints)
+            ├─ Generated by: FmToDiagPysat
+            └─ Example: [100, 101, 102, ...] for internal Tseitin
+
+    ────────────────────────────────────────────────────────────────────────────
+
+    Part 3: FM constraint assumptions (paired) ← From Oracle
+            ├─ Format: [root_pos, root_neg, c2_pos, c2_neg, ...]
+            ├─ Example: [200, 201, 202, 203, ...]
+            ├─ Clauses: [-a, cnf_clauses]
+            └─ Storage: BGData.assumptions, BGData.set_kb, BGData.negation_map
+
+    ┌────────────────────────────────────────────────────────────────────────────┐
+    │ Part 4: Feature assignment assumptions (PAIRED) ← pos/neg_assignment      │
+    │         ├─ Format: [f1_pos, f1_neg, f2_pos, f2_neg, ...]                 │
+    │         ├─ Example: [210, 211, 212, 213, ...] (2 per feature)             │
+    │         ├─ Clauses: [-a_pos, feature_id], [-a_neg, -feature_id]          │
+    │         ├─ Storage:                                                        │
+    │         │  ├─ BGData.assignment_clauses                                    │
+    │         │  ├─ BGData.assignment_assumptions                                │
+    │         │  ├─ BGData.pos_assignment_to_assumption {f1→210, f2→212, ...}   │
+    │         │  └─ BGData.neg_assignment_to_assumption {f1→211, f2→213, ...}   │
+    │         └─ Copied to QuAcqTask                                             │
+    └────────────────────────────────────────────────────────────────────────────┘
+
+    ────────────────────────────────────────────────────────────────────────────
+
+    Part 5: Tseitin variables (negated bias constraints) ← From QuAcqModelBuilder
+            ├─ Generated by: negate_cnf_tseitin() at build time
+            └─ Used by: QueryGenerator (negated form for SAT generation)
+
+    Part 6: Bias constraint assumptions (paired) ← From QuAcqTaskPreparation
+            ├─ Format: [c1_pos, c1_neg, c2_pos, c2_neg, ...]
+            ├─ Storage: QuAcqTask.set_c (subset of assumptions)
+            └─ Used by: QuAcq.learn() main algorithm
+
+═════════════════════════════════════════════════════════════════════════════════
+
+KEY POINTS:
+───────────
+
+1. CREATION: FMOracleTaskPreparation loops through model.variables to create
+   pos/neg assumption pairs for each feature.
+
+2. STORAGE: Dicts stored in FMOracleModel → BGData → QuAcqTask (immutable copy)
+
+3. PROPAGATION: Oracle.get_bg_data() → QuAcqTaskPreparation.prepare() → QuAcqTask
+
+4. PARAMETERS: _learn_params_from_task() flattens QuAcqTask fields for QuAcq.learn()
+
+5. CONSUMPTION: QuAcq._prune_rejecting_constraints() uses dicts to convert feature
+   assignments to assumption IDs for SAT-based consistency checking.
+
+6. OPTIONAL: Dicts default to None in QuAcq.learn(); fallback to legacy Boolean
+   evaluation if unavailable.
+
+7. DUAL USE: Also used in FMOracleModel._config_to_assumptions() for configuration
+   application.
+

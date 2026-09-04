@@ -1,0 +1,4 @@
+- [Verify rebaselined goldens vs independent oracle](rebaselined-golden-verify-against-independent-oracle.md) — rebaseline can bless a new bug; recompute changed entries from an independent rule, confirm only predicted entries changed
+- [ConMin eval row identity is a composite key](conmin-eval-row-identity-is-composite-key.md) — rows keyed by (condition,k,negatives); merge/replace by condition alone silently drops k/neg rows
+- [QuAcq FindScope determinism test is a phantom](quacq-findscope-determinism-test-phantom.md) — 3654c2b sorted(R) fix is a no-op on REAL-FM-7; its cross-seed test passes on the buggy parent
+- [Revertible probe hook repro gap](revertible-probe-hook-repro-gap.md) — fairness probe scripts reference a reverted quacq.py _FAIRNESS_PROBE hook; drop-classification numbers need the hook re-added to reproduce

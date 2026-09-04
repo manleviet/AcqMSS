@@ -1,0 +1,159 @@
+DOCUMENTATION UPDATE - REFACTORING: QueryGenerator & ExampleProvider Relocation
+Date: 2026-02-14
+Status: COMPLETED
+
+================================================================================
+FILES MODIFIED
+================================================================================
+
+1. /Users/manleviet/Development/GitHub/AcqMSS/docs/codebase-summary.md
+   - Line 26-35: Modified acqmss/algorithms/interactive/ section
+   - Line 49-61: Added acqmss/example_generators/ section (NEW)
+   - Line 63-72: Modified acqmss/oracle/ section
+   - Line 297-300: Added Recent Changes subsection
+
+2. /Users/manleviet/Development/GitHub/AcqMSS/docs/system-architecture.md
+   - Line 55-75: Modified Core API code example
+   - Line 112-134: Added acqmss/example_generators/ section (NEW)
+   - Line 136-151: Modified acqmss/oracle/ section
+
+3. /Users/manleviet/Development/GitHub/AcqMSS/docs/quacq.md
+   - Line 25-28: Updated oracle-based mode implementation references
+   - Line 41-46: Updated example-based mode implementation references
+   - Line 115-121: Updated core implementation references
+   - Line 150-160: Restructured Oracle Implementations section
+
+================================================================================
+KEY CHANGES SUMMARY
+================================================================================
+
+RELOCATED CLASSES:
+  QueryGenerator
+    FROM: acqmss/algorithms/interactive/query_generator.py
+    TO:   acqmss/example_generators/query_generator.py
+    
+  ExampleProvider
+    FROM: acqmss/oracle/example_provider.py
+    TO:   acqmss/example_generators/example_provider.py
+
+CANONICAL IMPORTS DOCUMENTED:
+  from acqmss.example_generators import QueryGenerator, ExampleProvider
+
+NEW MODULE SECTION:
+  acqmss/example_generators/ (7 files, ~1,285 LOC)
+  - Consolidates example generation and query generation
+  - Contains: RandomSamplingGenerator, FeatureFrequencyGenerator, 
+    NWiseCoverageGenerator, QueryGenerator, ExampleProvider
+  - Lazy-loaded QueryGenerator via __getattr__ (circular dependency resolution)
+
+UPDATED MODULES:
+  acqmss/algorithms/interactive/ (6 files, ~1,950 LOC)
+    - Removed: QueryGenerator (moved to example_generators)
+    - Remaining: QuAcq, InteractiveLearner, FindScope, FindC, Task, Result
+    
+  acqmss/oracle/ (6 files, ~630 LOC)
+    - Removed: ExampleProvider (moved to example_generators)
+    - Remaining: FeatureModelOracle, UserPromptOracle, CachedOracle, OracleData
+                 base.py, __init__.py
+
+================================================================================
+DOCUMENTATION IMPROVEMENTS
+================================================================================
+
+IMPORTS CLARITY:
+  ✅ Canonical imports shown in code examples
+  ✅ Old paths no longer documented (clean break)
+  ✅ Lazy-loading mechanism explained
+
+ARCHITECTURE DOCUMENTATION:
+  ✅ New acqmss/example_generators/ section with full details
+  ✅ Integration points documented
+  ✅ Circular dependency resolution explained
+
+MODULE ORGANIZATION:
+  ✅ Cohesive example/query generation module
+  ✅ Clear separation of concerns (generation vs validation)
+  ✅ Consistent cross-references
+
+DEVELOPER GUIDANCE:
+  ✅ "moved from X" notation provides context
+  ✅ LOC counts and file counts updated
+  ✅ Statistics track recent changes
+
+================================================================================
+VERIFICATION
+================================================================================
+
+Content Accuracy:
+  ✅ QueryGenerator location: acqmss/example_generators/query_generator.py
+  ✅ ExampleProvider location: acqmss/example_generators/example_provider.py
+  ✅ All paths verified against actual file system
+  ✅ No dead references to old locations
+  ✅ Canonical imports documented correctly
+
+Cross-References:
+  ✅ codebase-summary.md consistent with system-architecture.md
+  ✅ quacq.md consistent with architecture documents
+  ✅ All internal links functional
+  ✅ New module properly referenced in all locations
+
+Format & Style:
+  ✅ Markdown tables properly formatted
+  ✅ Code examples use correct syntax highlighting
+  ✅ Consistent terminology and terminology
+  ✅ Line counts and file counts accurate
+  ✅ Section hierarchy maintained
+  ✅ Documentation limits respected
+
+================================================================================
+STATISTICS
+================================================================================
+
+Files Updated:           3
+Sections Added:          2
+Sections Modified:       4
+Code Examples Updated:   2
+Cross-References:        5+
+Total Lines Changed:     50+
+
+Before:  0 files documented with new module
+After:   3 files with complete acqmss/example_generators/ documentation
+
+================================================================================
+FILES NOT MODIFIED (AS REQUESTED)
+================================================================================
+
+✓ docs/code-standards.md - Already updated by developer
+✓ docs/project-overview-pdr.md - No changes needed
+✓ docs/project-roadmap.md - No changes needed
+✓ docs/design-guidelines.md - Not applicable
+✓ docs/README.md - No changes needed
+
+================================================================================
+GENERATED REPORTS
+================================================================================
+
+Location: /Users/manleviet/Development/GitHub/AcqMSS/plans/reports/
+
+1. docs-manager-260214-0720-refactoring-update.md
+   - Initial documentation update report
+   
+2. docs-manager-260214-0720-refactoring-update-FINAL.md
+   - Final verification and completion report
+   
+3. CHANGES.txt (this file)
+   - Summary of all changes made
+
+================================================================================
+NOTES FOR REVIEWERS
+================================================================================
+
+1. All documentation changes reflect the actual codebase structure
+2. No old import paths shown (clean migration to new structure)
+3. Lazy-loading mechanism in QueryGenerator documented for future maintenance
+4. Cross-references maintained for consistency across all documents
+5. All file paths and LOC counts verified against actual files
+
+================================================================================
+STATUS: ✅ READY FOR REVIEW
+================================================================================

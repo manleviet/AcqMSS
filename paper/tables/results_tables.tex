@@ -1,0 +1,253 @@
+% Evaluation Results
+% KB Mapping: KB1=REAL-FM-7, KB2=fqa, KB3=arcade, KB4=REAL-FM-4
+\usepackage{booktabs}
+
+
+% Table 7: ACQMSS #consistency checks and runtime (msec)
+\begin{table}[htbp]
+\centering
+\caption{ACQMSS \#consistency checks and runtime (msec) - Incremental}
+\label{tab:table7_incremental}
+\begin{tabular}{lrrcccc}
+\toprule
+Strategy & $|E^+|$ & $|E^-|$ & KB1 & KB2 & KB3 & KB4 \\
+\midrule
+RS(1n) & - & - & - & - & - & - \\
+RS(2n) & - & - & - & - & - & - \\
+RS(3n) & - & - & - & - & - & - \\
+RS(m) & - & - & - & - & - & - \\
+2-COV & - & - & - & - & - & - \\
+FF & - & - & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 9: Accuracy with Random Sampling (RS)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with Random Sampling (RS) - Incremental}
+\label{tab:table9_incremental}
+\begin{tabular}{lcccc}
+\toprule
+Strategy & KB1 & KB2 & KB3 & KB4 \\
+\midrule
+RS(1n) & - & - & - & - \\
+RS(2n) & - & - & - & - \\
+RS(3n) & - & - & - & - \\
+RS(m) & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 10: Accuracy with 2-wise coverage (2-COV)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with 2-wise coverage (2-COV) - Incremental}
+\label{tab:table10_incremental}
+\begin{tabular}{lc}
+\toprule
+KB & Accuracy \\
+\midrule
+KB1 & - \\
+KB2 & - \\
+KB3 & - \\
+KB4 & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 11: Accuracy with Feature Frequency (FF)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with Feature Frequency (FF) - Incremental}
+\label{tab:table11_incremental}
+\begin{tabular}{lc}
+\toprule
+KB & Accuracy \\
+\midrule
+KB1 & - \\
+KB2 & - \\
+KB3 & - \\
+KB4 & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table: Accuracy by Sampling Strategy (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy by Sampling Strategy (Incremental)}
+\label{tab:accuracy_incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & - & - & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table: Performance Metrics (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{Performance Metrics (Incremental)}
+\label{tab:performance_incremental}
+\begin{tabular}{llrrrrrr}
+\toprule
+KB & Strategy & Runtime (ms) & \#Checks & Memory (MB) & $|B|$ & $|MSS|$ & $|KB|$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table: KB Summary (Incremental)
+\begin{table}[htbp]
+\centering
+\caption{KB Summary (Incremental)}
+\label{tab:kb_summary_incremental}
+\begin{tabular}{llrrrr}
+\toprule
+KB & Strategy & $|B|$ & $|KB|$ (mean) & $|KB_{\cap}|$ & Reduction \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 7: ACQMSS #consistency checks and runtime (msec)
+\begin{table}[htbp]
+\centering
+\caption{ACQMSS \#consistency checks and runtime (msec) - Non-incremental}
+\label{tab:table7_non-incremental}
+\begin{tabular}{lrrcccc}
+\toprule
+Strategy & $|E^+|$ & $|E^-|$ & KB1 & KB2 & KB3 & KB4 \\
+\midrule
+RS(1n) & 8 & 0 & 598 / 193.5 & - & - & - \\
+RS(2n) & 17 & 1 & 599 / 236.1 & - & - & - \\
+RS(3n) & 25 & 2 & 599 / 280.0 & - & - & - \\
+RS(m) & 5 & 0 & 589 / 190.5 & - & - & - \\
+2-COV & 0 & 6 & 301 / 70.5 & - & - & - \\
+FF & 4 & 2 & 588 / 159.7 & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 9: Accuracy with Random Sampling (RS)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with Random Sampling (RS) - Non-incremental}
+\label{tab:table9_non-incremental}
+\begin{tabular}{lcccc}
+\toprule
+Strategy & KB1 & KB2 & KB3 & KB4 \\
+\midrule
+RS(1n) & 0.2778 $\pm$ 0.0481 & - & - & - \\
+RS(2n) & 0.5583 $\pm$ 0.2184 & - & - & - \\
+RS(3n) & 0.8603 $\pm$ 0.1430 & - & - & - \\
+RS(m) & 0.1944 $\pm$ 0.1735 & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 10: Accuracy with 2-wise coverage (2-COV)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with 2-wise coverage (2-COV) - Non-incremental}
+\label{tab:table10_non-incremental}
+\begin{tabular}{lc}
+\toprule
+KB & Accuracy \\
+\midrule
+KB1 & 1.0000 $\pm$ 0.0000 \\
+KB2 & - \\
+KB3 & - \\
+KB4 & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 11: Accuracy with Feature Frequency (FF)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy with Feature Frequency (FF) - Non-incremental}
+\label{tab:table11_non-incremental}
+\begin{tabular}{lc}
+\toprule
+KB & Accuracy \\
+\midrule
+KB1 & 0.4444 $\pm$ 0.1925 \\
+KB2 & - \\
+KB3 & - \\
+KB4 & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table: Accuracy by Sampling Strategy (Non-incremental)
+\begin{table}[htbp]
+\centering
+\caption{Accuracy by Sampling Strategy (Non-incremental)}
+\label{tab:accuracy_non-incremental}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+KB1 & 0.2778 $\pm$ 0.0481 & 0.5583 $\pm$ 0.2184 & 0.8603 $\pm$ 0.1430 & 0.1944 $\pm$ 0.1735 & 1.0000 $\pm$ 0.0000 & 0.4444 $\pm$ 0.1925 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table: Performance Metrics (Non-incremental)
+\begin{table}[htbp]
+\centering
+\caption{Performance Metrics (Non-incremental)}
+\label{tab:performance_non-incremental}
+\begin{tabular}{llrrrrrr}
+\toprule
+KB & Strategy & Runtime (ms) & \#Checks & Memory (MB) & $|B|$ & $|MSS|$ & $|KB|$ \\
+\midrule
+KB1 & RS(1n) & 193.53 $\pm$ 14.65 & 598 $\pm$ 7 & 0.33 & 295 & 91.7 & 18.7 \\
+ & RS(2n) & 236.10 $\pm$ 21.04 & 599 $\pm$ 3 & 0.38 & 295 & 69.0 & 18.3 \\
+ & RS(3n) & 279.97 $\pm$ 43.36 & 599 $\pm$ 6 & 0.43 & 295 & 61.7 & 15.0 \\
+ & RS(m) & 190.53 $\pm$ 16.56 & 589 $\pm$ 11 & 0.30 & 295 & 131.7 & 19.7 \\
+ & 2-COV & 70.50 $\pm$ 0.54 & 301 $\pm$ 0 & 0.26 & 295 & 294.0 & 15.7 \\
+ & FF & 159.74 $\pm$ 5.41 & 588 $\pm$ 6 & 0.28 & 295 & 142.3 & 19.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table: KB Summary (Non-incremental)
+\begin{table}[htbp]
+\centering
+\caption{KB Summary (Non-incremental)}
+\label{tab:kb_summary_non-incremental}
+\begin{tabular}{llrrrr}
+\toprule
+KB & Strategy & $|B|$ & $|KB|$ (mean) & $|KB_{\cap}|$ & Reduction \\
+\midrule
+KB1 & RS(1n) & 295 & 18.7 & 2 & 93.7\% \\
+ & RS(2n) & 295 & 18.3 & 4 & 93.8\% \\
+ & RS(3n) & 295 & 15.0 & 2 & 94.9\% \\
+ & RS(m) & 295 & 19.7 & 1 & 93.3\% \\
+ & 2-COV & 295 & 15.7 & 0 & 94.7\% \\
+ & FF & 295 & 19.3 & 0 & 93.4\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table: Incremental vs Non-Incremental Comparison
+\begin{table}[htbp]
+\centering
+\caption{Incremental vs Non-Incremental Comparison}
+\label{tab:inc_vs_noninc}
+\begin{tabular}{lllrrr}
+\toprule
+KB & Strategy & Mode & Accuracy & Runtime (ms) & \#Checks \\
+\midrule
+KB1 & RS(1n) & Non-Inc & 0.2778 & 193.53 & 598 \\
+ & RS(2n) & Non-Inc & 0.5583 & 236.10 & 599 \\
+ & RS(3n) & Non-Inc & 0.8603 & 279.97 & 599 \\
+ & RS(m) & Non-Inc & 0.1944 & 190.53 & 589 \\
+ & 2-COV & Non-Inc & 1.0000 & 70.50 & 301 \\
+ & FF & Non-Inc & 0.4444 & 159.74 & 588 \\
+\bottomrule
+\end{tabular}
+\end{table}

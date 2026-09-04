@@ -1,0 +1,345 @@
+% Evaluation Results - Updated with all 4 models
+% KB Mapping: KB1=IDE (REAL-FM-7), KB2=FQA (fqa), KB3=Arcade (arcade-game), KB4=eShop (REAL-FM-4)
+\usepackage{booktabs}
+\usepackage{multirow}
+
+%==============================================================================
+% Table 7: ACQMSS Performance (Example Distribution, Checks, Runtime)
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Example Distribution, \#Consistency Checks, and Runtime (Non-incremental)}
+\label{tab:table7}
+\begin{tabular}{l|rr|rr|rr|rr}
+\toprule
+\multirow{2}{*}{Strategy}
+    & \multicolumn{2}{c|}{IDE ($n$=14, $|B|$=295)}
+    & \multicolumn{2}{c|}{FQA ($n$=179, $|B|$=459)}
+    & \multicolumn{2}{c|}{Arcade ($n$=65, $|B|$=1755)}
+    & \multicolumn{2}{c}{eShop ($n$=291, $|B|$=2079)} \\
+    & $|E^+|/|E^-|$ & \#Checks/RT
+    & $|E^+|/|E^-|$ & \#Checks/RT
+    & $|E^+|/|E^-|$ & \#Checks/RT
+    & $|E^+|/|E^-|$ & \#Checks/RT \\
+\midrule
+RS(1n) & 13/1  & 5067/409     & 162/17 & 79581/27235   & 59/6   & 190590/100648  & 262/29 & 920980/1047924 \\
+RS(2n) & 26/2  & 12720/849    & 323/35 & 110387/70455  & 117/13 & 316567/143006  & 524/58 & 842960/1212656 \\
+RS(3n) & 38/4  & 15714/1014   & 484/53 & 131703/64049  & 176/19 & 413697/201107  & 786/87 & 1082059/1938064 \\
+RS(m)  & 8/1   & 7777/667     & 15/1   & 21942/6917    & 13/1   & 64011/32017    & 17/1   & 42796/42506 \\
+2-COV  & 0/9   & 1497/278     & 0/16   & 2418/1506     & 1/13   & 16406/11349    & 1/17   & 10353/14131 \\
+FF     & 4/4   & 4974/493     & 65/7   & 48569/11887   & 20/5   & 90910/42103    & 103/7  & 230615/178132 \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\small RT = Runtime in milliseconds (ms).
+\end{flushleft}
+\end{table}
+
+%==============================================================================
+% Table 9: Accuracy with Random Sampling (RS)
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{5-Fold Cross-Validation Accuracy with Random Sampling (Non-incremental)}
+\label{tab:table9}
+\begin{tabular}{lcccc}
+\toprule
+Strategy & IDE (KB1) & FQA (KB2) & Arcade (KB3) & eShop (KB4) \\
+\midrule
+RS(1n) & $0.39 \pm 0.24$ & $0.91 \pm 0.08$ & $0.62 \pm 0.15$ & $0.86 \pm 0.05$ \\
+RS(2n) & $0.81 \pm 0.25$ & $0.96 \pm 0.03$ & $0.79 \pm 0.10$ & $0.90 \pm 0.03$ \\
+RS(3n) & $0.96 \pm 0.06$ & $0.98 \pm 0.01$ & $0.81 \pm 0.09$ & $0.94 \pm 0.01$ \\
+RS(m)  & $0.40 \pm 0.42$ & $0.18 \pm 0.29$ & $0.22 \pm 0.22$ & $0.10 \pm 0.09$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+% Table 10: Accuracy with 2-wise Coverage (2-COV)
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{5-Fold Cross-Validation Accuracy with 2-wise Coverage (Non-incremental)}
+\label{tab:table10}
+\begin{tabular}{lcccc}
+\toprule
+KB & IDE & FQA & Arcade & eShop \\
+\midrule
+2-COV & $1.00 \pm 0.00$ & $1.00 \pm 0.00$ & $0.95 \pm 0.11$ & $0.95 \pm 0.08$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+% Table 11: Accuracy with Feature Frequency (FF)
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{5-Fold Cross-Validation Accuracy with Feature Frequency (Non-incremental)}
+\label{tab:table11}
+\begin{tabular}{lcccc}
+\toprule
+KB & IDE & FQA & Arcade & eShop \\
+\midrule
+FF & $0.40 \pm 0.22$ & $0.62 \pm 0.21$ & $0.28 \pm 0.18$ & $0.43 \pm 0.06$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+% Combined Accuracy Table
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{5-Fold CV Accuracy by Sampling Strategy (Non-incremental)}
+\label{tab:accuracy_combined}
+\begin{tabular}{lcccccc}
+\toprule
+KB & RS(1n) & RS(2n) & RS(3n) & RS(m) & 2-COV & FF \\
+\midrule
+IDE    & $0.39 \pm 0.24$ & $0.81 \pm 0.25$ & $0.96 \pm 0.06$ & $0.40 \pm 0.42$ & $1.00 \pm 0.00$ & $0.40 \pm 0.22$ \\
+FQA    & $0.91 \pm 0.08$ & $0.96 \pm 0.03$ & $0.98 \pm 0.01$ & $0.18 \pm 0.29$ & $1.00 \pm 0.00$ & $0.62 \pm 0.21$ \\
+Arcade & $0.62 \pm 0.15$ & $0.79 \pm 0.10$ & $0.81 \pm 0.09$ & $0.22 \pm 0.22$ & $0.95 \pm 0.11$ & $0.28 \pm 0.18$ \\
+eShop  & $0.86 \pm 0.05$ & $0.90 \pm 0.03$ & $0.94 \pm 0.01$ & $0.10 \pm 0.09$ & $0.95 \pm 0.08$ & $0.43 \pm 0.06$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+% Table 12: KB Evaluation Against Ground Truth
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{KB Evaluation: Description-Based Strategy (Non-incremental)}
+\label{tab:kb_eval_desc}
+\begin{tabular}{l|cccc|cccc|cccc}
+\toprule
+\multirow{2}{*}{Strategy}
+    & \multicolumn{4}{c|}{Accuracy}
+    & \multicolumn{4}{c|}{Precision}
+    & \multicolumn{4}{c}{Recall} \\
+    & IDE & FQA & Arcade & eShop
+    & IDE & FQA & Arcade & eShop
+    & IDE & FQA & Arcade & eShop \\
+\midrule
+RS(1n) & 0.00 & 0.01 & 0.02 & 0.05 & 0.00 & 0.04 & 0.04 & 0.15 & 0.00 & 0.01 & 0.04 & 0.07 \\
+RS(2n) & 0.00 & 0.01 & 0.02 & 0.04 & 0.00 & 0.05 & 0.03 & 0.12 & 0.00 & 0.01 & 0.04 & 0.05 \\
+RS(3n) & 0.00 & 0.01 & 0.02 & 0.03 & 0.00 & 0.04 & 0.04 & 0.10 & 0.00 & 0.01 & 0.04 & 0.05 \\
+RS(m)  & 0.00 & 0.08 & 0.04 & 0.13 & 0.00 & 0.28 & 0.08 & 0.42 & 0.00 & 0.11 & 0.06 & 0.16 \\
+2-COV  & 0.00 & 0.15 & 0.05 & 0.04 & 0.00 & 0.26 & 0.31 & 0.23 & 0.00 & 0.26 & 0.06 & 0.05 \\
+FF     & 0.00 & 0.02 & 0.03 & 0.04 & 0.00 & 0.13 & 0.07 & 0.20 & 0.00 & 0.03 & 0.04 & 0.05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{KB Evaluation: Clause-Based Strategy (Non-incremental)}
+\label{tab:kb_eval_clause}
+\begin{tabular}{l|cccc|cccc|cccc}
+\toprule
+\multirow{2}{*}{Strategy}
+    & \multicolumn{4}{c|}{Accuracy}
+    & \multicolumn{4}{c|}{Precision}
+    & \multicolumn{4}{c}{Recall} \\
+    & IDE & FQA & Arcade & eShop
+    & IDE & FQA & Arcade & eShop
+    & IDE & FQA & Arcade & eShop \\
+\midrule
+RS(1n) & 0.87 & 0.51 & 0.90 & 0.81 & 0.00 & 0.38 & 0.22 & 0.37 & 0.00 & 0.03 & 0.15 & 0.09 \\
+RS(2n) & 0.86 & 0.52 & 0.89 & 0.80 & 0.00 & 0.50 & 0.18 & 0.29 & 0.00 & 0.03 & 0.14 & 0.07 \\
+RS(3n) & 0.86 & 0.52 & 0.90 & 0.80 & 0.00 & 0.44 & 0.21 & 0.27 & 0.00 & 0.03 & 0.14 & 0.07 \\
+RS(m)  & 0.87 & 0.57 & 0.92 & 0.84 & 0.07 & 0.75 & 0.42 & 0.70 & 0.05 & 0.15 & 0.17 & 0.18 \\
+2-COV  & 0.87 & 0.73 & 0.95 & 0.89 & 0.00 & 0.74 & 0.98 & 0.97 & 0.00 & 0.69 & 0.35 & 0.42 \\
+FF     & 0.90 & 0.52 & 0.92 & 0.82 & 0.00 & 0.46 & 0.42 & 0.48 & 0.00 & 0.03 & 0.15 & 0.07 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+% Performance Metrics Table
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Performance Metrics (Non-incremental)}
+\label{tab:performance}
+\begin{tabular}{llrrrrr}
+\toprule
+KB & Strategy & Runtime (ms) & \#Checks & $|B|$ & $|KB_\cap|$ & Reduction \\
+\midrule
+\multirow{6}{*}{IDE}
+    & RS(1n) & 409     & 5,067   & 295 & 13  & 95.6\% \\
+    & RS(2n) & 849     & 12,720  & 295 & 18  & 93.9\% \\
+    & RS(3n) & 1,014   & 15,714  & 295 & 17  & 94.2\% \\
+    & RS(m)  & 667     & 7,777   & 295 & 15  & 94.9\% \\
+    & 2-COV  & 278     & 1,497   & 295 & 15  & 94.9\% \\
+    & FF     & 493     & 4,974   & 295 & 6   & 98.0\% \\
+\midrule
+\multirow{6}{*}{FQA}
+    & RS(1n) & 27,235  & 79,581  & 459 & 25  & 94.6\% \\
+    & RS(2n) & 70,455  & 110,387 & 459 & 21  & 95.4\% \\
+    & RS(3n) & 64,049  & 131,703 & 459 & 24  & 94.8\% \\
+    & RS(m)  & 6,917   & 21,942  & 459 & 39  & 91.5\% \\
+    & 2-COV  & 1,506   & 2,418   & 459 & 104 & 77.3\% \\
+    & FF     & 11,887  & 48,569  & 459 & 23  & 95.0\% \\
+\midrule
+\multirow{6}{*}{Arcade}
+    & RS(1n) & 100,648 & 190,590 & 1,755 & 84  & 95.2\% \\
+    & RS(2n) & 143,006 & 316,567 & 1,755 & 96  & 94.5\% \\
+    & RS(3n) & 201,107 & 413,697 & 1,755 & 85  & 95.2\% \\
+    & RS(m)  & 32,017  & 64,011  & 1,755 & 48  & 97.3\% \\
+    & 2-COV  & 11,349  & 16,406  & 1,755 & 13  & 99.3\% \\
+    & FF     & 42,103  & 90,910  & 1,755 & 46  & 97.4\% \\
+\midrule
+\multirow{6}{*}{eShop}
+    & RS(1n) & 1,047,924 & 920,980   & 2,079 & 103 & 95.0\% \\
+    & RS(2n) & 1,212,656 & 842,960   & 2,079 & 102 & 95.1\% \\
+    & RS(3n) & 1,938,064 & 1,082,059 & 2,079 & 108 & 94.8\% \\
+    & RS(m)  & 42,506    & 42,796    & 2,079 & 81  & 96.1\% \\
+    & 2-COV  & 14,131    & 10,353    & 2,079 & 48  & 97.7\% \\
+    & FF     & 178,132   & 230,615   & 2,079 & 61  & 97.1\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+% Summary Comparison Table
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Summary: \textsc{ConGen} Results (Non-incremental Mode)}
+\label{tab:summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ll|rrrr|ccc|cc}
+\toprule
+\textbf{Model} & \textbf{Strategy}
+    & \textbf{$|E^+|$} & \textbf{$|E^-|$} & \textbf{\#Checks} & \textbf{Runtime}
+    & \textbf{CV Acc.} & \textbf{$|KB_\cap|$} & \textbf{Reduction}
+    & \textbf{Desc.Acc} & \textbf{Clause.Acc} \\
+\midrule
+\multirow{6}{*}{IDE ($n$=14)}
+    & RS(1n)  & 13  & 1  & 5,067     & 0.4s      & 0.39 & 13  & 95.6\% & 0.00 & 0.87 \\
+    & RS(2n)  & 26  & 2  & 12,720    & 0.8s      & 0.81 & 18  & 93.9\% & 0.00 & 0.86 \\
+    & RS(3n)  & 38  & 4  & 15,714    & 1.0s      & 0.96 & 17  & 94.2\% & 0.00 & 0.86 \\
+    & RS(m)   & 8   & 1  & 7,777     & 0.7s      & 0.40 & 15  & 94.9\% & 0.00 & 0.87 \\
+    & 2-COV   & 0   & 9  & 1,497     & 0.3s      & 1.00 & 15  & 94.9\% & 0.00 & 0.87 \\
+    & FF      & 4   & 4  & 4,974     & 0.5s      & 0.40 & 6   & 98.0\% & 0.00 & 0.90 \\
+\midrule
+\multirow{6}{*}{FQA ($n$=179)}
+    & RS(1n)  & 162 & 17 & 79,581    & 27s       & 0.91 & 25  & 94.6\% & 0.01 & 0.51 \\
+    & RS(2n)  & 323 & 35 & 110,387   & 70s       & 0.96 & 21  & 95.4\% & 0.01 & 0.52 \\
+    & RS(3n)  & 484 & 53 & 131,703   & 64s       & 0.98 & 24  & 94.8\% & 0.01 & 0.52 \\
+    & RS(m)   & 15  & 1  & 21,942    & 7s        & 0.18 & 39  & 91.5\% & 0.08 & 0.57 \\
+    & 2-COV   & 0   & 16 & 2,418     & 1.5s      & 1.00 & 104 & 77.3\% & 0.15 & 0.73 \\
+    & FF      & 65  & 7  & 48,569    & 12s       & 0.62 & 23  & 95.0\% & 0.02 & 0.52 \\
+\midrule
+\multirow{6}{*}{Arcade ($n$=65)}
+    & RS(1n)  & 59  & 6  & 190,590   & 101s      & 0.62 & 84  & 95.2\% & 0.02 & 0.90 \\
+    & RS(2n)  & 117 & 13 & 316,567   & 143s      & 0.79 & 96  & 94.5\% & 0.02 & 0.89 \\
+    & RS(3n)  & 176 & 19 & 413,697   & 201s      & 0.81 & 85  & 95.2\% & 0.02 & 0.90 \\
+    & RS(m)   & 13  & 1  & 64,011    & 32s       & 0.22 & 48  & 97.3\% & 0.04 & 0.92 \\
+    & 2-COV   & 1   & 13 & 16,406    & 11s       & 0.95 & 13  & 99.3\% & 0.05 & 0.95 \\
+    & FF      & 20  & 5  & 90,910    & 42s       & 0.28 & 46  & 97.4\% & 0.03 & 0.92 \\
+\midrule
+\multirow{6}{*}{eShop ($n$=291)}
+    & RS(1n)  & 262 & 29 & 920,980   & 1048s     & 0.86 & 103 & 95.0\% & 0.05 & 0.81 \\
+    & RS(2n)  & 524 & 58 & 842,960   & 1213s     & 0.90 & 102 & 95.1\% & 0.04 & 0.80 \\
+    & RS(3n)  & 786 & 87 & 1,082,059 & 1938s     & 0.94 & 108 & 94.8\% & 0.03 & 0.80 \\
+    & RS(m)   & 17  & 1  & 42,796    & 43s       & 0.10 & 81  & 96.1\% & 0.13 & 0.84 \\
+    & 2-COV   & 1   & 17 & 10,353    & 14s       & 0.95 & 48  & 97.7\% & 0.04 & 0.89 \\
+    & FF      & 103 & 7  & 230,615   & 178s      & 0.43 & 61  & 97.1\% & 0.04 & 0.82 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+%==============================================================================
+% Table 12: Comparison of CONGEN vs Interactive Learning
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of CONGEN (Passive Learning) vs Interactive Learning (Active Learning)}
+\label{tab:table12}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ll|rrrr|cc}
+\toprule
+\textbf{Model} & \textbf{Approach}
+    & \textbf{\#Queries/Examples} & \textbf{$|KB|$} & \textbf{\#Checks} & \textbf{Runtime}
+    & \textbf{Desc.Acc} & \textbf{Clause.Acc} \\
+\midrule
+\multirow{2}{*}{IDE ($n$=14)}
+    & CONGEN (2-COV)   & 9    & 15  & 1,497   & 278ms   & 0.00 & 0.87 \\
+    & Interactive      & 13   & 15  & 527     & 22ms    & 0.00 & 0.87 \\
+\midrule
+\multirow{2}{*}{FQA ($n$=179)}
+    & CONGEN (2-COV)   & 16   & 104 & 2,418   & 1,506ms & 0.15 & 0.73 \\
+    & Interactive      & 103  & 89  & 5,557   & 627ms   & 0.12 & 0.71 \\
+\midrule
+\multirow{2}{*}{Arcade ($n$=65)}
+    & CONGEN (2-COV)   & 14   & 13  & 16,406  & 11.3s   & 0.05 & 0.95 \\
+    & Interactive      & 65   & 60  & 2,916   & 376ms   & 0.08 & 0.95 \\
+\midrule
+\multirow{2}{*}{eShop ($n$=291)}
+    & CONGEN (2-COV)   & 18   & 48  & 10,353  & 14.1s   & 0.04 & 0.89 \\
+    & Interactive      & 201  & 157 & 19,965  & 4.0s    & 0.22 & 0.90 \\
+\bottomrule
+\end{tabular}%
+}
+\begin{flushleft}
+\small CONGEN uses 2-COV (best-performing strategy). Interactive Learning uses QuAcq algorithm.
+\#Queries = number of oracle queries (Interactive) or examples (CONGEN).
+\end{flushleft}
+\end{table}
+
+%==============================================================================
+% Table 12b: Detailed Interactive Learning Results
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Interactive Learning Results (QuAcq Algorithm)}
+\label{tab:interactive}
+\begin{tabular}{l|rrrr|cc}
+\toprule
+\textbf{Model} & \textbf{\#Queries} & \textbf{$|KB|$} & \textbf{\#Checks} & \textbf{Runtime (ms)}
+    & \textbf{Desc.Acc} & \textbf{Clause.Acc} \\
+\midrule
+IDE (KB1)    & 13  & 15  & 527    & 22     & 0.00 & 0.87 \\
+FQA (KB2)    & 103 & 89  & 5,557  & 627    & 0.12 & 0.71 \\
+Arcade (KB3) & 65  & 60  & 2,916  & 376    & 0.08 & 0.95 \\
+eShop (KB4)  & 201 & 157 & 19,965 & 3,980  & 0.22 & 0.90 \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\small Convergence: all models converged with ``no\_query'' (empty bias or no valid query found).
+\end{flushleft}
+\end{table}
+
+%==============================================================================
+% Feature Model Statistics
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Feature Model Statistics}
+\label{tab:fm_stats}
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{ID} & \textbf{Model Name} & \textbf{$n$ (Features)} & \textbf{Hierarchical} & \textbf{Cross-tree} & \textbf{$|B|$ (Bias)} \\
+\midrule
+KB1 (IDE)    & REAL-FM-7    & 14   & 11    & 2     & 295    \\
+KB2 (FQA)    & fqa          & 179  & 93    & 9     & 459    \\
+KB3 (Arcade) & arcade-game  & 65   & 36    & 34    & 1,755  \\
+KB4 (eShop)  & REAL-FM-4    & 291  & 198   & 21    & 2,079  \\
+\bottomrule
+\end{tabular}
+\end{table}

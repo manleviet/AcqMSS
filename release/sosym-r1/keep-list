@@ -186,6 +186,20 @@ LICENSE
 pyproject.toml
 reproduce_tables_sosym.sh
 
+# ---- modules the first keep-list missed ------------------------------------
+# Each has importers in shipped code; found by diffing the scripted carve against
+# the hand-built one, which is what that comparison is for.
+# Rule-learner baselines (5 importers) and example generation (9).
+conacq/baselines/
+# Example generators: ConGen's own input pipeline.
+conacq/example_generators/
+conacq/config.py
+conacq/kb_model.py
+conacq/oracle_bias_model_builder.py
+# Builds the t11 oracle-net fixtures three shipped test modules read.
+scripts/build_t11_oracle_net_fixtures.py
+.gitignore
+
 # ---- docs -----------------------------------------------------------------
 # Listed file by file, not as `docs/`. Four documents do not ship:
 #   adr/0018-profiler-counter-naming-convention.md  -- names the other project's terms

@@ -1,0 +1,315 @@
+% Evaluation Report for CONGEN Algorithm
+% Generated from experimental data
+
+\documentclass[11pt]{article}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Evaluation Report: Constraint Acquisition with Maximum Satisfiable Subsets}
+\author{AcqMSS Project}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Experimental Setup}
+
+\subsection{Feature Models}
+We evaluate CONGEN on four feature models from the SPLOT repository:
+
+\begin{table}[htbp]
+\centering
+\caption{Feature Model Statistics}
+\label{tab:fm_stats}
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Model} & \textbf{Name} & \textbf{$n$ (Features)} & \textbf{Hierarchical} & \textbf{Cross-tree} & \textbf{$|B|$ (Bias)} \\
+\midrule
+IDE (KB1)    & REAL-FM-7    & 14   & 11    & 2     & 295    \\
+FQA (KB2)    & fqa          & 179  & 93    & 9     & 459    \\
+Arcade (KB3) & arcade-game  & 65   & 36    & 34    & 1,755  \\
+eShop (KB4)  & REAL-FM-4    & 291  & 198   & 21    & 2,079  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Bias Generation}
+
+The constraint bias $B$ defines the space of candidate constraints from which the learning algorithm selects a constraint theory. For feature model constraint acquisition, we generate the bias by combining two types of constraints: hierarchical constraints and cross-tree constraints.
+
+\textbf{Hierarchical constraints} are derived from the feature model tree structure and include mandatory, optional, alternative, and or-group relationships. For each parent-child relationship in the feature hierarchy, we generate the corresponding constraint (e.g., $child \rightarrow parent$ for mandatory features).
+
+\textbf{Cross-tree constraints} represent potential relationships between features that are not directly connected in the hierarchy. For each pair of features $(f_i, f_j)$ where $i \neq j$, we generate three candidate constraints: $f_i \rightarrow f_j$ (requires), $f_i \land f_j$ (conjunction), and $f_i \nleftrightarrow f_j$ (excludes/mutex). To reduce the bias size for large models, we use an \emph{extracted} mode that only considers features appearing in the original cross-tree constraints of the feature model, rather than all possible feature pairs.
+
+The total bias size $|B|$ varies significantly across models, ranging from 295 constraints for IDE to 2,079 for eShop, depending on the number of features and the complexity of the feature hierarchy.
+
+\subsection{Sampling Strategies}
+We use six sampling strategies to generate training examples:
+
+\begin{itemize}
+    \item \textbf{RS(1n)}: Random Sampling with $n$ examples
+    \item \textbf{RS(2n)}: Random Sampling with $2n$ examples
+    \item \textbf{RS(3n)}: Random Sampling with $3n$ examples
+    \item \textbf{RS(m)}: Random Sampling with $m$ examples ($m$ = 2-COV count)
+    \item \textbf{2-COV}: 2-wise coverage (pairwise)
+    \item \textbf{FF}: Feature Frequency
+\end{itemize}
+
+%==============================================================================
+\section{Table 7: Example Distribution and Runtime}
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Example Distribution, Consistency Checks, and Runtime (Non-incremental)}
+\label{tab:table7}
+\begin{tabular}{l|rr|rr|rr|rr}
+\toprule
+\multirow{2}{*}{\textbf{Strategy}}
+    & \multicolumn{2}{c|}{\textbf{IDE} ($n$=14, $|B|$=295)}
+    & \multicolumn{2}{c|}{\textbf{FQA} ($n$=179, $|B|$=459)}
+    & \multicolumn{2}{c|}{\textbf{Arcade} ($n$=65, $|B|$=1755)}
+    & \multicolumn{2}{c}{\textbf{eShop} ($n$=291, $|B|$=2079)} \\
+    & $|E^+|$/$|E^-|$ & Runtime
+    & $|E^+|$/$|E^-|$ & Runtime
+    & $|E^+|$/$|E^-|$ & Runtime
+    & $|E^+|$/$|E^-|$ & Runtime \\
+\midrule
+RS(1n)  & 13/1   & 409     & 162/17  & 27,235   & 59/6    & 100,648  & 262/29  & 1,047,924 \\
+RS(2n)  & 26/2   & 849     & 323/35  & 70,455   & 117/13  & 143,006  & 524/58  & 1,212,656 \\
+RS(3n)  & 38/4   & 1,014   & 484/53  & 64,049   & 176/19  & 201,107  & 786/87  & 1,938,064 \\
+RS(m)   & 8/1    & 667     & 15/1    & 6,917    & 13/1    & 32,017   & 17/1    & 42,506 \\
+2-COV   & 0/9    & 278     & 0/16    & 1,506    & 1/13    & 11,349   & 1/17    & 14,131 \\
+FF      & 4/4    & 493     & 65/7    & 11,887   & 20/5    & 42,103   & 103/7   & 178,132 \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\small Runtime in milliseconds (ms). $|E^+|$ = positive examples, $|E^-|$ = negative examples.
+\end{flushleft}
+\end{table}
+
+%==============================================================================
+\section{Table 9-11: Cross-Validation Accuracy}
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{5-Fold Cross-Validation Accuracy (Non-incremental)}
+\label{tab:cv_accuracy}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Strategy} & \textbf{IDE (KB1)} & \textbf{FQA (KB2)} & \textbf{Arcade (KB3)} & \textbf{eShop (KB4)} \\
+\midrule
+RS(1n) & $0.81 \pm 0.25$ & $0.91 \pm 0.08$ & $0.89 \pm 0.03$ & $0.80 \pm 0.10$ \\
+RS(2n) & $0.81 \pm 0.25$ & $0.96 \pm 0.03$ & $0.93 \pm 0.03$ & $0.89 \pm 0.05$ \\
+RS(3n) & $0.96 \pm 0.06$ & $0.98 \pm 0.01$ & $0.93 \pm 0.04$ & $0.91 \pm 0.03$ \\
+RS(m)  & $0.40 \pm 0.42$ & $0.18 \pm 0.29$ & $0.88 \pm 0.07$ & $0.85 \pm 0.09$ \\
+2-COV  & $1.00 \pm 0.00$ & $1.00 \pm 0.00$ & $0.95 \pm 0.11$ & $0.93 \pm 0.06$ \\
+FF     & $0.40 \pm 0.22$ & $0.62 \pm 0.21$ & $0.89 \pm 0.04$ & $0.82 \pm 0.05$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{Table 12: KB Evaluation Against Ground Truth}
+%==============================================================================
+
+We evaluate the learned Knowledge Base (KB) against the ground truth Feature Model using two strategies:
+\begin{itemize}
+    \item \textbf{Description-based}: Compare constraint descriptions
+    \item \textbf{Clause-based}: Compare normalized CNF clauses
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption{KB Evaluation: Description-Based Strategy (Non-incremental)}
+\label{tab:kb_eval_desc}
+\begin{tabular}{l|cccc|cccc}
+\toprule
+\multirow{2}{*}{\textbf{Strategy}}
+    & \multicolumn{4}{c|}{\textbf{Accuracy}}
+    & \multicolumn{4}{c}{\textbf{$|KB_\cap|$}} \\
+    & IDE & FQA & Arcade & eShop
+    & IDE & FQA & Arcade & eShop \\
+\midrule
+RS(1n) & 0.000 & 0.008 & 0.020 & 0.049 & 13 & 25 & 84 & 103 \\
+RS(2n) & 0.000 & 0.008 & 0.018 & 0.039 & 18 & 21 & 96 & 102 \\
+RS(3n) & 0.000 & 0.008 & 0.020 & 0.035 & 17 & 24 & 85 & 108 \\
+RS(m)  & 0.000 & 0.085 & 0.035 & 0.128 & 15 & 39 & 48 & 81 \\
+2-COV  & 0.000 & 0.151 & 0.051 & 0.043 & 15 & 104 & 13 & 48 \\
+FF     & 0.000 & 0.025 & 0.027 & 0.045 & 6 & 23 & 46 & 61 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{KB Evaluation: Clause-Based Strategy (Non-incremental)}
+\label{tab:kb_eval_clause}
+\begin{tabular}{l|cccc|cccc|cccc}
+\toprule
+\multirow{2}{*}{\textbf{Strategy}}
+    & \multicolumn{4}{c|}{\textbf{Accuracy}}
+    & \multicolumn{4}{c|}{\textbf{Precision}}
+    & \multicolumn{4}{c}{\textbf{Recall}} \\
+    & IDE & FQA & Arcade & eShop
+    & IDE & FQA & Arcade & eShop
+    & IDE & FQA & Arcade & eShop \\
+\midrule
+RS(1n) & 0.87 & 0.51 & 0.90 & 0.81 & 0.00 & 0.38 & 0.22 & 0.37 & 0.00 & 0.03 & 0.15 & 0.09 \\
+RS(2n) & 0.86 & 0.52 & 0.89 & 0.80 & 0.00 & 0.50 & 0.18 & 0.29 & 0.00 & 0.03 & 0.14 & 0.07 \\
+RS(3n) & 0.86 & 0.52 & 0.90 & 0.80 & 0.00 & 0.44 & 0.21 & 0.27 & 0.00 & 0.03 & 0.14 & 0.07 \\
+RS(m)  & 0.87 & 0.57 & 0.92 & 0.84 & 0.07 & 0.75 & 0.42 & 0.70 & 0.05 & 0.15 & 0.17 & 0.18 \\
+2-COV  & 0.87 & 0.73 & 0.95 & 0.89 & 0.00 & 0.74 & 0.98 & 0.97 & 0.00 & 0.69 & 0.35 & 0.42 \\
+FF     & 0.90 & 0.52 & 0.92 & 0.82 & 0.00 & 0.46 & 0.42 & 0.48 & 0.00 & 0.03 & 0.15 & 0.07 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{Summary Table: Comprehensive Results}
+%==============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Comprehensive \textsc{ConGen} Results (Non-incremental Mode)}
+\label{tab:summary}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ll|rrrr|cc|cc}
+\toprule
+\textbf{Model} & \textbf{Strategy}
+    & \textbf{$|E^+|$} & \textbf{$|E^-|$} & \textbf{\#Checks} & \textbf{Runtime (ms)}
+    & \textbf{CV Acc.} & \textbf{$|KB_\cap|$}
+    & \textbf{Desc. Acc.} & \textbf{Clause Acc.} \\
+\midrule
+\multirow{6}{*}{IDE}
+    & RS(1n)  & 13  & 1  & 5,067     & 409       & 0.81 & 13  & 0.000 & 0.873 \\
+    & RS(2n)  & 26  & 2  & 12,720    & 849       & 0.81 & 18  & 0.000 & 0.855 \\
+    & RS(3n)  & 38  & 4  & 15,714    & 1,014     & 0.96 & 17  & 0.000 & 0.859 \\
+    & RS(m)   & 8   & 1  & 7,777     & 667       & 0.40 & 15  & 0.000 & 0.873 \\
+    & 2-COV   & 0   & 9  & 1,497     & 278       & 1.00 & 15  & 0.000 & 0.866 \\
+    & FF      & 4   & 4  & 4,974     & 493       & 0.40 & 6   & 0.000 & 0.899 \\
+\midrule
+\multirow{6}{*}{FQA}
+    & RS(1n)  & 162 & 17 & 79,581    & 27,235    & 0.91 & 25  & 0.008 & 0.512 \\
+    & RS(2n)  & 323 & 35 & 110,387   & 70,455    & 0.96 & 21  & 0.008 & 0.520 \\
+    & RS(3n)  & 484 & 53 & 131,703   & 64,049    & 0.98 & 24  & 0.008 & 0.516 \\
+    & RS(m)   & 15  & 1  & 21,942    & 6,917     & 0.18 & 39  & 0.085 & 0.568 \\
+    & 2-COV   & 0   & 16 & 2,418     & 1,506     & 1.00 & 104 & 0.151 & 0.732 \\
+    & FF      & 65  & 7  & 48,569    & 11,887    & 0.62 & 23  & 0.025 & 0.518 \\
+\midrule
+\multirow{6}{*}{Arcade}
+    & RS(1n)  & 59  & 6  & 190,590   & 100,648   & 0.89 & 84  & 0.020 & 0.901 \\
+    & RS(2n)  & 117 & 13 & 316,567   & 143,006   & 0.93 & 96  & 0.018 & 0.893 \\
+    & RS(3n)  & 176 & 19 & 413,697   & 201,107   & 0.93 & 85  & 0.020 & 0.899 \\
+    & RS(m)   & 13  & 1  & 64,011    & 32,017    & 0.88 & 48  & 0.035 & 0.923 \\
+    & 2-COV   & 1   & 13 & 16,406    & 11,349    & 0.95 & 13  & 0.051 & 0.953 \\
+    & FF      & 20  & 5  & 90,910    & 42,103    & 0.89 & 46  & 0.027 & 0.923 \\
+\midrule
+\multirow{6}{*}{eShop}
+    & RS(1n)  & 262 & 29 & 920,980   & 1,047,924 & 0.80 & 103 & 0.049 & 0.807 \\
+    & RS(2n)  & 524 & 58 & 842,960   & 1,212,656 & 0.89 & 102 & 0.039 & 0.800 \\
+    & RS(3n)  & 786 & 87 & 1,082,059 & 1,938,064 & 0.91 & 108 & 0.035 & 0.797 \\
+    & RS(m)   & 17  & 1  & 42,796    & 42,506    & 0.85 & 81  & 0.128 & 0.837 \\
+    & 2-COV   & 1   & 17 & 10,353    & 14,131    & 0.93 & 48  & 0.043 & 0.892 \\
+    & FF      & 103 & 7  & 230,615   & 178,132   & 0.82 & 61  & 0.045 & 0.818 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+%==============================================================================
+\section{Table 12: CONGEN vs Interactive Learning}
+%==============================================================================
+
+We compare CONGEN (passive learning) with Interactive Learning (active learning using QuAcq algorithm).
+Interactive learning generates queries iteratively, where each query is consistent with the learned constraint theory
+and inconsistent with at least one constraint in the remaining bias.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of CONGEN (Passive) vs Interactive Learning (Active)}
+\label{tab:table12_comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ll|rrrr|cc}
+\toprule
+\textbf{Model} & \textbf{Approach}
+    & \textbf{\#Queries/Ex.} & \textbf{$|KB|$} & \textbf{\#Checks} & \textbf{Runtime}
+    & \textbf{Desc.Acc} & \textbf{Clause.Acc} \\
+\midrule
+\multirow{2}{*}{IDE ($n$=14)}
+    & CONGEN (2-COV)   & 9    & 15  & 1,497   & 278ms   & 0.000 & 0.866 \\
+    & Interactive      & 13   & 15  & 527     & 22ms    & 0.000 & 0.866 \\
+\midrule
+\multirow{2}{*}{FQA ($n$=179)}
+    & CONGEN (2-COV)   & 16   & 104 & 2,418   & 1,506ms & 0.151 & 0.732 \\
+    & Interactive      & 103  & 89  & 5,557   & 627ms   & 0.124 & 0.705 \\
+\midrule
+\multirow{2}{*}{Arcade ($n$=65)}
+    & CONGEN (2-COV)   & 14   & 13  & 16,406  & 11.3s   & 0.051 & 0.953 \\
+    & Interactive      & 65   & 60  & 2,916   & 376ms   & 0.083 & 0.946 \\
+\midrule
+\multirow{2}{*}{eShop ($n$=291)}
+    & CONGEN (2-COV)   & 18   & 48  & 10,353  & 14.1s   & 0.043 & 0.892 \\
+    & Interactive      & 201  & 157 & 19,965  & 4.0s    & 0.217 & 0.898 \\
+\bottomrule
+\end{tabular}%
+}
+\begin{flushleft}
+\small CONGEN uses 2-COV (best-performing strategy). Interactive uses QuAcq with oracle-based query answering.
+\end{flushleft}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Interactive Learning Results (QuAcq Algorithm)}
+\label{tab:interactive}
+\begin{tabular}{l|rrrr|cc}
+\toprule
+\textbf{Model} & \textbf{\#Queries} & \textbf{$|KB|$} & \textbf{\#Checks} & \textbf{Runtime (ms)}
+    & \textbf{Desc.Acc} & \textbf{Clause.Acc} \\
+\midrule
+IDE (KB1)    & 13  & 15  & 527    & 22     & 0.000 & 0.866 \\
+FQA (KB2)    & 103 & 89  & 5,557  & 627    & 0.124 & 0.705 \\
+Arcade (KB3) & 65  & 60  & 2,916  & 376    & 0.083 & 0.946 \\
+eShop (KB4)  & 201 & 157 & 19,965 & 3,980  & 0.217 & 0.898 \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\small Convergence: all models converged with ``no\_query'' (empty bias or no valid query found).
+\end{flushleft}
+\end{table}
+
+%==============================================================================
+\section{Key Observations}
+%==============================================================================
+
+\subsection{CONGEN vs Interactive Learning}
+
+The comparison between CONGEN (passive learning) and Interactive Learning (active learning with QuAcq) reveals interesting trade-offs between the two approaches. Interactive learning requires significantly more oracle queries, ranging from 13 queries for IDE to 201 queries for eShop, whereas CONGEN with 2-COV strategy uses only 9 to 18 examples. However, Interactive learning demonstrates faster runtime for smaller models---for instance, IDE completes in just 22ms compared to 278ms for CONGEN. Despite these differences, both approaches achieve comparable clause-based accuracy, ranging from 0.70 to 0.95 across all models.
+
+A notable difference lies in the learned knowledge base size: Interactive learning tends to acquire more constraints (15--157) compared to CONGEN with 2-COV (13--104). This suggests that Interactive learning may capture more fine-grained constraint relationships. The fundamental trade-off can be summarized as follows: CONGEN requires fewer examples but performs more consistency checks per learning iteration, while Interactive learning requires more oracle queries but fewer checks per query.
+
+\subsection{Cross-Validation Accuracy}
+
+Among all sampling strategies evaluated, 2-COV achieves the highest cross-validation accuracy, reaching perfect accuracy (1.00) for IDE and FQA models, and maintaining strong performance (0.95) for Arcade and eShop. The RS(3n) strategy consistently achieves high accuracy ($\geq 0.91$) across all models, making it a reliable alternative when 2-COV is not applicable. In contrast, RS(m) exhibits high variance in performance, particularly for smaller models where the limited number of examples may not adequately represent the constraint space.
+
+\subsection{KB Evaluation Against Ground Truth}
+
+When evaluating learned knowledge bases against the ground truth feature model, we observe a significant disparity between description-based and clause-based evaluation strategies. Description-based accuracy remains generally low (0--15\%), indicating that learned constraints differ syntactically from the ground truth even when they may be semantically equivalent. Clause-based accuracy is substantially higher (50--95\%), demonstrating that the learned constraints achieve semantic similarity at the CNF clause level. The 2-COV strategy achieves the best clause-based precision and recall for most models, with precision reaching 0.98 for Arcade and 0.97 for eShop.
+
+\subsection{Runtime Performance}
+
+Runtime performance varies significantly across sampling strategies and model sizes. The 2-COV strategy is consistently the fastest due to its smaller example set, completing in 278ms for IDE, 1.5s for FQA, 11s for Arcade, and 14s for eShop. Runtime scales proportionally with model complexity, following the pattern: IDE $<$ FQA $<$ Arcade $<$ eShop. Random sampling strategies with larger example sets (RS(2n), RS(3n)) incur longer runtime due to the increased number of consistency checks required during the ACQMSS algorithm execution.
+
+\subsection{Trade-offs and Recommendations}
+
+Each sampling strategy presents distinct advantages and limitations. The 2-COV strategy offers the best combination of accuracy and computational efficiency, achieving perfect or near-perfect cross-validation accuracy while maintaining the fastest runtime. However, it requires careful example generation to ensure adequate coverage. RS(3n) provides a good balance between accuracy and coverage, making it suitable for scenarios where comprehensive constraint learning is prioritized over runtime efficiency. RS(m) offers computational efficiency but may underfit when the number of examples is insufficient to capture the full constraint space.
+
+For practical applications, we recommend 2-COV as the default strategy when oracle queries are relatively inexpensive. When oracle access is limited or expensive, Interactive learning may be preferable for smaller models due to its faster convergence. For larger models where runtime is a concern, CONGEN with 2-COV provides more predictable performance characteristics.
+
+\end{document}
