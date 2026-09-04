@@ -300,12 +300,16 @@ def compare_kb(kb_path: Path, comparator: KBComparator,
                 "folds[], one knowledge base per fold, and --kb reads the standalone "
                 "schema. Scoring it here would report n_kb 0 and F1 0.0 for every "
                 "strategy -- an artefact of the wrong entry point, not a result.")
+            # make_score_configs writes score_<algorithm>.toml, and takes the algorithm
+            # from the directory the CV file sits in. Naming score_congen.toml here
+            # would be wrong for every interactive cell -- that is, for half of them --
+            # and wrong precisely in the message someone reads when they are stuck.
             logger.error(
                 "Use config mode, with kb_dir naming this file:\n"
                 "    python3 tools/sosym_r1/make_score_configs.py "
                 "--cv-dir %s --out scratch\n"
-                "    python3 -m apps.run_compare scratch/score_congen.toml",
-                kb_path.parent)
+                "    python3 -m apps.run_compare scratch/score_%s.toml",
+                kb_path.parent, kb_path.parent.name)
         else:
             logger.error(
                 "--kb expects a standalone result file. This one carries neither "

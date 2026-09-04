@@ -81,7 +81,7 @@ if [ "${PRINT_FP:-0}" = "1" ]; then
 fi
 
 # ---------------------------------------------------------------- 0. environment
-say "0/5  environment"
+say "0/6  environment"
 python3 -c "import sys; assert sys.version_info >= (3,11), sys.version" \
   || die "Python >= 3.11 required"
 python3 -c "import explanation, flamapy" 2>/dev/null \
@@ -92,7 +92,7 @@ python3 -c "import scipy" 2>/dev/null \
 echo "  ok: $(python3 -V), explanation + conacq + scipy importable"
 
 # ---------------------------------------------------------------- 1. the evidence
-say "1/5  the two trees this revision rests on"
+say "1/6  the two trees this revision rests on"
 # OLD and NEW are the pairing the N item rests on, and their paths are asserted by
 # the verifier. Named here so a reader sees which is which before any table appears.
 [ -d "data/results" ] \
@@ -103,13 +103,13 @@ echo "  OLD = data/results        $(ls data/results/congen/*_cv_*.json 2>/dev/nu
 echo "  NEW = $R1  $(ls $R1/congen/*_cv_*.json | wc -l | tr -d ' ') congen, $(ls $R1/interactive/*_cv_*.json | wc -l | tr -d ' ') interactive"
 
 # ---------------------------------------------------------------- 2. timing gate
-say "2/5  timing provenance gate"
+say "2/6  timing provenance gate"
 echo "  Refuses a timing figure measured while another sweep unit was in flight."
 python3 apps/sosym_r1/check_timing_provenance.py \
   || die "timing provenance — a reported runtime overlaps another run; re-time those units first"
 
 # ---------------------------------------------------------------- 3. numbers gate
-say "3/5  paper-numbers gate"
+say "3/6  paper-numbers gate"
 echo "  Every number quoted in the revision, recomputed from the committed data."
 python3 apps/sosym_r1/check_paper_numbers.py \
   || die "paper numbers — a quoted number no longer reproduces. Update the note to the
@@ -137,7 +137,7 @@ fi
 # empty set of failures while pytest was not installed, and a targeted run reported
 # success against a test file that did not exist. Both exited 0. Collection is cheap;
 # certifying a tree whose tests cannot even be collected is not.
-say "3b/5  the suite is collectable"
+say "3b/6  the suite is collectable"
 if command -v python3 >/dev/null && python3 -c "import pytest" 2>/dev/null; then
   # A SMOKE CHECK, deliberately, and it says so rather than inventing a floor. The
   # count differs between repositories (681 here, 343 in the artifact), so any minimum
@@ -167,59 +167,8 @@ else
   echo "  pytest not installed - skipping (install with: pip install '.[dev]')"
 fi
 
-# A DOCUMENTED RECIPE IS AN EXECUTABLE CLAIM, and until now nothing executed it. The
-# gates above check the numbers the pipeline produces; the README describes a second,
-# independent route to those numbers, and that route was wrong for the entire life of
-# the published artifact -- it told reviewers to score a cross-validation file through
-# an entry point that reads a different schema, so it reported that the method learned
-# nothing, and exited 0 while doing it.
-#
-# Costs about two seconds against the pipeline's five, because REAL-FM-7 is the cheapest
-# cell by design. Compares n_kb and all three F1 values against the committed result,
-# never the exit status: an exit status is exactly what hid the defect.
-say "3c/5  the README's worked example reproduces the committed numbers"
-REF="$R1/congen/REAL-FM-7_ff_cv_incremental.json"
-if [ -f "$REF" ] && [ -f "data/results_sosym/configs/congen_REAL-FM-7_ff.toml" ]; then
-  python3 -m apps.run_cv data/results_sosym/configs/congen_REAL-FM-7_ff.toml \
-      -o scratch > /dev/null 2>&1 \
-    || die "the README's run_cv step failed. The worked example is broken."
-  python3 -m apps.run_compare \
-      "$R1/compare_configs/score_one_cell_example.toml" > /dev/null 2>&1 \
-    || die "the README's scoring step failed. The worked example is broken."
-  python3 - "scratch/congen/REAL-FM-7_ff_cv_incremental.json" "$REF" <<'PYEOF' \
-    || die "the README's worked example no longer reproduces the committed numbers.
-       Fix the recipe or the code -- never the reference."
-import json, sys
-
-
-def rows(path):
-    with open(path) as fh:
-        data = json.load(fh)
-    return [(fold['statistics']['n_kb'],
-             *(round(fold['evaluation'][s]['metrics']['f1_score'], 4)
-               for s in ('description', 'clause', 'semantic')))
-            for fold in data['folds']]
-
-
-got, ref = rows(sys.argv[1]), rows(sys.argv[2])
-# n_kb 0 is the specific shape of the defect this check exists for, so it is named
-# rather than left to fall out of the comparison.
-if any(row[0] == 0 for row in got):
-    sys.exit('  the recipe scored an EMPTY knowledge base (n_kb 0)')
-if got != ref:
-    for i, (g, r) in enumerate(zip(got, ref)):
-        if g != r:
-            print(f'  fold {i}: recipe {g} != committed {r}')
-    sys.exit(1)
-print(f'  ok: {len(got)} folds match — n_kb {got[0][0]}, '
-      f'semantic F1 ' + ', '.join(f'{row[3]:.4f}' for row in got))
-PYEOF
-else
-  echo "  skipped: the single-cell inputs are not present in this tree"
-fi
-
 # ---------------------------------------------------------------- 4. tables
-say "4/5  generate tables -> $TABLES_DIR"
+say "4/6  generate tables -> $TABLES_DIR"
 mkdir -p "$TABLES_DIR"
 python3 -m apps.extract_results --results-dir "$R1" --output-dir "$TABLES_DIR" \
   || die "extract_results"
@@ -231,7 +180,7 @@ python3 apps/sosym_r1/count_target_clauses.py > "$TABLES_DIR/target-clause-count
   || die "target clause counts"
 
 # ---------------------------------------------------------------- 5. verify
-say "5/5  verify the emitted artifacts"
+say "5/6  verify the emitted artifacts"
 # A CONTENT fingerprint of the generator, deliberately NOT `git rev-parse HEAD`.
 #
 # HEAD names a commit, and a commit is not the thing that made these tables — it is
@@ -294,5 +243,72 @@ The acquisition sweep is committed evidence, not a table input. One busybox fold
 at cap 5,000 is 15.5 h and the full sweep took three weeks of machine time.
 EOF
 echo "  ok: PROVENANCE.md written"
+
+# ---------------------------------------------------------------- 6. the recipe
+# A DOCUMENTED RECIPE IS AN EXECUTABLE CLAIM, and until now nothing executed it. The
+# gates above check the numbers the pipeline produces; the README describes a second,
+# independent route to those numbers, and that route was wrong for the entire life of
+# the published artifact -- it sent reviewers through an entry point that reads a
+# different schema, so it reported that the method learned nothing, and exited 0.
+#
+# RUNS LAST, AFTER THE TABLES ARE WRITTEN, and that ordering is deliberate. Placed
+# before them it withheld every table whenever the recipe failed, including for reasons
+# unrelated to any number. A mismatch here still fails the run loudly -- but the reader
+# already holds the tables, and can see which of the two disagrees. A warning in the
+# middle of a long log would have been the wrong fix: nobody reads those.
+#
+# Costs about 0.4 s against the pipeline's five, measured as the median of three clean
+# runs; REAL-FM-7 is the cheapest cell by design. Compares n_kb and all three F1 values
+# against the committed result, never the exit status -- an exit status is exactly what
+# hid the defect this check exists for.
+say "6/6  the README's worked example reproduces the committed numbers"
+REF="$R1/congen/REAL-FM-7_ff_cv_incremental.json"
+RECIPE_CFG="data/results_sosym/configs/congen_REAL-FM-7_ff.toml"
+# Both inputs are tracked in this tree. A "skipped" branch here would be a check that
+# cannot go red, which is the shape that has already produced two false greens in this
+# project -- so their absence is a failure, not a reason to pass quietly.
+[ -f "$REF" ] || die "missing $REF -- the worked example has nothing to compare against"
+[ -f "$RECIPE_CFG" ] || die "missing $RECIPE_CFG -- the worked example cannot be run"
+
+# run_cv SKIPS any fold whose partial already exists (apps/run_cv.py:116). Left in
+# place, a reader's partials from an earlier or interrupted run would decide what this
+# compares, and the mismatch would be reported as "fix the recipe or the code" while
+# all three were correct. Clearing the scratch tree is what makes this measure the
+# current code rather than whatever is lying around.
+rm -rf scratch/congen
+python3 -m apps.run_cv "$RECIPE_CFG" -o scratch > /dev/null 2>&1 \
+  || die "the README's run_cv step failed. The worked example is broken."
+python3 -m apps.run_compare \
+    "$R1/compare_configs/score_one_cell_example.toml" > /dev/null 2>&1 \
+  || die "the README's scoring step failed. The worked example is broken."
+python3 - "scratch/congen/REAL-FM-7_ff_cv_incremental.json" "$REF" <<'PYEOF' \
+  || die "the README's worked example no longer reproduces the committed numbers.
+       The tables above are already written; this says the documented recipe and the
+       pipeline disagree. Fix the recipe or the code -- never the reference."
+import json, sys
+
+
+def rows(path):
+    with open(path) as fh:
+        data = json.load(fh)
+    return [(fold['statistics']['n_kb'],
+             *(round(fold['evaluation'][s]['metrics']['f1_score'], 4)
+               for s in ('description', 'clause', 'semantic')))
+            for fold in data['folds']]
+
+
+got, ref = rows(sys.argv[1]), rows(sys.argv[2])
+# n_kb 0 is the specific shape of the defect this check exists for, so it is named
+# rather than left to fall out of the comparison.
+if any(row[0] == 0 for row in got):
+    sys.exit('  the recipe scored an EMPTY knowledge base (n_kb 0)')
+if got != ref:
+    for i, (g, r) in enumerate(zip(got, ref)):
+        if g != r:
+            print(f'  fold {i}: recipe {g} != committed {r}')
+    sys.exit(1)
+print(f'  ok: {len(got)} folds match — n_kb {got[0][0]}, '
+      f'semantic F1 ' + ', '.join(f'{row[3]:.4f}' for row in got))
+PYEOF
 
 printf '\n\033[32mDONE\033[0m — artifacts in %s\n' "$TABLES_DIR"

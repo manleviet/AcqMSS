@@ -49,11 +49,11 @@ are CV files that reach it only by mistake, and no test calls `compare_kb` or
 
 `reproduce_tables_sosym.sh` now also runs the README's worked example and compares `n_kb`
 and all three F1 values against the committed result, because a documented recipe is an
-executable claim and nothing was executing it. It costs about one second.
+executable claim and nothing was executing it. It costs about 0.4 s, the median of three clean runs.
 
 ## 2. `run_compare` config mode writes back into `kb_dir`
 
-`apps/run_compare.py:223` writes each fold's evaluation into the CV file named by
+`apps/run_compare.py:231` writes each fold's evaluation into the CV file named by
 `kb_dir`. In config mode that is the *input* file, so pointing it at a committed results
 tree re-scores that tree in place.
 
@@ -73,15 +73,31 @@ learned KB, accuracy, negative examples, metrics, summary all reproduce exactly 
 element order within a result varies, so two runs of the same scoring produce
 byte-different files.
 
-**Not fixed, and the reason is the cost of fixing it now.** Sorting the output changes
-the byte content of every scored JSON, which changes every generated table, which means
-the 93 assertions in `apps/sosym_r1/check_paper_numbers.py` have to be re-derived from
-scratch. Close to a submission deadline that is a bad trade: the numbers are correct
-today, and the change would put every one of them back in question to gain a property
-nothing currently depends on.
+**Not fixed — but the reason first recorded here was wrong, and the correction matters
+more than the decision.**
+
+The original entry said that sorting the output would change every generated table and
+force all 93 assertions in `apps/sosym_r1/check_paper_numbers.py` to be re-derived. That
+is false. `apps/extract_results.py:656` builds each row from `fs['tp'] + fs['fn']`,
+`fs['tp']`, `fs['fp']`, `fs['fn']` and the three metric values — counts and numbers, not
+element sequences — and every loop that reaches them is a `sorted()`. Element order
+inside a scored result reaches no table cell, so sorting the scorer's output would move
+no published number and invalidate no assertion.
+
+The reasoning was mine as reviewer, not the implementer's, and it was accepted without
+being checked against the code. An ADR is precisely where a reason has to be right: the
+decision here happens to survive the correction, but a later reader would have inherited
+a false model of how the tables are built and used it to judge some other change.
+
+**The real cost is re-running and re-verifying, not moved numbers.** The fix rewrites
+every scored JSON in both result trees, and nothing short of a full re-run of the
+pipeline and its gates establishes that only ordering moved — which is the one thing a
+byte diff of those files cannot show, since every byte is expected to differ. Close to a
+submission deadline that is a bad trade for a property nothing currently depends on.
 
 The artifact's README states the limit plainly, so a reviewer who re-runs the scoring
 and sees different bytes knows that is expected rather than a discrepancy.
 
-Revisit after the deadline. If the sort lands, re-derive the assertions in the same
-commit, and re-run the full acceptance rather than trusting that only ordering moved.
+Revisit after the deadline. If the sort lands, re-run the full acceptance rather than
+trusting that only ordering moved — and do not expect the tables to move, because on the
+evidence above they will not.
