@@ -159,7 +159,12 @@ cd "$HERE"
 # nothing. The example/fold filter is the one legitimate source of absences, so its
 # removals are subtracted before comparing.
 KEPT=$(cd "$OUT" && git ls-files)
-WANT=$(printf '%s\n' "${FILES[@]}" | grep -v '^data/\(examples\|folds\)/' | sort)
+# Expected = allowlist selection, plus whole-file replacements (which are legitimately
+# present without being selected: CITATION.cff does not exist upstream, and README.md
+# is replaced rather than copied), minus what the example/fold filter removed.
+ADDED=$( [ -d "$T/patches/files" ] && (cd "$T/patches/files" && find . -type f | sed 's|^\./||') || true )
+WANT=$(printf '%s\n%s\n' "$(printf '%s\n' "${FILES[@]}")" "$ADDED" \
+        | grep -v '^$' | grep -v '^data/\(examples\|folds\)/' | sort -u)
 GOT=$(printf '%s\n' "$KEPT" | grep -v '^data/\(examples\|folds\)/' | sort)
 if [ "$WANT" != "$GOT" ]; then
   echo "  selected but absent from the commit:" >&2
