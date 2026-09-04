@@ -133,6 +133,8 @@ git init -q -b main
 # -f, because the artifact ships a .gitignore that matches files this repository
 # tracks anyway -- data/bias/linux-2.6.33.3-bias-stats.txt among them. Without it
 # the file is copied to disk and then silently left out of the commit.
+# Radius measured, not assumed: `git ls-files | git check-ignore --no-index --stdin`
+# returns exactly one path. At forty, -f would be reckless rather than safe.
 git add -A -f
 git -c user.email=manleviet@gmail.com -c user.name="Lê Viết Mẫn" commit -q -m \
 "ConGen evaluation artifact

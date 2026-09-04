@@ -76,6 +76,25 @@ shared code path is shaped for it. None names the venue, the title, or the revie
 A gate that is red on day one gets relaxed until it checks nothing. Two such relaxations
 have already been removed from that script.
 
+## Method rules
+
+Learned the expensive way, each from a check that reported success while unable to
+observe the failure it existed to prevent:
+
+- **Every selective check runs in both directions — missing and extra.** A
+  one-directional check is a systematic way to overlook things, not a weaker one. This
+  file's own output gate compared only one way and was blind to a tracked file the
+  shipped `.gitignore` silently dropped from the commit. The same shape appeared four
+  times before that: a `.get()` default standing in for a missing key, filtering by
+  filename instead of by role, `git grep` over paths instead of contents, and an
+  `exists()` guard turning an absent input into a pass.
+- **Byte-identity is not a reason to drop a file; "who reads it" is.** See §3.
+- **A gate that is red on day one gets relaxed until it checks nothing.** See §6.
+- **Measure the radius before trusting a force.** `git add -A -f` is safe here because
+  exactly one tracked file is also matched by `.gitignore` — measured with
+  `git ls-files | git check-ignore --no-index --stdin`, not assumed. At forty files it
+  would not have been safe.
+
 ## The acceptance gate
 
 Two numbers and a scan — never "the items were applied":

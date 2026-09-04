@@ -1,0 +1,10 @@
+--- a/.gitignore
++++ b/.gitignore
+@@ -211,7 +211,6 @@
+ /data/bias/ea2468-bias.json
+ /data/bias/linux-2.6.33.3-bias.cnf
+ /data/bias/linux-2.6.33.3-bias.json
+-/data/bias/linux-2.6.33.3-bias-stats.txt
+ # ea2468 example sets exceed GitHub's 100 MB per-file push limit
+ # (rs_1n ~96 MB, rs_2n ~193 MB, rs_3n ~290 MB; this repo has no git-lfs).
+ # Transferred out of band, deposited on Zenodo at publication — same treatment
