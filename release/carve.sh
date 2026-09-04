@@ -130,7 +130,10 @@ fi
 say "4/6  one root commit"
 cd "$OUT"
 git init -q -b main
-git add -A
+# -f, because the artifact ships a .gitignore that matches files this repository
+# tracks anyway -- data/bias/linux-2.6.33.3-bias-stats.txt among them. Without it
+# the file is copied to disk and then silently left out of the commit.
+git add -A -f
 git -c user.email=manleviet@gmail.com -c user.name="Lê Viết Mẫn" commit -q -m \
 "ConGen evaluation artifact
 
@@ -149,9 +152,21 @@ say "5/6  verify"
 cd "$HERE"
 # Output must equal the allowlist selection minus what the example filter removed. This
 # is the check that sees a file the script created but did not intend to ship.
-if diff <(cd "$OUT" && git ls-files) <(printf '%s\n' "${FILES[@]}" | sort) | grep -q '^<'; then
-  diff <(cd "$OUT" && git ls-files) <(printf '%s\n' "${FILES[@]}" | sort) | grep '^<' >&2
-  die "output contains files the allowlist did not select"
+# BOTH directions. The first version only looked for files the allowlist had not
+# selected, and was blind to the opposite case -- a selected file missing from the
+# output. That is precisely how the shipped .gitignore silently dropped a tracked
+# file: copied to disk, absent from the commit, and a one-directional gate saw
+# nothing. The example/fold filter is the one legitimate source of absences, so its
+# removals are subtracted before comparing.
+KEPT=$(cd "$OUT" && git ls-files)
+WANT=$(printf '%s\n' "${FILES[@]}" | grep -v '^data/\(examples\|folds\)/' | sort)
+GOT=$(printf '%s\n' "$KEPT" | grep -v '^data/\(examples\|folds\)/' | sort)
+if [ "$WANT" != "$GOT" ]; then
+  echo "  selected but absent from the commit:" >&2
+  comm -23 <(printf '%s\n' "$WANT") <(printf '%s\n' "$GOT") | sed 's/^/    /' >&2
+  echo "  present but never selected:" >&2
+  comm -13 <(printf '%s\n' "$WANT") <(printf '%s\n' "$GOT") | sed 's/^/    /' >&2
+  die "output does not equal the allowlist selection"
 fi
 # Invoked through bash, not by exec bit: a checked-out mode is one more thing that
 # can differ between machines, and this gate must run everywhere.
