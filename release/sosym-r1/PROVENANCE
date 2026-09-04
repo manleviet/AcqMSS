@@ -1,10 +1,10 @@
 target:     sosym-r1
-carved:     2026-09-04T22:45:13Z
-source:     AcqMSS d13d847 (feat/sosym-r1)
-artifact:   9988754
+carved:     2026-09-04T23:06:29Z
+source:     AcqMSS 1d0791c (feat/sosym-r1)
+artifact:   77f9cd7
             (recorded after the commit; a commit cannot name its own hash --
              verify by re-carving from the source SHA, not from inside it)
-generator:  344bea3 carve.sh, bc97b38 keep-list
+generator:  344bea3 carve.sh, df88626 keep-list
 files:      915 selected by keep-list, before the example/fold filter
 
 gitignore radius: 1 tracked file(s) also matched by .gitignore
