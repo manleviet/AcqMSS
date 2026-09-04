@@ -207,6 +207,10 @@ scripts/build_t11_oracle_net_fixtures.py
 #   eval-pipeline.md                                -- opens by disclaiming itself, then
 #                                                      points at files this repo lacks
 #   journals/260726-make-tables-generator-build.md  -- build log for a dropped generator
+#   project-roadmap.md, project-overview-pdr.md    -- describe an ongoing project,
+#                                                     not this artifact; they invite a
+#                                                     reader onto a roadmap they cannot
+#                                                     follow
 # A `docs/` prefix would quietly re-admit all four the next time someone re-carves.
 docs/README.md
 # Each ADR by name. A `docs/adr/` prefix would re-admit 0018 -- and the
@@ -232,7 +236,5 @@ docs/adr/0017-reduce-discards-mss-order.md
 docs/adr/README.md
 docs/code-standards.md
 docs/congen.md
-docs/project-overview-pdr.md
-docs/project-roadmap.md
 docs/quacq.md
 docs/system-architecture.md

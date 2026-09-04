@@ -106,6 +106,14 @@ for d, suf in (('data/examples', '.json'), ('data/folds', '_folds.json')):
 print(f"  dropped {removed} example/fold files with no corresponding result")
 PY
 
+# ------------------------------------------------------- 2b. phrase substitutions
+# Applied before the patches, so a patch's context is the substituted text and the two
+# mechanisms cannot fight over the same line.
+if [ -f "$T/substitutions" ]; then
+  say "2b/6  apply $T/substitutions"
+  python3 release/apply_substitutions.py "$OUT" "$T/substitutions" || die "phrase substitutions"
+fi
+
 # ---------------------------------------------------------------- 3. patches
 say "3/6  apply $T/patches"
 # An allowlist removes files; it cannot remove a function from a file that is kept.
@@ -188,6 +196,14 @@ say "6/6  record provenance"
   echo "carved:     $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "source:     AcqMSS $SRC_SHA ($(git rev-parse --abbrev-ref HEAD))"
   echo "artifact:   $OUT_SHA"
+  # Stated because it is structurally unavoidable and would otherwise look like an
+  # error: this file is written AFTER the artifact commit, so it names that commit
+  # while living outside it. A commit can never contain its own hash. The artifact
+  # SHA below is therefore verifiable by re-running the carve from the source SHA
+  # above, not by looking inside the artifact.
+  echo "            (recorded after the commit; a commit cannot name its own hash --"
+  echo "             verify by re-carving from the source SHA, not from inside it)"
+  echo "generator:  $(git rev-parse --short HEAD:release/carve.sh) carve.sh, $(git rev-parse --short HEAD:release/$TARGET/keep-list) keep-list"
   echo "files:      ${#FILES[@]} selected by keep-list, before the example/fold filter"
   echo ""
   # Measured at carve time, never transcribed. A number copied from a report is a claim;

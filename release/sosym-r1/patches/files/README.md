@@ -75,14 +75,18 @@ lists the 28 cells that do have results, and no more.
 
 ## Provenance
 
-This repository was carved out of a larger development repository. The extraction is
-verified before each release by a checker that lives in that repository, not this one:
-it scans both the working tree and the full commit history, and refuses to publish if
-anything from the unrelated work remains. It is not shipped here because a checker that
-lists what it forbids is itself the disclosure it exists to prevent.
+This repository is derived from a private working repository where ConGen is developed
+alongside unrelated work. Only what the paper rests on is published here: the
+implementation as evaluated, the inputs, the results, and the code that turns them into
+the tables. The derivation is scripted, so it can be repeated for a later version rather
+than assembled by hand.
 
-Unrelated sources were removed from history entirely. Incidental terminology may remain
-in the history of files the two projects shared.
+**The results were re-scored after a defect was found in the scoring step.** Four of the
+five knowledge bases had been compared against the wrong model's target theory, which
+inflated some figures and deflated others. Both trees ship — `data/results` as
+originally computed, `data/results_sosym_r1` after the correction — because the
+disclosure in the paper is a comparison between them, and a reader given only the
+corrected numbers could not check it.
 
 ## Layout
 

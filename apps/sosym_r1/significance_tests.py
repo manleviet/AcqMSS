@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """C9: significance tests across instances, with the two cautions that matter.
 
-R3-Q5 asks for statistical significance to be *discussed*. The design gives three
+a reviewer question asks for statistical significance to be *discussed*. The design gives three
 folds per cell, which has no power and whose folds share one example pool, so the
 unit of analysis is the **(knowledge base x sampling) instance**: one paired
 observation per cell, Wilcoxon signed-rank, Holm correction over the family.

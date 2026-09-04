@@ -1,29 +1,20 @@
 #!/usr/bin/env python3
-"""Reproduce, and ASSERT, every number the SoSyM revision notes quote.
+"""Reproduce, and ASSERT, every number the paper quotes.
 
 Why this file exists
 --------------------
-The checking layer was the one layer leaving no audit trail. CC's measurements
-live in committed scripts; CW's counter-measurements were ad-hoc snippets typed
-into a chat, and the numbers they produced went straight into `~SoSyM revision.md`
-and the paper drafts. Several of those numbers are load-bearing:
+A number that nobody can recompute cannot be re-checked, only re-asserted. The
+figures below are load-bearing:
 
-  * |Cτ| = 130 for arcade-game is the hand count that decided the ground-truth
-    question. The whole "four of five models were scored against fqa's Cτ"
-    disclosure rests on it.
-  * 74.62 %, 18/28, 1/84 and the 29-80 % agreement range are quoted in the paper.
+  * |Ctau| = 130 for arcade-game is the hand count that settled the ground-truth
+    question, and the disclosure that four of five models had been scored against
+    another model's target theory rests on it.
+  * 74.62 %, 18/28, 1/84 and the 29-80 % agreement range appear in the paper.
 
-A number in a note that nobody can recompute cannot be re-checked, only
-re-asserted. This project already adopted the rule ("scratch is local, evidence
-is committed"; "you may call something scratch only if you can name what
-reconstructs it") and this file is CW complying with it.
-
-It ASSERTS rather than prints, so it doubles as a regression test: if a future
-re-run moves a number that reached the paper, this fails loudly instead of
-letting the paper and the data drift apart silently.
-
-Run:  PYTHONPATH=. python3 apps/sosym_r1/check_paper_numbers.py
-Exit: 0 = every number in the notes still holds. 1 = at least one moved.
+Each is recomputed here from the committed data, so a reader can see the number
+move if the data moves. When one of these fails, the finding is that a number
+changed: update the paper to the measurement, never the assertion to the number
+you hoped for.
 """
 from __future__ import annotations
 
@@ -585,5 +576,5 @@ if checks < MINIMUM_CHECKS:
     print('An empty or truncated run is not a pass. Something above exited early or')
     print('skipped a section -- find it rather than lowering this number.')
     sys.exit(1)
-print(f'OK: all {checks} numbers quoted in the SoSyM notes reproduce from the data.')
+print(f'OK: all {checks} numbers quoted in the paper reproduce from the data.')
 sys.exit(0)
