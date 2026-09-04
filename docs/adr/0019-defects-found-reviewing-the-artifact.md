@@ -1,14 +1,15 @@
-# ADR-0019 — Three known defects, deferred past the release
+# ADR-0019 — Defects found while reviewing the public artifact
 
-**Status:** Accepted. Recorded rather than fixed, deliberately.
+**Status:** Accepted. The first is fixed here; the other two are recorded rather than
+fixed, deliberately.
 **Date:** 2026-09-04, extended 2026-09-05.
 
-All three were found while reviewing the public evaluation artifact. None is fixed here,
-and the reason differs for each. They are ordered by severity, and the ordering is the
-point: the first returns a wrong answer without saying so, while the other two produce
-only cosmetic differences.
+All three were found while reviewing the public evaluation artifact. They are ordered by
+severity, and the ordering is the point: the first returned a wrong answer without saying
+so, while the other two produce only cosmetic differences. That is why the first was
+worth fixing before submission and the others were not.
 
-## 1. `--kb` CLI mode silently scores an empty knowledge base for a CV file
+## 1. `--kb` CLI mode silently scored an empty knowledge base for a CV file — FIXED
 
 `apps/run_compare.py`'s CLI mode reads the single-knowledge-base schema, which expects
 `kb_constraints` at the top level. A cross-validation file does not have that: its
@@ -30,10 +31,25 @@ it quietly reports that the paper's method learned nothing. A reviewer following
 instructions exactly would have concluded ConGen acquires zero constraints, and every
 signal available to them — exit code, log output, a well-formed JSON — would have agreed.
 
-The README now prescribes config mode against a scratch copy and states this limit
-explicitly. **Fixing the code is the first task after submission**, ahead of both defects
-below. The fix is to reject a CV file in CLI mode rather than score it as empty: refusing
-to answer is correct, answering zero is not.
+**Fixed in `compare_kb`:** a file with no `kb_constraints` at the top level is now
+refused with an explanation and exit 1, instead of scored as empty. Refusing to answer is
+correct; answering zero is not.
+
+The location is a hard constraint, not a preference. The check does **not** belong in
+`ConGenResultData.from_json`, which is a loader that several tests require to parse every
+recorded result without raising — `tests/test_t9_metrics_safety_net.py:171` calls it with
+`# must not raise`, and `test_evaluation.py` calls it in four places. Refusing at the
+loader would forbid reading a CV file at all. Refusing at this entry point rejects only
+the combination that cannot work.
+
+The change can only add a failure, never alter a correct answer: measured across `data/`,
+214 files carry `kb_constraints` at the root and are scored correctly by this path, 274
+are CV files that reach it only by mistake, and no test calls `compare_kb` or
+`run_cli_mode` at all. A run that produced a right answer necessarily had the key.
+
+`reproduce_tables_sosym.sh` now also runs the README's worked example and compares `n_kb`
+and all three F1 values against the committed result, because a documented recipe is an
+executable claim and nothing was executing it. It costs about one second.
 
 ## 2. `run_compare` config mode writes back into `kb_dir`
 

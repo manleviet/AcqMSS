@@ -82,12 +82,14 @@ matching `data/results_sosym_r1/congen/REAL-FM-7_ff_cv_incremental.json`.
 into the file it names, which is what you want for your own scratch copy and destructive
 for `data/results_sosym_r1/` — it would re-score the committed results in place.
 
-⚠ **`--kb` CLI mode cannot score a cross-validation file, and does not say so.** It
-expects a single-knowledge-base file with `kb_constraints` at the top level; a CV file
-holds its constraints inside `folds[]`. Given one it scores an empty knowledge base and
-reports `n_kb: 0` with precision and recall `0.0` for every strategy, exiting `0` with no
-warning. Those zeros are an artefact of the wrong entry point, not a result. This is a
-known defect, recorded in `docs/adr/0019-known-defects-deferred-past-the-release.md`.
+⚠ **`--kb` CLI mode cannot score a cross-validation file.** It expects a single
+knowledge base with `kb_constraints` at the top level; a CV file holds its constraints
+inside `folds[]`. Handed one it now refuses, names the reason, points here, and exits 1.
+
+Until that check existed it did something worse: it scored an empty knowledge base and
+reported `n_kb: 0` with precision and recall `0.0` for every strategy, exiting `0` with
+no warning — zeros that were an artefact of the wrong entry point rather than a result.
+That history is recorded in `docs/adr/0019-defects-found-reviewing-the-artifact.md`.
 
 **What matches on a re-run, and what does not.** The learned knowledge base, the
 accuracy, the negative examples, the metric values and the summary all reproduce

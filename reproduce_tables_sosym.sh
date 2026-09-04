@@ -167,6 +167,57 @@ else
   echo "  pytest not installed - skipping (install with: pip install '.[dev]')"
 fi
 
+# A DOCUMENTED RECIPE IS AN EXECUTABLE CLAIM, and until now nothing executed it. The
+# gates above check the numbers the pipeline produces; the README describes a second,
+# independent route to those numbers, and that route was wrong for the entire life of
+# the published artifact -- it told reviewers to score a cross-validation file through
+# an entry point that reads a different schema, so it reported that the method learned
+# nothing, and exited 0 while doing it.
+#
+# Costs about two seconds against the pipeline's five, because REAL-FM-7 is the cheapest
+# cell by design. Compares n_kb and all three F1 values against the committed result,
+# never the exit status: an exit status is exactly what hid the defect.
+say "3c/5  the README's worked example reproduces the committed numbers"
+REF="$R1/congen/REAL-FM-7_ff_cv_incremental.json"
+if [ -f "$REF" ] && [ -f "data/results_sosym/configs/congen_REAL-FM-7_ff.toml" ]; then
+  python3 -m apps.run_cv data/results_sosym/configs/congen_REAL-FM-7_ff.toml \
+      -o scratch > /dev/null 2>&1 \
+    || die "the README's run_cv step failed. The worked example is broken."
+  python3 -m apps.run_compare \
+      "$R1/compare_configs/score_one_cell_example.toml" > /dev/null 2>&1 \
+    || die "the README's scoring step failed. The worked example is broken."
+  python3 - "scratch/congen/REAL-FM-7_ff_cv_incremental.json" "$REF" <<'PYEOF' \
+    || die "the README's worked example no longer reproduces the committed numbers.
+       Fix the recipe or the code -- never the reference."
+import json, sys
+
+
+def rows(path):
+    with open(path) as fh:
+        data = json.load(fh)
+    return [(fold['statistics']['n_kb'],
+             *(round(fold['evaluation'][s]['metrics']['f1_score'], 4)
+               for s in ('description', 'clause', 'semantic')))
+            for fold in data['folds']]
+
+
+got, ref = rows(sys.argv[1]), rows(sys.argv[2])
+# n_kb 0 is the specific shape of the defect this check exists for, so it is named
+# rather than left to fall out of the comparison.
+if any(row[0] == 0 for row in got):
+    sys.exit('  the recipe scored an EMPTY knowledge base (n_kb 0)')
+if got != ref:
+    for i, (g, r) in enumerate(zip(got, ref)):
+        if g != r:
+            print(f'  fold {i}: recipe {g} != committed {r}')
+    sys.exit(1)
+print(f'  ok: {len(got)} folds match — n_kb {got[0][0]}, '
+      f'semantic F1 ' + ', '.join(f'{row[3]:.4f}' for row in got))
+PYEOF
+else
+  echo "  skipped: the single-cell inputs are not present in this tree"
+fi
+
 # ---------------------------------------------------------------- 4. tables
 say "4/5  generate tables -> $TABLES_DIR"
 mkdir -p "$TABLES_DIR"

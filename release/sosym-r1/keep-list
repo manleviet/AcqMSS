@@ -233,7 +233,7 @@ docs/adr/0014-parallel-executor-deferred-to-canonical.md
 docs/adr/0015-example-mode-pool-shuffle-must-be-seeded.md
 docs/adr/0016-shuffle-bias-is-a-no-op-for-quacq.md
 docs/adr/0017-reduce-discards-mss-order.md
-docs/adr/0019-known-defects-deferred-past-the-release.md
+docs/adr/0019-defects-found-reviewing-the-artifact.md
 docs/adr/README.md
 docs/code-standards.md
 docs/congen.md

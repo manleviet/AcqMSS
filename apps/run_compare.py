@@ -272,6 +272,46 @@ def compare_kb(kb_path: Path, comparator: KBComparator,
                strategies: List[ComparationStrategy],
                output_dir: Path) -> dict:
     """Compare a single standalone KB file against ground truth."""
+    # REFUSE a cross-validation file rather than scoring it as empty.
+    #
+    # This path reads the standalone schema, whose constraints are `kb_constraints` at
+    # the top level. A CV file keeps them inside `folds[]`, one knowledge base per fold.
+    # Handed one, this used to find neither, score an empty knowledge base, and write
+    # n_kb 0 with precision and recall 0.0 for every strategy -- exiting 0, logging
+    # "Done.", warning about nothing. A reviewer following the artifact's README saw
+    # that and would have concluded the method learns nothing.
+    #
+    # Measured across data/: 214 files carry `kb_constraints` at the root and are scored
+    # correctly here; 274 are CV files that reach this only by mistake. A run that
+    # produces a correct answer necessarily has the key, so this can only add a failure
+    # -- it cannot change any output that was already right.
+    #
+    # The check belongs HERE and not in ConGenResultData.from_json, which is a loader
+    # that several tests require to parse every recorded result without raising
+    # (tests/test_t9_metrics_safety_net.py:171, "must not raise"). Refusing at the loader
+    # would forbid reading a CV file at all; refusing at this entry point rejects only
+    # the combination that cannot work.
+    raw = json.loads(kb_path.read_text())
+    if isinstance(raw, dict) and 'kb_constraints' not in raw:
+        logger.error("%s has no 'kb_constraints' at the top level.", kb_path)
+        if 'folds' in raw:
+            logger.error(
+                "It is a cross-validation file: the learned constraints are inside "
+                "folds[], one knowledge base per fold, and --kb reads the standalone "
+                "schema. Scoring it here would report n_kb 0 and F1 0.0 for every "
+                "strategy -- an artefact of the wrong entry point, not a result.")
+            logger.error(
+                "Use config mode, with kb_dir naming this file:\n"
+                "    python3 tools/sosym_r1/make_score_configs.py "
+                "--cv-dir %s --out scratch\n"
+                "    python3 -m apps.run_compare scratch/score_congen.toml",
+                kb_path.parent)
+        else:
+            logger.error(
+                "--kb expects a standalone result file. This one carries neither "
+                "'kb_constraints' nor 'folds', so there is nothing here to score.")
+        sys.exit(1)
+
     result_data = ConGenResultData.from_json(kb_path)
 
     eval_result = {}
