@@ -126,6 +126,28 @@ observe the failure it existed to prevent:
   in this effort were described by what they were meant to contain: a staged revert had
   already been picked up, so a message announcing a seven-line fix shipped twenty-three
   files. Read back what git recorded, not what you asked for.
+- **Care protects what you chose to write; it cannot protect what a tool writes for
+  you.** The full chain, because no single link explains it:
+
+  1. A check for the sibling project's name was **removed** on the reasoning that it
+     would be red on day one. The observation was true; the conclusion silenced the
+     bell rather than putting out the fire.
+  2. Twenty-six references consequently reached a public repository.
+  3. The check was restored and the references fixed.
+  4. It then caught something nobody would have caught by being careful: building a
+     patch through a shell heredoc, backticks **inside a comment** executed
+     `git ls-remote --tags`, injecting the development repository's tag name — which
+     contains both forbidden terms — into the artifact's `pyproject.toml`.
+
+  The lesson is not about heredocs or quoting. It is that reviewing your intentions
+  cannot catch what your tooling emits on your behalf. Only a check on the *output*
+  can, and a check removed for being inconvenient is not there when that happens.
+
+- **Turn what must be remembered into what must be true.** `date-released` must equal
+  the tag date. A comment saying so did not stop it expiring — set to 2026-09-03 and
+  still there the next day. It is now asserted against today's date, and the artifact
+  version against the package version, because both were previously caught by eye, and
+  what is caught by eye once is missed by eye later.
 - **Measure the radius before trusting a force.** `git add -A -f` is safe here because
   exactly one tracked file is also matched by `.gitignore` — measured with
   `git ls-files | git check-ignore --no-index --stdin`, not assumed. At forty files it

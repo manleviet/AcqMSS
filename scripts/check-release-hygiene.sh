@@ -49,6 +49,31 @@ for term in "AAAI" "conmin"; do
   fi
 done
 
+# Two numbers that must agree with something outside themselves. Both were found by
+# eye during review, which means the next drift is found the same way or not at all.
+#
+# date-released must be TODAY. It is written to equal the tag date, and it has already
+# expired once -- set to 2026-09-03, still there on 2026-09-04. A note in the file
+# saying "update this before tagging" did not prevent that, because notes never do.
+# Turning a thing that must be remembered into a thing that must be true is the only
+# reliable move available.
+cff="$TARGET/CITATION.cff"
+if [ -f "$cff" ]; then
+  today=$(date +%Y-%m-%d)
+  released=$(grep -m1 '^date-released:' "$cff" | awk '{print $2}')
+  if [ "$released" != "$today" ]; then
+    echo "  CITATION.cff date-released is $released, today is $today" >&2
+    echo "  It must equal the tag date. Re-run the carve on the day you tag." >&2
+    fail=1
+  fi
+  cff_v=$(grep -m1 '^version:' "$cff" | awk '{print $2}' | tr -d '"')
+  py_v=$(grep -m1 '^version = ' "$TARGET/pyproject.toml" 2>/dev/null | cut -d'"' -f2)
+  if [ -n "$py_v" ] && [ "$cff_v" != "$py_v" ]; then
+    echo "  CITATION.cff version $cff_v != pyproject version $py_v" >&2
+    fail=1
+  fi
+fi
+
 # No path in ANY commit belongs to the other project. With a single root commit this is
 # cheap, but it stays because it is the only check that would survive a return to
 # carrying history, and it is the one that has actually caught things: two files no
