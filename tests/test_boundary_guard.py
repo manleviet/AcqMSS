@@ -121,30 +121,10 @@ def test_conacq_imports_profiling_only_through_facade():
     assert not breaches, "conacq → profiling breaches:\n  " + "\n  ".join(breaches)
 
 
-def test_explanation_imports_profiling_only_through_facade():
-    """(3) Framework reaches the profiling leaf solely via the ``profiling`` façade."""
-    breaches = _facade_breaches(EXPLANATION_DIR, "profiling", PROFILING_FACADE)
-    assert not breaches, "explanation → profiling breaches:\n  " + "\n  ".join(breaches)
 
 
-def test_explanation_never_imports_conacq():
-    """(4) Framework has zero knowledge of the app."""
-    breaches = _dependency_breaches(EXPLANATION_DIR, "conacq")
-    assert not breaches, (
-        "explanation → conacq breaches (framework must not know app):\n  "
-        + "\n  ".join(breaches)
-    )
 
 
-def test_profiling_is_a_leaf():
-    """(5) The profiling leaf depends on neither tier above it."""
-    breaches = _dependency_breaches(PROFILING_DIR, "explanation") + _dependency_breaches(
-        PROFILING_DIR, "conacq"
-    )
-    assert not breaches, (
-        "profiling is not a leaf (must not import explanation/conacq):\n  "
-        + "\n  ".join(breaches)
-    )
 
 
 # The application core — everything under conacq except ``eval`` itself (and the
@@ -202,3 +182,13 @@ def test_conacq_core_does_not_import_eval():
     """
     breaches = _eval_layer_breaches()
     assert not breaches, "conacq core → eval breaches (ADR-0006):\n  " + "\n  ".join(breaches)
+
+# Rules (3), (4) and (5) were REMOVED, not disabled. They scanned REPO_ROOT/explanation
+# and REPO_ROOT/profiling, which this repository has not held since 4b47c9b -- those
+# packages are consumed from the canonical ../explanation checkout. rglob over a missing
+# directory yields nothing, so _iter_source_files returned 0 files and all three
+# asserted over an empty list: green forever, having examined nothing.
+#
+# Measured at removal: conacq/ = 74 files scanned, explanation/ = 0, profiling/ = 0.
+# The surviving rules are the real boundary this repository can enforce. A guard that
+# cannot fail is worse than an absent one: it reports a safety it is not providing.
