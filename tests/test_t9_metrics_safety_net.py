@@ -45,7 +45,7 @@ def test_extraction_tables_are_byte_identical(tmp_path, monkeypatch):
     are both stale. Re-extracting stale data still matches the stale golden — a
     green that proves nothing. Kept loud (skip, not pass) so the pending
     multi-hour CV regen is visible. Unskip after regen (see
-    ``plans/260710-redesign-abc-v2/B3-pending-revision.md``).
+    `an internal effort log, not shipped with this artifact`).
     """
     from apps import extract_results
 

@@ -22,4 +22,4 @@ solver_name = "glucose4"
 name = "REAL-FM-7"
 oracle = "data/fms/REAL-FM-7.uvl"
 bias = "data/bias/REAL-FM-7-bias.json"
-# examples = "data/examples/REAL-FM-7-examples.json"  # required for example_only/example_first
+# examples = "data/examples/<model>_<sampling>.json"  # required for example_only/example_first

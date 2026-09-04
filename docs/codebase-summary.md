@@ -589,7 +589,7 @@ PYTHONPATH=. pytest tests/test_diagnosis_hsdag.py -v
 PYTHONPATH=. pytest tests/ -k "fastdiag" -v
 
 # Run single test with full profiling
-PYTHONPATH=. pytest tests/test_diagnosis_fastdiag.py -v -s
+PYTHONPATH=. pytest the canonical explanation repository's diagnosis tests -v -s
 ```
 
 ## Main Applications

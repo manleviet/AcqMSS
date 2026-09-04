@@ -196,7 +196,7 @@ QueryProvider(
 - `conacq/example_generators/` — QueryProvider: unified pool + SAT query generation (query_provider.py)
 
 **Evaluation Support**:
-- `conacq/eval/fold_io.py` — Shared CV fold generation for CONGEN/QuAcq comparison
+- `conacq/eval/folds.py` — Shared CV fold generation for CONGEN/QuAcq comparison
 - `conacq/runners/quacq_runner.py` — QuAcq pipeline runner (238 LOC, moved from eval/)
 - `conacq/eval/cross_validation.py` — Cross-validation framework (424 LOC)
 - `apps/generate_cv_folds.py` — CLI to pre-generate folds (68 LOC)
@@ -297,7 +297,7 @@ Key Classes (in conacq/algorithms/quacq/):
 - Both use same SAT solvers (IncrementalPySATChecker, NonIncrementalPySATChecker)
 - Both use same FM representation and bias generation pipeline
 - Both use same evaluation framework (cross_validation, accuracy metrics)
-- Fair comparison via shared CV folds (fold_io.py)
+- Fair comparison via shared CV folds (folds.py)
 - Both support n-fold cross-validation with pre-generated folds
 - Constraint name resolution moved to runner layer (QuAcqRunner.resolve_kb() pattern)
 
@@ -428,7 +428,7 @@ Both CONGEN and QuAcq support n-fold cross-validation with shared infrastructure
 
 ```python
 # Shared fold generation and loading
-from conacq.eval.fold_io import generate_folds, load_folds, save_folds
+from conacq.eval.folds import generate_folds, load_folds, save_folds
 
 # Pre-generate folds once for reproducible evaluation
 folds = generate_folds(E_plus, E_minus, n_splits=5, seed=42)

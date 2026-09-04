@@ -6,8 +6,8 @@ This script reads a TOML configuration file containing paths to YAML bias config
 generates bias constraints for each, and saves them to the specified output directory.
 
 Usage:
-    python apps/generate_bias_files_1.py apps/conf/generate_bias_files_config.toml
-    python apps/generate_bias_files_1.py --config apps/conf/generate_bias_files_config.toml
+    python apps/generate_bias_files.py apps/conf/generate_bias_files_config.toml
+    python apps/generate_bias_files.py --config apps/conf/generate_bias_files_config.toml
 
 Example TOML config:
     [settings]
@@ -315,7 +315,7 @@ Example TOML config file:
     config_path = args.config or args.config_flag
 
     if not config_path:
-        parser.error("Configuration file is required. Use: python generate_bias_files_1.py <config.toml>")
+        parser.error("Configuration file is required. Use: python generate_bias_files.py <config.toml>")
 
     return config_path
 

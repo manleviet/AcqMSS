@@ -731,7 +731,7 @@ Both paradigms use:
 - Same SAT solvers (Incremental/NonIncremental/SAT4J)
 - Same bias generation pipeline
 - Same evaluation framework (cross-validation, accuracy metrics)
-- Shared CV folds for fair comparison (fold_io.py)
+- Shared CV folds for fair comparison (folds.py)
 
 ## Data Flow Diagrams
 
@@ -877,7 +877,7 @@ conacq/ uses components from the external `../explanation` package:
 
 The Oracle and all SAT-based components must use the **same** feature_ids mapping:
 ```
-Oracle (conacq/oracle/fm_oracle.py)
+Oracle (conacq/oracle/fm/oracle.py)
   ├─ _build_cnf(): Uses FmToPysat → generates CNF clauses with variable IDs
   └─ _build_feature_ids(): Must extract mapping from same FmToPysat transform
 

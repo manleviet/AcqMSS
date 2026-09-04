@@ -87,11 +87,11 @@ kb_dir = "data/results/interactive"
 # [[models]]
 # name = "ea2468"
 # oracle = "data/fms/ea2468.uvl"
-# bias = "data/bias/ea2468-bias.json"
+# bias = "data/bias/<model>-bias.json"
 # kb_dir = "data/results/congen"
 
 # [[models]]
 # name = "linux-2.6.33.3"
 # oracle = "data/fms/linux-2.6.33.3.uvl"
-# bias = "data/bias/linux-2.6.33.3-bias.json"
+# bias = "data/bias/<model>-bias.json"
 # kb_dir = "data/results/congen"

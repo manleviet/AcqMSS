@@ -1,8 +1,8 @@
 target:     sosym-r1
-carved:     2026-09-04T11:00:54Z
-source:     AcqMSS 6275955 (feat/sosym-r1)
-artifact:   b3ba5cc
-files:      914 selected by keep-list, before the example/fold filter
+carved:     2026-09-04T11:36:22Z
+source:     AcqMSS 244ccc5 (feat/sosym-r1)
+artifact:   91ab78c
+files:      915 selected by keep-list, before the example/fold filter
 
 gitignore radius: 1 tracked file(s) also matched by .gitignore
                   (this is why the root commit uses `git add -A -f`; at forty it would be reckless)

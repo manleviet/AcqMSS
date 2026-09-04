@@ -98,7 +98,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ FindC algorithm (IJCAI13 Algorithm 3) — constraint discrimination with scope
 - ✅ QuAcq.learn_from_examples() — example-based learning mode (no oracle needed)
 - ✅ QueryProvider class — unified query/example provision (merged ExampleProvider + QueryGenerator)
-- ✅ Shared CV fold generation/save/load (fold_io.py)
+- ✅ Shared CV fold generation/save/load (folds.py)
 - ✅ Pre-generated fold support in cross_validation.py
 - ✅ Bias shuffle seed support in congen_runner.py and run_congen_eval.py
 - ✅ generate_cv_folds.py CLI for reproducible fold generation
@@ -147,7 +147,7 @@ AcqMSS is a mature research system with core functionality fully implemented and
 - ✅ Pipeline scripts refactoring: 4 monolithic scripts → 6 focused SRP scripts
   - Deleted: `run_congen_eval.py`, `run_interactive_eval.py` (merged functionality)
   - New: `run_cv.py` (unified CV), `run_quacq.py` (learning only), `run_compare.py` (evaluation)
-  - New module: `conacq/eval/config.py` (shared config loading)
+  - New module: `conacq/config.py` (shared config loading)
   - Cleaner separation: learning → evaluation → reporting
 
 **Expected Completion**: End of February 2026

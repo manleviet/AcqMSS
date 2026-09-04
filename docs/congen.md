@@ -173,7 +173,7 @@ Output: B' ⊆ B (maximum satisfiable subset)
 - **Line 13**: Find MSS of second half, with first half's MSS added to BG
 - **Lines 6-8**: Base case — single constraint that causes inconsistency is removed
 
-**Implementation**: `conacq/algorithms/acqmss.py` — `AcqMSS.find_mss()` (104 LOC)
+**Implementation**: `conacq/algorithms/acqmss/acqmss.py` — `AcqMSS.find_mss()` (104 LOC)
 - Uses KBDiag from `explanation/operations/algorithms/kbdiag.py` (100 LOC, in canonical `../explanation`)
 
 ## REDUCE (Algorithm 3)
@@ -197,7 +197,7 @@ Output: KB (reduced knowledge base)
 
 **Line 3 logic**: If adding ¬ci to the remaining KB causes inconsistency, then KB − {ci} already entails ci, so ci is redundant.
 
-**Implementation**: `conacq/algorithms/reduce.py` — `Reduce.reduce()` (155 LOC)
+**Implementation**: `conacq/algorithms/acqmss/reduce.py` — `Reduce.reduce()` (155 LOC)
 - Uses `negation_map` (Dict[int, int]) mapping assumption ID → negated form
 - Tseitin encoding used to negate CNF clauses
 
@@ -352,7 +352,7 @@ ConGen and QuAcq share significant infrastructure:
 | Bias generation | `conacq/bias/` | Same BiasGenerator for both paradigms |
 | Oracle | `conacq/oracle/` | role protocols, FMOracle, OracleData/BGData |
 | Evaluation | `conacq/eval/` | Same accuracy metrics and cross-validation |
-| CV folds | `conacq/eval/fold_io.py` | Pre-generated folds for fair comparison |
+| CV folds | `conacq/eval/folds.py` | Pre-generated folds for fair comparison |
 | Feature IDs | flamapy tree traversal | Authoritative variable mapping (NOT alphabetical) |
 
 **Two paradigms, one framework**:
@@ -366,7 +366,7 @@ ConGen supports n-fold cross-validation with shared folds for fair comparison wi
 ```python
 from conacq.algorithms.congen import ConGenModelBuilder
 from conacq.oracle import FMOracle
-from conacq.eval.fold_io import load_folds
+from conacq.eval.folds import load_folds
 from conacq.eval.cross_validation import n_fold_cross_validation
 
 # Load pre-generated folds (shared with QuAcq)
@@ -386,6 +386,6 @@ results = n_fold_cross_validation(model, fold_data=fold_data, n_splits=5)
 
 **Key features**:
 - Per-fold bias shuffling (shuffle_seeds in FoldData)
-- Shared folds with QuAcq for fair comparison via `fold_io.py`
+- Shared folds with QuAcq for fair comparison via `folds.py`
 - Accuracy, precision, recall, F1 per fold and aggregated
 - CSV/JSON/LaTeX export of results

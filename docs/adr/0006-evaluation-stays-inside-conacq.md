@@ -30,7 +30,7 @@ The circular import is a symptom of (B), not of (A): **`runners` imports `eval` 
 1. **Move the metrics container out of `eval` into `conacq/runners/`.** It is the *output a runner produces*, not the *evaluation that consumes runs*. This removes the only `runners → eval` edge — the cycle dies **structurally**, not by a deferred import.
 2. **Rebuild the container**: dict-backed, with a declarative spec; `to_dict()` *is* the dict; aggregation becomes **one generic reducer** (`{key: {mean, std, min, max}}`); the metric map is **declared per algorithm**, so QuAcq stops injecting zeroed fields into ConGen's container and a third algorithm costs nobody anything.
 3. **Add a guard rule** (extending ADR-0002 to inside `conacq`): `conacq.{runners, algorithms, models, oracle, bias, examples}` **must not import** `conacq.eval`. This declares `eval` a layer of its own and enforces it — **without moving a single file**.
-4. `conacq/eval/config.py` moves to `conacq/config.py`: it holds `ModelConfig` / `load_pipeline_config`, which six `apps/` scripts use. It is application configuration, not evaluation.
+4. `conacq/config.py` moves to `conacq/config.py`: it holds `ModelConfig` / `load_pipeline_config`, which six `apps/` scripts use. It is application configuration, not evaluation.
 
 Hard constraint throughout: **the on-disk export is frozen.** `data/results/**` must stay `from_json`-readable and CSV/LaTeX byte-identical — the paper pipeline reads them. So the dict must serialise with the same key names in the same order, which means an explicit ordered key list per algorithm, generated from the same declaration. The safety net is a **golden-file test written before the refactor**.
 
