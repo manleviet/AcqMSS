@@ -67,11 +67,18 @@ done < <(cat "$T/keep-list")
 printf '%s\n' "${PATTERNS[@]}" | grep -q '^release/' \
   && die "keep-list selects release/ -- the artifact must not carry its own carve recipe"
 
+# Selection in python, not awk: passing a newline-separated pattern list through
+# `awk -v` does not survive, and the failure mode was an empty selection -- which the
+# count assertion above caught, but which would otherwise have carved an empty tree.
 FILES=()
 while IFS= read -r f; do FILES+=("$f"); done < <(
-  git ls-files | awk -v pats="$(printf '%s\n' "${PATTERNS[@]}")" '
-    BEGIN { n = split(pats, P, "\n") }
-    { for (i = 1; i <= n; i++) if ($0 == P[i] || index($0, P[i]) == 1) { print; break } }')
+  git ls-files | python3 -c '
+import sys
+pats = [l.rstrip("\n") for l in open(sys.argv[1]) if l.strip() and not l.startswith("#")]
+for f in (l.rstrip("\n") for l in sys.stdin):
+    if any(f == p or f.startswith(p) for p in pats):
+        print(f)
+' "$T/keep-list")
 [ "${#FILES[@]}" -gt 0 ] || die "allowlist selected no files"
 echo "  ${#PATTERNS[@]} patterns select ${#FILES[@]} files from $SRC_SHA"
 
