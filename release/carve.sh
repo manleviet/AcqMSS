@@ -213,8 +213,16 @@ EOF
   echo "  test_explanation_imports_profiling_only_through_facade"
   echo "  test_explanation_never_imports_conacq"
   echo "  test_profiling_is_a_leaf"
-  echo "  (each scanned REPO_ROOT/explanation or /profiling, absent since 4b47c9b,"
-  echo "   so all three asserted over an empty list)"
+  echo "  Each scanned REPO_ROOT/explanation or /profiling, gone since 4b47c9b, so"
+  echo "  none of them could fail: three green lights wired to nothing. An empty"
+  echo "  assertion is worse than an absent one -- it is a promise of protection"
+  echo "  that does not exist, and it reads as coverage in every report."
+  echo ""
+  echo "  The rules themselves are NOT abandoned. All three live in the canonical"
+  echo "  explanation repository, which does contain those packages:"
+  echo "    test_explanation_imports_profiling_only_through_facade"
+  echo "    test_explanation_never_imports_an_application  (generalised: no single app there)"
+  echo "    test_profiling_is_a_leaf"
 } > "$T/PROVENANCE"
 cat "$T/PROVENANCE" | sed 's/^/  /'
 

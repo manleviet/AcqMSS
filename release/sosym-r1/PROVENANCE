@@ -1,5 +1,17 @@
 target:     sosym-r1
-carved:     2026-09-04T10:47:22Z
-source:     AcqMSS e618f2c (feat/sosym-r1)
-artifact:   a2bc6ad
+carved:     2026-09-04T10:55:14Z
+source:     AcqMSS 758f9aa (feat/sosym-r1)
+artifact:   ac5d3d2
 files:      914 selected by keep-list, before the example/fold filter
+
+gitignore radius: 1 tracked file(s) also matched by .gitignore
+                  (this is why the root commit uses `git add -A -f`; at forty it would be reckless)
+escapes:    189 .py compiled with warnings on, 0 invalid escape(s)
+
+boundary-guard rules removed from the source repository, by name --
+a count would not say which, and three deleted looks like three broken:
+  test_explanation_imports_profiling_only_through_facade
+  test_explanation_never_imports_conacq
+  test_profiling_is_a_leaf
+  (each scanned REPO_ROOT/explanation or /profiling, absent since 4b47c9b,
+   so all three asserted over an empty list)

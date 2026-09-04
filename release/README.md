@@ -103,6 +103,14 @@ observe the failure it existed to prevent:
   compare against — a gate creating maintenance without creating information. Meanwhile
   `pytest` was already reporting exit 2 on a broken `conftest.py`, and `2>/dev/null` was
   discarding it. The same error produced the case-insensitive `conmin` proposal in §6.
+- **An assertion must be shown to be capable of failing.** If it has never been red,
+  make it red once before trusting it. Three boundary rules in this repository passed for
+  months while scanning directories that did not exist — green lights wired to nothing.
+  An empty assertion is worse than an absent one: it reads as coverage in every report
+  and promises a protection that is not there. The same shape produced a `.get()` default
+  standing in for a missing key, a suite that "passed" with pytest uninstalled, and a
+  targeted run that succeeded against a test file that did not exist. Every gate added
+  during this release was deliberately made to fail once before being believed.
 - **Measure the radius before trusting a force.** `git add -A -f` is safe here because
   exactly one tracked file is also matched by `.gitignore` — measured with
   `git ls-files | git check-ignore --no-index --stdin`, not assumed. At forty files it
