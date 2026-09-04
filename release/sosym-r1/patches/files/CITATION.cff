@@ -1,12 +1,12 @@
 cff-version: 1.2.0
 message: "If you use this software or its data, please cite the paper below."
-title: "ConGen — evaluation artifact"
+title: "Constraint Acquisition of Configuration Knowledge Bases with Maximum Satisfiable Subsets — evaluation artifact"
 abstract: >-
   Source code, data and result tables for the ConGen paper: constraint
   acquisition from feature models via maximum satisfiable subsets.
 type: software
 version: 1.0.0
-date-released: 2026-09-03
+date-released: 2026-09-04
 authors:
   - family-names: "Le"
     given-names: "Viet-Man"
@@ -20,11 +20,11 @@ repository-code: "https://github.com/manleviet/ConGenEvaluation"
 # must be connected to Zenodo BEFORE the release is published; connect it after
 # and that release is simply not archived, silently.
 #
-# date-released must match the tag date. If tagging slips past 2026-09-03,
-# update it here first.
+# date-released must match the tag date. If tagging slips past 2026-09-04,
+# update it here first -- it has already expired once.
 preferred-citation:
   type: article
-  title: "TBD — paper title"
+  title: "Constraint Acquisition of Configuration Knowledge Bases with Maximum Satisfiable Subsets"
   authors:
     - family-names: "Le"
       given-names: "Viet-Man"

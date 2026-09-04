@@ -1,11 +1,15 @@
 --- a/pyproject.toml
 +++ b/pyproject.toml
-@@ -3,7 +3,7 @@
+@@ -3,7 +3,10 @@
  build-backend = "setuptools.build_meta"
  
  [project]
 -name = "acqmss"
+-version = "0.1.0"
 +name = "congen-evaluation"
++# 1.0.0, matching CITATION.cff and the release tag. The development version is
++# independent: this is the first published form of the artifact.
++version = "1.0.0"
  version = "0.1.0"
  requires-python = ">=3.11"
  dependencies = [
