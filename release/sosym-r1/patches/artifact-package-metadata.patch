@@ -13,18 +13,16 @@
  requires-python = ">=3.11"
  dependencies = [
      "flamapy-fw==2.6.0.dev4",
-@@ -26,6 +28,15 @@
+@@ -26,6 +28,13 @@
      # evidence chain. Same failure as PyYAML above: available by accident, never
      # declared. A package that fails loudly at install is still not reproducible.
      "scipy>=1.11",
 +    # The SAT infrastructure ConGen is built on. Pinned to a tag rather than a
-+    # sibling checkout: AcqMSS assumes ../explanation is present and editable-
-+    # installed, which is a two-repo development convention and not something a
-+    # reader of this artifact can be expected to reproduce.
++    # sibling checkout, which is a two-repo development convention a reader of this
++    # artifact cannot be expected to reproduce.
 +    # v0.1.0 dereferences to commit dca7c1121fac3b5f6d2b333ac674cc08d9cab260.
-+    # NOTE: v0.1.0 is an ANNOTATED tag, so \8853989a41d0487e127fbe64ae4c5bb1338c0490	refs/tags/conmin-aaai-data
-+fd8476228ad53fd19c84a9f2abd74518a3ddeb14	refs/tags/conmin-aaai-data^{} shows the tag
-+    # object 6a51e5e, not the commit. Only \ gives dca7c11.
++    # NOTE: v0.1.0 is an ANNOTATED tag, so listing remote tags shows the tag object
++    # 6a51e5e, not the commit; only the dereferenced form gives dca7c11.
 +    "explanation @ git+https://github.com/manleviet/explanation.git@v0.1.0",
  ]
  
