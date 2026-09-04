@@ -14,6 +14,11 @@
 # name is a pointer to something absent, exactly like a stale file path. So the fix
 # belongs on the artifact side, and the upstream comments stay accurate.
 #
+# ORDER MATTERS. Rules apply in file order, so a longer phrase must precede any
+# shorter phrase contained in it -- otherwise the short rule consumes the text and the
+# long one silently never fires. The match-at-least-once assertion is what surfaces
+# that: two shadowed rules were removed the first time it ran.
+#
 # FORMAT: one `find<TAB>replace` per line. Blank lines and # comments ignored.
 # Every entry must match at least once, and no `find` may survive: carve.sh asserts
 # both. An entry that matches nothing means the upstream wording moved, and the table
@@ -32,7 +37,6 @@ a subclass (ConMin) can return	a subclass can return
 ConMin passes a dict	the subclass passes a dict
 with ConMin's ``size``	with the sibling's ``size``
 the same contract ConMin	the same contract the other
-ConMin's ``size``	the sibling's ``size``
 the ConMin	the sibling's
 (base_runner, conmin_cv_evaluator)	(base_runner, the passive evaluator)
 common to ConGen, ConMin, and Interactive	common to every runner
@@ -45,4 +49,3 @@ ConMinModel already carries	a sibling model already carries
 data/results_conmin/*_long.csv, condition A	the condition-A reference CSVs
 tests/test_diagnosis_fastdiag.py	the canonical explanation repository's diagnosis tests
 `plans/260710-redesign-abc-v2/B3-pending-revision.md`	an internal effort log, not shipped
-``plans/260710-redesign-abc-v2/B3-pending-revision.md``	an internal effort log, not shipped
