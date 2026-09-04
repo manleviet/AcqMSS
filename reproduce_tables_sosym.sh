@@ -267,14 +267,21 @@ RECIPE_CFG="data/results_sosym/configs/congen_REAL-FM-7_ff.toml"
 # Both inputs are tracked in this tree. A "skipped" branch here would be a check that
 # cannot go red, which is the shape that has already produced two false greens in this
 # project -- so their absence is a failure, not a reason to pass quietly.
+#
+# NOT EXERCISED, and said plainly so nobody assumes otherwise: both files are also read
+# by the paper-numbers gate at step 3, so removing either turns THAT red first and this
+# line is never reached. It is here for a tree assembled differently, not because it has
+# been seen to fire. Treat it as untested code.
 [ -f "$REF" ] || die "missing $REF -- the worked example has nothing to compare against"
 [ -f "$RECIPE_CFG" ] || die "missing $RECIPE_CFG -- the worked example cannot be run"
 
-# run_cv SKIPS any fold whose partial already exists (apps/run_cv.py:116). Left in
-# place, a reader's partials from an earlier or interrupted run would decide what this
-# compares, and the mismatch would be reported as "fix the recipe or the code" while
-# all three were correct. Clearing the scratch tree is what makes this measure the
-# current code rather than whatever is lying around.
+# run_cv SKIPS any fold whose partial already exists (apps/run_cv.py:116), and a partial
+# records neither seed nor shuffle_bias -- so one produced by a different configuration
+# is indistinguishable from a correct one and is silently reused. Reproduced: a cell run
+# once with shuffle_bias = false leaves partials that make the next run report n_kb
+# 13/15/16 with three plausible-looking F1 triples, none of them right. See ADR-0019 §2.
+# Clearing the scratch tree is what makes this measure the current code rather than
+# whatever is lying around.
 rm -rf scratch/congen
 python3 -m apps.run_cv "$RECIPE_CFG" -o scratch > /dev/null 2>&1 \
   || die "the README's run_cv step failed. The worked example is broken."

@@ -308,7 +308,10 @@ def compare_kb(kb_path: Path, comparator: KBComparator,
                 "Use config mode, with kb_dir naming this file:\n"
                 "    python3 tools/sosym_r1/make_score_configs.py "
                 "--cv-dir %s --out scratch\n"
-                "    python3 -m apps.run_compare scratch/score_%s.toml",
+                "    python3 -m apps.run_compare scratch/score_%s.toml\n"
+                "  Those two commands only work if the file sits in a directory named "
+                "'congen' or 'interactive': make_score_configs selects by that name and "
+                "writes score_<name>.toml. Move it under one of those first.",
                 kb_path.parent, kb_path.parent.name)
         else:
             logger.error(
