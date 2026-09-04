@@ -115,9 +115,16 @@ for p in "$T"/patches/*.patch; do
   (cd "$OUT" && git apply --whitespace=nowarn "$HERE/$p") || die "patch failed: $p"
   echo "  applied $(basename "$p")"
 done
-for n in "$T"/patches/*.new; do
-  base=$(basename "$n" .new); cp "$n" "$OUT/$base"; echo "  added   $base"
-done
+# Whole-file replacements mirror the tree under patches/files/, so a nested path stays
+# nested. An earlier flat `*.new` scheme would have written tools/sosym_r1/README.md to
+# the repository root -- silently, since nothing checks where a copy lands.
+if [ -d "$T/patches/files" ]; then
+  (cd "$T/patches/files" && find . -type f) | sed 's|^\./||' | while IFS= read -r rel; do
+    mkdir -p "$OUT/$(dirname "$rel")"
+    cp "$T/patches/files/$rel" "$OUT/$rel"
+    echo "  replaced $rel"
+  done
+fi
 
 # ---------------------------------------------------------------- 4. root commit
 say "4/6  one root commit"
