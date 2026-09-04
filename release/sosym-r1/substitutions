@@ -44,7 +44,9 @@ common to ConGen, ConMin, and Interactive	common to every runner
 ConMinModel already carries	a sibling model already carries
 
 # --- paths this artifact does not contain -----------------------------------
-`apps/conf_conmin/run_conmin_eval_config.toml`	the evaluation config
+# (the apps/conf_conmin reference lives in data/fms/SOURCES.md, which the data/
+#  guard puts out of reach -- it is a named patch instead, deliberately, rather
+#  than an exception carved into the guard.)
 `apps.run_conmin_eval`	an evaluation app
 ``data/results_conmin/*_long.csv``	the condition-A reference CSVs
 data/results_conmin/*_long.csv, condition A	the condition-A reference CSVs
