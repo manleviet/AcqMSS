@@ -255,7 +255,10 @@ If B' = ∅, ConGen returns only NE derived from E-. The learned KB contains onl
 
 Feature model knowledge bases published on UVLHub (Romero-Organvidez et al. 2024, JSS 216:112150;
 see `data/fms/SOURCES.md`) serve as oracle:
-- Feature hierarchy → background knowledge BG
+- Root feature constraint → background knowledge BG
+  (BG is the root constraint alone, not the hierarchy: see `conacq/oracle/bg_data.py`.
+  The distinction matters for how recall is read — everything above the root is
+  learned, not assumed.)
 - Component requirements/incompatibilities → bias B
 - FM solver validates configurations against target C_T
 

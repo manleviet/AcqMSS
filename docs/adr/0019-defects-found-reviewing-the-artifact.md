@@ -65,13 +65,16 @@ sites", which was neither of the two real figures — it recorded a mid-enumerat
 Two definitions give two numbers, and an entry that sells completeness has to say which
 one it means:
 
-| definition | count |
-|---|---|
-| a command inside an error/reporting branch — `logger.*`, `print`, `sys.exit`, `parser.error`, `raise SystemExit`, `pytest.fail`, shell `die`/`echo` | **10** |
-| the above plus module docstrings, argparse `usage`/`epilog` and `--help` text, in shipped `.py`/`.sh` | **89** |
+**10**, under this definition: *a command printed on a non-zero-exit branch or on a
+missing-dependency branch.* Independent counts agreed at 11 and then subtracted
+`reproduce_tables_sosym.sh:166`, which is an `echo` inside a skip branch and so prints
+no remedy for a failure.
 
-Only the first is the invariant's scope. The second is quoted to make the boundary
-explicit, not to promise the same treatment.
+A broader figure — adding module docstrings, argparse `usage`/`epilog` and `--help` text
+— was drafted here and is deliberately **not** recorded, because it has no unit. Sites or
+lines? Is a docstring listing three invocations one or three? Until the unit is fixed the
+number is not a measurement, and a number without a unit in an entry about completeness
+is worse than no number.
 
 **The enumeration missed sites twice, both times instructively.** The first pass matched
 line by line, so commands inside a multi-line `logger.error` were attributed to "some
@@ -93,9 +96,18 @@ Running it re-baselines the T11 goldens; the result is canonical-equal but byte-
 so an incautious run leaves a dirty tree that reads as a regression. The message is
 correct as a command and remains a loaded one.
 
-**Left alone deliberately, and recorded rather than fixed:** the three `pip install` forms
-(all three run as printed), the `generate_bias_config.py` docstring example, and the
-`extract_results.py` argparse epilog. Each is prose on a path nobody is stuck on, and every
+**Left alone deliberately, and recorded rather than fixed.** Each was checked and none
+misleads a reader about a result:
+
+- the three `pip install` forms — all three run as printed;
+- `apps/generate_bias_config.py`'s docstring example, and `apps/extract_results.py`'s
+  argparse epilog, both of which name `python` and a bare script path;
+- `apps/conf/test_eval_config.toml:2`, whose comment says
+  `python -m apps.run_congen_eval` — a module this artifact does not ship — and whose
+  `output_dir` is `data/results`, the committed tree;
+- `docs/README.md:63` and `docs/code-standards.md:7` say **Python 3.13+**, while
+  `pyproject.toml`, the README and `reproduce_tables_sosym.sh` all say **>= 3.11**. The
+  three that govern installation agree; the two that disagree are internal notes. Each is prose on a path nobody is stuck on, and every
 new line of text carries the defect rate this review has been measuring — roughly one per
 forty-five lines written. Past a point the cost of editing exceeds its value; that point
 is here.
