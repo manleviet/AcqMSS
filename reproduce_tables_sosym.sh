@@ -210,6 +210,16 @@ if grep -qniE 'pending|tonight|overnight|TODO|FIXME' "$TABLES_DIR"/*.md; then
 fi
 echo "  ok: no plan strings"
 
+# CONTENT, not determinism. Every other gate here compares the artifact against itself:
+# the 93 numbers are recomputed from the result trees and never open a table, and
+# "byte-identical" compares a regenerated table with the committed one -- which agree
+# perfectly when both are wrong. v1.0.0 shipped `KB3 & - & - & - & - & - & -` and no
+# busybox row at all, through seven rounds of green gates, because nothing asked whether
+# a table contained the data it claimed to.
+python3 apps/sosym_r1/check_table_coverage.py --tables "$TABLES_DIR" \
+  || die "table coverage -- a model with results is missing from the tables, or a row is
+       blank while its neighbours have data. Fix the mapping, never the expectation."
+
 cat > "$TABLES_DIR/PROVENANCE.md" <<EOF
 # Provenance
 

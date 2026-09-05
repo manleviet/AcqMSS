@@ -28,15 +28,28 @@ from typing import Callable, Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 
-# KB name mapping (paper names)
+# KB name mapping (paper names).
+#
+# KEYS MUST MATCH THE RESULT FILENAMES EXACTLY. `_get_result` resolves a label through
+# `KB_REVERSE.get(...)`, an exact lookup, so a near-miss produces no error and no data:
+# 'arcade' does not match `arcade-game_*`, and busybox was absent altogether. v1.0.0
+# shipped `KB3 & - & - & - & - & - & -` and no busybox row because of those two lines.
+#
+# apps/sosym_r1/check_table_coverage.py asserts this against the filenames on disk, so
+# the mapping cannot silently drift from the data again. The labels themselves stay a
+# decision of the paper -- which model is called KB1 is not something the code should
+# invent -- but the gate proves whatever the paper chose actually resolves.
 KB_MAPPING = {
     'REAL-FM-7': 'KB1',
     'fqa': 'KB2',
-    'arcade': 'KB3',
+    'arcade-game': 'KB3',
     'REAL-FM-4': 'KB4',
+    'busybox-1.18.0': 'KB5',
 }
 KB_REVERSE = {v: k for k, v in KB_MAPPING.items()}
-KB_NAMES = ['KB1', 'KB2', 'KB3', 'KB4']
+# Derived, never a second list to keep in step: the earlier pair could disagree, and a
+# model added to one but not the other would vanish from every table without a word.
+KB_NAMES = list(KB_MAPPING.values())
 
 # Sampling strategies in order
 STRATEGIES = ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m', '2cov', 'ff']
@@ -1084,14 +1097,19 @@ def main():
     logger.info("Generating tables to: %s", output_dir)
     modes_to_gen = ['incremental', 'non-incremental'] if mode == 'both' else [mode]
 
+    # Rendered from KB_MAPPING, not written out again. This line was a third copy of
+    # the same fact and it kept saying KB3=arcade after the mapping was corrected --
+    # a header that describes the tables it sits above, and disagrees with them.
+    kb_legend = "KB Mapping: " + ", ".join(
+        f"{label}={model}" for model, label in KB_MAPPING.items())
     md_content = [
         "# Evaluation Results\n",
         f"Generated from: {results_dir}\n",
-        "KB Mapping: KB1=REAL-FM-7, KB2=fqa, KB3=arcade, KB4=REAL-FM-4\n",
+        f"{kb_legend}\n",
     ]
     latex_content = [
         "% Evaluation Results",
-        "% KB Mapping: KB1=REAL-FM-7, KB2=fqa, KB3=arcade, KB4=REAL-FM-4",
+        f"% {kb_legend}",
         "\\usepackage{booktabs}", "",
     ]
 
