@@ -1,11 +1,11 @@
 # ADR-0019 — Defects found while reviewing the public artifact
 
-**Status:** Accepted. The first is fixed here; the other three are recorded rather than
+**Status:** Accepted. The first is fixed here; the others are recorded rather than
 fixed, deliberately.
 **Date:** 2026-09-04, extended 2026-09-05.
 
-All four were found while reviewing the public evaluation artifact. They are ordered by
-severity, and the ordering is the point: the first two return wrong answers without
+All were found while reviewing the public evaluation artifact. They are ordered by
+severity, and the ordering is the point: the first three return wrong answers without
 saying so, while the last two produce only cosmetic differences. That is why the first
 was worth fixing before submission and the rest were not.
 
@@ -118,7 +118,48 @@ the end of a release, against one sentence of documentation, and the measured de
 through this review has been about one per forty-five lines written. Post-submission work,
 along with defects 2, 3 and 4.
 
-## 2. Partial resume reuses work from a different configuration
+## 2. The KB mapping reached four of five models, and every gate agreed — FIXED
+
+`KB_MAPPING` keyed `'arcade'` against files named `arcade-game_*`, and omitted busybox.
+`_get_result` resolves through `KB_REVERSE.get(...)`, an exact lookup, so the near-miss
+produced no error and no data. v1.0.0 shipped `KB3 & - & - & - & - & - & -` and no
+busybox row.
+
+**Why seven rounds of green gates missed it, which matters more than the mapping.** The
+93 paper-number checks recompute figures from the result trees and never open
+`results_tables.tex`. "Five tables byte-identical" compares a regenerated table against
+the committed one — both made by the same defective mapping, so both agreed. Every gate
+compared the artifact against itself: what was measured was determinism, and what was
+reported was correctness.
+
+`apps/sosym_r1/check_table_coverage.py` is the first gate that asks whether a table
+contains the data it claims to, answering from the filenames on disk rather than a
+constant.
+
+**And that new gate immediately failed to catch the defect it caused.** Widening the
+tables filled the row bodies, which iterate `KB_NAMES`, while headers and column specs
+stayed hand-written at four labels — `\begin{tabular}{lcccc}` with six fields per row,
+LaTeX that does not compile, committed under a green coverage gate. The gate asked "is
+every model labelled?", which was yesterday's question; it did not ask "is this table
+well-formed?" A gate written to catch one defect answers the question that defect posed,
+and the next defect poses a different one. A fourth check now compares LaTeX field counts
+against the column spec, falsified against the tables committed a step earlier: 20
+problems, exit 1.
+
+The fact had four copies — the mapping, `KB_NAMES`, the printed legend, and the headers —
+and each had been wrong at least once. All four now derive from one source.
+
+**A positive control that does not cover the quantity in question says nothing about it.**
+The `tab:fm_summary` numbers were verified by reproducing the paper's `#features` and
+`|B|`, and reported as "the method reproduces every printed number" — while `#clauses`
+was untested and wrong by factors of 14.3, 2.7 and 15.1. The column is the total CNF
+clauses the *bias* expands to, `sum(len(bias.get_clauses(cid)))`, not `|C_T|`. Once the
+control covered all three columns it reproduced 314 / 932 / 1960 exactly, and KB4/KB5
+follow by the same verified method. `count_target_clauses.py`'s agreement between its two
+methods was not independent evidence here: both count the same quantity, and they agree
+perfectly whether or not that quantity is the published one.
+
+## 3. Partial resume reuses work from a different configuration
 
 `apps/run_cv.py` skips any fold whose partial already exists, so a second run into the
 same output directory reuses the first run's folds. A partial records `schema`, `model`,
@@ -154,7 +195,7 @@ and `shuffle_bias` — and for resume to refuse a partial whose configuration di
 Deferred because it changes the on-disk partial schema, which is not a change to make in
 the days before a submission.
 
-## 3. `run_compare` config mode writes back into `kb_dir`
+## 4. `run_compare` config mode writes back into `kb_dir`
 
 `apps/run_compare.py:231` writes each fold's evaluation into the CV file named by
 `kb_dir`. In config mode that is the *input* file, so pointing it at a committed results
@@ -169,7 +210,7 @@ which is how defect 1 above reached the README.
 Not fixed because the behaviour is relied upon by the existing scoring workflow, and
 changing where it writes is a contract change rather than a bug fix.
 
-## 4. Scored-JSON byte layout depends on `PYTHONHASHSEED`
+## 5. Scored-JSON byte layout depends on `PYTHONHASHSEED`
 
 The scorer's output order is not deterministic across processes. The *values* are —
 learned KB, accuracy, negative examples, metrics, summary all reproduce exactly — but
