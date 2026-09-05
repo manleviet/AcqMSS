@@ -34,7 +34,7 @@ def layer3_golden():
     if not _GOLDEN_PATH.exists():
         pytest.fail(
             "golden fixture missing — the net is NOT running; "
-            "run scripts/build_t11_oracle_net_fixtures.py"
+            "run PYTHONPATH=. python3 scripts/build_t11_oracle_net_fixtures.py"
         )
     return load_json(_GOLDEN_PATH)["layer3"]
 

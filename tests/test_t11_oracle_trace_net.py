@@ -43,7 +43,8 @@ def test_oracle_trace_replays_exactly(name, path):
         # red, never a silent skip (a skipped net reads as "covered" when it isn't).
         pytest.fail(
             f"golden fixture missing for {name} — the net is NOT running; "
-            f"run scripts/build_t11_oracle_net_fixtures.py --include-slow"
+            f"run PYTHONPATH=. python3 scripts/build_t11_oracle_net_fixtures.py "
+            f"--include-slow"
         )
     queries = load_json(q_path)
     golden = load_json(t_path)

@@ -57,11 +57,48 @@ parent directory, because `make_score_configs` selects by that name and writes
 commands fail with "no CV files matched", so the message now states that the file must
 sit in a directory called `congen` or `interactive`.
 
-This was found as the third instance of one class, not as a case: **every command an
-error branch prints must run verbatim, for every input shape that reaches that branch.**
-Enumerating the shipped tree against that invariant found 6 sites printing a command and
-2 that could not run — this one, and an install hint naming a sibling checkout the
-artifact does not have. Both are fixed.
+This was found as one instance of a class, not as a case: **every command an error
+branch prints must run verbatim, for every input shape that reaches that branch.**
+
+**The count, and which definition it uses.** An earlier draft of this entry said "6
+sites", which was neither of the two real figures — it recorded a mid-enumeration state.
+Two definitions give two numbers, and an entry that sells completeness has to say which
+one it means:
+
+| definition | count |
+|---|---|
+| a command inside an error/reporting branch — `logger.*`, `print`, `sys.exit`, `parser.error`, `raise SystemExit`, `pytest.fail`, shell `die`/`echo` | **10** |
+| the above plus module docstrings, argparse `usage`/`epilog` and `--help` text, in shipped `.py`/`.sh` | **89** |
+
+Only the first is the invariant's scope. The second is quoted to make the boundary
+explicit, not to promise the same treatment.
+
+**The enumeration missed sites twice, both times instructively.** The first pass matched
+line by line, so commands inside a multi-line `logger.error` were attributed to "some
+string" — it missed the very site that prompted it. The second parsed the AST but matched
+a hand-written list of reporter names, so `raise SystemExit` and `pytest.fail` were
+invisible: a case list one level up from the case list it replaced. The third searched for
+text beginning `python3`, `pip` or `./` — and **the two remaining defects were invisible
+precisely because they were broken in the way being hunted**: `sweep_queue.py init` and
+`scripts/build_t11_oracle_net_fixtures.py` carry no interpreter, so a search for
+well-formed commands cannot see a missing one.
+
+Five sites fixed: a usage string with the wrong path and interpreter; an install hint
+naming a sibling checkout the artifact does not have; a ledger hint with no interpreter;
+and three test messages, not one — the same string appears in `test_t11_e2e_learned_kb.py`,
+`test_t11_prepared_task_ids.py` and `test_t11_oracle_trace_net.py`.
+
+⚠ **The fixture-builder command those three now print writes eleven tracked files.**
+Running it re-baselines the T11 goldens; the result is canonical-equal but byte-different,
+so an incautious run leaves a dirty tree that reads as a regression. The message is
+correct as a command and remains a loaded one.
+
+**Left alone deliberately, and recorded rather than fixed:** the three `pip install` forms
+(all three run as printed), the `generate_bias_config.py` docstring example, and the
+`extract_results.py` argparse epilog. Each is prose on a path nobody is stuck on, and every
+new line of text carries the defect rate this review has been measuring — roughly one per
+forty-five lines written. Past a point the cost of editing exceeds its value; that point
+is here.
 
 The better design is for `make_score_configs` to read the algorithm from the JSON instead
 of inferring it from a path. That is deferred: it is roughly twenty lines of new code at

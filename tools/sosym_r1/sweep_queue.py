@@ -120,7 +120,8 @@ def write_ledger(ledger: dict, path: Path, own_metadata: bool = False) -> None:
 
 def load_ledger(path: Path) -> dict:
     if not path.exists():
-        raise SystemExit(f"no ledger at {path} -- run `sweep_queue.py init` first")
+        raise SystemExit(f"no ledger at {path} -- run "
+                         f"`python3 tools/sosym_r1/sweep_queue.py init` first")
     ledger = json.loads(path.read_text())
     if ledger.get('schema') != LEDGER_SCHEMA:
         raise SystemExit(f"{path}: ledger schema {ledger.get('schema')!r}, expected {LEDGER_SCHEMA!r}")

@@ -300,19 +300,35 @@ def compare_kb(kb_path: Path, comparator: KBComparator,
                 "folds[], one knowledge base per fold, and --kb reads the standalone "
                 "schema. Scoring it here would report n_kb 0 and F1 0.0 for every "
                 "strategy -- an artefact of the wrong entry point, not a result.")
-            # make_score_configs writes score_<algorithm>.toml, and takes the algorithm
-            # from the directory the CV file sits in. Naming score_congen.toml here
-            # would be wrong for every interactive cell -- that is, for half of them --
-            # and wrong precisely in the message someone reads when they are stuck.
-            logger.error(
-                "Use config mode, with kb_dir naming this file:\n"
-                "    python3 tools/sosym_r1/make_score_configs.py "
-                "--cv-dir %s --out scratch\n"
-                "    python3 -m apps.run_compare scratch/score_%s.toml\n"
-                "  Those two commands only work if the file sits in a directory named "
-                "'congen' or 'interactive': make_score_configs selects by that name and "
-                "writes score_<name>.toml. Move it under one of those first.",
-                kb_path.parent, kb_path.parent.name)
+            # make_score_configs writes score_<algorithm>.toml and takes the algorithm
+            # from the DIRECTORY the CV file sits in, so what can be suggested depends
+            # on where the file already is.
+            #
+            # The precondition is stated first and the commands are written for where
+            # the file has to end up -- not for where it is now with a "move it first"
+            # appended. That earlier shape failed the one job a message like this has:
+            # a reader who did exactly as told still got "no CV files matched", because
+            # the printed paths pointed at the old location.
+            algorithm = kb_path.parent.name
+            if algorithm in ('congen', 'interactive'):
+                logger.error(
+                    "Use config mode, with kb_dir naming this file:\n"
+                    "    python3 tools/sosym_r1/make_score_configs.py "
+                    "--cv-dir %s --out scratch\n"
+                    "    python3 -m apps.run_compare scratch/score_%s.toml",
+                    kb_path.parent, algorithm)
+            else:
+                dest = kb_path.parent / 'congen'
+                logger.error(
+                    "make_score_configs selects by directory name, so this file must "
+                    "sit in one called 'congen' or 'interactive'. It is in %r. These "
+                    "four run as they stand:\n"
+                    "    mkdir -p %s\n"
+                    "    mv %s %s/\n"
+                    "    python3 tools/sosym_r1/make_score_configs.py "
+                    "--cv-dir %s --out scratch\n"
+                    "    python3 -m apps.run_compare scratch/score_congen.toml",
+                    algorithm, dest, kb_path, dest, dest)
         else:
             logger.error(
                 "--kb expects a standalone result file. This one carries neither "
