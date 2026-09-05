@@ -115,6 +115,42 @@ def orphan_rows(path: pathlib.Path, labels: list[str]) -> list[tuple[int, str]]:
     return orphans
 
 
+def malformed_tabulars(path: pathlib.Path) -> list[str]:
+    """LaTeX rows whose field count disagrees with the column spec.
+
+    Added because widening the tables introduced exactly this: the row bodies iterate
+    KB_NAMES and grew to five models, while the header and `\\begin{tabular}{lcccc}`
+    stayed at four. Six fields in a five-column table is LaTeX that does not compile,
+    and no gate here would have seen it -- coverage was satisfied, the numbers were
+    right, and the file was byte-identical to a regeneration of itself.
+    """
+    if path.suffix != '.tex':
+        return []
+    problems: list[str] = []
+    spec = None
+    label = '?'
+    for i, line in enumerate(path.read_text().splitlines(), 1):
+        m = re.search(r'\\begin\{tabular\}\{([lcr|@{}.\s]+)\}', line)
+        if m:
+            spec = sum(1 for ch in m.group(1) if ch in 'lcr')
+            continue
+        m = re.search(r'\\label\{([^}]+)\}', line)
+        if m:
+            label = m.group(1)
+        if line.strip().startswith(r'\end{tabular}'):
+            spec = None
+            continue
+        if spec is None or '&' not in line:
+            continue
+        if line.lstrip().startswith('%'):
+            continue
+        fields = len(line.split('&'))
+        if fields != spec:
+            problems.append(
+                f"{path.name}:{i} ({label}): {fields} fields in a {spec}-column tabular")
+    return problems
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--results', default='data/results_sosym_r1/congen')
@@ -169,6 +205,10 @@ def main() -> int:
             failures.append(
                 f"{path.name}:{line_no}: {label} ({model}, {data_models[model]} CV files) "
                 f"is empty while other models on the same table have data")
+
+    # 4. a widened table must still be well-formed LaTeX
+    for path in table_files:
+        failures.extend(malformed_tabulars(path))
 
     if failures:
         print(f"\n{'=' * 70}")

@@ -51,6 +51,23 @@ KB_REVERSE = {v: k for k, v in KB_MAPPING.items()}
 # model added to one but not the other would vanish from every table without a word.
 KB_NAMES = list(KB_MAPPING.values())
 
+# Headers and column specs derived from KB_NAMES for the same reason KB_NAMES is derived
+# from KB_MAPPING: adding busybox as KB5 filled the row bodies (which iterate KB_NAMES)
+# while the headers stayed at four labels, so `{lcccc}` declared five columns for six
+# fields -- LaTeX that does not compile. A header written out by hand is a copy of a
+# fact, and every copy of this fact has now been wrong at least once.
+KB_HEADER_MD = " | ".join(KB_NAMES)
+KB_HEADER_TEX = " & ".join(KB_NAMES)
+KB_SEP_MD = "|".join(":---:" for _ in KB_NAMES)
+KB_COLS = "c" * len(KB_NAMES)
+
+# Two different absences, told apart because a reader cannot otherwise distinguish
+# "we did not run this" from "this scored zero". busybox has 4 of the 6 sampling
+# conditions -- rs_2n and rs_3n were never run -- and a bare dash in those cells reads
+# as a measurement.
+ABSENT = "n/a"          # no result file for this (knowledge base, sampling, mode)
+UNSCORED = "-"          # a run exists, but this strategy tier was not scored
+
 # Sampling strategies in order
 STRATEGIES = ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m', '2cov', 'ff']
 STRATEGY_NAMES = {
@@ -475,7 +492,7 @@ def _compact_grid_md(
         row = f"| {kb} |"
         for s in strats:
             r = _get_result(results, kb, s, mode)
-            row += f" {cell_fn(r)} |" if r else " - |"
+            row += f" {cell_fn(r)} |" if r else f" {ABSENT} |"
         lines.append(row)
     return "\n".join(lines)
 
@@ -512,7 +529,7 @@ def _compact_grid_latex(
         row = kb
         for s in strats:
             r = _get_result(results, kb, s, mode)
-            row += f" & {cell_fn(r)}" if r else " & -"
+            row += f" & {cell_fn(r)}" if r else f" & {ABSENT}"
         row += " \\\\"
         body.append(row)
     return _latex_wrap(title, label, col_spec, header, body, mode)
@@ -959,14 +976,14 @@ def generate_table7(results: Dict, mode: str, fmt: str) -> str:
         cells = []
         for kb in KB_NAMES:
             r = _get_result(results, kb, strategy, mode)
-            cells.append(f"{r.checks_mean:.0f} / {r.runtime_mean_ms:.1f}" if r else "-")
+            cells.append(f"{r.checks_mean:.0f} / {r.runtime_mean_ms:.1f}" if r else ABSENT)
         return n_pos, n_neg, cells
 
     title = "AcqMSS #consistency checks and runtime (msec)"
     if fmt == 'md':
         lines = [f"## Table 7: {title} - {mode.capitalize()} Mode", "",
-                 "| Strategy | |E+| | |E-| | KB1 | KB2 | KB3 | KB4 |",
-                 "|:---|---:|---:|:---:|:---:|:---:|:---:|"]
+                 f"| Strategy | |E+| | |E-| | {KB_HEADER_MD} |",
+                 f"|:---|---:|---:|{KB_SEP_MD}|"]
         for s in STRATEGIES:
             np, nn, cells = _row_data(s)
             lines.append(f"| {STRATEGY_NAMES[s]} | {np} | {nn} | " + " | ".join(cells) + " |")
@@ -978,8 +995,8 @@ def generate_table7(results: Dict, mode: str, fmt: str) -> str:
         np, nn, cells = _row_data(s)
         body.append(f"{STRATEGY_NAMES[s]} & {np} & {nn} & " + " & ".join(cells) + " \\\\")
     return _latex_wrap(f"AcqMSS \\#consistency checks and runtime (msec) - {mode.capitalize()}",
-                       f"table7_{mode}", "lrrcccc",
-                       "Strategy & $|E^+|$ & $|E^-|$ & KB1 & KB2 & KB3 & KB4 \\\\",
+                       f"table7_{mode}", "lrr" + KB_COLS,
+                       f"Strategy & $|E^+|$ & $|E^-|$ & {KB_HEADER_TEX} \\\\",
                        body)
 
 
@@ -990,13 +1007,13 @@ def generate_table9(results: Dict, mode: str, fmt: str) -> str:
 
     if fmt == 'md':
         lines = [f"## Table 9: {title} - {mode.capitalize()} Mode", "",
-                 "| Strategy | KB1 | KB2 | KB3 | KB4 |",
-                 "|:---|:---:|:---:|:---:|:---:|"]
+                 f"| Strategy | {KB_HEADER_MD} |",
+                 f"|:---|{KB_SEP_MD}|"]
         for s in rs:
             row = f"| {STRATEGY_NAMES[s]} |"
             for kb in KB_NAMES:
                 r = _get_result(results, kb, s, mode)
-                row += f" {r.mean_accuracy:.4f} ± {r.std_accuracy:.4f} |" if r else " - |"
+                row += f" {r.mean_accuracy:.4f} ± {r.std_accuracy:.4f} |" if r else f" {ABSENT} |"
             lines.append(row)
         return "\n".join(lines)
 
@@ -1006,10 +1023,10 @@ def generate_table9(results: Dict, mode: str, fmt: str) -> str:
         row = STRATEGY_NAMES[s]
         for kb in KB_NAMES:
             r = _get_result(results, kb, s, mode)
-            row += f" & {r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f}" if r else " & -"
+            row += f" & {r.mean_accuracy:.4f} $\\pm$ {r.std_accuracy:.4f}" if r else f" & {ABSENT}"
         body.append(row + " \\\\")
     return _latex_wrap(f"{title} - {mode.capitalize()}", f"table9_{mode}",
-                       "lcccc", "Strategy & KB1 & KB2 & KB3 & KB4 \\\\", body)
+                       "l" + KB_COLS, f"Strategy & {KB_HEADER_TEX} \\\\", body)
 
 
 def generate_single_strategy_table(
@@ -1102,14 +1119,19 @@ def main():
     # a header that describes the tables it sits above, and disagrees with them.
     kb_legend = "KB Mapping: " + ", ".join(
         f"{label}={model}" for model, label in KB_MAPPING.items())
+    marker_legend = (f"Cell markers: `{ABSENT}` = this (knowledge base, sampling) "
+                     f"combination was not run; `{UNSCORED}` = the run exists but this "
+                     f"strategy tier was not scored. Neither is a measured zero.")
     md_content = [
         "# Evaluation Results\n",
         f"Generated from: {results_dir}\n",
         f"{kb_legend}\n",
+        f"{marker_legend}\n",
     ]
     latex_content = [
         "% Evaluation Results",
         f"% {kb_legend}",
+        f"% {marker_legend}",
         "\\usepackage{booktabs}", "",
     ]
 
