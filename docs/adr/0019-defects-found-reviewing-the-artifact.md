@@ -9,6 +9,40 @@ severity, and the ordering is the point: the first three return wrong answers wi
 saying so, while the last two produce only cosmetic differences. That is why the first
 was worth fixing before submission and the rest were not.
 
+## 0. No Zenodo record and no GitHub Release until camera-ready — DECIDED
+
+**Do not mint a DOI for this artifact.** The tag `v1.0.0` on `ConGenEvaluation` is the
+whole deliverable for the revision; a reviewer needs `tree/v1.0.0`, which is already
+immutable.
+
+The reason is that a Zenodo record cannot be deleted. Reviewer 2 may change the artifact,
+and a `v1.0.0` record left behind would exist permanently describing code that is no
+longer the paper's code. Deferring costs nothing, because the tag already gives a fixed
+reference; minting early costs a permanent wrong record.
+
+This is written down because the implementer proposed the Zenodo-then-Release sequence in
+three consecutive reports, correctly as a matter of ordering — Zenodo must be connected
+before a Release exists or the Release is silently not archived — and wrongly as a matter
+of whether to do it at all. Nobody had said. **A later session reading those reports would
+find a confident, repeated, and entirely unauthorised instruction to go and mint a DOI.**
+
+## A note on the shape of this whole effort
+
+Every gate built during this release compared the artifact against itself:
+
+- `check_paper_numbers.py` recomputes 93 figures from the result trees and never opens
+  `results_tables.tex`;
+- "five tables byte-identical" compared a regenerated table against the committed one,
+  and both were produced by the same defective KB mapping, so both agreed;
+- `count_target_clauses.py`'s two methods count the same quantity and agree perfectly
+  whether or not that quantity is the one the paper printed.
+
+Three times, one shape. What was measured was self-consistency; what was reported was
+correctness, and a determinism check cannot tell the two apart. The missing gate compares
+against a source **outside** the artifact — the paper's printed numbers, or the original
+data files — and it only ran because someone thought to ask that question in the seventh
+round. Nothing in the process produced the question; a reviewer did.
+
 ## 1. `--kb` CLI mode silently scored an empty knowledge base for a CV file — FIXED
 
 `apps/run_compare.py`'s CLI mode reads the single-knowledge-base schema, which expects

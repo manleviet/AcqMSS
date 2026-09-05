@@ -142,7 +142,10 @@ observe the failure it existed to prevent:
   clothes — process vocabulary fixed at the sites anyone could remember, then a hardcoded
   `score_congen.toml`, then a directory-name precondition nobody had stated — and each
   round closed the instance while the class survived. Enumerating the shipped tree found
-  **6 sites that print a command**, of which **2 could not run**: a usage string saying
+  **10 commands printed on a non-zero-exit or missing-dependency branch** — the count
+  carries that definition because a looser one gave 89 here and 16 to an independent
+  count of the same tree, a 5.5x spread that proves the class was never pinned down.
+  **5 of the 10 could not run**, among them a usage string saying
   `python generate_bias_files.py <config.toml>` (wrong path, wrong interpreter — `rc=2,
   can't open file`), and an install hint saying `pip install -e ../explanation` in an
   artifact that has no sibling checkout.
@@ -209,7 +212,7 @@ observe the failure it existed to prevent:
 
 Two numbers and a scan — never "the items were applied":
 
-1. `pytest tests/ -q` on a clean machine → **328 passed, 18 skipped, 0 failed**, reported
+1. `pytest tests/ -q` on a clean machine → **325 passed, 18 skipped, 0 failed**, reported
    as the set of red test names, not a total. A total that drops by three looks identical
    whether three tests were deleted or three broke.
 2. `./reproduce_tables_sosym.sh` → five tables byte-identical with the committed ones;
