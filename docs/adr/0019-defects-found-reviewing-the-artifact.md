@@ -2,7 +2,15 @@
 
 **Status:** Accepted. The first is fixed here; the others are recorded rather than
 fixed, deliberately.
-**Date:** 2026-09-04, extended 2026-09-05.
+**Date:** 2026-09-04, extended 2026-09-05 and 2026-09-18.
+
+**2026-09-18 — the public artifact no longer ships `data/results`.** That tree was
+carried so a reader could check a correction the paper was going to disclose; the
+paper does not disclose it (the response letter covers it under R2-Q13 / N1), so the
+artifact has nothing to check it against and carrying it invited a comparison the
+paper never makes. It stays here and in this repository's history, which is the only
+place it is needed. The checks that existed as evidence for that comparison were
+removed from `check_paper_numbers.py` rather than left to skip silently.
 
 All were found while reviewing the public evaluation artifact. They are ordered by
 severity, and the ordering is the point: the first three return wrong answers without
