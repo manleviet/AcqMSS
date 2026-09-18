@@ -60,9 +60,11 @@ apps/_harness.py
 # prefix would re-admit it on the next carve, and the output-equals-allowlist gate
 # could not catch that -- the allowlist would be the thing asking for it.
 apps/sosym_r1/check_paper_numbers.py
+apps/sosym_r1/check_paper_tables.py
 apps/sosym_r1/check_table_coverage.py
 apps/sosym_r1/check_timing_provenance.py
 apps/sosym_r1/count_target_clauses.py
+apps/sosym_r1/make_paper_tables.py
 apps/sosym_r1/measure_exact_equivalence.py
 apps/sosym_r1/measure_ne_accuracy_effect.py
 apps/sosym_r1/measure_ne_per_example.py
@@ -71,6 +73,15 @@ apps/sosym_r1/measure_reduce_order_sensitivity.py
 apps/sosym_r1/probe_query_budget.py
 apps/sosym_r1/probe_query_spin.py
 apps/sosym_r1/significance_tests.py
+# The table generator, as a package. A directory prefix is safe here because the
+# package exists only to build the paper's fragments -- every module in it is on the
+# path from committed JSON to a printed cell, and a file added to it later is by
+# construction part of that path or it is in the wrong place.
+apps/sosym_r1/paper_tables/
+# The table gate, as a package. Same reasoning, opposite direction: everything here
+# re-reads the same JSON to check the generator, and it must stay separate from the
+# generator's package so that neither can quietly start importing the other.
+apps/sosym_r1/audit_tables/
 # Run configs. Verified to contain no file naming a dropped cell.
 apps/conf/
 apps/extract_results.py

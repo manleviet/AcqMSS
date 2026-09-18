@@ -29,8 +29,9 @@ One command, from the committed data:
 ```
 
 It writes `data/results_sosym_r1/tables/` — `results_tables.{md,tex}`,
-`significance.md`, `target-clause-counts.md`, and a `PROVENANCE.md` recording a
-fingerprint of the generator's own bytes.
+`significance.md`, `target-clause-counts.md`, a `PROVENANCE.md` recording a
+fingerprint of the generator's own bytes, and `tables/paper/` — one LaTeX fragment
+per table the paper prints.
 
 Running it here leaves the repository unchanged: `git status` stays clean, because every
 one of those files is regenerated identical to the committed copy. That is the check —
@@ -44,7 +45,28 @@ table is written:
 - **`apps/sosym_r1/check_timing_provenance.py`** — refuses a runtime measured while
   another sweep unit was in flight.
 - **`apps/sosym_r1/check_paper_numbers.py`** — recomputes every number quoted in the
-  paper from the committed data. 88 checks.
+  paper's prose from the committed data. 89 checks.
+
+and one runs after the tables are written:
+
+- **`apps/sosym_r1/check_paper_tables.py`** — re-derives every cell of every paper
+  fragment from the same result files, with a reader that shares no aggregation or
+  formatting code with the generator. 1,250 cells. A fragment it cannot parse is a
+  failure, not a skip.
+
+### The paper's tables
+
+`data/results_sosym_r1/tables/paper/` holds one `.tex` per table, named after the
+label the paper uses (`tab_AcqMssruntime.tex`, `tab_kb_size.tex`, …). Each file is a
+single `tabular` environment and nothing else — the caption, the `\label` and the
+`table*` wrapper live in the manuscript, which `\input`s the fragment.
+
+Every quality metric is the **mean over the three folds**. The two other aggregations
+these files admit — the intersected knowledge base, and a pooled figure — are
+different quantities, and neither is reachable from the generator. Two cell markers
+appear and both are generated: `n/a` means the (knowledge base, sampling) unit was
+not run, and `--` means it ran but the quantity is not defined there. Neither is ever
+a zero.
 
 ### Re-running the acquisition itself
 
