@@ -1,15 +1,15 @@
 target:     sosym-r1
-carved:     2026-09-18T12:12:10Z
-source:     AcqMSS 6f4ae93 (feat/sosym-r1)
-artifact:   bb6e346
+carved:     2026-09-18T12:27:12Z
+source:     AcqMSS fcf04ca (feat/sosym-r1)
+artifact:   0345b3c
             (recorded after the commit; a commit cannot name its own hash --
              verify by re-carving from the source SHA, not from inside it)
-generator:  0b0789a carve.sh, 27e35dd keep-list
-files:      602 selected by keep-list, before the example/fold filter
+generator:  0b0789a carve.sh, fa2fdd0 keep-list
+files:      627 selected by keep-list, before the example/fold filter
 
 gitignore radius: 1 tracked file(s) also matched by .gitignore
                   (this is why the root commit uses `git add -A -f`; at forty it would be reckless)
-escapes:    191 .py compiled with warnings on, 0 invalid escape(s)
+escapes:    202 .py compiled with warnings on, 0 invalid escape(s)
 
 boundary-guard rules removed from the source repository, by name --
 a count would not say which, and three deleted looks like three broken:
