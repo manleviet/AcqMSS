@@ -109,8 +109,62 @@ class ResultTree:
                        if f.get("convergence_reason")})
 
     # ------------------------------------------------------------------ phases
+    # ------------------------------------------------------------------ phases
+    #
+    # NO DEFAULTING. Every read below either finds its key or raises, with one
+    # justified exception stated at the point it is taken. A ``.get(key, 0)`` cannot
+    # tell "the phase cost nothing" from "the fold never recorded it", and the two
+    # produce different means; reading the second as the first is how a preprocessing
+    # cost would be silently understated.
+
+    @staticmethod
+    def _perf(fold: dict, key: str) -> float:
+        perf = fold.get("performance") or {}
+        if key not in perf:
+            raise Missing(f"fold {fold.get('fold_index')} has no performance.{key}")
+        return perf[key]
+
+    @staticmethod
+    def _prof(fold: dict, key: str) -> float:
+        prof = (fold.get("performance") or {}).get("profiler") or {}
+        if key not in prof:
+            raise Missing(f"fold {fold.get('fold_index')} has no profiler.{key}")
+        return prof[key]
+
+    @staticmethod
+    def _prof_ms(fold: dict, key: str) -> float:
+        block = ResultTree._prof(fold, key)
+        return block["total"] * 1000.0
+
+    @staticmethod
+    def _preprocessing(fold: dict, key: str, ms: bool) -> float:
+        """GenerateNE/QuickXplain, whose counters exist only if the phase ran.
+
+        THE ONE JUSTIFIED ZERO IN THIS MODULE, and it is justified from the fold
+        rather than from the absence. GenerateNE explains negative examples:
+        ``generate_ne.py`` returns before the loop that creates these counters when
+        the test suite is empty, so a fold with no negative training example never
+        creates them. The phase ran zero times and cost zero -- a MEASURED zero, not
+        a missing measurement, and the fold belongs in the mean at 0.
+
+        Measured over all 84 folds: the counters are absent in exactly the 5 folds
+        with ``train_size.negative == 0``, and present in the other 79. The
+        correspondence is exact in both directions, so a key missing while the fold
+        HAS negatives is something else entirely -- and raises.
+        """
+        prof = (fold.get("performance") or {}).get("profiler") or {}
+        if key in prof:
+            return prof[key]["total"] * 1000.0 if ms else prof[key]
+        negatives = (fold.get("train_size") or {}).get("negative")
+        if negatives == 0:
+            return 0.0
+        raise Missing(
+            f"fold {fold.get('fold_index')} has no profiler.{key} but its training "
+            f"split holds {negatives} negative example(s). The phase should have run. "
+            f"This is not the empty-test-suite case and must not be read as zero.")
+
     def phases_ms(self, folds: list[dict]) -> dict[str, float | None]:
-        """Per-phase wall clock, in milliseconds, as per-fold means.
+        """Per-phase wall clock in milliseconds, as per-fold means over ALL folds.
 
         THE SCOPES, measured over all 84 folds rather than assumed:
 
@@ -121,47 +175,36 @@ class ResultTree:
 
         So AcqMss is the acquisition loop minus Reduce, and preprocessing is NOT
         subtracted from the loop -- it was never part of it. Subtracting it anyway
-        printed a NEGATIVE AcqMss duration for KB2, and the cell gate agreed,
-        because a re-derivation that shares the definition agrees with a wrong one.
-        The containment above is now asserted by audit_tables/properties.py, which
-        does not share this expression.
+        printed a NEGATIVE AcqMss duration, and the cell gate agreed, because a
+        re-derivation shares the definition and will agree with a wrong one.
 
         The three phases sum to LESS than the total. The remainder is setup and
-        teardown outside every timing scope; it stays unattributed rather than being
-        folded into a phase that did not spend it.
+        teardown outside every timing scope and stays unattributed.
 
-        ``acqmss_runtime`` is NOT read. It accumulates over thousands of nested
+        ``acqmss_runtime`` is NOT read: it accumulates over thousands of nested
         recursive calls -- 149.9 s against a 15.2 s run -- so it is not a duration.
         """
-        def prof_total(fold: dict, key: str) -> float:
-            block = ((fold.get("performance") or {}).get("profiler") or {}).get(key)
-            return (block or {}).get("total", 0.0) * 1000.0 if block else 0.0
-
         acq, red, pre, tot = [], [], [], []
         for f in folds:
-            perf = f.get("performance") or {}
-            loop = perf.get("congen_runtime_ms")
-            if loop is None:
-                continue
-            reduce_ms = perf.get("reduce_runtime_ms") or 0.0
+            loop = self._perf(f, "congen_runtime_ms")
+            reduce_ms = self._perf(f, "reduce_runtime_ms")
             red.append(reduce_ms)
-            pre.append(prof_total(f, "shared_preprocessing_runtime"))
+            pre.append(self._preprocessing(f, "shared_preprocessing_runtime", ms=True))
             acq.append(loop - reduce_ms)
-            tot.append(perf.get("runtime_ms") or loop)
+            tot.append(self._perf(f, "runtime_ms"))
         m = lambda xs: st.mean(xs) if xs else None  # noqa: E731
-        return {"acqmss": m(acq), "reduce": m(red), "preprocessing": m(pre), "total": m(tot)}
+        return {"acqmss": m(acq), "reduce": m(red), "preprocessing": m(pre),
+                "total": m(tot), "n_folds": len(acq)}
 
     def phase_checks(self, folds: list[dict]) -> dict[str, float | None]:
-        """Per-phase consistency checks, as per-fold means, in the paper's unit."""
-        def prof(fold: dict, key: str) -> float:
-            return ((fold.get("performance") or {}).get("profiler") or {}).get(key, 0) or 0
-
-        acq = [prof(f, "paper_consistency_checks") for f in folds]
-        red = [(f.get("performance") or {}).get("redundancy_consistency_checks") or 0
+        """Per-phase consistency checks, as per-fold means over ALL folds."""
+        acq = [self._prof(f, "paper_consistency_checks") for f in folds]
+        red = [self._perf(f, "redundancy_consistency_checks") for f in folds]
+        pre = [self._preprocessing(f, "shared_preprocessing_quickxplain_checks", ms=False)
                for f in folds]
-        pre = [prof(f, "shared_preprocessing_quickxplain_checks") for f in folds]
         m = lambda xs: st.mean(xs) if xs else None  # noqa: E731
-        out = {"acqmss": m(acq), "reduce": m(red), "preprocessing": m(pre)}
+        out = {"acqmss": m(acq), "reduce": m(red), "preprocessing": m(pre),
+               "n_folds": len(acq)}
         out["total"] = (None if out["acqmss"] is None
                         else out["acqmss"] + out["reduce"] + out["preprocessing"])
         return out

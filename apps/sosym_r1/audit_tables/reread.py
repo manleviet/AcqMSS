@@ -17,6 +17,10 @@ import json
 from pathlib import Path
 
 
+class Absent(Exception):
+    """A key the gate needs is missing, and nothing justifies reading it as zero."""
+
+
 def load(path: Path):
     return json.loads(path.read_text()) if path.exists() else None
 
@@ -63,20 +67,58 @@ def stat_mean(fs: list[dict], key: str) -> float | None:
 
 
 def perf_mean(fs: list[dict], key: str) -> float | None:
-    return avg([(f.get("performance") or {}).get(key) for f in fs])
+    """Mean over folds. A fold missing the key is an error, never a zero: the two
+    give different means and only one of them is a measurement."""
+    out = []
+    for f in fs:
+        perf = f.get("performance") or {}
+        if key not in perf:
+            raise Absent(f"fold {f.get('fold_index')}: performance.{key} missing")
+        out.append(perf[key])
+    return avg(out)
+
+
+def _preprocessing(f: dict, key: str, ms: bool) -> float:
+    """GenerateNE/QuickXplain counters, which exist only if the phase ran.
+
+    Written out here rather than imported: the gate must reach the same conclusion by
+    its own route or it is not a second reader. The justification is the fold's own
+    training split, never the absence of the key -- the phase explains negative
+    examples, so a split with none never runs it, and zero is then a measurement.
+    A key missing while negatives exist is a different fault and is raised.
+    """
+    prof = (f.get("performance") or {}).get("profiler") or {}
+    if key in prof:
+        return prof[key]["total"] * 1000.0 if ms else prof[key]
+    neg = (f.get("train_size") or {}).get("negative")
+    if neg == 0:
+        return 0.0
+    raise Absent(f"fold {f.get('fold_index')}: profiler.{key} missing with "
+                 f"{neg} negative training example(s)")
 
 
 def profiler_total_ms(fs: list[dict], key: str) -> float | None:
+    if key.startswith("shared_preprocessing"):
+        return avg([_preprocessing(f, key, ms=True) for f in fs])
     out = []
     for f in fs:
-        block = ((f.get("performance") or {}).get("profiler") or {}).get(key)
-        out.append((block or {}).get("total", 0.0) * 1000.0 if block else 0.0)
+        prof = (f.get("performance") or {}).get("profiler") or {}
+        if key not in prof:
+            raise Absent(f"fold {f.get('fold_index')}: profiler.{key} missing")
+        out.append(prof[key]["total"] * 1000.0)
     return avg(out)
 
 
 def profiler_scalar(fs: list[dict], key: str) -> float | None:
-    return avg([((f.get("performance") or {}).get("profiler") or {}).get(key, 0) or 0
-                for f in fs])
+    if key.startswith("shared_preprocessing"):
+        return avg([_preprocessing(f, key, ms=False) for f in fs])
+    out = []
+    for f in fs:
+        prof = (f.get("performance") or {}).get("profiler") or {}
+        if key not in prof:
+            raise Absent(f"fold {f.get('fold_index')}: profiler.{key} missing")
+        out.append(prof[key])
+    return avg(out)
 
 
 def queries_mean(fs: list[dict]) -> float | None:

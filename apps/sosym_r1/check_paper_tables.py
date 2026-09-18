@@ -99,6 +99,8 @@ COST_COLS = ("acqmss checks", "acqmss ms", "reduce checks", "reduce ms",
 MS_COLUMNS = {3: "AcqMss ms", 5: "Reduce ms", 7: "GenNE/QX ms", 9: "total ms"}
 CHECK_PARTS, CHECK_TOTAL = [2, 4, 6], 8
 MS_PARTS, MS_TOTAL = [3, 5, 7], 9
+# The fragment header declares this; P5 is what keeps the declaration true.
+DECLARED_FOLDS = 3
 
 
 def _cost_rows(d: Path) -> list[list[str]]:
@@ -158,6 +160,7 @@ def check_cost_properties(a: Audit, d: Path) -> None:
     failures += over
     failures += PR.parts_sum_to_total(rows, CHECK_PARTS, CHECK_TOTAL, "checks")
     failures += PR.timing_scopes(TREE / "congen")
+    failures += PR.fold_counts(TREE / "congen", DECLARED_FOLDS)
     a.properties = (len(rows), slack)
     a.bad += failures
 

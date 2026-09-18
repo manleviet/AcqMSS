@@ -118,3 +118,36 @@ def timing_scopes(congen_dir: Path) -> list[str]:
                 bad.append(f"{where}: profiler.congen_total_time "
                            f"{total_ms('congen_total_time'):.1f} != runtime_ms {total:.1f}")
     return bad
+
+
+def fold_counts(congen_dir: Path, declared: int) -> list[str]:
+    """P5 -- every unit has exactly the declared number of folds, and every fold
+    contributes to every mean.
+
+    The fragment's header declares that each cell is a mean over ``declared`` folds.
+    This is what makes that declaration true rather than decorative: if a unit ever
+    has a different number of folds, or a fold stops carrying a quantity the mean
+    needs, the declaration silently becomes a different statement and every affected
+    cell moves without anything going red.
+
+    The GenerateNE/QuickXplain counters are the one case where a fold legitimately
+    lacks a key, and it is not an exemption: the phase did not run because the fold's
+    training split holds no negative example, so the fold contributes a measured zero
+    and still counts. A fold missing the key WITH negatives present is reported here,
+    because then the mean really would be over fewer folds than it claims.
+    """
+    bad = []
+    for path in sorted(congen_dir.glob("*_cv_incremental.json")):
+        folds = json.loads(path.read_text()).get("folds") or []
+        if len(folds) != declared:
+            bad.append(f"{path.name}: {len(folds)} folds, the fragment declares {declared}")
+        for fold in folds:
+            prof = ((fold.get("performance") or {}).get("profiler") or {})
+            neg = (fold.get("train_size") or {}).get("negative")
+            for key in ("shared_preprocessing_runtime",
+                        "shared_preprocessing_quickxplain_checks"):
+                if key not in prof and neg != 0:
+                    bad.append(f"{path.name} fold {fold.get('fold_index')}: {key} "
+                               f"missing but the split holds {neg} negative(s), so the "
+                               f"mean would be over fewer folds than declared")
+    return bad
