@@ -1,8 +1,25 @@
 diff --git a/docs/adr/0019-defects-found-reviewing-the-artifact.md b/docs/adr/0019-defects-found-reviewing-the-artifact.md
-index 4813ed4..5ff174f 100644
+index 92b0686..5ff174f 100644
 --- a/docs/adr/0019-defects-found-reviewing-the-artifact.md
 +++ b/docs/adr/0019-defects-found-reviewing-the-artifact.md
-@@ -138,7 +138,7 @@ misleads a reader about a result:
+@@ -2,15 +2,7 @@
+ 
+ **Status:** Accepted. The first is fixed here; the others are recorded rather than
+ fixed, deliberately.
+-**Date:** 2026-09-04, extended 2026-09-05 and 2026-09-18.
+-
+-**2026-09-18 — the public artifact no longer ships `data/results`.** That tree was
+-carried so a reader could check a correction the paper was going to disclose; the
+-paper does not disclose it (the response letter covers it under R2-Q13 / N1), so the
+-artifact has nothing to check it against and carrying it invited a comparison the
+-paper never makes. It stays here and in this repository's history, which is the only
+-place it is needed. The checks that existed as evidence for that comparison were
+-removed from `check_paper_numbers.py` rather than left to skip silently.
++**Date:** 2026-09-04, extended 2026-09-05.
+ 
+ All were found while reviewing the public evaluation artifact. They are ordered by
+ severity, and the ordering is the point: the first three return wrong answers without
+@@ -146,7 +138,7 @@ misleads a reader about a result:
    argparse epilog, both of which name `python` and a bare script path;
  - `apps/conf/test_eval_config.toml:2`, whose comment says
    `python -m apps.run_congen_eval` — a module this artifact does not ship — and whose
