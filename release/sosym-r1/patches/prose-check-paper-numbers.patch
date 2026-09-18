@@ -1,5 +1,5 @@
 diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_numbers.py
-index cf059d8..8303043 100644
+index ee9cdca..75f9639 100644
 --- a/apps/sosym_r1/check_paper_numbers.py
 +++ b/apps/sosym_r1/check_paper_numbers.py
 @@ -1,29 +1,23 @@
@@ -360,8 +360,8 @@ index cf059d8..8303043 100644
  
  # The one number in the comparison no re-score can move.
  cg_with_queries = sum(
-@@ -504,7 +510,7 @@ cg_with_queries = sum(
- check('ConGen folds issuing oracle queries', cg_with_queries, 0)
+@@ -542,7 +548,7 @@ else:
+     check('   ... folds with ZERO semantic spread', _s['folds_with_zero_semantic_spread'], 17)
  
  # ---------------------------------------------------------------------------
 -# 10. C9's significance tests. Asserted through significance_tests.compute() so
@@ -369,7 +369,7 @@ index cf059d8..8303043 100644
  #     the suite checks THOSE numbers, not a second implementation of them.
  #
  #     The invariant that matters is the last one. Claim 2 is excluded from the
-@@ -515,7 +521,7 @@ check('ConGen folds issuing oracle queries', cg_with_queries, 0)
+@@ -553,7 +559,7 @@ else:
  #     quietly excluded forever. An absence rendered as a result is the failure
  #     mode this whole effort has been about.
  # ---------------------------------------------------------------------------
@@ -378,7 +378,7 @@ index cf059d8..8303043 100644
  try:
      from significance_tests import compute as _sig_compute, holm as _holm, floor_p, ALPHA
  except ImportError as exc:                      # scipy absent, or the tool moved
-@@ -556,7 +562,7 @@ else:
+@@ -594,7 +600,7 @@ else:
      check('claim 2 floor p', floor_p(sig['2']['n']), 0.0625, tol=1e-9)
  
  # ---------------------------------------------------------------------------
@@ -387,7 +387,7 @@ index cf059d8..8303043 100644
  #
  #     score_interactive.toml shipped with 56 kb_dir values hardcoding one
  #     developer's checkout. It was noticed and judged harmless because the run
-@@ -565,7 +571,7 @@ else:
+@@ -603,7 +609,7 @@ else:
  #     would have caught it without anyone noticing: no tracked config may name
  #     an absolute or home-relative path, on any platform.
  # ---------------------------------------------------------------------------
@@ -396,7 +396,7 @@ index cf059d8..8303043 100644
  _abs = re.compile(r'=\s*"(?:[/~]|[A-Za-z]:[\\/])')
  try:
      _tomls = subprocess.run(['git', 'ls-files', '*.toml'], cwd=REPO,
-@@ -585,10 +591,10 @@ else:
+@@ -623,10 +629,10 @@ else:
  # ---------------------------------------------------------------------------
  print(f'\n{"=" * 70}')
  if failures:
@@ -409,12 +409,12 @@ index cf059d8..8303043 100644
      print('never the assertion to the number you hoped for.')
      sys.exit(1)
  # A pass is a POSITIVE COUNT, never the absence of a failure. With zero checks this
-@@ -596,11 +602,11 @@ if failures:
+@@ -634,11 +640,11 @@ if failures:
  # indistinguishable from a clean one to anything reading the exit code. The same shape
  # passed an artifact whose test suite had not run at all, because pytest was absent and
  # `grep FAILED` found nothing.
 -MINIMUM_CHECKS = 90
-+MINIMUM_CHECKS = 85
++MINIMUM_CHECKS = 96
  if checks < MINIMUM_CHECKS:
      print(f'FAIL: only {checks} checks ran; expected at least {MINIMUM_CHECKS}.')
      print('An empty or truncated run is not a pass. Something above exited early or')

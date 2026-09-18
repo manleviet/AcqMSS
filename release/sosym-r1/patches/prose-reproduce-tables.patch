@@ -1,7 +1,7 @@
 diff --git a/reproduce_tables_sosym.sh b/reproduce_tables_sosym.sh
 old mode 100755
 new mode 100644
-index 6e6632f..ab56d20
+index 131e415..38336ea
 --- a/reproduce_tables_sosym.sh
 +++ b/reproduce_tables_sosym.sh
 @@ -5,9 +5,9 @@
@@ -66,8 +66,8 @@ index 6e6632f..ab56d20
    [ -s "$TABLES_DIR/$f" ] || die "missing or empty artifact: $TABLES_DIR/$f"
  done
  n_frag=$(ls "$TABLES_DIR"/paper/*.tex 2>/dev/null | wc -l | tr -d ' ')
- [ "$n_frag" -eq 13 ] \
-   || die "expected 13 paper fragments in $TABLES_DIR/paper, found $n_frag"
+ [ "$n_frag" -eq 12 ] \
+   || die "expected 12 paper fragments in $TABLES_DIR/paper, found $n_frag"
 -echo "  ok: five artifacts and $n_frag paper fragments present and non-empty"
 +echo "  ok: four artifacts and $n_frag paper fragments present and non-empty"
  

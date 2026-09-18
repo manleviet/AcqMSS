@@ -45,21 +45,28 @@ table is written:
 - **`apps/sosym_r1/check_timing_provenance.py`** — refuses a runtime measured while
   another sweep unit was in flight.
 - **`apps/sosym_r1/check_paper_numbers.py`** — recomputes every number quoted in the
-  paper's prose from the committed data. 89 checks.
+  paper's prose from the committed data. 99 checks.
 
 and one runs after the tables are written:
 
 - **`apps/sosym_r1/check_paper_tables.py`** — re-derives every cell of every paper
   fragment from the same result files, with a reader that shares no aggregation or
-  formatting code with the generator. 1,250 cells. A fragment it cannot parse is a
+  formatting code with the generator. 1,420 cells. A fragment it cannot parse is a
   failure, not a skip.
+
+  It also checks properties that do not depend on the generator's expressions at all:
+  no printed duration is negative, phases sum within their total, declared parts sum to
+  the declared total, and the profiler's timing scopes really do contain what is
+  subtracted from them. A re-derivation shares the generator's definition and will
+  agree with a wrong one; these will not.
 
 ### The paper's tables
 
 `data/results_sosym_r1/tables/paper/` holds one `.tex` per table, named after the
 label the paper uses (`tab_AcqMssruntime.tex`, `tab_kb_size.tex`, …). Each file is a
-single `tabular` environment and nothing else — the caption, the `\label` and the
-`table*` wrapper live in the manuscript, which `\input`s the fragment.
+single `tabular` environment, optionally preceded by a `%` header naming each column's
+source field, unit and — for a derived column — its exact expression. The caption, the
+`\label` and the `table*` wrapper live in the manuscript, which `\input`s the fragment.
 
 Every quality metric is the **mean over the three folds**. The two other aggregations
 these files admit — the intersected knowledge base, and a pooled figure — are
