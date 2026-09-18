@@ -1,7 +1,7 @@
 # CC-A ×2 — drop the OLD tree, and generate every paper table
 
-Both prompts, one carve, plus the four follow-up items. Source `4aed7f8`
-(feat/sosym-r1) → artifact `dbfd65c`. Tag not applied; commands for it at the end.
+Both prompts, one carve, plus two rounds of follow-up. Source `bb46bc9`
+(feat/sosym-r1) → artifact `1eaed23`. Tag not applied; commands for it at the end.
 
 **Revised 2026-09-18 after the follow-up.** The cost table had a defect — a negative
 duration — and the numbers below are the post-fix ones. See "Follow-up".
@@ -432,3 +432,104 @@ something other than what is published.
 4. Items 2–3 of the original unresolved list stand: the manuscript's tables must be
    re-typed from the fragments, and the `tab:runtime_comparison` /
    `tab:AcqMssruntime` captions must state the aggregation.
+
+
+---
+
+# Follow-up 2 (2026-09-18) — the missing profiler counters
+
+## The report was right about the reads, and wrong about the number
+
+Five fold-0 records carry no `shared_preprocessing_runtime` /
+`shared_preprocessing_quickxplain_checks`, and both the generator and the gate read the
+absence as `0` through `.get(key, 0)`. That route is indefensible and is now gone.
+
+**But the resulting number was correct, and changing it would introduce an error.**
+
+## Why those five folds lack the keys
+
+Measured over all 84 congen folds, then proved from the code:
+
+| | |
+|---|---|
+| folds lacking the counters | **5** — all fold 0: KB₁ RS(n), KB₁ RS(m), KB₂ RS(m), KB₃ RS(m), KB₄ RS(m) |
+| folds with `train_size.negative == 0` | **5** — the same five |
+| correspondence | **exact, both directions** |
+| what else those folds lack | the whole QuickXplain family: `quickxplain_calls`, `quickxplain_runtime`, `qx_calls`, `qx_runtime`, and the two shared counters — 15 profiler keys instead of 21 |
+
+`generate_ne.py:86` is `if not testsuite.testcases: return []`, and the counters are
+created lazily inside the per-testcase loop below it (`:162`, `:166`). GenerateNE
+explains **negative** examples. A training split with none never enters the loop, so the
+counters are never created.
+
+**Not a resumed partial, not a pre-instrumentation run.** The phase ran zero times and
+cost zero checks and zero milliseconds. That is a measurement, not a gap.
+
+## Therefore the fold belongs in the mean, at zero
+
+KB₁ RS(m) GenNE/QX checks = mean(0, 9, 9) = **6**, which is what the fragment prints.
+Averaging over the two folds that recorded a counter would give 9 and **overstate the
+preprocessing cost by half**, by dropping a fold in which the phase genuinely cost
+nothing. The invariant "a quantity absent from a fold is absent, never zero" is right in
+general and does not apply here, because the quantity is not absent — it is zero, and
+the fold says so through `train_size.negative`.
+
+**No number in the fragment moved.** Verified: the regenerated table is byte-identical
+to the committed one apart from the header comment.
+
+## What did change: the route
+
+The zero is now justified **from the fold**, never from the absence. Both readers ask
+`train_size.negative == 0`; if a counter is missing while negatives are present, they
+raise rather than default — a different fault, and one that would otherwise understate
+the cost silently.
+
+### Every default-on-missing read, enumerated and decided
+
+Measured first: across 84 congen folds, which keys are ever actually absent?
+
+| key | absent in | decision |
+|---|---|---|
+| `shared_preprocessing_runtime` | 5 folds | **justified zero**, from `train_size.negative == 0`; raise otherwise |
+| `shared_preprocessing_quickxplain_checks` | 5 folds | same |
+| `n_queries`, `convergence_reason` | 84 folds | absent by design — ConGen is passive; already rendered `--` |
+| `runtime_ms`, `congen_runtime_ms`, `reduce_runtime_ms`, `consistency_checks`, `redundancy_consistency_checks` | **0 folds** | **strict** — raise on absence |
+| `paper_consistency_checks`, `congen_total_time` | **0 folds** | **strict** — raise on absence |
+| `n_mss`, `n_kb`, `n_bias`, `n_ne`, `accuracy` | **0 folds** | **strict** |
+
+Every `.get(key, 0)` and `or 0` in `read_results.py` is gone; `perf_mean`,
+`profiler_scalar` and `profiler_total_ms` in the gate's `reread.py` raise `Absent`. A
+default on a key that is never absent can only ever hide a future fault, which is
+exactly what it did here.
+
+## P5 — fold counts, declared and enforced
+
+`properties.fold_counts(congen_dir, declared=3)`: every unit has the declared number of
+folds, and no fold silently drops out of a mean. The fragment header states the
+declaration, so the two cannot drift apart.
+
+**P5 does not fire on the committed tree, and that is the correct outcome rather than a
+weak test** — every unit has three folds and every fold contributes to every mean. Its
+failure path was therefore exercised on constructed input, as P2–P4 were:
+
+| constructed fault | result |
+|---|---|
+| counter missing while the split has 4 negatives | **red** — P5 names the fold and the count |
+| the same, through the generator | **red** — `Missing`, not a default |
+| the same, through the gate | **red** — `Absent`, not a default |
+| a unit with 2 folds where 3 are declared | **red** |
+| `performance.reduce_runtime_ms` deleted | **red** — `Absent` |
+
+5 of 5. The per-fragment cell mutation (12/12) and P1–P4 (4/4) were re-run and still hold.
+
+## Acceptance, re-run
+
+`pip install .` ok · script exit 0 · **99** prose checks · **1,420** cells / 0 mismatched
+· properties green over 30 units · **324 passed / 17 skipped / 0 failed** · round-trip
+**0** · grep 41 hits, none naming a second tree · 618 files. Source suite **680 passed,
+1 skipped** — the documented baseline.
+
+## Unresolved, unchanged
+
+The four items from Follow-up 1 stand. Nothing here adds one: the five folds are
+explained, and the explanation is in the fragment header rather than only in this report.

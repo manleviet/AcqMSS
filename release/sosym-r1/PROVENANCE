@@ -1,7 +1,7 @@
 target:     sosym-r1
-carved:     2026-09-18T13:29:47Z
-source:     AcqMSS 4aed7f8 (feat/sosym-r1)
-artifact:   dbfd65c
+carved:     2026-09-18T13:48:28Z
+source:     AcqMSS 2c6c9bb (feat/sosym-r1)
+artifact:   1eaed23
             (recorded after the commit; a commit cannot name its own hash --
              verify by re-carving from the source SHA, not from inside it)
 generator:  0b0789a carve.sh, 641b8b9 keep-list
