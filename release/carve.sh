@@ -93,7 +93,7 @@ python3 - "$OUT" <<'PY'
 import pathlib, sys
 out = pathlib.Path(sys.argv[1])
 stems = {f.name.split('_cv_')[0]
-         for tree in ('data/results_sosym_r1', 'data/results')
+         for tree in ('data/results_sosym_r1',)
          if (out / tree).is_dir()
          for f in (out / tree).rglob('*_cv_*.json')}
 removed = 0

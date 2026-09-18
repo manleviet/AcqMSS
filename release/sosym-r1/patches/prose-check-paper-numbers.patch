@@ -1,5 +1,5 @@
 diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_numbers.py
-index 3754da5..36ebd22 100644
+index 3754da5..92b4695 100644
 --- a/apps/sosym_r1/check_paper_numbers.py
 +++ b/apps/sosym_r1/check_paper_numbers.py
 @@ -1,29 +1,19 @@
@@ -44,16 +44,27 @@ index 3754da5..36ebd22 100644
  """
  from __future__ import annotations
  
-@@ -42,7 +32,7 @@ OLD = REPO / 'data' / 'results' / 'congen'
- OLD_INT = REPO / 'data' / 'results' / 'interactive'
+@@ -37,12 +27,15 @@ import sys
+ from pathlib import Path
+ 
+ REPO = Path(__file__).resolve().parents[2]
+-R1 = REPO / 'data' / 'results_sosym_r1' / 'congen'
+-OLD = REPO / 'data' / 'results' / 'congen'
+-OLD_INT = REPO / 'data' / 'results' / 'interactive'
++TREE = REPO / 'data' / 'results_sosym_r1'
++R1 = TREE / 'congen'
  FMS = REPO / 'data' / 'fms'
  
 -TOL = 5e-3  # numbers are quoted to 3-4 significant figures in the notes
++STEMS = ['REAL-FM-4', 'REAL-FM-7', 'arcade-game', 'busybox-1.18.0', 'fqa']
++SAMPLINGS = ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m', '2cov', 'ff']
++MODES = ['example_only', 'example_first']
++
 +TOL = 5e-3  # numbers are quoted to 3-4 significant figures in the paper
  
  failures: list[str] = []
  checks = 0
-@@ -54,7 +44,7 @@ def check(name: str, got, want, tol: float | None = None) -> None:
+@@ -54,7 +47,7 @@ def check(name: str, got, want, tol: float | None = None) -> None:
      checks += 1
      ok = (abs(got - want) <= (TOL if tol is None else tol)) if isinstance(want, float) else (got == want)
      status = 'ok  ' if ok else 'FAIL'
@@ -62,7 +73,7 @@ index 3754da5..36ebd22 100644
      if not ok:
          failures.append(name)
  
-@@ -64,8 +54,9 @@ def semantic(fold: dict) -> dict:
+@@ -64,8 +57,9 @@ def semantic(fold: dict) -> dict:
  
      NOTE the nesting: evaluation.semantic.METRICS.recall. Reading one level
      shallower returns a .get() default of 0 on every fold, which is exactly how
@@ -74,7 +85,54 @@ index 3754da5..36ebd22 100644
      """
      return ((fold.get('evaluation') or {}).get('semantic') or {}).get('metrics') or {}
  
-@@ -97,15 +88,15 @@ def count_ctau_from_uvl(path: Path) -> int:
+@@ -82,6 +76,46 @@ def folds_of(pattern: str, root: Path):
+             yield os.path.basename(f), d, fo
+ 
+ 
++def fold_mean(path: Path, key: str = 'f1_score'):
++    """A cell is the mean over folds. Never the intersected KB, never a pooled figure."""
++    if not path.exists():
++        return None
++    folds = json.loads(path.read_text())['folds']
++    vals = [semantic(f).get(key) for f in folds if semantic(f)]
++    return statistics.mean(vals) if vals else None
++
++
++def queries_of(path: Path):
++    """Mean oracle queries per fold, and the stopping rules observed."""
++    if not path.exists():
++        return None, set()
++    folds = json.loads(path.read_text())['folds']
++    n = [f.get('n_queries') for f in folds if f.get('n_queries') is not None]
++    return (statistics.mean(n) if n else None), {f.get('convergence_reason') for f in folds}
++
++
++def cell(stem: str, samp: str, mode: str) -> dict | None:
++    """One (KB, sampling, mode) unit: ConGen, the iterative baseline, and the gap.
++
++    Returns None unless BOTH halves exist. A congen-only check would count units
++    whose gap was never computable and report them as if they had one.
++    """
++    cg = fold_mean(TREE / 'congen' / f'{stem}_{samp}_cv_incremental.json')
++    it_path = TREE / 'interactive' / f'{stem}_{samp}_cv_incremental_{mode}.json'
++    it = fold_mean(it_path)
++    if cg is None or it is None:
++        return None
++    nq, stops = queries_of(it_path)
++    return {'congen': cg, 'iterative': it, 'gap': cg - it, 'queries': nq, 'stops': stops}
++
++
++def collapsed(stem: str, samp: str) -> bool:
++    """Identical iterative F1 under both modes: the lost-method-axis signature."""
++    a = fold_mean(TREE / 'interactive' / f'{stem}_{samp}_cv_incremental_example_only.json')
++    b = fold_mean(TREE / 'interactive' / f'{stem}_{samp}_cv_incremental_example_first.json')
++    return a is not None and b is not None and abs(a - b) < 1e-12
++
++
+ # ---------------------------------------------------------------------------
+ # 1. |Cτ| counted from the feature model alone, never from a result file.
+ #    This is the hand count that settled which value was correct.
+@@ -97,15 +131,15 @@ def count_ctau_from_uvl(path: Path) -> int:
      ALTERNATIVE group !ci v !cj   C(n,2) per group  <-- see below
      cross-tree                    1 each
  
@@ -93,25 +151,248 @@ index 3754da5..36ebd22 100644
      and the model used to validate the count could not exercise it.
      """
      lines = path.read_text().split('\n')
-@@ -199,7 +190,7 @@ if old_int:
+@@ -179,27 +213,9 @@ for model, want in EXPECTED_CTAU.items():
+         check(f'|Ctau| {model} == tp+fn, single-valued', sorted(seen[model]), [want])
+ 
  # ---------------------------------------------------------------------------
- # 4. Numbers quoted in A5 / B7 / B20.
+-# 3. The defect's signature: every OLD file reports fqa's |Ctau| = 342.
+-#    This is the evidence behind the N item, so it must stay reproducible.
+-# ---------------------------------------------------------------------------
+-print('\n3. the defect signature in the published run (evidence for the N item)')
+-old_vals: list[int] = []
+-for base, _d, fo in folds_of('*.json', OLD):
+-    sm = semantic(fo)
+-    if sm:
+-        old_vals.append(sm.get('true_positives', 0) + sm.get('false_negatives', 0))
+-if old_vals:
+-    check('old congen: every fold scored against 342', sorted(set(old_vals)), [342])
+-old_int = [semantic(fo).get('true_positives', 0) + semantic(fo).get('false_negatives', 0)
+-           for _b, _d, fo in folds_of('**/*.json', OLD_INT) if semantic(fo)]
+-if old_int:
+-    check('old interactive: same', sorted(set(old_int)), [342])
+-    check('old interactive: fold count', len(old_int), 108)
+-
+-# ---------------------------------------------------------------------------
+-# 4. Numbers quoted in A5 / B7 / B20.
++# 3. Numbers quoted in A5 / B7 / B20.
  # ---------------------------------------------------------------------------
 -print('\n4. numbers quoted in the drafts')
-+print('\n4. numbers quoted in the paper')
++print('\n3. numbers quoted in the paper')
  
  cells: dict[str, list[float]] = {}
  eq_hits: list[tuple[str, int]] = []
-@@ -487,7 +478,7 @@ cg_with_queries = sum(
+@@ -256,9 +272,9 @@ check('accuracy folds internally consistent with their own test split', acc_mism
+ check('   ... folds checked', acc_folds > 80, True)
+ 
+ # ---------------------------------------------------------------------------
+-# 5. Fold agreement, reported as a STABILITY statistic and never as a score.
++# 4. Fold agreement, reported as a STABILITY statistic and never as a score.
+ # ---------------------------------------------------------------------------
+-print('\n5. fold-agreement range (stability statistic, not a quality score)')
++print('\n4. fold-agreement range (stability statistic, not a quality score)')
+ agree: dict[str, float] = {}
+ for f in sorted(glob.glob(str(R1 / '*.json'))):
+     d = json.load(open(f))
+@@ -278,25 +294,27 @@ if agree:
+     check('fqa rs_1n agreement ~80%', agree.get('fqa_rs_1n_cv_incremental.json', -1), 79.6, tol=1.0)
+ 
+ # ---------------------------------------------------------------------------
+-# 6. The aggregation convention. Decided 2026-08-29: per-fold mean, not the
+-#    intersected KB. The published .525 is the regression target.
++# 5. The aggregation convention: per-fold mean, never the intersected KB.
++#    Three separate errors in this project came from the other two aggregations
++#    -- the intersected KB, and a pooled figure -- so both are pinned here as
++#    numbers that must NOT equal the reported one.
+ # ---------------------------------------------------------------------------
+-print('\n6. aggregation convention: per-fold mean is what the paper reports')
+-p = OLD / 'arcade-game_rs_1n_cv_incremental.json'
++print('\n5. aggregation convention: per-fold mean is what the paper reports')
++p = R1 / 'arcade-game_rs_1n_cv_incremental.json'
+ if p.exists():
+     d = json.load(open(p))
+     per = [semantic(fo).get('f1_score') for fo in d['folds'] if semantic(fo)]
+     inter = (((d.get('intersected_kb') or {}).get('evaluation') or {})
+              .get('semantic') or {}).get('metrics', {}).get('f1_score')
+     summ = ((d.get('summary') or {}).get('semantic') or {}).get('f1_score', {}).get('mean')
+-    check('published .525 == per-fold mean', round(statistics.mean(per), 6), 0.524859, tol=1e-6)
+-    check('published .525 == summary.mean', summ, 0.524859, tol=1e-6)
+-    check('intersected KB is a DIFFERENT number', round(inter, 6), 0.443966, tol=1e-6)
++    check('reported .660 == per-fold mean', round(statistics.mean(per), 6), 0.659711, tol=1e-6)
++    check('reported .660 == summary.mean', summ, 0.659711, tol=1e-6)
++    check('intersected KB is a DIFFERENT number', round(inter, 6), 0.654709, tol=1e-6)
+ 
+ # ---------------------------------------------------------------------------
+-# 7. The 2-COV applicability threshold quoted in B20 / A5.
++# 6. The 2-COV applicability threshold quoted in B20 / A5.
+ # ---------------------------------------------------------------------------
+-print('\n7. the 2-COV boundary: passive acquisition has no positive examples to work with')
++print('\n6. the 2-COV boundary: passive acquisition has no positive examples to work with')
+ tr_zero = tr_tot = te_zero = 0
+ max_pos = 0
+ for base, _d, fo in folds_of('*2cov*.json', R1):
+@@ -316,7 +334,7 @@ check('2-COV max |E+| over all folds', max_pos, 1)
+ check('2-COV folds with no positive TEST example', te_zero, 13)
+ 
+ # ---------------------------------------------------------------------------
+-# 8. Cap sensitivity of the iterative baseline. This is the evidence that the
++# 7. Cap sensitivity of the iterative baseline. This is the evidence that the
+ #    baseline was not starved: the budget was raised 20x and the return per
+ #    query collapsed, with nothing converging at any budget.
+ #
+@@ -327,7 +345,7 @@ check('2-COV folds with no positive TEST example', te_zero, 13)
+ #    fold-0 vs mean, pooled vs mean, intersected vs mean. Quote the aggregation
+ #    the paper uses, and say which one it is.
+ # ---------------------------------------------------------------------------
+-print('\n8. cap sensitivity of the iterative baseline (per-fold means)')
++print('\n7. cap sensitivity of the iterative baseline (per-fold means)')
+ import re as _re
+ 
+ cap_rows: dict[tuple[str, str], dict[int, float]] = {}
+@@ -373,40 +391,23 @@ check('every cap-probe fold stopped on max_queries, none converged',
+ check('   ... folds observed', stop_reasons.get('max_queries', 0), 42)
+ 
+ # ---------------------------------------------------------------------------
+-# 9. The passive-vs-active comparison, as INVARIANTS. Per-cell gaps are
++# 8. The passive-vs-active comparison, as INVARIANTS. Per-cell gaps are
+ #    deliberately NOT asserted: the models do not share a query budget (REAL-FM-7
+ #    stops on no_query at 953-2,386, busybox ran at 1,000, the rest at 5,000), so
+ #    a gap is only readable beside its own budget. What is asserted here is what
+ #    no budget policy can move.
+ #
+-#    The tree paths are asserted too. The defect this replaces was a PAIRING --
+-#    a corrected ConGen column beside an uncorrected iterative one -- so a future
+-#    run silently reading a third tree is the failure mode to catch.
++#    Every cell is read from ONE tree, and both halves of a cell come from it.
++#    The failure mode to catch is a ConGen column set beside an iterative column
++#    computed differently: that pairing matches no tree and reproduces from none.
+ # ---------------------------------------------------------------------------
+-print('\n9. passive vs active: the invariants, not the per-cell gaps')
+-# The siblings live beside this file. Named explicitly and checked, so a move that
+-# breaks the path reports WHICH path broke rather than an ImportError traceback --
+-# a relocation is exactly when this class of failure recurs.
+-_SIBLINGS = REPO / 'apps' / 'sosym_r1'
+-if not (_SIBLINGS / 'measure_corrected_gap_table.py').exists():
+-    sys.exit(f'FATAL: sibling tools not found under {_SIBLINGS}. If they moved, update '
+-             f'this path and reproduce_tables_sosym.sh together.')
+-sys.path.insert(0, str(_SIBLINGS))
+-from measure_corrected_gap_table import (  # noqa: E402
+-    TREES, STEMS, SAMPLINGS, MODES, cell, collapsed, published)
+-
+-check('OLD tree is data/results', str(TREES['old'].relative_to(REPO)), 'data/results')
+-check('NEW tree is data/results_sosym_r1',
+-      str(TREES['new'].relative_to(REPO)), 'data/results_sosym_r1')
+-
+-new_cells = [(st_, sm) for st_ in STEMS for sm in SAMPLINGS
+-             if all(cell(TREES['new'], st_, sm, m) for m in MODES)]
+-check('cells in NEW', len(new_cells), 28)
+-check('of those, published in OLD (correctable)',
+-      sum(1 for st_, sm in new_cells if published(st_, sm)), 18)
+-
+-gaps = {(st_, sm): {m: cell(TREES['new'], st_, sm, m)['gap'] for m in MODES}
+-        for st_, sm in new_cells}
++print('\n8. passive vs active: the invariants, not the per-cell gaps')
++cells_ = [(st_, sm) for st_ in STEMS for sm in SAMPLINGS
++          if all(cell(st_, sm, m) for m in MODES)]
++check('cells with a result in both modes', len(cells_), 28)
++
++gaps = {(st_, sm): {m: cell(st_, sm, m)['gap'] for m in MODES}
++        for st_, sm in cells_}
+ check('cells where the baseline wins in BOTH modes',
+       sum(1 for g in gaps.values() if all(v < 0 for v in g.values())), 0)
+ check('cells where example-only beats ConGen',
+@@ -414,11 +415,10 @@ check('cells where example-only beats ConGen',
+ check('cells where example-first beats ConGen',
+       sum(1 for g in gaps.values() if g['example_first'] < 0), 1)
+ 
+-# Mode collapse: identical iterative F1 under both modes, the lost-method-axis
+-# signature. The published comparison was uninformative exactly there.
+-old_cells = [(st_, sm) for st_, sm in new_cells if published(st_, sm)]
+-check('mode-collapsed cells in OLD', sum(1 for c in old_cells if collapsed(TREES['old'], *c)), 11)
+-check('mode-collapsed cells in NEW', sum(1 for c in new_cells if collapsed(TREES['new'], *c)), 0)
++# Mode collapse: identical iterative F1 under both modes. That is the signature of
++# an extractor that has lost its method axis, and it makes an active-vs-passive
++# comparison uninformative rather than merely wrong. Not one cell shows it.
++check('mode-collapsed cells', sum(1 for c in cells_ if collapsed(*c)), 0)
+ 
+ # Three stopping rules, three different kinds of fact. no_query is the strong one:
+ # the active baseline asked every question available to it and still lost.
+@@ -464,22 +464,24 @@ else:
+     check('busybox cap 1000 wall clock, hours',
+           f1['performance']['runtime_ms'] / 3.6e6, 2.12, tol=0.02)
+ 
+-# The abstract's "consistently below 0.06" is a claim about BOTH modes. It was
+-# nearly true of the old tree (18/18 example-only, 15/18 example-first) and is
+-# false of the corrected one for example-first: not one cell of 28.
+-below = {m: sum(1 for st_, sm in new_cells
+-                if cell(TREES['new'], st_, sm, m)['iterative'] < 0.06)
++# "Consistently below 0.06" is a claim about BOTH modes, and it does not hold:
++# under example-first not one cell of 28 is below 0.06. Under example-only, 12 are.
++# The two modes are therefore not interchangeable in any statement about the
++# baseline's level, which is why every such statement names its mode.
++below = {m: sum(1 for st_, sm in cells_ if cell(st_, sm, m)['iterative'] < 0.06)
+          for m in MODES}
+-check('NEW example-first cells with iterative F1 below 0.06', below['example_first'], 0)
+-check('NEW example-only cells with iterative F1 below 0.06', below['example_only'], 12)
+-
+-# The oracle benefit the two modes exist to measure. OLD reported exactly zero of
+-# it on the mode-collapsed cells; every corrected cell shows some.
+-benefit = [cell(TREES['new'], st_, sm, 'example_first')['iterative']
+-           - cell(TREES['new'], st_, sm, 'example_only')['iterative']
+-           for st_, sm in new_cells if published(st_, sm)]
+-check('published cells showing ZERO oracle benefit, NEW', sum(1 for b in benefit if abs(b) < 1e-12), 0)
+-check('smallest oracle benefit across published cells, NEW', min(benefit), 0.0919, tol=1e-3)
++check('example-first cells with iterative F1 below 0.06', below['example_first'], 0)
++check('example-only cells with iterative F1 below 0.06', below['example_only'], 12)
++
++# The oracle benefit the two modes exist to measure: consulting the oracle first
++# is worth something in every cell, never nothing. Measured over all 28 cells --
++# the population is the whole tree, not a subset, so the minimum is the weakest
++# case anywhere rather than the weakest case in a chosen slice.
++benefit = [cell(st_, sm, 'example_first')['iterative']
++           - cell(st_, sm, 'example_only')['iterative']
++           for st_, sm in cells_]
++check('cells showing ZERO oracle benefit', sum(1 for b in benefit if abs(b) < 1e-12), 0)
++check('smallest oracle benefit across all cells', min(benefit), 0.0035, tol=1e-3)
+ 
+ # The one number in the comparison no re-score can move.
+ cg_with_queries = sum(
+@@ -487,7 +489,7 @@ cg_with_queries = sum(
  check('ConGen folds issuing oracle queries', cg_with_queries, 0)
  
  # ---------------------------------------------------------------------------
 -# 10. C9's significance tests. Asserted through significance_tests.compute() so
-+# 10. The significance tests. Asserted through significance_tests.compute() so
++# 9. The significance tests. Asserted through significance_tests.compute() so
  #     the suite checks THOSE numbers, not a second implementation of them.
  #
  #     The invariant that matters is the last one. Claim 2 is excluded from the
-@@ -568,10 +559,10 @@ else:
+@@ -498,7 +500,7 @@ check('ConGen folds issuing oracle queries', cg_with_queries, 0)
+ #     quietly excluded forever. An absence rendered as a result is the failure
+ #     mode this whole effort has been about.
+ # ---------------------------------------------------------------------------
+-print('\n10. significance: medians, Holm rejections, and what cannot be tested')
++print('\n9. significance: medians, Holm rejections, and what cannot be tested')
+ try:
+     from significance_tests import compute as _sig_compute, holm as _holm, floor_p, ALPHA
+ except ImportError as exc:                      # scipy absent, or the tool moved
+@@ -539,7 +541,7 @@ else:
+     check('claim 2 floor p', floor_p(sig['2']['n']), 0.0625, tol=1e-9)
+ 
+ # ---------------------------------------------------------------------------
+-# 11. The package must work on a machine that is not this one.
++# 10. The package must work on a machine that is not this one.
+ #
+ #     score_interactive.toml shipped with 56 kb_dir values hardcoding one
+ #     developer's checkout. It was noticed and judged harmless because the run
+@@ -548,7 +550,7 @@ else:
+ #     would have caught it without anyone noticing: no tracked config may name
+ #     an absolute or home-relative path, on any platform.
+ # ---------------------------------------------------------------------------
+-print('\n11. portability: no tracked config names a path only this machine has')
++print('\n10. portability: no tracked config names a path only this machine has')
+ _abs = re.compile(r'=\s*"(?:[/~]|[A-Za-z]:[\\/])')
+ try:
+     _tomls = subprocess.run(['git', 'ls-files', '*.toml'], cwd=REPO,
+@@ -568,10 +570,10 @@ else:
  # ---------------------------------------------------------------------------
  print(f'\n{"=" * 70}')
  if failures:
@@ -124,7 +405,14 @@ index 3754da5..36ebd22 100644
      print('never the assertion to the number you hoped for.')
      sys.exit(1)
  # A pass is a POSITIVE COUNT, never the absence of a failure. With zero checks this
-@@ -585,5 +576,5 @@ if checks < MINIMUM_CHECKS:
+@@ -579,11 +581,11 @@ if failures:
+ # indistinguishable from a clean one to anything reading the exit code. The same shape
+ # passed an artifact whose test suite had not run at all, because pytest was absent and
+ # `grep FAILED` found nothing.
+-MINIMUM_CHECKS = 90
++MINIMUM_CHECKS = 85
+ if checks < MINIMUM_CHECKS:
+     print(f'FAIL: only {checks} checks ran; expected at least {MINIMUM_CHECKS}.')
      print('An empty or truncated run is not a pass. Something above exited early or')
      print('skipped a section -- find it rather than lowering this number.')
      sys.exit(1)

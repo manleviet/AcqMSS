@@ -1,7 +1,18 @@
 diff --git a/reproduce_tables_sosym.sh b/reproduce_tables_sosym.sh
-index 451a4da..c17305a 100755
+index e6bc756..608f587 100755
 --- a/reproduce_tables_sosym.sh
 +++ b/reproduce_tables_sosym.sh
+@@ -5,8 +5,8 @@
+ #   ./reproduce_tables_sosym.sh --draft    # tables to a scratch dir, nothing official
+ #   ./reproduce_tables_sosym.sh --print-fingerprint   # the generator's hash, nothing else
+ #
+-# Output: data/results_sosym_r1/tables/ — results_tables.{md,tex}, corrected-gap-table.md,
+-#         significance.md, target-clause-counts.md, PROVENANCE.md
++# Output: data/results_sosym_r1/tables/ — results_tables.{md,tex}, significance.md,
++#         target-clause-counts.md, PROVENANCE.md
+ #
+ # Every step is gated. The script stops at the first failure and says which one;
+ # it never emits tables from inputs it could not verify. Both gates existed before
 @@ -30,11 +30,10 @@ for a in "$@"; do
      # The cost is that the draft directory changes between runs, so the path is
      # echoed at both the generate step and DONE.
@@ -18,7 +29,20 @@ index 451a4da..c17305a 100755
      --print-fingerprint) PRINT_FP=1 ;;
      -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
      *) echo "unknown flag: $a" >&2; exit 2 ;;
-@@ -85,7 +84,7 @@ say "0/6  environment"
+@@ -47,11 +46,10 @@ export PYTHONPATH=.
+ say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+ die() { printf '\n\033[31mFAILED: %s\033[0m\n' "$*" >&2; exit 1; }
+ 
+-# The five files whose bytes ARE the generator. Hashed rather than resolved to a
++# The four files whose bytes ARE the generator. Hashed rather than resolved to a
+ # commit; see the long note at the fingerprint's use below.
+ GENERATOR_FILES="reproduce_tables_sosym.sh
+ apps/extract_results.py
+-apps/sosym_r1/measure_corrected_gap_table.py
+ apps/sosym_r1/significance_tests.py
+ apps/sosym_r1/count_target_clauses.py"
+ 
+@@ -85,22 +83,20 @@ say "0/6  environment"
  python3 -c "import sys; assert sys.version_info >= (3,11), sys.version" \
    || die "Python >= 3.11 required"
  python3 -c "import explanation, flamapy" 2>/dev/null \
@@ -27,3 +51,79 @@ index 451a4da..c17305a 100755
  python3 -c "import conacq" 2>/dev/null || die "conacq not importable (run from the repo root)"
  python3 -c "import scipy" 2>/dev/null \
    || die "scipy missing — the significance tests and 18 of the verifier's checks need it (pip install -e .)"
+ echo "  ok: $(python3 -V), explanation + conacq + scipy importable"
+ 
+ # ---------------------------------------------------------------- 1. the evidence
+-say "1/6  the two trees this revision rests on"
+-# OLD and NEW are the pairing the N item rests on, and their paths are asserted by
+-# the verifier. Named here so a reader sees which is which before any table appears.
+-[ -d "data/results" ] \
+-  || die "data/results missing — that is OLD, the tree the published tables came from"
++say "1/6  the evidence"
++# Both halves are asserted before any table appears, because a table built from one
++# half and a stale copy of the other reproduces from neither. Counted, not merely
++# existence-checked: an empty directory satisfies -d and produces an empty table.
+ { [ -d "$R1/congen" ] && [ -d "$R1/interactive" ]; } \
+-  || die "$R1 incomplete — that is NEW, the re-scored tree"
+-echo "  OLD = data/results        $(ls data/results/congen/*_cv_*.json 2>/dev/null | wc -l | tr -d ' ') congen, $(ls data/results/interactive/*_cv_*.json 2>/dev/null | wc -l | tr -d ' ') interactive"
+-echo "  NEW = $R1  $(ls $R1/congen/*_cv_*.json | wc -l | tr -d ' ') congen, $(ls $R1/interactive/*_cv_*.json | wc -l | tr -d ' ') interactive"
++  || die "$R1 incomplete — the acquisition results are the input to every table here"
++echo "  $R1  $(ls $R1/congen/*_cv_*.json | wc -l | tr -d ' ') congen, $(ls $R1/interactive/*_cv_*.json | wc -l | tr -d ' ') interactive"
+ 
+ # ---------------------------------------------------------------- 2. timing gate
+ say "2/6  timing provenance gate"
+@@ -172,8 +168,6 @@ say "4/6  generate tables -> $TABLES_DIR"
+ mkdir -p "$TABLES_DIR"
+ python3 -m apps.extract_results --results-dir "$R1" --output-dir "$TABLES_DIR" \
+   || die "extract_results"
+-python3 apps/sosym_r1/measure_corrected_gap_table.py > "$TABLES_DIR/corrected-gap-table.md" \
+-  || die "gap table"
+ python3 apps/sosym_r1/significance_tests.py > "$TABLES_DIR/significance.md" \
+   || die "significance tests"
+ python3 apps/sosym_r1/count_target_clauses.py > "$TABLES_DIR/target-clause-counts.md" \
+@@ -197,11 +191,11 @@ say "5/6  verify the emitted artifacts"
+ # message, which no reproduction can overwrite.
+ fingerprint=$(compute_fingerprint)
+ [ -n "$fingerprint" ] || die "could not compute the generator fingerprint"
+-for f in results_tables.md results_tables.tex corrected-gap-table.md significance.md \
++for f in results_tables.md results_tables.tex significance.md \
+          target-clause-counts.md; do
+   [ -s "$TABLES_DIR/$f" ] || die "missing or empty artifact: $TABLES_DIR/$f"
+ done
+-echo "  ok: five artifacts present and non-empty"
++echo "  ok: four artifacts present and non-empty"
+ 
+ # An artifact must state the state at generation time, never a plan.
+ if grep -qniE 'pending|tonight|overnight|TODO|FIXME' "$TABLES_DIR"/*.md; then
+@@ -211,7 +205,7 @@ fi
+ echo "  ok: no plan strings"
+ 
+ # CONTENT, not determinism. Every other gate here compares the artifact against itself:
+-# the 93 numbers are recomputed from the result trees and never open a table, and
++# the paper numbers are recomputed from the result tree and never open a table, and
+ # "byte-identical" compares a regenerated table with the committed one -- which agree
+ # perfectly when both are wrong. v1.0.0 shipped `KB3 & - & - & - & - & - & -` and no
+ # busybox row at all, through seven rounds of green gates, because nothing asked whether
+@@ -231,16 +225,13 @@ this file back unchanged; a differing fingerprint means the generating code diff
+ which a commit id could not have told you. The commit this artifact was derived from
+ is recorded in the repository's root commit message.
+ 
+-## Trees
++## Input
+ 
+-| role | path | meaning |
+-|---|---|---|
+-| OLD | \`data/results\` | the tree the published tables were computed from |
+-| NEW | \`$R1\` | re-scored ConGen + interactive, each fold against its own oracle |
+-
+-Both are required. The correction rests on the PAIRING of the two, and a table
+-that mixes a column from one with a column from the other reproduces from
+-neither. That defect is what the N-item report was superseded for.
++Every table here is computed from \`$R1\` — the acquisition results, each fold
++scored against its own oracle. Both halves of the tree are inputs: \`congen/\`
++carries the passive results and \`interactive/\` the iterative baseline, and a
++table that draws a column from one and a stale copy of the other reproduces from
++neither. The script asserts both are present before it emits anything.
+ 
+ ## Gates passed
+ 

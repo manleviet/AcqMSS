@@ -1,0 +1,15 @@
+diff --git a/docs/code-standards.md b/docs/code-standards.md
+index dfca094..daf3f0c 100644
+--- a/docs/code-standards.md
++++ b/docs/code-standards.md
+@@ -715,8 +715,8 @@ max_solver_calls = 10000
+ timeout_seconds = 300.0
+ 
+ [output]
+-result_file = "data/results/arcade-game_CONGEN.json"
+-profiling_file = "data/results/arcade-game_profile.json"
++result_file = "scratch/arcade-game_CONGEN.json"
++profiling_file = "scratch/arcade-game_profile.json"
+ ```
+ 
+ ## Performance Considerations

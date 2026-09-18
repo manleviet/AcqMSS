@@ -1,0 +1,17 @@
+diff --git a/apps/conf/extract_results_config.toml b/apps/conf/extract_results_config.toml
+index eb87428..12bf282 100644
+--- a/apps/conf/extract_results_config.toml
++++ b/apps/conf/extract_results_config.toml
+@@ -3,10 +3,10 @@
+ 
+ [general]
+ # Directory containing CV result JSON files (*_cv_*.json)
+-results_dir = "data/results/congen"
++results_dir = "data/results_sosym_r1/congen"
+ 
+ # Directory to save generated tables (MD + LaTeX)
+-output_dir = "paper/tables"
++output_dir = "scratch/tables"
+ 
+ # Solver mode: "incremental", "non-incremental", or "both"
+ mode = "both"

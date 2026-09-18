@@ -1,0 +1,13 @@
+diff --git a/docs/adr/0019-defects-found-reviewing-the-artifact.md b/docs/adr/0019-defects-found-reviewing-the-artifact.md
+index 4813ed4..5ff174f 100644
+--- a/docs/adr/0019-defects-found-reviewing-the-artifact.md
++++ b/docs/adr/0019-defects-found-reviewing-the-artifact.md
+@@ -138,7 +138,7 @@ misleads a reader about a result:
+   argparse epilog, both of which name `python` and a bare script path;
+ - `apps/conf/test_eval_config.toml:2`, whose comment says
+   `python -m apps.run_congen_eval` — a module this artifact does not ship — and whose
+-  `output_dir` is `data/results`, the committed tree;
++  `output_dir` defaults to `data/results`, which is a destination rather than scratch;
+ - `docs/README.md:63` and `docs/code-standards.md:7` say **Python 3.13+**, while
+   `pyproject.toml`, the README and `reproduce_tables_sosym.sh` all say **>= 3.11**. The
+   three that govern installation agree; the two that disagree are internal notes. Each is prose on a path nobody is stuck on, and every
