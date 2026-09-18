@@ -202,8 +202,17 @@ KEPT=$(cd "$OUT" && git ls-files)
 # present without being selected: CITATION.cff does not exist upstream, and README.md
 # is replaced rather than copied), minus what the example/fold filter removed.
 ADDED=$( [ -d "$T/patches/files" ] && (cd "$T/patches/files" && find . -type f | sed 's|^\./||') || true )
+# A patch may DELETE a kept file -- an allowlist cannot remove one, so a deletion has
+# nowhere else to live. Read the deletions out of the patches themselves rather than
+# maintaining a second list beside them: a list that can disagree with the patches
+# would eventually disagree silently, and the disagreement reads as a missing file.
+DELETED=$(awk '/^--- a\//{f=substr($2,3)} /^\+\+\+ \/dev\/null/{print f}' "$T"/patches/*.patch 2>/dev/null || true)
 WANT=$(printf '%s\n%s\n' "$(printf '%s\n' "${FILES[@]}")" "$ADDED" \
         | grep -v '^$' | grep -v '^data/\(examples\|folds\)/' | sort -u)
+if [ -n "$DELETED" ]; then
+  WANT=$(comm -23 <(printf '%s\n' "$WANT") <(printf '%s\n' "$DELETED" | sort -u))
+  echo "  $(printf '%s\n' "$DELETED" | grep -c .) file(s) deleted by a patch, subtracted from the expected set"
+fi
 GOT=$(printf '%s\n' "$KEPT" | grep -v '^data/\(examples\|folds\)/' | sort)
 if [ "$WANT" != "$GOT" ]; then
   echo "  selected but absent from the commit:" >&2

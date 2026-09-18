@@ -1,0 +1,22 @@
+diff --git a/apps/run_compare.py b/apps/run_compare.py
+index 711b80a..d096211 100644
+--- a/apps/run_compare.py
++++ b/apps/run_compare.py
+@@ -20,7 +20,7 @@ Usage:
+     python -m apps.run_compare apps/conf/run_compare_config.toml -v
+ 
+     # CLI mode (single model — legacy standalone KB files)
+-    python -m apps.run_compare --kb data/results/model_kb.json --bias path --oracle path
++    python -m apps.run_compare --kb scratch/model_kb.json --bias path --oracle path
+ """
+ 
+ import argparse
+@@ -406,7 +406,7 @@ Example:
+     python -m apps.run_compare apps/conf/run_compare_config.toml -v
+ 
+     # CLI mode (standalone KB files)
+-    python -m apps.run_compare --kb data/results/model_kb.json --bias path --oracle path
++    python -m apps.run_compare --kb scratch/model_kb.json --bias path --oracle path
+         """
+     )
+     parser.add_argument('config', nargs='?', default=None,

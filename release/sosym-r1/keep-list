@@ -59,7 +59,6 @@ apps/_harness.py
 # there and reports a second result tree this artifact does not ship; a directory
 # prefix would re-admit it on the next carve, and the output-equals-allowlist gate
 # could not catch that -- the allowlist would be the thing asking for it.
-apps/sosym_r1/__init__.py
 apps/sosym_r1/check_paper_numbers.py
 apps/sosym_r1/check_table_coverage.py
 apps/sosym_r1/check_timing_provenance.py

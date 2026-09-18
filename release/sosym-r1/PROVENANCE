@@ -1,11 +1,11 @@
 target:     sosym-r1
-carved:     2026-09-05T09:13:06Z
-source:     AcqMSS 19f86dc (feat/sosym-r1)
-artifact:   54b8d1c
+carved:     2026-09-18T12:09:10Z
+source:     AcqMSS 6f93fa2 (feat/sosym-r1)
+artifact:   64e0152
             (recorded after the commit; a commit cannot name its own hash --
              verify by re-carving from the source SHA, not from inside it)
-generator:  344bea3 carve.sh, df88626 keep-list
-files:      916 selected by keep-list, before the example/fold filter
+generator:  74ba72d carve.sh, 2f2332c keep-list
+files:      602 selected by keep-list, before the example/fold filter
 
 gitignore radius: 1 tracked file(s) also matched by .gitignore
                   (this is why the root commit uses `git add -A -f`; at forty it would be reckless)
