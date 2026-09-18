@@ -23,6 +23,17 @@
 % So AcqMss is the acquisition loop minus Reduce, and preprocessing is NOT subtracted
 % from the loop: it never was part of it.
 %
+% EVERY CELL IS A MEAN OVER ALL THREE FOLDS. Five folds carry no GenNE/QX counters
+% at all: GenerateNE explains negative examples, and a training split with none never
+% runs it, so generate_ne.py returns before the counters are created. Those folds
+% contribute a measured ZERO and still count -- the phase ran zero times and cost
+% zero, which is a measurement, not a gap. Reading the absence as "no data" and
+% averaging over two folds instead would overstate the KB1 RS(m) preprocessing cost
+% by half. The correspondence is exact in both directions over all 84 folds: the
+% counters are absent in precisely the 5 folds whose training split has 0 negatives.
+% A counter missing while negatives ARE present is a different fault, and both the
+% generator and the gate raise on it rather than defaulting to zero.
+%
 % The three phase durations therefore sum to LESS than the total. The remainder is
 % setup and teardown outside all three timing scopes (5.8 ms to 11.8 s across the
 % folds); it is left unattributed rather than folded into a phase that did not spend it.
