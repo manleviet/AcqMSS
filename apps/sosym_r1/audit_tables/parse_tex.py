@@ -28,7 +28,10 @@ def rows_of(path: Path) -> list[list[str]]:
     out: list[list[str]] = []
     for line in text.splitlines():
         s = line.strip()
-        if not s or s.startswith(RULE_LINES) or s.startswith(r"\cmidrule"):
+        # A leading %-comment block carries each column's JSON path, unit and, for a
+        # derived column, its expression. It is documentation of the derivation and
+        # lives with the numbers rather than in a report nobody will have open.
+        if not s or s.startswith("%") or s.startswith(RULE_LINES) or s.startswith(r"\cmidrule"):
             continue
         if s.startswith((r"\begin{tabular}", r"\end{tabular}")):
             continue

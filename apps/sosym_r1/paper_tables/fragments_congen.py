@@ -64,50 +64,80 @@ def example_sizes_table(tree: ResultTree, data: Path) -> str:
     return tex.tabular("l" + "rr" * len(KB_LABELS), header, rows, rules)
 
 
+COST_HEADER = r"""% Cost per (knowledge base, sampling) unit. Every value is the MEAN OVER THE THREE
+% FOLDS of the quantity named, computed from data/results_sosym_r1/congen/<unit>.json.
+%
+% column              unit    source / expression
+% ------------------  ------  --------------------------------------------------------
+% AcqMss checks       checks  folds[].performance.profiler.paper_consistency_checks
+% AcqMss ms           ms      DERIVED: performance.congen_runtime_ms
+%                                      - performance.reduce_runtime_ms
+% Reduce checks       checks  folds[].performance.redundancy_consistency_checks
+% Reduce ms           ms      folds[].performance.reduce_runtime_ms
+% GenNE/QX checks     checks  profiler.shared_preprocessing_quickxplain_checks
+% GenNE/QX ms         ms      profiler.shared_preprocessing_runtime.total x 1000
+% total checks        checks  DERIVED: AcqMss + Reduce + GenNE/QX checks
+% total ms            ms      folds[].performance.runtime_ms
+%
+% SCOPES, measured over all 84 folds rather than assumed -- this is the containment
+% the one derived duration depends on, and getting it backwards printed a NEGATIVE
+% AcqMss runtime for KB2 before it was checked:
+%   reduce_runtime_ms is INSIDE congen_runtime_ms          (0 folds violate)
+%   shared_preprocessing_runtime is DISJOINT from it       (0 folds violate)
+%   congen_runtime_ms + preprocessing <= runtime_ms        (0 folds violate)
+%   profiler.congen_total_time == performance.runtime_ms   (0 folds violate)
+% So AcqMss is the acquisition loop minus Reduce, and preprocessing is NOT subtracted
+% from the loop: it never was part of it.
+%
+% The three phase durations therefore sum to LESS than the total. The remainder is
+% setup and teardown outside all three timing scopes (5.8 ms to 11.8 s across the
+% folds); it is left unattributed rather than folded into a phase that did not spend it.
+%
+% profiler.acqmss_runtime is NOT used. It accumulates over thousands of nested
+% recursive calls -- 149.9 s against a 15.2 s run on KB3 RS(n) -- so it is not a
+% duration, and printing it beside one inflates AcqMss against Reduce, which is the
+% one comparison this table exists to support.
+"""
+
+
+def _unit_cost(tree: ResultTree, stem: str, samp: str) -> dict[str, float | None]:
+    """The eight cost quantities for one unit, as per-fold means."""
+    folds = tree.require(stem, samp)
+    checks = tree.phase_checks(folds)
+    ms = tree.phases_ms(folds)
+    return {"acqmss_checks": checks["acqmss"], "acqmss_ms": ms["acqmss"],
+            "reduce_checks": checks["reduce"], "reduce_ms": ms["reduce"],
+            "prep_checks": checks["preprocessing"], "prep_ms": ms["preprocessing"],
+            "total_checks": checks["total"], "total_ms": ms["total"]}
+
+
+COST_COLUMNS = ("acqmss_checks", "acqmss_ms", "reduce_checks", "reduce_ms",
+                "prep_checks", "prep_ms", "total_checks", "total_ms")
+
+
 def acqmss_runtime(tree: ResultTree, data: Path) -> str:
-    """AcqMss consistency checks / runtime (ms), the paper's two-quantity shape."""
-    def cell(folds, stem, samp, not_run):
-        if not_run:
-            return tex.NA
-        checks = tree.consistency_checks(folds)
-        ms = tree.runtime_ms(folds)
-        return f"{tex.count(checks)}~/~{tex.millis(ms)}"
-    return tex.tabular("l" + "r" * len(KB_LABELS),
-                       [["Strategy", *KB_LABELS]], _grid(tree, cell))
+    """Cost per unit: three phases and a total, in checks and milliseconds.
 
-
-def acqmss_phases(tree: ResultTree, data: Path) -> str:
-    """Per-phase cost: AcqMss, Reduce, preprocessing, and the total including it.
-
-    Three phases and a total, per knowledge base, as the mean over the six sampling
-    strategies' per-fold means. Checks above runtime, both in the paper's units.
-
-    WHY THE MEAN OVER SAMPLINGS: the per-phase story is about the algorithm's shape
-    -- Reduce is linear in |B'| while AcqMss is logarithmic in n/gamma -- and that
-    shape does not depend on which sampler produced the examples. A 6x5 grid per
-    phase would be four tables, and none of them would say anything the shape does
-    not already say.
+    One row per (knowledge base, sampling), like every other table, and one column per
+    quantity. No aggregation over samplings: a mean across samplers would hide that
+    2-COV costs ten consistency checks where RS(3n) costs thousands, and any narrower
+    view the paper wants is derivable from this one without recomputing anything.
     """
     rows = []
-    phases = (("AcqMss", "acqmss"), (r"\textsc{Reduce}", "reduce"),
-              ("GenerateNE / QuickXplain", "preprocessing"), ("total", "total"))
-    for quantity, fmt in (("checks", tex.count), ("runtime (ms)", tex.millis)):
-        for phase_label, key in phases:
-            cells = [f"{quantity}, {phase_label}"]
-            for stem, *_ in KNOWLEDGE_BASES:
-                vals = []
-                for samp, _ in SAMPLINGS:
-                    if is_not_run(stem, samp):
-                        continue
-                    folds = tree.require(stem, samp)
-                    block = (tree.phase_checks(folds) if quantity == "checks"
-                             else tree.phases_ms(folds))
-                    if block[key] is not None:
-                        vals.append(block[key])
-                cells.append(fmt(sum(vals) / len(vals) if vals else None))
-            rows.append(cells)
-    return tex.tabular("l" + "r" * len(KB_LABELS),
-                       [["Quantity and phase", *KB_LABELS]], rows)
+    for stem, label, *_ in KNOWLEDGE_BASES:
+        for samp, samp_label in SAMPLINGS:
+            if is_not_run(stem, samp):
+                rows.append([label, samp_label] + [tex.NA] * len(COST_COLUMNS))
+                continue
+            v = _unit_cost(tree, stem, samp)
+            rows.append([label, samp_label] + [
+                (tex.count(v[c]) if c.endswith("checks") else tex.millis(v[c]))
+                for c in COST_COLUMNS])
+    header = [["", "", tex.multicolumn(2, "AcqMss"), tex.multicolumn(2, r"\textsc{Reduce}"),
+               tex.multicolumn(2, "GenNE / QX"), tex.multicolumn(2, "total")],
+              ["KB", "Strategy"] + ["checks", "ms"] * 4]
+    rules = [tex.cmidrules(4, 2, first_col=3), ""]
+    return COST_HEADER + tex.tabular("ll" + "rr" * 4, header, rows, rules)
 
 
 def accuracy_all(tree: ResultTree, data: Path) -> str:

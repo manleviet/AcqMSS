@@ -216,8 +216,8 @@ for f in results_tables.md results_tables.tex corrected-gap-table.md significanc
   [ -s "$TABLES_DIR/$f" ] || die "missing or empty artifact: $TABLES_DIR/$f"
 done
 n_frag=$(ls "$TABLES_DIR"/paper/*.tex 2>/dev/null | wc -l | tr -d ' ')
-[ "$n_frag" -eq 13 ] \
-  || die "expected 13 paper fragments in $TABLES_DIR/paper, found $n_frag"
+[ "$n_frag" -eq 12 ] \
+  || die "expected 12 paper fragments in $TABLES_DIR/paper, found $n_frag"
 echo "  ok: five artifacts and $n_frag paper fragments present and non-empty"
 
 # An artifact must state the state at generation time, never a plan.

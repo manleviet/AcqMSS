@@ -26,6 +26,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from apps.sosym_r1.audit_tables import parse_tex as P  # noqa: E402
+from apps.sosym_r1.audit_tables import properties as PR  # noqa: E402
 from apps.sosym_r1.audit_tables import reread as R  # noqa: E402
 
 # The gate declares the frozen vocabulary itself rather than importing the
@@ -46,6 +47,7 @@ class Audit:
     def __init__(self) -> None:
         self.checked = 0
         self.bad: list[str] = []
+        self.properties: tuple[int, float] | None = None
 
     def cell(self, where: str, got: str, want: str) -> None:
         self.checked += 1
@@ -92,15 +94,72 @@ def check_example_sizes(a: Audit, d: Path) -> None:
     _grid(a, d / "tab_example_sizes.tex", 2, want, "example_sizes", per_kb=2)
 
 
+COST_COLS = ("acqmss checks", "acqmss ms", "reduce checks", "reduce ms",
+             "prep checks", "prep ms", "total checks", "total ms")
+MS_COLUMNS = {3: "AcqMss ms", 5: "Reduce ms", 7: "GenNE/QX ms", 9: "total ms"}
+CHECK_PARTS, CHECK_TOTAL = [2, 4, 6], 8
+MS_PARTS, MS_TOTAL = [3, 5, 7], 9
+
+
+def _cost_rows(d: Path) -> list[list[str]]:
+    return P.body_rows(d / "tab_AcqMssruntime.tex", 2)
+
+
 def check_acqmss_runtime(a: Audit, d: Path) -> None:
-    def want(stem, samp, j):
-        if (stem, samp) in NOT_RUN:
-            return NA
-        fs = a.folds(stem, samp, "congen")
-        checks = R.perf_mean(fs, "consistency_checks")
-        ms = R.perf_mean(fs, "runtime_ms")
-        return f"{R.fmt_count(checks)}~/~{R.fmt_count(ms)}"
-    _grid(a, d / "tab_AcqMssruntime.tex", 1, want, "AcqMssruntime")
+    """Re-derive the eight cost quantities per unit.
+
+    AcqMss is the acquisition loop MINUS Reduce, and preprocessing is not subtracted:
+    it is a disjoint scope. That is asserted as a property of the JSON by
+    check_cost_properties, so this re-derivation cannot quietly agree with a wrong
+    definition the way the first version of it did.
+    """
+    rows = _cost_rows(d)
+    expected = len(KBS) * len(SAMPLINGS)
+    if len(rows) != expected:
+        a.bad.append(f"AcqMssruntime: {len(rows)} body rows, expected {expected}")
+        return
+    i = 0
+    for stem in KBS:
+        for samp in SAMPLINGS:
+            cells = P.expand(rows[i])[2:]
+            if (stem, samp) in NOT_RUN:
+                for j, got in enumerate(cells):
+                    a.cell(f"cost {stem} {samp} {COST_COLS[j]}", got, NA)
+                i += 1
+                continue
+            fs = a.folds(stem, samp, "congen")
+            acq_c = R.profiler_scalar(fs, "paper_consistency_checks")
+            red_c = R.perf_mean(fs, "redundancy_consistency_checks") or 0.0
+            pre_c = R.profiler_scalar(fs, "shared_preprocessing_quickxplain_checks")
+            loop = R.perf_mean(fs, "congen_runtime_ms")
+            red_ms = R.perf_mean(fs, "reduce_runtime_ms") or 0.0
+            pre_ms = R.profiler_total_ms(fs, "shared_preprocessing_runtime")
+            want = [R.fmt_count(acq_c), R.fmt_count(loop - red_ms),
+                    R.fmt_count(red_c), R.fmt_count(red_ms),
+                    R.fmt_count(pre_c), R.fmt_count(pre_ms),
+                    R.fmt_count(acq_c + red_c + pre_c),
+                    R.fmt_count(R.perf_mean(fs, "runtime_ms"))]
+            for j, got in enumerate(cells):
+                a.cell(f"cost {stem} {samp} {COST_COLS[j]}", got, want[j])
+            i += 1
+
+
+def check_cost_properties(a: Audit, d: Path) -> None:
+    """Properties the cost table must have whatever expression produced it.
+
+    These do not re-derive anything, which is the point: a re-derivation shares the
+    generator's definition and will agree with a wrong one. A negative duration, a
+    phase sum exceeding its total, or a total that is not the sum of its parts are
+    wrong under EVERY correct derivation.
+    """
+    rows = _cost_rows(d)
+    failures = PR.durations_non_negative(rows, MS_COLUMNS)
+    over, slack = PR.phases_within_total(rows, MS_PARTS, MS_TOTAL, "runtime")
+    failures += over
+    failures += PR.parts_sum_to_total(rows, CHECK_PARTS, CHECK_TOTAL, "checks")
+    failures += PR.timing_scopes(TREE / "congen")
+    a.properties = (len(rows), slack)
+    a.bad += failures
 
 
 def check_accuracy_all(a: Audit, d: Path) -> None:
@@ -266,50 +325,112 @@ def check_significance(a: Audit, d: Path) -> None:
         a.bad.append(f"significance: alpha moved to {ALPHA}; the caption says 0.05")
 
 
-def check_acqmss_phases(a: Audit, d: Path) -> None:
-    """The per-phase fragment. Eight rows: two quantities over four phases.
+def check_iterative_accuracy(a: Audit, d: Path) -> None:
+    def want(stem, samp, method, j):
+        if (stem, samp) in NOT_RUN:
+            return NA
+        mean, _ = R.accuracy_mean_sd(a.folds(stem, samp, method))
+        return R.fmt_quality(mean)
+    _method_grid(a, d / "tab_iterative_accuracy.tex", 1, want, "iterative_accuracy")
 
-    AcqMss is the acquisition loop minus the two phases that are timed once each.
-    ``acqmss_runtime`` is not read on either side: it accumulates over thousands of
-    nested recursive calls and exceeds the whole run's wall clock, so it is not a
-    duration at all.
-    """
-    rows = P.body_rows(d / "tab_AcqMssruntime_phases.tex", 1)
-    if len(rows) != 8:
-        a.bad.append(f"AcqMssruntime_phases: {len(rows)} body rows, expected 8")
-        return
-    phases = ["acqmss", "reduce", "preprocessing", "total"]
-    for i, row in enumerate(rows):
-        quantity = "checks" if i < 4 else "runtime"
-        phase = phases[i % 4]
-        for k, stem in enumerate(KBS):
-            vals = []
-            for samp in SAMPLINGS:
+
+def check_iterative_semantic(a: Audit, d: Path) -> None:
+    short = {"max_queries": "budget", "no_query": "no query", "pool_exhausted": "pool"}
+    def want(stem, samp, method, j):
+        if (stem, samp) in NOT_RUN:
+            return NA
+        fs = a.folds(stem, samp, method)
+        if j == 0:
+            return R.fmt_quality(R.tier_mean(fs, "semantic", "f1_score"))
+        if method == "congen":
+            return UND
+        if j == 1:
+            return R.fmt_count(R.queries_mean(fs))
+        return ",".join(short.get(s, s) for s in R.stop_set(fs)) or UND
+    _method_grid(a, d / "tab_iterative_semantic.tex", 2, want, "iterative_semantic", 3)
+
+
+def check_runtime_comparison(a: Audit, d: Path) -> None:
+    def want(stem, samp, method, j):
+        if (stem, samp) in NOT_RUN:
+            return NA
+        return R.fmt_count(R.perf_mean(a.folds(stem, samp, method), "runtime_ms"))
+    _method_grid(a, d / "tab_runtime_comparison.tex", 1, want, "runtime_comparison")
+
+
+def check_rule_learners(a: Audit, d: Path) -> None:
+    import json
+    doc = json.loads((TREE / "baselines" / "baselines.json").read_text())
+    by: dict[tuple[str, str], list[dict]] = {}
+    for row in doc["rows"]:
+        unit = row["kb"]
+        stem = next(s for s in KBS if unit.startswith(s + "_"))
+        by.setdefault((unit[len(stem) + 1:] and stem, unit[len(stem) + 1:]), [])
+        by.setdefault((stem, unit[len(stem) + 1:]), []).append(row)
+
+    rows = P.body_rows(d / "tab_rule_learners.tex", 2)
+    keys = ["accuracy", "sem_precision", "sem_recall", "sem_f1"]
+    i = 0
+    for samp in SAMPLINGS:
+        for learner in LEARNERS:
+            cells = P.expand(rows[i])[2:]
+            for k, stem in enumerate(KBS):
+                block = cells[k * 4:(k + 1) * 4]
                 if (stem, samp) in NOT_RUN:
+                    for j, got in enumerate(block):
+                        a.cell(f"rule_learners {samp} {learner} {stem} col{j}", got, NA)
                     continue
-                fs = a.folds(stem, samp, "congen")
-                if quantity == "checks":
-                    acq = R.profiler_scalar(fs, "paper_consistency_checks")
-                    red = R.perf_mean(fs, "redundancy_consistency_checks") or 0.0
-                    pre = R.profiler_scalar(fs, "shared_preprocessing_quickxplain_checks")
-                    block = {"acqmss": acq, "reduce": red, "preprocessing": pre,
-                             "total": None if acq is None else acq + red + pre}
+                unit = [r for r in by.get((stem, samp), []) if r["learner"] == learner]
+                scored = [r for r in unit if not r.get("degenerate")]
+                if not unit:
+                    want = [UND] * 4
+                elif not scored:
+                    reasons = {r.get("degenerate") for r in unit}
+                    label = ("too few" if reasons == {"too_few_instances"}
+                             else "no rules" if reasons == {"no_rules_learned"}
+                             else "degenerate")
+                    want = [label] * 4
                 else:
-                    loop = R.perf_mean(fs, "congen_runtime_ms")
-                    red = R.perf_mean(fs, "reduce_runtime_ms") or 0.0
-                    pre = R.profiler_total_ms(fs, "shared_preprocessing_runtime")
-                    block = {"acqmss": None if loop is None else loop - red - pre,
-                             "reduce": red, "preprocessing": pre,
-                             "total": R.perf_mean(fs, "runtime_ms")}
-                if block[phase] is not None:
-                    vals.append(block[phase])
-            want = R.fmt_count(sum(vals) / len(vals)) if vals else UND
-            a.cell(f"phases {quantity} {phase} {stem}", P.expand(row)[1 + k], want)
+                    want = [R.fmt_quality(sum(r[k_] for r in scored) / len(scored))
+                            for k_ in keys]
+                for j, got in enumerate(block):
+                    a.cell(f"rule_learners {samp} {learner} {stem} col{j}", got, want[j])
+            i += 1
+
+
+def check_significance(a: Audit, d: Path) -> None:
+    from significance_tests import ALPHA, compute, floor_p, holm
+    family = {r["name"].split()[0] for r in holm(compute()) if True}
+    rejected = {r["name"].split()[0] for r in holm(compute()) if r["reject"]}
+    rows = P.body_rows(d / "tab_significance.tex", 1)
+    results = {r["name"].split()[0]: r for r in compute()}
+    if len(rows) != len(results):
+        a.bad.append(f"significance: {len(rows)} rows for {len(results)} claims")
+        return
+    for row in rows:
+        claim = row[0]
+        r = results.get(claim)
+        if r is None:
+            a.bad.append(f"significance: fragment names an unknown claim {claim!r}")
+            continue
+        a.cell(f"significance {claim} n", row[1], R.fmt_count(r["n"]))
+        a.cell(f"significance {claim} median", row[2], "%.4f" % r["median"])
+        a.cell(f"significance {claim} wins", row[3], f"{r['wins']}/{r['n']}")
+        if claim in family:
+            want_p = r"$< 10^{-7}$" if r["p"] < 1e-7 else "%.4f" % r["p"]
+            want_v = "reject" if claim in rejected else "retain"
+        else:
+            want_p = r"$\geq %.4f$" % floor_p(r["n"])
+            want_v = r"not testable at $n = %d$" % r["n"]
+        a.cell(f"significance {claim} p", row[4], want_p)
+        a.cell(f"significance {claim} verdict", row[5], want_v)
+    if ALPHA != 0.05:
+        a.bad.append(f"significance: alpha moved to {ALPHA}; the caption says 0.05")
 
 
 CHECKS = (check_fm_summary, check_example_sizes, check_acqmss_runtime,
           check_accuracy_all, check_comparison_strategies, check_semantic_pr,
-          check_kb_size, check_acqmss_phases, check_iterative_accuracy, check_iterative_semantic,
+          check_kb_size, check_cost_properties, check_iterative_accuracy, check_iterative_semantic,
           check_runtime_comparison, check_rule_learners, check_significance)
 
 MINIMUM_CELLS = 1000
@@ -331,6 +452,9 @@ def main() -> int:
         except Exception as exc:                       # a broken fragment is red
             audit.bad.append(f"{check.__name__} raised {type(exc).__name__}: {exc}")
 
+    if audit.properties:
+        n_rows, slack = audit.properties
+        print(f"\ncost-table properties: {n_rows} units checked for negative\n  durations, phase sums within their total, and parts summing to it;\n  largest unattributed runtime slack {slack:.0f} ms")
     print(f"\n{audit.checked} cells checked, {len(audit.bad)} mismatched")
     for line in audit.bad[:40]:
         print(f"  {line}")

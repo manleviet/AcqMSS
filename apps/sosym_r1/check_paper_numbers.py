@@ -504,6 +504,44 @@ cg_with_queries = sum(
 check('ConGen folds issuing oracle queries', cg_with_queries, 0)
 
 # ---------------------------------------------------------------------------
+# 9b. Two figures the drafts quote about variation. Both are asserted against a
+#     COMMITTED measurement, because neither is recoverable from the result files
+#     alone -- one needs a probe, the other needs a stated definition.
+# ---------------------------------------------------------------------------
+print('\n9b. variation: Reduce input-order sensitivity, and runtime spread')
+
+# The spread between folds of the SAME cell, max/min of the fold wall clocks. Named
+# here because "runtime spread" has no meaning until the population is stated, and
+# the drafts' 2.8x is a different quantity entirely (see the order-sensitivity block
+# below): it is the description:semantic spread ratio, not a ratio of runtimes.
+spreads = []
+for f in sorted(glob.glob(str(R1 / '*_cv_incremental.json'))):
+    rts = [(x.get('performance') or {}).get('runtime_ms')
+           for x in (json.load(open(f)).get('folds') or [])]
+    rts = [r for r in rts if r]
+    if len(rts) > 1 and min(rts) > 0:
+        spreads.append(max(rts) / min(rts))
+check('largest per-cell fold-runtime spread, max/min', max(spreads), 1.5249, tol=1e-4)
+check('   ... cells with more than one timed fold', len(spreads), 28)
+
+# Reduce is greedy: the surviving redundant representative depends on the order it
+# walks B'. The finding is the RATIO -- order moves the description tier far more
+# than the semantic one -- not the absolute spreads, so the ratio is what is pinned.
+_os = REPO / 'data' / 'results_sosym_r1' / 'order_sensitivity' / 'order_sensitivity.json'
+if not _os.exists():
+    failures.append('order-sensitivity measurement missing -- checks skipped')
+else:
+    _s = json.load(open(_os))['summary']
+    check('order sensitivity: folds measured', _s['folds'], 84)
+    check('order sensitivity: permutations per fold', _s['permutations_per_fold'], 20)
+    check('order sensitivity: folds whose score moved with order', _s['folds_whose_score_moved'], 77)
+    check('order sensitivity: largest description spread', _s['max_description_spread'], 0.5182, tol=1e-4)
+    check('order sensitivity: largest semantic spread', _s['max_semantic_spread'], 0.8385, tol=1e-4)
+    check('order sensitivity: description:semantic ratio, median', _s['desc_over_sem_ratio_median'], 2.7857, tol=1e-4)
+    check('   ... folds with a finite ratio', _s['desc_over_sem_ratio_n_finite'], 67)
+    check('   ... folds with ZERO semantic spread', _s['folds_with_zero_semantic_spread'], 17)
+
+# ---------------------------------------------------------------------------
 # 10. C9's significance tests. Asserted through significance_tests.compute() so
 #     the suite checks THOSE numbers, not a second implementation of them.
 #

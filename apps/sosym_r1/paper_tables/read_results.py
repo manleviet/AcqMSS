@@ -112,13 +112,26 @@ class ResultTree:
     def phases_ms(self, folds: list[dict]) -> dict[str, float | None]:
         """Per-phase wall clock, in milliseconds, as per-fold means.
 
-        ``acqmss_runtime`` is NOT usable here and is deliberately not read. It is a
-        timer accumulated over 3,000+ nested recursive calls, so its total exceeds
-        the whole run's wall clock by an order of magnitude; printing it beside a
-        real duration would inflate the AcqMss column against Reduce's, which is
-        the exact comparison this table exists to make. AcqMss is therefore the
-        residual of the acquisition loop after the two phases that are measured
-        once each.
+        THE SCOPES, measured over all 84 folds rather than assumed:
+
+          ``reduce_runtime_ms`` is INSIDE ``congen_runtime_ms``     (0 violations)
+          ``shared_preprocessing_runtime`` is DISJOINT from it      (0 violations)
+          their sum is within ``runtime_ms``                        (0 violations)
+          ``profiler.congen_total_time`` == ``runtime_ms``          (0 violations)
+
+        So AcqMss is the acquisition loop minus Reduce, and preprocessing is NOT
+        subtracted from the loop -- it was never part of it. Subtracting it anyway
+        printed a NEGATIVE AcqMss duration for KB2, and the cell gate agreed,
+        because a re-derivation that shares the definition agrees with a wrong one.
+        The containment above is now asserted by audit_tables/properties.py, which
+        does not share this expression.
+
+        The three phases sum to LESS than the total. The remainder is setup and
+        teardown outside every timing scope; it stays unattributed rather than being
+        folded into a phase that did not spend it.
+
+        ``acqmss_runtime`` is NOT read. It accumulates over thousands of nested
+        recursive calls -- 149.9 s against a 15.2 s run -- so it is not a duration.
         """
         def prof_total(fold: dict, key: str) -> float:
             block = ((fold.get("performance") or {}).get("profiler") or {}).get(key)
@@ -131,10 +144,9 @@ class ResultTree:
             if loop is None:
                 continue
             reduce_ms = perf.get("reduce_runtime_ms") or 0.0
-            pre_ms = prof_total(f, "shared_preprocessing_runtime")
             red.append(reduce_ms)
-            pre.append(pre_ms)
-            acq.append(loop - reduce_ms - pre_ms)
+            pre.append(prof_total(f, "shared_preprocessing_runtime"))
+            acq.append(loop - reduce_ms)
             tot.append(perf.get("runtime_ms") or loop)
         m = lambda xs: st.mean(xs) if xs else None  # noqa: E731
         return {"acqmss": m(acq), "reduce": m(red), "preprocessing": m(pre), "total": m(tot)}
