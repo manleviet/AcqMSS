@@ -34,7 +34,12 @@ from conacq.runners.metrics import (
 DATA_DIR = Path(__file__).parent.parent / "data"
 FM_PATH = DATA_DIR / "fms" / "REAL-FM-7.uvl"
 BIAS_PATH = DATA_DIR / "bias" / "REAL-FM-7-bias.json"
-RESULT_PATH = DATA_DIR / "results" / "old_results" / "REAL-FM-7_rs_1n_non-incremental_fold1_kb.json"
+# A single learned knowledge base, extracted from fold 0 of the committed
+# cross-validation result. A CV file cannot stand in for it directly: it carries
+# its constraints inside folds[], so loading one here yields an EMPTY kb and the
+# assertions below pass on nothing -- the exact shape ADR-0019 records.
+# Regenerate with tools/sosym_r1/make_single_kb_fixture.py if the tree is re-scored.
+RESULT_PATH = Path(__file__).parent / "resources" / "congen_kb_REAL-FM-7_rs_1n_fold0.json"
 EXAMPLES_RS_1N_PATH = DATA_DIR / "examples" / "REAL-FM-7_rs_1n.json"
 
 
