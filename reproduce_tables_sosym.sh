@@ -6,7 +6,8 @@
 #   ./reproduce_tables_sosym.sh --print-fingerprint   # the generator's hash, nothing else
 #
 # Output: data/results_sosym_r1/tables/ — results_tables.{md,tex}, corrected-gap-table.md,
-#         significance.md, target-clause-counts.md, PROVENANCE.md
+#         significance.md, target-clause-counts.md, PROVENANCE.md, and
+#         tables/paper/ — one LaTeX fragment per table the paper prints.
 #
 # Every step is gated. The script stops at the first failure and says which one;
 # it never emits tables from inputs it could not verify. Both gates existed before
@@ -47,13 +48,22 @@ export PYTHONPATH=.
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 die() { printf '\n\033[31mFAILED: %s\033[0m\n' "$*" >&2; exit 1; }
 
-# The five files whose bytes ARE the generator. Hashed rather than resolved to a
-# commit; see the long note at the fingerprint's use below.
+# The files whose bytes ARE the generator. Hashed rather than resolved to a commit;
+# see the long note at the fingerprint's use below. The audit side
+# (check_paper_tables.py and apps/sosym_r1/audit_tables/) is deliberately NOT in
+# this list: it is what checks the tables, not what makes them, and hashing it here
+# would make an improvement to the checker look like a change to the results.
 GENERATOR_FILES="reproduce_tables_sosym.sh
 apps/extract_results.py
 apps/sosym_r1/measure_corrected_gap_table.py
 apps/sosym_r1/significance_tests.py
-apps/sosym_r1/count_target_clauses.py"
+apps/sosym_r1/count_target_clauses.py
+apps/sosym_r1/make_paper_tables.py
+apps/sosym_r1/paper_tables/frozen.py
+apps/sosym_r1/paper_tables/latex.py
+apps/sosym_r1/paper_tables/read_results.py
+apps/sosym_r1/paper_tables/fragments_congen.py
+apps/sosym_r1/paper_tables/fragments_comparison.py"
 
 compute_fingerprint() {
   # Each file asserted present before hashing. A missing file would otherwise hash to
@@ -178,6 +188,10 @@ python3 apps/sosym_r1/significance_tests.py > "$TABLES_DIR/significance.md" \
   || die "significance tests"
 python3 apps/sosym_r1/count_target_clauses.py > "$TABLES_DIR/target-clause-counts.md" \
   || die "target clause counts"
+# One fragment per table the paper prints, each holding a single tabular. The paper
+# \input{}s these; nothing in it is typed by hand any more.
+python3 apps/sosym_r1/make_paper_tables.py --out "$TABLES_DIR/paper" \
+  || die "paper table fragments"
 
 # ---------------------------------------------------------------- 5. verify
 say "5/6  verify the emitted artifacts"
@@ -201,7 +215,10 @@ for f in results_tables.md results_tables.tex corrected-gap-table.md significanc
          target-clause-counts.md; do
   [ -s "$TABLES_DIR/$f" ] || die "missing or empty artifact: $TABLES_DIR/$f"
 done
-echo "  ok: five artifacts present and non-empty"
+n_frag=$(ls "$TABLES_DIR"/paper/*.tex 2>/dev/null | wc -l | tr -d ' ')
+[ "$n_frag" -eq 13 ] \
+  || die "expected 13 paper fragments in $TABLES_DIR/paper, found $n_frag"
+echo "  ok: five artifacts and $n_frag paper fragments present and non-empty"
 
 # An artifact must state the state at generation time, never a plan.
 if grep -qniE 'pending|tonight|overnight|TODO|FIXME' "$TABLES_DIR"/*.md; then
@@ -219,6 +236,14 @@ echo "  ok: no plan strings"
 python3 apps/sosym_r1/check_table_coverage.py --tables "$TABLES_DIR" \
   || die "table coverage -- a model with results is missing from the tables, or a row is
        blank while its neighbours have data. Fix the mapping, never the expectation."
+
+# EVERY CELL, re-derived. A second reader of the same JSON parses each emitted
+# fragment and recomputes every cell, sharing no aggregation code with the
+# generator above -- so a mistake in the aggregation has to be made twice,
+# identically, to reach the paper. A fragment it cannot parse is red, not skipped.
+python3 apps/sosym_r1/check_paper_tables.py --tables "$TABLES_DIR/paper" \
+  || die "paper tables -- a cell does not re-derive from the committed results. Fix
+       the fragment or the generator; never the expectation."
 
 cat > "$TABLES_DIR/PROVENANCE.md" <<EOF
 # Provenance
@@ -246,6 +271,8 @@ neither. That defect is what the N-item report was superseded for.
 
 - \`check_timing_provenance.py\` — no reported runtime overlaps another run
 - \`check_paper_numbers.py\` — every quoted number recomputes from committed data
+- \`check_paper_tables.py\` — every cell of every paper fragment re-derives from the
+  same JSON, by a reader that shares no aggregation code with the generator
 
 ## Not re-runnable from here
 

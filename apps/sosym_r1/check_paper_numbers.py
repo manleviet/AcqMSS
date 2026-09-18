@@ -255,6 +255,23 @@ check('accept-everything baseline, pooled (reference only, NOT comparable)',
 check('accuracy folds internally consistent with their own test split', acc_mismatch, 0)
 check('   ... folds checked', acc_folds > 80, True)
 
+# The trivial baseline is a REFERENCE, and the paper states what it references:
+# accepting every configuration beats ConGen's accuracy in most cells. That is the
+# predicted consequence of maximality -- a maximal satisfiable subset keeps every
+# constraint the examples do not rule out, so it rejects configurations a permissive
+# model would accept -- and softening it would be hiding the thing the design implies.
+below_trivial = 0
+for f in sorted(glob.glob(str(R1 / '*_cv_incremental.json'))):
+    d = json.load(open(f))
+    fs = d.get('folds') or []
+    accs = [x['accuracy'] for x in fs if x.get('accuracy') is not None]
+    shares = [x['test_size']['positive'] / (x['test_size']['positive'] + x['test_size']['negative'])
+              for x in fs if x.get('test_size')
+              and (x['test_size']['positive'] + x['test_size']['negative'])]
+    if accs and shares and statistics.mean(accs) < statistics.mean(shares):
+        below_trivial += 1
+check('cells where ConGen is below the accept-everything baseline', below_trivial, 20)
+
 # ---------------------------------------------------------------------------
 # 5. Fold agreement, reported as a STABILITY statistic and never as a score.
 # ---------------------------------------------------------------------------
