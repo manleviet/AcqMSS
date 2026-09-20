@@ -106,6 +106,22 @@ if [ -f "$cff" ]; then
   fi
 fi
 
+# A GENERATED FILE THAT NOBODY REGENERATES. data/bias-config/README.md described the
+# eight configs beside it, and described three of them wrongly: it was a captured
+# console log, so it recorded settings from the run that produced it rather than the
+# settings in the files it names. It said `all` where the YAML says `extracted` --
+# the difference between pairing every feature and pairing the 14, 34 and 34 that the
+# evaluation actually pairs. Nothing disagreed with it, because a log agrees with
+# nothing by construction.
+#
+# It is now rendered from those YAMLs, and this re-renders and compares. The check is
+# the render itself, so it cannot drift from what it checks the way a second
+# description of the same data would.
+if ! PYTHONPATH=. python3 apps/describe_bias_configs.py --check; then
+  echo "  ^ data/bias-config/README.md no longer describes the configs beside it" >&2
+  fail=1
+fi
+
 # No path in ANY commit belongs to the other project. With a single root commit this is
 # cheap, but it stays because it is the only check that would survive a return to
 # carrying history, and it is the one that has actually caught things: two files no
@@ -120,4 +136,4 @@ if [ "$fail" -ne 0 ]; then
   printf '\n\033[31mFAILED: release hygiene\033[0m\n' >&2
   exit 1
 fi
-printf '\033[32mOK\033[0m — five release-hygiene checks pass\n'
+printf '\033[32mOK\033[0m — six release-hygiene checks pass\n'

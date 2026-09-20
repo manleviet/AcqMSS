@@ -96,6 +96,10 @@ apps/sosym_r1/paper_tables/
 apps/sosym_r1/audit_tables/
 # Run configs. Verified to contain no file naming a dropped cell.
 apps/conf/
+# Renders data/bias-config/README.md from the YAML configs. It ships because the file
+# it renders ships, and because check-release-hygiene.sh runs its --check against the
+# carve: a description of the data is only trustworthy while something re-derives it.
+apps/describe_bias_configs.py
 apps/extract_results.py
 apps/generate_bias_config.py
 apps/generate_bias_files.py

@@ -161,3 +161,27 @@ def test_save_statistics_content(bias, tmp_path):
     assert f"Total features: {EXPECTED_NUM_FEATURES}" in text
     assert f"Total constraints: {EXPECTED_TOTAL}" in text
     assert f"Total clauses: {EXPECTED_NUM_CLAUSES}" in text
+
+
+# --- the README that describes those configs -------------------------------
+
+def test_bias_config_readme_is_the_render_of_the_configs():
+    """The committed README must equal what the configs render to, here and now.
+
+    It used to be a captured console log, and it disagreed with three of the eight
+    configs it described -- `all` where the YAML says `extracted`. Nothing held the
+    two together, so nothing reported it. `check-release-hygiene.sh` runs the same
+    comparison before a carve is published; this one runs on every commit, which is
+    where the drift is cheap to fix.
+    """
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from apps.describe_bias_configs import CONFIG_DIR, describe, render
+
+    configs = sorted(CONFIG_DIR.glob("*.yaml"))
+    assert configs, f"no bias configs under {CONFIG_DIR}"
+    assert (CONFIG_DIR / "README.md").read_text() == render([describe(p) for p in configs]), (
+        "data/bias-config/README.md has drifted from the YAML configs it describes. "
+        "Re-render it: python3 apps/describe_bias_configs.py"
+    )
