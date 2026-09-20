@@ -1,5 +1,5 @@
 diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_numbers.py
-index ee9cdca..75f9639 100644
+index 15154b4..05a09b1 100644
 --- a/apps/sosym_r1/check_paper_numbers.py
 +++ b/apps/sosym_r1/check_paper_numbers.py
 @@ -1,29 +1,23 @@
@@ -155,7 +155,7 @@ index ee9cdca..75f9639 100644
      and the model used to validate the count could not exercise it.
      """
      lines = path.read_text().split('\n')
-@@ -179,27 +217,9 @@ for model, want in EXPECTED_CTAU.items():
+@@ -186,27 +224,9 @@ for model, want in EXPECTED_CTAU.items():
          check(f'|Ctau| {model} == tp+fn, single-valued', sorted(seen[model]), [want])
  
  # ---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ index ee9cdca..75f9639 100644
  
  cells: dict[str, list[float]] = {}
  eq_hits: list[tuple[str, int]] = []
-@@ -273,9 +293,9 @@ for f in sorted(glob.glob(str(R1 / '*_cv_incremental.json'))):
+@@ -280,9 +300,9 @@ for f in sorted(glob.glob(str(R1 / '*_cv_incremental.json'))):
  check('cells where ConGen is below the accept-everything baseline', below_trivial, 20)
  
  # ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ index ee9cdca..75f9639 100644
  agree: dict[str, float] = {}
  for f in sorted(glob.glob(str(R1 / '*.json'))):
      d = json.load(open(f))
-@@ -295,25 +315,27 @@ if agree:
+@@ -302,25 +322,27 @@ if agree:
      check('fqa rs_1n agreement ~80%', agree.get('fqa_rs_1n_cv_incremental.json', -1), 79.6, tol=1.0)
  
  # ---------------------------------------------------------------------------
@@ -234,7 +234,7 @@ index ee9cdca..75f9639 100644
  tr_zero = tr_tot = te_zero = 0
  max_pos = 0
  for base, _d, fo in folds_of('*2cov*.json', R1):
-@@ -333,7 +355,7 @@ check('2-COV max |E+| over all folds', max_pos, 1)
+@@ -340,7 +362,7 @@ check('2-COV max |E+| over all folds', max_pos, 1)
  check('2-COV folds with no positive TEST example', te_zero, 13)
  
  # ---------------------------------------------------------------------------
@@ -243,7 +243,7 @@ index ee9cdca..75f9639 100644
  #    baseline was not starved: the budget was raised 20x and the return per
  #    query collapsed, with nothing converging at any budget.
  #
-@@ -344,7 +366,7 @@ check('2-COV folds with no positive TEST example', te_zero, 13)
+@@ -351,7 +373,7 @@ check('2-COV folds with no positive TEST example', te_zero, 13)
  #    fold-0 vs mean, pooled vs mean, intersected vs mean. Quote the aggregation
  #    the paper uses, and say which one it is.
  # ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ index ee9cdca..75f9639 100644
  import re as _re
  
  cap_rows: dict[tuple[str, str], dict[int, float]] = {}
-@@ -390,40 +412,23 @@ check('every cap-probe fold stopped on max_queries, none converged',
+@@ -397,40 +419,23 @@ check('every cap-probe fold stopped on max_queries, none converged',
  check('   ... folds observed', stop_reasons.get('max_queries', 0), 42)
  
  # ---------------------------------------------------------------------------
@@ -304,7 +304,7 @@ index ee9cdca..75f9639 100644
  check('cells where the baseline wins in BOTH modes',
        sum(1 for g in gaps.values() if all(v < 0 for v in g.values())), 0)
  check('cells where example-only beats ConGen',
-@@ -431,11 +436,10 @@ check('cells where example-only beats ConGen',
+@@ -438,11 +443,10 @@ check('cells where example-only beats ConGen',
  check('cells where example-first beats ConGen',
        sum(1 for g in gaps.values() if g['example_first'] < 0), 1)
  
@@ -320,7 +320,7 @@ index ee9cdca..75f9639 100644
  
  # Three stopping rules, three different kinds of fact. no_query is the strong one:
  # the active baseline asked every question available to it and still lost.
-@@ -481,22 +485,24 @@ else:
+@@ -488,22 +492,24 @@ else:
      check('busybox cap 1000 wall clock, hours',
            f1['performance']['runtime_ms'] / 3.6e6, 2.12, tol=0.02)
  
@@ -360,7 +360,7 @@ index ee9cdca..75f9639 100644
  
  # The one number in the comparison no re-score can move.
  cg_with_queries = sum(
-@@ -542,7 +548,7 @@ else:
+@@ -549,7 +555,7 @@ else:
      check('   ... folds with ZERO semantic spread', _s['folds_with_zero_semantic_spread'], 17)
  
  # ---------------------------------------------------------------------------
@@ -369,7 +369,7 @@ index ee9cdca..75f9639 100644
  #     the suite checks THOSE numbers, not a second implementation of them.
  #
  #     The invariant that matters is the last one. Claim 2 is excluded from the
-@@ -553,7 +559,7 @@ else:
+@@ -560,7 +566,7 @@ else:
  #     quietly excluded forever. An absence rendered as a result is the failure
  #     mode this whole effort has been about.
  # ---------------------------------------------------------------------------
@@ -378,7 +378,7 @@ index ee9cdca..75f9639 100644
  try:
      from significance_tests import compute as _sig_compute, holm as _holm, floor_p, ALPHA
  except ImportError as exc:                      # scipy absent, or the tool moved
-@@ -594,7 +600,7 @@ else:
+@@ -601,7 +607,7 @@ else:
      check('claim 2 floor p', floor_p(sig['2']['n']), 0.0625, tol=1e-9)
  
  # ---------------------------------------------------------------------------
@@ -387,7 +387,7 @@ index ee9cdca..75f9639 100644
  #
  #     score_interactive.toml shipped with 56 kb_dir values hardcoding one
  #     developer's checkout. It was noticed and judged harmless because the run
-@@ -603,7 +609,7 @@ else:
+@@ -610,7 +616,7 @@ else:
  #     would have caught it without anyone noticing: no tracked config may name
  #     an absolute or home-relative path, on any platform.
  # ---------------------------------------------------------------------------
@@ -396,7 +396,7 @@ index ee9cdca..75f9639 100644
  _abs = re.compile(r'=\s*"(?:[/~]|[A-Za-z]:[\\/])')
  try:
      _tomls = subprocess.run(['git', 'ls-files', '*.toml'], cwd=REPO,
-@@ -623,10 +629,10 @@ else:
+@@ -653,10 +659,10 @@ for module in (revision_bias_composition, revision_ea2468_limit,
  # ---------------------------------------------------------------------------
  print(f'\n{"=" * 70}')
  if failures:
@@ -409,14 +409,7 @@ index ee9cdca..75f9639 100644
      print('never the assertion to the number you hoped for.')
      sys.exit(1)
  # A pass is a POSITIVE COUNT, never the absence of a failure. With zero checks this
-@@ -634,11 +640,11 @@ if failures:
- # indistinguishable from a clean one to anything reading the exit code. The same shape
- # passed an artifact whose test suite had not run at all, because pytest was absent and
- # `grep FAILED` found nothing.
--MINIMUM_CHECKS = 90
-+MINIMUM_CHECKS = 96
- if checks < MINIMUM_CHECKS:
-     print(f'FAIL: only {checks} checks ran; expected at least {MINIMUM_CHECKS}.')
+@@ -670,5 +676,5 @@ if checks < MINIMUM_CHECKS:
      print('An empty or truncated run is not a pass. Something above exited early or')
      print('skipped a section -- find it rather than lowering this number.')
      sys.exit(1)
