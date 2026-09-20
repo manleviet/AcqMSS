@@ -166,6 +166,13 @@ for model, want in EXPECTED_CTAU.items():
         continue
     check(f'|Ctau| {model} from UVL', count_ctau_from_uvl(uvl), want)
 
+# S5.3 prints the five counts as a SEQUENCE, "22, 342, 130, 428, and 994 clauses for
+# KB1 to KB5". The dict above cannot catch a KB relabelling; the order can, and the
+# order is what a reader maps onto the rows of every other table.
+KB_ORDER = ['REAL-FM-7', 'fqa', 'arcade-game', 'REAL-FM-4', 'busybox-1.18.0']
+check('|Ctau| in the KB1..KB5 order S5.3 prints them',
+      [EXPECTED_CTAU[m] for m in KB_ORDER], [22, 342, 130, 428, 994])
+
 print('\n2. the same |Ctau| appears as tp+fn in the corrected results')
 seen: dict[str, set[int]] = {}
 for base, _d, fo in folds_of('*.json', R1):
@@ -621,6 +628,27 @@ else:
     check('tracked configs naming an absolute path', len(offenders), 0)
 
 # ---------------------------------------------------------------------------
+# 12-19. The figures the SoSyM revision added. They live in sibling modules
+#        because they are new claims with their own provenance to explain, not
+#        because the sections differ in kind: the rule is the same one this file
+#        has always applied. Each module asserts through the `check` above, so a
+#        number that moved is reported here with every other.
+# ---------------------------------------------------------------------------
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import revision_bias_composition            # noqa: E402
+import revision_ea2468_limit                # noqa: E402
+import revision_order_and_working_example   # noqa: E402
+import revision_run_cost                    # noqa: E402
+
+for module in (revision_bias_composition, revision_ea2468_limit,
+               revision_run_cost, revision_order_and_working_example):
+    try:
+        module.run(check, REPO)
+    except Exception as exc:                # a source that moved or vanished
+        failures.append(f'{module.__name__} could not run: {exc!r}')
+        print(f'  [FAIL] {module.__name__}: {exc!r}')
+
+# ---------------------------------------------------------------------------
 print(f'\n{"=" * 70}')
 if failures:
     print(f'FAIL: {len(failures)} of {checks} numbers no longer match the notes:')
@@ -634,7 +662,7 @@ if failures:
 # indistinguishable from a clean one to anything reading the exit code. The same shape
 # passed an artifact whose test suite had not run at all, because pytest was absent and
 # `grep FAILED` found nothing.
-MINIMUM_CHECKS = 90
+MINIMUM_CHECKS = 250
 if checks < MINIMUM_CHECKS:
     print(f'FAIL: only {checks} checks ran; expected at least {MINIMUM_CHECKS}.')
     print('An empty or truncated run is not a pass. Something above exited early or')
