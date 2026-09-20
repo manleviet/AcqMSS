@@ -212,9 +212,11 @@ observe the failure it existed to prevent:
 
 Two numbers and a scan — never "the items were applied":
 
-1. `pytest tests/ -q` on a clean machine → **325 passed, 18 skipped, 0 failed**, reported
+1. `pytest tests/ -q` on a clean machine → **341 passed, 0 skipped, 0 failed**, reported
    as the set of red test names, not a total. A total that drops by three looks identical
-   whether three tests were deleted or three broke.
+   whether three tests were deleted or three broke. (It read 325 passed / 18 skipped until
+   2026-09-20, measured before the skips were resolved -- an expected total nobody
+   re-measures is the same stale-baseline hazard this line exists to warn about.)
 2. `./reproduce_tables_sosym.sh` → five tables byte-identical with the committed ones;
    only `PROVENANCE.md` differs, on its SHA line.
 3. Content scan on the artifact's committed HEAD → empty.
