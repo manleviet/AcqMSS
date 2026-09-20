@@ -212,7 +212,7 @@ observe the failure it existed to prevent:
 
 Two numbers and a scan — never "the items were applied":
 
-1. `pytest tests/ -q` on a clean machine → **341 passed, 0 skipped, 0 failed**, reported
+1. `pytest tests/ -q` on a clean machine → **342 passed, 0 skipped, 0 failed**, reported
    as the set of red test names, not a total. A total that drops by three looks identical
    whether three tests were deleted or three broke. (It read 325 passed / 18 skipped until
    2026-09-20, measured before the skips were resolved -- an expected total nobody
