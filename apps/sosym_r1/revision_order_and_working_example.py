@@ -119,7 +119,7 @@ def canonical(entry: tuple[str, str, str]) -> tuple:
 
 
 def run(check, repo: Path) -> None:
-    print('\n18. S5.3: how far the reduction order can move a score (F1, not P and R)')
+    print('\n[order] S5.3: how far the reduction order can move a score (F1, not P and R)')
     data = json.loads((repo / 'data' / 'results_sosym_r1' / 'order_sensitivity'
                        / 'order_sensitivity.json').read_text())
     spreads = [(r['model'], r['fold'], f1_spreads(r)) for r in data['folds']]
@@ -144,7 +144,7 @@ def run(check, repo: Path) -> None:
           round(max(s['description'] for _m, _f, s in spreads), 2),
           PAPER_ORDER_SENSITIVITY['max_description_f1_spread'], tol=1e-9)
 
-    print('\n18b. S5.3: the tier gap quoted from tab:comparison_strategies')
+    print('\n[order] the tier gap quoted from tab:comparison_strategies')
     folds = json.loads((repo / 'data' / 'results_sosym_r1' / 'congen'
                         / f"{PAPER_TIER_EXAMPLE['model']}_{PAPER_TIER_EXAMPLE['sampling']}"
                           '_cv_incremental.json').read_text())['folds']
@@ -154,7 +154,7 @@ def run(check, repo: Path) -> None:
         check(f'KB3 RS(n): {tier} F1, mean over folds',
               round(mean, 3), PAPER_TIER_EXAMPLE[tier], tol=1e-9)
 
-    print('\n19. S3: the working-example bias enumerates to 18 entries and 12 constraints')
+    print('\n[example] the working-example bias enumerates to 18 entries and 12 constraints')
     entries = enumerate_working_example_bias()
     n = len(WORKING_EXAMPLE_VARIABLES)
     check('entries, and the 3n(n-1) the paper derives', (len(entries), 3 * n * (n - 1)),

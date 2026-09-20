@@ -628,11 +628,13 @@ else:
     check('tracked configs naming an absolute path', len(offenders), 0)
 
 # ---------------------------------------------------------------------------
-# 12-19. The figures the SoSyM revision added. They live in sibling modules
-#        because they are new claims with their own provenance to explain, not
-#        because the sections differ in kind: the rule is the same one this file
-#        has always applied. Each module asserts through the `check` above, so a
-#        number that moved is reported here with every other.
+# The figures the SoSyM revision added. They live in sibling modules because they
+# are new claims with their own provenance to explain, not because the sections
+# differ in kind: the rule is the same one this file has always applied. Each
+# module asserts through the `check` above, so a number that moved is reported
+# here with every other. Their section headers carry a TAG rather than a number:
+# the artifact drops two sections of this file, and a number would then have to be
+# maintained in two trees to stay contiguous in both.
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import revision_bias_composition            # noqa: E402

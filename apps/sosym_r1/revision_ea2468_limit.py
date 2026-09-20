@@ -86,7 +86,7 @@ def figures_from_report(report: Path) -> dict[str, float]:
 
 
 def run(check, repo: Path) -> None:
-    print('\n14. the ea2468 limit: the projection recomputes, the rate is a cited report')
+    print('\n[limit] the ea2468 limit: the projection recomputes, the rate is a cited report')
     report = repo / PROBE_REPORT
 
     tracked = subprocess.run(['git', 'ls-files', PROBE_REPORT], cwd=repo,

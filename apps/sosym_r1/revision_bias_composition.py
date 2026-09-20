@@ -136,7 +136,7 @@ def render_reduction(value: float) -> str:
 def run(check, repo: Path) -> None:
     cfg_dir, bias_dir = repo / 'data' / 'bias-config', repo / 'data' / 'bias'
 
-    print('\n12. the evaluation bias: composition and the closed form (tab:biasformula)')
+    print('\n[bias] the evaluation bias: composition and the closed form (tab:biasformula)')
     for stem, label, n, h_bin, h_grp, k, bias, _red in PAPER_BIAS_TABLE:
         cfg = composition_from_config(cfg_dir / f'{stem}.yaml')
         st = composition_from_stats(bias_dir / f'{stem}-bias-stats.txt')
@@ -159,7 +159,7 @@ def run(check, repo: Path) -> None:
         check(f'{label} two requires per excludes',
               st['ops']['requires'], 2 * st['ops']['excludes'])
 
-    print('\n12b. the one documented exception: KB1 admits every feature to cross-tree pairs')
+    print('\n[bias] the one documented exception: KB1 admits every feature to cross-tree pairs')
     k1 = composition_from_config(cfg_dir / 'REAL-FM-7.yaml')
     check('KB1 cross-tree mode is "all", not "extracted"', k1['mode'], 'all')
     check('KB1 k == n, which is what "all" means', k1['k'], k1['n'])
@@ -169,7 +169,7 @@ def run(check, repo: Path) -> None:
         check(f'{label} cross-tree mode is "extracted"',
               composition_from_config(cfg_dir / f'{stem}.yaml')['mode'], 'extracted')
 
-    print('\n12c. the selection criteria quoted in S5.3')
+    print('\n[bias] the selection criteria quoted in S5.3')
     for stem, (hier, k) in PAPER_SELECTION_CRITERIA.items():
         st = composition_from_stats(bias_dir / f'{stem}-bias-stats.txt')
         check(f'{stem}: hierarchical candidates', st['h_bin'] + st['h_grp'], hier)
@@ -184,7 +184,7 @@ def run(check, repo: Path) -> None:
           (ea['k'], ea['n']), (1168, 1408))
     check('ea2468 |B| is above two million, as S5.3 says', ea['bias'] > 2_000_000, True)
 
-    print('\n13. the reduction against the unrestricted language (n/k)^2')
+    print('\n[bias] the reduction against the unrestricted language (n/k)^2')
     for stem, label, n, _hb, _hg, _k, bias, printed in PAPER_BIAS_TABLE:
         st = composition_from_stats(bias_dir / f'{stem}-bias-stats.txt')
         exact = reduction_against_unrestricted(st['h_bin'], st['h_grp'], st['n'], st['bias'])

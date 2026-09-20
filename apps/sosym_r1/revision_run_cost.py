@@ -83,7 +83,7 @@ def run(check, repo: Path) -> None:
     results = repo / 'data' / 'results_sosym_r1' / 'congen'
     examples = repo / 'data' / 'examples'
 
-    print('\n15. the row S5.5.1 reads aloud, and the bound it evaluates there')
+    print('\n[cost] the row S5.5.1 reads aloud, and the bound it evaluates there')
     r = READ_ALOUD
     folds = _folds(results, r['model'], r['sampling'])
     ex = json.loads((examples / f"{r['model']}_{r['sampling']}.json").read_text())
@@ -109,7 +109,7 @@ def run(check, repo: Path) -> None:
     check('   ... and the measured count sits below it, as the sentence claims',
           sum(means.values()) < acqmss_bound(r['bias'], gamma), True)
 
-    print('\n16. S5.4: m is the size of the 2-COV sample of the same model')
+    print('\n[cost] S5.4: m is the size of the 2-COV sample of the same model')
     for model, m in PAPER_M.items():
         def size(strategy: str) -> int:
             d = json.loads((examples / f'{model}_{strategy}.json').read_text())
@@ -118,7 +118,7 @@ def run(check, repo: Path) -> None:
         check(f'{model}: |2-COV| == m, which is what makes the two comparable',
               size('2cov'), m)
 
-    print('\n17. S5.3: why RS(2n) and RS(3n) were not run on KB5')
+    print('\n[cost] S5.3: why RS(2n) and RS(3n) were not run on KB5')
     kb5 = _folds(results, 'busybox-1.18.0', 'rs_1n')
     hours = sorted(f['performance']['runtime_ms'] / 3.6e6 for f in kb5)
     check('KB5 RS(n): slowest fold, hours', round(hours[-1], 1), KB5_FOLD_HOURS[1], tol=1e-9)
