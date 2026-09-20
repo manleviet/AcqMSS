@@ -73,6 +73,18 @@ apps/sosym_r1/measure_reduce_order_sensitivity.py
 apps/sosym_r1/probe_query_budget.py
 apps/sosym_r1/probe_query_spin.py
 apps/sosym_r1/significance_tests.py
+# The revision's own figures, asserted by check_paper_numbers.py, which IMPORTS these
+# four. Omitting one would not shrink the gate quietly -- the gate would not start --
+# but they are listed for the same reason as everything else: an artifact that prints a
+# number ships what recomputes it.
+apps/sosym_r1/revision_bias_composition.py
+apps/sosym_r1/revision_ea2468_limit.py
+apps/sosym_r1/revision_order_and_working_example.py
+apps/sosym_r1/revision_run_cost.py
+# The proof that those four assert anything: it re-runs each one with its expected value
+# altered and requires the failure. Ships for the same reason falsify_hygiene_patterns.sh
+# would if it were artifact-side -- a reviewer can re-earn the trust rather than take it.
+apps/sosym_r1/mutate_revision_checks.py
 # The table generator, as a package. A directory prefix is safe here because the
 # package exists only to build the paper's fragments -- every module in it is on the
 # path from committed JSON to a printed cell, and a file added to it later is by
@@ -111,6 +123,15 @@ tools/sosym_r1/sweep-ledger.json
 tools/sosym_r1/sweep_queue.py
 tools/sosym_r1/sweep_units.py
 tools/sosym_r1/verify_examples_bundle.py
+# The two ea2468 feasibility probes. The first is the SOURCE of the 95-second rate the
+# paper quotes for the size limit: that run's raw sampler output was never committed and
+# no longer exists, so the report IS the provenance, and check_paper_numbers.py parses
+# its figures rather than restating them. The second is cited by the first and settles
+# its open question. They are the only files this artifact ships from plans/, and they
+# ship through prose-ea2468-probe-reports.patch, which rewords the four spots naming a
+# sibling algorithm's runners and a numbered review item.
+plans/reports/measurement-260822-0149-ea2468-congen-feasibility-probe-report.md
+plans/reports/measurement-260822-1330-ea2468-ff-acqmss-feasibility-probe-report.md
 
 # ---- data -----------------------------------------------------------------
 # data/examples and data/folds are filtered by carve.sh to the cells that have a

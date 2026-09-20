@@ -94,7 +94,7 @@ observe the failure it existed to prevent:
   empty set of failures because pytest was not installed; a targeted run reported success
   against a test file that did not exist. Both exited 0. Naming this did not stop it
   recurring an hour later, so it is now a gate in two places: `check_paper_numbers.py`
-  refuses a run of fewer than 90 checks, and `reproduce_tables_sosym.sh` refuses a tree
+  refuses a run of fewer than 250 checks, and `reproduce_tables_sosym.sh` refuses a tree
   whose tests cannot be collected.
 - **A gate must stand on a measured number, not a chosen one.** If you find yourself
   picking a threshold, first look for the real signal being thrown away. A proposed

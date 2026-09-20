@@ -1,0 +1,44 @@
+diff --git a/plans/reports/measurement-260822-0149-ea2468-congen-feasibility-probe-report.md b/plans/reports/measurement-260822-0149-ea2468-congen-feasibility-probe-report.md
+index 33221b5..6116d7c 100644
+--- a/plans/reports/measurement-260822-0149-ea2468-congen-feasibility-probe-report.md
++++ b/plans/reports/measurement-260822-0149-ea2468-congen-feasibility-probe-report.md
+@@ -113,7 +113,7 @@ This is a **lower bound on preprocessing only**. AcqMss and Reduce add unknown,
+ 
+ **No — ea2468 cannot be evaluated before 2026-08-26.** 46 h of preprocessing alone, on a single machine, with acquisition cost unmeasured on top, against a deadline four days out and a single-combined-sweep decision that yields no partial results.
+ 
+-This is a **measured non-completion**, which is the usable form of the R1-Q8 "state the practical size limit" branch: at |B| = 2,047,362 (308× busybox's 6,635, which itself cost 16.6 h at rs_1n), the pipeline does not reach acquisition within an hour on an M1 Pro. The limit sits below ea2468.
++This is a **measured non-completion**, which is the usable form of the reviewers' request to state the practical size limit: at |B| = 2,047,362 (308× busybox's 6,635, which itself cost 16.6 h at rs_1n), the pipeline does not reach acquisition within an hour on an M1 Pro. The limit sits below ea2468.
+ 
+ If ea2468 is wanted later, the target is GenerateNE, not AcqMss/Reduce — the per-negative non-incremental checker rebuild is the thing to attack.
+ 
+@@ -131,7 +131,7 @@ If ea2468 is wanted later, the target is GenerateNE, not AcqMss/Reduce — the p
+   examples = "data/examples/ea2468_rs_3n.json"
+   folds_path = "data/folds/ea2468_rs_3n_folds.json"
+   ```
+-- No data committed. No file under `conacq/algorithms/**`, `run_conmin_eval.py`, or `conmin_cv_evaluator.py` touched.
++- No data committed. No file under `conacq/algorithms/**` and no evaluation runner touched.
+ - Raw artefacts in session scratch: `ea2468_probe.jsonl` (347 samples), `ea2468_run.log` (timestamped), `probe_ea2468.py`.
+ 
+ ## Unresolved
+diff --git a/plans/reports/measurement-260822-1330-ea2468-ff-acqmss-feasibility-probe-report.md b/plans/reports/measurement-260822-1330-ea2468-ff-acqmss-feasibility-probe-report.md
+index 3f39794..a3352f9 100644
+--- a/plans/reports/measurement-260822-1330-ea2468-ff-acqmss-feasibility-probe-report.md
++++ b/plans/reports/measurement-260822-1330-ea2468-ff-acqmss-feasibility-probe-report.md
+@@ -129,7 +129,7 @@ Probe 2 ran under `os.setsid()` (new session) plus `caffeinate -i` and survived
+ 
+ ff is the cheapest of the six: 40× less preprocessing than rs_3n and ~10× cheaper per AcqMss node. It still failed to complete a single fold in 3 h, with AcqMss alone consuming 2.79 h and not converging. Every other sampling is strictly more expensive on both phases. A table row needs 3 folds × 6 samplings.
+ 
+-This is now a statement about **acquisition**, not preprocessing — materially stronger than probe 1's finding. The practical size limit for R1-Q8 sits below |B| = 2,047,362: at that bias size AcqMss does not converge in hours even with only 234 positive examples. busybox at |B| = 6,635 (308× smaller) remains the largest KB that completes.
++This is now a statement about **acquisition**, not preprocessing — materially stronger than probe 1's finding. The practical size limit sits below |B| = 2,047,362: at that bias size AcqMss does not converge in hours even with only 234 positive examples. busybox at |B| = 6,635 (308× smaller) remains the largest KB that completes.
+ 
+ ## Repo state
+ 
+@@ -151,7 +151,7 @@ This is now a statement about **acquisition**, not preprocessing — materially
+   Run as: `PYTHONPATH=. python -m apps.run_cv apps/conf/run_cv_config.toml -v -o <scratch>`
+   — the `-o` is required; without it `run_cv.py:76` writes into `data/results/congen/`.
+   Detach the process (`os.setsid()`) or the harness kills it at ~1 h; see the SIGTERM section.
+-- No data committed. `conacq/algorithms/**`, `run_conmin_eval.py`, `conmin_cv_evaluator.py` untouched. `minimize` left at default True.
++- No data committed. `conacq/algorithms/**` and the evaluation runners untouched. `minimize` left at default True.
+ - Artefacts in session scratch: `ff_probe.jsonl` (2065 samples @ 5 s), `ff_run.log` (timestamped), `probe_ea2468.py`, `watch_phases.py`.
+ - Cosmetic: the wrapper's ceiling message hardcodes "2h CEILING HIT" while the configured ceiling was 10800 s. The 3 h value is correct; only the string is stale.
+ 

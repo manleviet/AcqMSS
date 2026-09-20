@@ -96,14 +96,31 @@ stems = {f.name.split('_cv_')[0]
          for tree in ('data/results_sosym_r1',)
          if (out / tree).is_dir()
          for f in (out / tree).rglob('*_cv_*.json')}
-removed = 0
+
+# ONE exception, and it is a reader, not a taste. The ea2468 cells produced no result
+# -- that is the paper's size limit -- but S5.3 quotes a projection computed FROM their
+# fold files: one QuickXplain run per training negative, 1,752 in total. Dropping them
+# would ship a number whose source the artifact does not contain, which is the failure
+# every gate here exists to prevent. 112 KB. Their EXAMPLE sets stay dropped: 148.6 MB,
+# and nothing reads them.
+KEPT_WITHOUT_RESULT = {'data/folds': ('ea2468_',)}
+removed = kept = 0
 for d, suf in (('data/examples', '.json'), ('data/folds', '_folds.json')):
     if not (out / d).is_dir():
         continue
     for f in sorted((out / d).glob('*' + suf)):
-        if f.name[:-len(suf)] not in stems:
-            f.unlink(); removed += 1
+        if f.name[:-len(suf)] in stems:
+            continue
+        if f.name.startswith(KEPT_WITHOUT_RESULT.get(d, ())):
+            kept += 1
+            continue
+        f.unlink(); removed += 1
 print(f"  dropped {removed} example/fold files with no corresponding result")
+# A positive count, so a silently emptied exception cannot read as a clean run.
+print(f"  kept {kept} fold files that have no result but do have a reader")
+if kept == 0:
+    raise SystemExit('  the ea2468 fold exception matched nothing -- a paper number '
+                     'would ship without its source')
 PY
 
 # ------------------------------------------------------- 2b. phrase substitutions
