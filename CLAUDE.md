@@ -57,10 +57,14 @@ PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
 - **Checker building**: Checker is built from a Task via `build_checker(task, backend=...)` (imported from `explanation.api`); models are pure KB containers with no checker protocol
 - **Test control**: `ENABLED_TESTS` and `ENABLED_PARAMS` dicts at top of test files toggle specific tests
 - **Known pytest warnings**: `TestSuiteReader` triggers PytestCollectionWarning (has `__init__`). The `slow` marker is registered in `pyproject.toml` `[tool.pytest.ini_options]`; shared fixtures/paths live in `tests/conftest.py` + `tests/resource_paths.py`.
-- **Suite baseline — `680 passed, 1 skipped`** (681 collected), measured at commit
-  `e39ad37` on 2026-09-05 under the environment below. `../explanation` is
+- **Suite baseline — `681 passed, 1 skipped`** (682 collected), measured at commit
+  `fff6a48` on 2026-09-20 under the environment below. `../explanation` is
   `275 passed, 0 skipped` (measured 2026-08-23, unchanged since).
-  (Was `683 passed, 1 skipped` at `c0f448f` on 2026-08-28. The three fewer cases are
+  (Was `680 passed, 1 skipped` at `e39ad37` on 2026-09-05. The added case is
+  `test_bias_config_readme_is_the_render_of_the_configs`: `data/bias-config/README.md`
+  is now rendered from the YAML configs rather than pasted from a console log, and the
+  test holds it to them. Before that it was `683 passed, 1 skipped` at `c0f448f`
+  on 2026-08-28. The three fewer cases are
   not a loss of coverage: `fce6a3c` deleted `test_explanation_imports_profiling_only_
   through_facade`, `test_explanation_never_imports_conacq` and `test_profiling_is_a_leaf`,
   each of which scanned a `REPO_ROOT/explanation` or `/profiling` that has not existed
