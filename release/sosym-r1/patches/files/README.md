@@ -45,7 +45,7 @@ table is written:
 - **`apps/sosym_r1/check_timing_provenance.py`** — refuses a runtime measured while
   another sweep unit was in flight.
 - **`apps/sosym_r1/check_paper_numbers.py`** — recomputes every number quoted in the
-  paper's prose from the committed data. 99 checks.
+  paper's prose from the committed data. 258 checks.
 
 and one runs after the tables are written:
 
@@ -138,6 +138,11 @@ study, never completed a run, and are **not** included — they produced no numb
 here, and shipping them tripled the size of every clone. `apps/conf/generate_cv_folds_config.toml`
 lists the 28 cells that do have results, and no more.
 
+The `ea2468` **fold** files are the one exception, and they are here because a
+number in the paper is computed from them: the projected preprocessing for that
+model is one QuickXplain run per training negative, 1,752 of them, and the fold
+files are what that count is read from. 112 KB. Their example sets stay out.
+
 ## Provenance
 
 This repository is derived from a private working repository where ConGen is developed
@@ -154,6 +159,7 @@ conacq/          the ConGen implementation
 apps/            entry points; apps/sosym_r1/ is what the table pipeline runs
 tools/sosym_r1/  sweep machinery and one-off measurements — not part of reproduction
 data/            feature models, examples, folds, bias, and the results
+plans/reports/   the two ea2468 feasibility probes; the size limit in §5.3 cites them
 tests/           the suite
 ```
 
