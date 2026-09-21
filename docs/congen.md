@@ -66,16 +66,25 @@ From the paper — 3 Boolean variables representing feature model selections.
 
 ### Bias B (Table 3)
 
-18 binary constraints (c1..c18): all combinations of {→, AND, NOT_AND} over {id, db, ga} pairs:
+Every ordered pair of distinct variables under every operator of
+`L = {x → y, x ∧ y, x ∧̸ y}`, row-major over the pairs in the order (db, id, ga), which
+is `3n(n-1) = 18` entries for `n = 3`. `∧̸` is negated conjunction (mutual exclusion), a
+single constraint rather than a negation applied to another entry:
 
 | # | Constraint | # | Constraint | # | Constraint |
 |---|-----------|---|-----------|---|-----------|
-| c1 | id → db | c7 | id → ¬ga | c13 | db → ¬ga |
-| c2 | db → id | c8 | ga → ¬id | c14 | ga → ¬db |
-| c3 | id ∧ db | c9 | ¬id ∧ ¬ga | c15 | ¬db ∧ ¬ga |
-| c4 | ¬id ∧ ¬db | c10 | id ∧ ga | c16 | db ∧ ga |
-| c5 | id → ¬db | c11 | id ∧ ¬ga | c17 | db ∧ ¬ga |
-| c6 | db → ¬id | c12 | ¬id ∧ ga | c18 | ¬db ∧ ga |
+| c1 | db → id | c7 | id → db | c13 | ga → db |
+| c2 | db ∧ id | c8 | id ∧ db | c14 | ga ∧ db |
+| c3 | db ∧̸ id | c9 | id ∧̸ db | c15 | ga ∧̸ db |
+| c4 | db → ga | c10 | id → ga | c16 | ga → id |
+| c5 | db ∧ ga | c11 | id ∧ ga | c17 | ga ∧ id |
+| c6 | db ∧̸ ga | c12 | id ∧̸ ga | c18 | ga ∧̸ id |
+
+`∧` and `∧̸` are commutative and `→` is not, so six entries are duplicates of six
+others — (c2, c8), (c3, c9), (c5, c14), (c6, c15), (c11, c17), (c12, c18) — and the
+number of DISTINCT constraints is `n(n-1) + 2C(n,2) = 12`. The enumeration keeps both
+members because the execution trace refers to entries by index; REDUCE is what removes
+the duplicate, which is why no final theory holds both members of a pair.
 
 ### Training Set (Table 4)
 
@@ -96,33 +105,43 @@ From the paper — 3 Boolean variables representing feature model selections.
 1. **GenerateNE**: NE = {¬(id ∧ ¬db)} — negation of negative example
 2. **IsConsistent check**: Verify E+ ∪ NE ∪ BG is consistent → yes, proceed
 3. **AcqMSS**: Divide-and-conquer on B, returns B' = {c7, c12, c13, c18}
+   = {id → db, id ∧̸ ga, ga → db, ga ∧̸ id}
 4. **REDUCE**: Test each constraint for redundancy
-   - c18 (¬db ∧ ga) is redundant given BG ∪ {c7, c12, c13} → removed
-5. **Result**: KB = {c7, c12, c13} = {id → ¬ga, ¬id ∧ ga, db → ¬ga}
+   - c18 (ga ∧̸ id) is the commutative duplicate of c12 (id ∧̸ ga), so the rest of the
+     theory entails it → removed
+5. **Result**: KB = {c7, c12, c13} = {id → db, id ∧̸ ga, ga → db}, which is the target
+   theory of Table 2 plus the background constraint it was learned under
 
 ## Algorithm Pipeline
 
 ConGen orchestrates three sub-algorithms in sequence:
 
-### Algorithm 1: ConGen(E+, E-, B, BG)
+### Algorithm 1: ConGen(E+, NE, B, BG), with NE = GenerateNE(E-) computed beforehand
 
 ```
-Input:  E+ (positive examples), E- (negative examples),
+Input:  E+ (positive examples), NE (negated negative examples, PRE-COMPUTED),
         B (constraint bias), BG (background knowledge)
 Output: KB (learned knowledge base)
 
-1: NE ← GenerateNE(E-)
-2: B' ← ∅
-3: if IsConsistent(E+, NE, BG) then
-4:     B' ← AcqMSS(∅, B, NE, E+, BG)
-5: else
-6:     print "examples inconsistent"
-7:     return ∅
-8: end if
-9: return REDUCE(B', NE, BG)
+1: B' ← ∅
+2: if IsConsistent(E+, NE, BG) then
+3:     B' ← AcqMSS(∅, B, NE, E+, BG)
+4: else
+5:     print "examples inconsistent"
+6:     return ∅
+7: end if
+8: return REDUCE(B', NE, BG)
 ```
 
-**Line 3 check**: If positive examples conflict with negated negative examples under BG, the training set itself is inconsistent — no valid KB exists.
+**NE is an input, not a step.** GenerateNE is preprocessing: it runs before ConGen and
+consults the oracle, since QuickXPlain decides which subsets of a negative example are
+still rejected. Algorithms 1 to 3 issue no query — that separation is what the passive
+claim rests on, and it is why the cost of preprocessing is reported apart from the cost
+of acquisition (`shared_preprocessing_*` counters). In the code the split is the same
+one: `ConGenModel.prepare_task()` computes NE, `ConGen.acquire()` receives it as
+`task.set_neg_tv`.
+
+**Line 2 check**: If positive examples conflict with negated negative examples under BG, the training set itself is inconsistent — no valid KB exists.
 
 ## GenerateNE
 
@@ -150,28 +169,37 @@ Input:  delta (recently added constraints), B (current bias subset),
         NE (negated examples), E+ (positive examples), BG (background)
 Output: B' ⊆ B (maximum satisfiable subset)
 
-1:  if delta ≠ ∅ then
-2:      if IsConsistent(NE, E+, B, BG) then
-3:          return B
-4:      end if
-5:  end if
-6:  if |B| = 1 then
-7:      return ∅
-8:  end if
-9:  k = ⌊|B|/2⌋
-10: B1 = {c1, ..., ck}
-11: B2 = {ck+1, ..., cn}
-12: B'_beta  ← AcqMSS(B1, B1, NE, E+, BG)
-13: B'_alpha ← AcqMSS(B1 − B'_beta, B2, NE, E+, BG ∪ B'_beta)
-14: return B'_alpha ∪ B'_beta
+1:  E'+ ← E+
+2:  if delta ≠ ∅ then
+3:      E'+ ← Violated(E+, NE, B, BG)
+4:      if E'+ = ∅ then
+5:          return B
+6:      end if
+7:  end if
+8:  if |B| = 1 then
+9:      return ∅
+10: end if
+11: k = ⌊|B|/2⌋
+12: B1 = {c1, ..., ck}
+13: B2 = {ck+1, ..., cn}
+14: B'_beta  ← AcqMSS(B1, B1, NE, E'+, BG)
+15: B'_alpha ← AcqMSS(B1 − B'_beta, B2, NE, E'+, BG ∪ B'_beta)
+16: return B'_alpha ∪ B'_beta
 ```
 
 **Key mechanics**:
-- **Line 2**: Early termination — if adding delta doesn't cause inconsistency, keep all of B
-- **Lines 9-11**: Binary split of B into two halves
-- **Line 12**: Recursively find MSS of first half
-- **Line 13**: Find MSS of second half, with first half's MSS added to BG
-- **Lines 6-8**: Base case — single constraint that causes inconsistency is removed
+- **Line 3**: `Violated` returns the positive examples that `B ∪ NE ∪ BG` still rejects,
+  and ONLY those are carried down. A positive example accepted at a node is accepted at
+  every descendant, because a descendant tests a subset of the node's constraints — so
+  the result is unchanged and only the number of solver calls moves. In the runs the
+  carried set shrinks to a knowledge-base-specific fraction of E+ within the first few
+  levels, which is why the cost analysis counts one check per node while the solver
+  calls per node vary (`is_consistent_test_cases`, one call per carried positive).
+- **Lines 4-6**: Early termination — nothing left to violate, so all of B is kept
+- **Lines 11-13**: Binary split of B into two halves
+- **Line 14**: Recursively find MSS of first half
+- **Line 15**: Find MSS of second half, with first half's MSS added to BG
+- **Lines 8-10**: Base case — single constraint that causes inconsistency is removed
 
 **Implementation**: `conacq/algorithms/acqmss/acqmss.py` — `AcqMSS.find_mss()` (104 LOC)
 - Uses KBDiag from `explanation/operations/algorithms/kbdiag.py` (100 LOC, in canonical `../explanation`)
@@ -292,7 +320,7 @@ see `data/fms/SOURCES.md`) serve as oracle:
 
 1. **Passive learning** — no user interaction required, fully automated
 2. **Partial examples supported** — works with incomplete configurations
-3. **Divide-and-conquer efficiency** — logarithmic consistency checks
+3. **Divide-and-conquer efficiency** — `2γ·log₂(n/γ) + 2γ` consistency checks in the worst case (see Complexity Analysis)
 4. **MSS guarantees** — accepts all positive examples by construction (Theorem 1)
 5. **Redundancy elimination** — REDUCE removes logically entailed constraints
 6. **Oracle integration** — automated evaluation via FM knowledge bases

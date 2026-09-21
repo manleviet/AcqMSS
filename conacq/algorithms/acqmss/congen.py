@@ -71,9 +71,10 @@ class ConGen:
     ) -> ConGenResult:
         """Acquire knowledge base from bias constraints.
 
-        Paper Algorithm 1 (steps 2-9, NE pre-computed):
-        2. if IsConsistent(E+, NE, BG) then B' <- AcqMSS(...)
-        3. return REDUCE(B', NE, BG)
+        Paper Algorithm 1, whose input is (E+, NE, B, BG) with NE pre-computed by
+        GenerateNE before ConGen is entered:
+        1. if IsConsistent(E+, NE, BG) then B' <- AcqMSS(...)
+        2. return REDUCE(B', NE, BG)
 
         Args:
             set_b: Bias constraint assumption IDs (B)

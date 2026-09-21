@@ -136,6 +136,10 @@ class BiasGenerator:
         Based on cross_tree_mode:
         - 'all': Generate constraints between all features
         - 'leaf': Generate constraints only between leaf features
+        - 'extracted': Generate constraints only between the features that occur in the
+          model's own cross-tree constraints (``cross_tree_features``). This is the mode
+          the evaluation uses on every model but REAL-FM-7, and it is what makes |B|
+          depend on k rather than on the feature count.
 
         For each pair, generate both directions of requires (a→b and b→a)
         and excludes (symmetric, only one direction).

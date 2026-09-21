@@ -10,7 +10,10 @@ not something anyone could check.
 
 Each fragment holds exactly ONE ``tabular`` environment and nothing else. The
 caption, the ``\\label`` and the ``table*`` wrapper stay in the manuscript, where
-the editorial decisions belong; the manuscript ``\\input``s the fragment.
+the editorial decisions belong. The journal template forbids ``\\input`` of other TeX
+files, so the manuscript TRANSCRIBES the fragment instead of including it -- which is
+why this file exists: the transcription has a checked source, and a cell typed from
+anywhere else has none.
 
 The companion gate, ``check_paper_tables.py``, parses every fragment back and
 recomputes each cell from the JSON with code this module does not share.

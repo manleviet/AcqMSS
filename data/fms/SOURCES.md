@@ -31,8 +31,12 @@ to match a specific file against its UVLHub record should search UVLHub by the f
 preserved unchanged.
 
 `ea2468.uvl` and `linux-2.6.33.3.uvl` are kept because the repository's scalability notes refer to
-them. They contribute **no number to any table in the paper** — the evaluation config
-(`apps/conf_conmin/run_conmin_eval_config.toml`) lists exactly the five knowledge bases above.
+them. Neither contributes a **result** to any table: no acquisition run completed on either, and the
+evaluation config (`apps/conf_conmin/run_conmin_eval_config.toml`) lists exactly the five knowledge
+bases above. `ea2468` does contribute its **bias composition** — n, the hierarchical candidates, k
+and `|B| = 2,047,362` — as the last row of the paper's bias-composition table, which is the model on
+which the study reached its size limit. Those figures are computed from `ea2468.uvl` and
+`data/bias-config/ea2468.yaml` by the same pipeline as every other row.
 
 ## Licensing
 

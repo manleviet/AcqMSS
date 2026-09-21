@@ -66,7 +66,10 @@ and one runs after the tables are written:
 label the paper uses (`tab_AcqMssruntime.tex`, `tab_kb_size.tex`, …). Each file is a
 single `tabular` environment, optionally preceded by a `%` header naming each column's
 source field, unit and — for a derived column — its exact expression. The caption, the
-`\label` and the `table*` wrapper live in the manuscript, which `\input`s the fragment.
+`\label` and the `table*` wrapper live in the manuscript. The journal's template forbids
+`\input` of other TeX files, so the manuscript carries a transcription of each fragment
+rather than including it: the fragment is the source these cells are checked against,
+and the gate below holds the fragment to the data, not the manuscript to the fragment.
 
 Every quality metric is the **mean over the three folds**. The two other aggregations
 these files admit — the intersected knowledge base, and a pooled figure — are

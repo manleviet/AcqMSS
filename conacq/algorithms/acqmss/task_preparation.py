@@ -105,7 +105,10 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
 
     Data mapping:
     - set_c: Bias constraints (B) with individual assumptions
-    - set_b: Background knowledge (BG) - root from Oracle via BGData
+    - set_b: Background knowledge (BG) - DOMAIN-ONLY, empty for a boolean FM. The root
+      constraint is recorded on ``root_axiom`` and applied after acquisition, not passed
+      into AcqMSS/REDUCE: inside BG it made REDUCE entailment-drop every ``X -> root``
+      constraint (design note "Root-constraint BG semantics")
     - set_tc: Positive examples (E+) with assumptions
     - set_tv: Negative examples (E-) with assumptions
     - set_neg_tv: Negated negative examples (NE)
