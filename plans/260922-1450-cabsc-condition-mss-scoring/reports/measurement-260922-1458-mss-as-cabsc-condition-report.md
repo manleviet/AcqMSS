@@ -108,6 +108,101 @@ to get the NE assumption ids, resolve each to its blocking clause the way
 `congen_model.py` does when it assembles the delivered theory, and solve. Scratch, and
 reconstructable from this paragraph.
 
+## The predicate, stated exactly (Task B)
+
+Section 5.5.4 says "the delivered *KB* and the subset $B'$ it is reduced from are
+logically equivalent given *BG* and *NE*". That is what ran, and it is whole-theory
+bidirectional entailment, not a per-constraint check:
+
+```
+SemanticEquivalenceChecker(
+    kb_clauses = clauses(B') + ne_clauses + bg_clauses,
+    ct_clauses = clauses(KB) + ne_clauses + bg_clauses,
+    bg_clauses = []).check_equivalence().is_equivalent
+```
+
+`check_equivalence` asks both directions, and each direction asks whether the source
+entails every clause of the target — entailing every clause of a set is entailing its
+conjunction, so each direction is one theory entailing the other. **84 of 84.**
+
+One detail that would otherwise be invisible: `SemanticEquivalenceChecker` adds its
+`bg_clauses` argument to the source of the FIRST direction only. Passing BG that way
+gives an asymmetric predicate in which direction 2 must entail $B'$ from $KB \cup NE$
+with no BG to help — fewer premises, so a strictly stronger claim. The first run used
+that form. It also holds on 84 of 84, and the measurement now records both
+(`given_bg_and_ne`, `bg_on_the_left_only`). The gate asserts the symmetric one, because
+that is the sentence. **No rewrite of the sentence is needed.**
+
+## Gated (Task A)
+
+`apps/sosym_r1/revision_cabsc_condition.py`, called by `check_paper_numbers.py`:
+**263 → 275 checks**, 12 new, all shown red by mutation before green.
+
+| Paper | Gate |
+|---|---|
+| S5.5.4 "logically equivalent given BG and NE" on every fold | 84/84, symmetric predicate; the stronger form asserted beside it |
+| S5.5.4 "1.4 to 1,659 times as many constraints" | rendered from 1.358407 and 1658.5 |
+| S5.7 "0.221 at the median" | rendered from 0.2207667 |
+| S5.7 "up to 0.758" | rendered from 0.7583933 |
+
+**On the rounding, the answer is that no tolerance is needed.** What is asserted is the
+*rendering*: the measured value put through the paper's own precision must produce the
+printed string exactly. A tolerance wide enough to admit both 1.36 and 1.4 would admit
+numbers the paper does not print.
+
+One trap is worth naming, because the obvious implementation gets it wrong. 1658.5 is an
+exact tie and Python's `round` is banker's rounding: `round(1658.5)` is **1658**. A gate
+written with `round` would go red on a correct paper and send someone to change 1,659 to
+1,658. `Decimal` with `ROUND_HALF_UP` is used instead — the rule a reader assumes, and
+the one the paper followed.
+
+Four further checks came free and are in the same module: the 73 folds with a positive
+example on which $A = B'$ exactly, and the 11 without one on which $A$ is the whole bias.
+`MINIMUM_CHECKS` 250 → 265.
+
+**The 11 and the 13 were already separated.** `check_paper_numbers.py` has asserted
+both since before this effort — `2-COV folds with |E+| == 0 in training` = 11 and
+`2-COV folds with no positive TEST example` = 13 — so a future edit that merges them
+turns the gate red rather than the paper wrong.
+
+## Where |B′| already lives
+
+It has a home in a published table, under another name: the `|MSS|` column of
+`tab:kb_size`. Checked cell by cell — the measured mean \|B′\| equals the printed
+\|MSS\| on **28 of 28** cells, including 6,634 for KB₅ 2-COV and 1,167 for KB₃ RS(m).
+
+So S5.5.4 needs no new column and no new number: one clause saying that $B'$ is the
+\|MSS\| column makes the 1.4–1,659 factor readable off the table the reader is already
+looking at. The section also already discusses MSS sizes in words ("2-COV retains larger
+MSS values but produces smaller final KBs"), so the connection is half made.
+
+## The failure pattern behind the prompt's correction
+
+The prompt's prediction was keyed on `len(ne_constraints) == 0`, read as "the NE that
+Reduce saw". It is the NE that **survived** Reduce. The meaning was taken from the field
+name rather than from the writer.
+
+This is the same shape as at least three earlier entries in this project's log, and the
+shape is the finding:
+
+- **A missing key read as a zero.** `semantic()` in `check_paper_numbers.py` carries the
+  note: reading one level shallower returns a `.get()` default of 0 on every fold, which
+  is how "the P/R do not exist anywhere in the repository" came to be reported. A missing
+  key and a zero value are different facts.
+- **A counter name that does not say whose numbers it moves.** ADR-0018 exists because
+  `conmin_` / `congen_` / `shared_` prefixes had to be *made* to carry that meaning; a
+  counter's name did not tell its reader whether touching it perturbed frozen figures.
+- **A guard named for the property it does not check.** In round 8, one day before this
+  effort, I went to `test_example_generators_rng_guard.py` to verify the manuscript's
+  "cross-process test" claim. It is a static AST guard with no subprocess. The real
+  cross-process test is in `test_generator_characterization.py`. Checking the *name*
+  would have produced a false contradiction against a correct paper.
+
+The rule that survives all four: **a field, counter or test earns its meaning from the
+code that writes it, never from what it is called.** Cheap enforcement, in this effort's
+case: one `print` of `train_size.negative` beside `len(ne_constraints)` would have shown
+5 against 30 before any prediction was built on either.
+
 ## What the Cowork layer can say
 
 - **"CABSC was evaluated"** — yes, on all 84 folds, under the identification the paper
