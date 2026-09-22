@@ -638,12 +638,14 @@ else:
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import revision_bias_composition            # noqa: E402
+import revision_cabsc_condition             # noqa: E402
 import revision_ea2468_limit                # noqa: E402
 import revision_order_and_working_example   # noqa: E402
 import revision_run_cost                    # noqa: E402
 
 for module in (revision_bias_composition, revision_ea2468_limit,
-               revision_run_cost, revision_order_and_working_example):
+               revision_run_cost, revision_order_and_working_example,
+               revision_cabsc_condition):
     try:
         module.run(check, REPO)
     except Exception as exc:                # a source that moved or vanished
@@ -664,7 +666,7 @@ if failures:
 # indistinguishable from a clean one to anything reading the exit code. The same shape
 # passed an artifact whose test suite had not run at all, because pytest was absent and
 # `grep FAILED` found nothing.
-MINIMUM_CHECKS = 250
+MINIMUM_CHECKS = 265
 if checks < MINIMUM_CHECKS:
     print(f'FAIL: only {checks} checks ran; expected at least {MINIMUM_CHECKS}.')
     print('An empty or truncated run is not a pass. Something above exited early or')

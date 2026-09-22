@@ -123,19 +123,36 @@ def clauses_of(bias, names) -> list:
             for c in bias.get_clauses(cid)]
 
 
-def theories_equivalent(bias, bprime, kb_names, fold) -> bool:
+def theories_equivalent(bias, bprime, kb_names, fold) -> dict:
     """Do B' and the delivered KB accept the same configurations, under NE and BG?
 
-    This is what Reduce claims: it drops only what the rest entails. NE and BG are on
-    BOTH sides, because they are on both sides in the run -- the delivered theory is
-    KB u NE u BG and the reduction was decided with NE present.
+    Two forms, because they are not the same predicate and the paper quotes one of them.
+
+    ``given_bg_and_ne`` is Section 5.5.4's sentence, literally: BG and NE sit on BOTH
+    sides, so this is mutual entailment between (B' u NE u BG) and (KB u NE u BG). They
+    are passed inside the two clause lists rather than through ``bg_clauses`` because
+    ``SemanticEquivalenceChecker`` adds ``bg_clauses`` to the source of ONE direction
+    only -- symmetric here means putting them in both.
+
+    ``bg_on_the_left_only`` is the asymmetric form that ``bg_clauses`` gives by default:
+    direction 2 must entail B' from KB u NE with no BG to help. Fewer premises, so it is
+    a STRICTLY STRONGER claim; it is kept because it also held, and because a reader
+    comparing this file with the checker's defaults would otherwise wonder which ran.
+
+    Whole-theory, not per-constraint: entailing every clause of a set is entailing its
+    conjunction, so each direction is one theory entailing the other.
     """
     ne = [list(c) for c in (fold.get('ne_clauses') or [])]
     bg = [list(c) for c in (fold.get('bg_clauses') or [])]
-    return bool(SemanticEquivalenceChecker(
-        kb_clauses=clauses_of(bias, bprime) + ne,
-        ct_clauses=clauses_of(bias, kb_names) + ne,
-        bg_clauses=bg).check_equivalence().is_equivalent)
+    left, right = clauses_of(bias, bprime) + ne, clauses_of(bias, kb_names) + ne
+    return {
+        'given_bg_and_ne': bool(SemanticEquivalenceChecker(
+            kb_clauses=left + bg, ct_clauses=right + bg,
+            bg_clauses=[]).check_equivalence().is_equivalent),
+        'bg_on_the_left_only': bool(SemanticEquivalenceChecker(
+            kb_clauses=left, ct_clauses=right,
+            bg_clauses=bg).check_equivalence().is_equivalent),
+    }
 
 
 def run_cell(cv_path: Path, bias, comparator) -> list:
@@ -197,7 +214,10 @@ def summarize(rows: list) -> dict:
     return {
         'folds': len(rows),
         'folds_without_ne': len(no_ne),
-        'folds_where_reduce_changed_the_theory': sum(1 for r in rows if not r['equivalent_to_kb']),
+        'folds_where_reduce_changed_the_theory':
+            sum(1 for r in rows if not r['equivalent_to_kb']['given_bg_and_ne']),
+        'folds_where_reduce_changed_the_theory_bg_on_the_left_only':
+            sum(1 for r in rows if not r['equivalent_to_kb']['bg_on_the_left_only']),
         'folds_whose_semantic_recall_moved': len(recall_moved),
         'folds_whose_semantic_precision_moved': len(precision_moved),
         'folds_where_A_strictly_contains_Bprime': len(strict),

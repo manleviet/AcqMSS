@@ -2,7 +2,7 @@
   "provenance": {
     "script": "apps/sosym_r1/measure_mss_as_cabsc_condition.py",
     "source": "data/results_sosym_r1/congen",
-    "measured": "2026-09-22T12:59:46Z",
+    "measured": "2026-09-22T13:28:45Z",
     "cells": [
       "REAL-FM-4_2cov",
       "REAL-FM-4_ff",
@@ -39,6 +39,7 @@
     "folds": 84,
     "folds_without_ne": 30,
     "folds_where_reduce_changed_the_theory": 0,
+    "folds_where_reduce_changed_the_theory_bg_on_the_left_only": 0,
     "folds_whose_semantic_recall_moved": 14,
     "folds_whose_semantic_precision_moved": 82,
     "folds_where_A_strictly_contains_Bprime": 11,
@@ -75,7 +76,10 @@
         "c828"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.25,
@@ -116,7 +120,10 @@
       "n_a": 1479,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5024390243902439,
@@ -157,7 +164,10 @@
       "n_a": 1479,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4926829268292683,
@@ -198,7 +208,10 @@
       "n_a": 782,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5443037974683544,
@@ -239,7 +252,10 @@
       "n_a": 859,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5695652173913044,
@@ -280,7 +296,10 @@
       "n_a": 966,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5535714285714286,
@@ -321,7 +340,10 @@
       "n_a": 648,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.596,
@@ -362,7 +384,10 @@
       "n_a": 687,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6118143459915611,
@@ -403,7 +428,10 @@
       "n_a": 811,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5809128630705395,
@@ -444,7 +472,10 @@
       "n_a": 538,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.632,
@@ -485,7 +516,10 @@
       "n_a": 572,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.623015873015873,
@@ -526,7 +560,10 @@
       "n_a": 585,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6311475409836066,
@@ -567,7 +604,10 @@
       "n_a": 502,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6820083682008368,
@@ -608,7 +648,10 @@
       "n_a": 485,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6485355648535565,
@@ -649,7 +692,10 @@
       "n_a": 540,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6695278969957081,
@@ -690,7 +736,10 @@
       "n_a": 1445,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5701357466063348,
@@ -731,7 +780,10 @@
       "n_a": 1379,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5919282511210763,
@@ -772,7 +824,10 @@
       "n_a": 1439,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5675675675675675,
@@ -815,7 +870,10 @@
         "c212"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.0,
@@ -858,7 +916,10 @@
         "c271"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.0,
@@ -901,7 +962,10 @@
         "c35"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.0,
@@ -942,7 +1006,10 @@
       "n_a": 149,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.1875,
@@ -983,7 +1050,10 @@
       "n_a": 146,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.0625,
@@ -1024,7 +1094,10 @@
       "n_a": 105,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.375,
@@ -1065,7 +1138,10 @@
       "n_a": 85,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.19047619047619047,
@@ -1106,7 +1182,10 @@
       "n_a": 99,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.29411764705882354,
@@ -1147,7 +1226,10 @@
       "n_a": 91,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.29411764705882354,
@@ -1188,7 +1270,10 @@
       "n_a": 73,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4117647058823529,
@@ -1229,7 +1314,10 @@
       "n_a": 67,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.35294117647058826,
@@ -1270,7 +1358,10 @@
       "n_a": 67,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.2727272727272727,
@@ -1311,7 +1402,10 @@
       "n_a": 62,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4666666666666667,
@@ -1352,7 +1446,10 @@
       "n_a": 63,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.23076923076923078,
@@ -1393,7 +1490,10 @@
       "n_a": 60,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.45454545454545453,
@@ -1434,7 +1534,10 @@
       "n_a": 128,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.3,
@@ -1475,7 +1578,10 @@
       "n_a": 139,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.17647058823529413,
@@ -1516,7 +1622,10 @@
       "n_a": 128,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.0,
@@ -1559,7 +1668,10 @@
         "c1351"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.16666666666666666,
@@ -1600,7 +1712,10 @@
       "n_a": 1185,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4,
@@ -1641,7 +1756,10 @@
       "n_a": 1185,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4090909090909091,
@@ -1682,7 +1800,10 @@
       "n_a": 808,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.3063063063063063,
@@ -1723,7 +1844,10 @@
       "n_a": 843,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.3300970873786408,
@@ -1764,7 +1888,10 @@
       "n_a": 907,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.34065934065934067,
@@ -1805,7 +1932,10 @@
       "n_a": 517,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.23121387283236994,
@@ -1846,7 +1976,10 @@
       "n_a": 560,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.23243243243243245,
@@ -1887,7 +2020,10 @@
       "n_a": 545,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.19186046511627908,
@@ -1928,7 +2064,10 @@
       "n_a": 400,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.18723404255319148,
@@ -1969,7 +2108,10 @@
       "n_a": 366,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.18333333333333332,
@@ -2010,7 +2152,10 @@
       "n_a": 348,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.17716535433070865,
@@ -2051,7 +2196,10 @@
       "n_a": 321,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.16444444444444445,
@@ -2092,7 +2240,10 @@
       "n_a": 313,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.17117117117117117,
@@ -2133,7 +2284,10 @@
       "n_a": 307,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.18141592920353983,
@@ -2174,7 +2328,10 @@
       "n_a": 1142,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4177215189873418,
@@ -2215,7 +2372,10 @@
       "n_a": 1211,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4027777777777778,
@@ -2256,7 +2416,10 @@
       "n_a": 1148,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4583333333333333,
@@ -2299,7 +2462,10 @@
         "c2627"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.0,
@@ -2342,7 +2508,10 @@
         "c673"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.0,
@@ -2385,7 +2554,10 @@
         "c2016"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.0,
@@ -2426,7 +2598,10 @@
       "n_a": 3899,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6153846153846154,
@@ -2467,7 +2642,10 @@
       "n_a": 3432,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5411061285500748,
@@ -2508,7 +2686,10 @@
       "n_a": 3397,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5319767441860465,
@@ -2549,7 +2730,10 @@
       "n_a": 2580,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5690140845070423,
@@ -2590,7 +2774,10 @@
       "n_a": 2536,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5862068965517241,
@@ -2631,7 +2818,10 @@
       "n_a": 2512,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6198473282442748,
@@ -2672,7 +2862,10 @@
       "n_a": 4789,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5390946502057613,
@@ -2713,7 +2906,10 @@
       "n_a": 4754,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.5277777777777778,
@@ -2754,7 +2950,10 @@
       "n_a": 4369,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.546,
@@ -2797,7 +2996,10 @@
         "c274"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.4423076923076923,
@@ -2840,7 +3042,10 @@
         "c274"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.37142857142857144,
@@ -2883,7 +3088,10 @@
         "c283"
       ],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.41346153846153844,
@@ -2924,7 +3132,10 @@
       "n_a": 266,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.7,
@@ -2965,7 +3176,10 @@
       "n_a": 277,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6916666666666667,
@@ -3006,7 +3220,10 @@
       "n_a": 265,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6639344262295082,
@@ -3047,7 +3264,10 @@
       "n_a": 218,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6870229007633588,
@@ -3088,7 +3308,10 @@
       "n_a": 219,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6617647058823529,
@@ -3129,7 +3352,10 @@
       "n_a": 237,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.728,
@@ -3170,7 +3396,10 @@
       "n_a": 209,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.656934306569343,
@@ -3211,7 +3440,10 @@
       "n_a": 209,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.674074074074074,
@@ -3252,7 +3484,10 @@
       "n_a": 230,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6766917293233082,
@@ -3293,7 +3528,10 @@
       "n_a": 201,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6814814814814815,
@@ -3334,7 +3572,10 @@
       "n_a": 201,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6861313868613139,
@@ -3375,7 +3616,10 @@
       "n_a": 202,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.6838235294117647,
@@ -3416,7 +3660,10 @@
       "n_a": 327,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.7410714285714286,
@@ -3457,7 +3704,10 @@
       "n_a": 352,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.7428571428571429,
@@ -3498,7 +3748,10 @@
       "n_a": 354,
       "a_minus_bprime": [],
       "bprime_minus_a": [],
-      "equivalent_to_kb": true,
+      "equivalent_to_kb": {
+        "given_bg_and_ne": true,
+        "bg_on_the_left_only": true
+      },
       "kb": {
         "description": [
           0.7407407407407407,
