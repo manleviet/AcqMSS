@@ -65,6 +65,11 @@ apps/sosym_r1/check_table_coverage.py
 apps/sosym_r1/check_timing_provenance.py
 apps/sosym_r1/count_target_clauses.py
 apps/sosym_r1/make_paper_tables.py
+# Produces data/results_sosym_r1/cabsc_condition/, which the gate reads: B' scored as
+# the CABSC condition, and A recomputed to decide Proposition 1's identification. It
+# ships because the artifact should be able to regenerate what it prints, not only
+# re-read it.
+apps/sosym_r1/measure_mss_as_cabsc_condition.py
 apps/sosym_r1/measure_exact_equivalence.py
 apps/sosym_r1/measure_ne_accuracy_effect.py
 apps/sosym_r1/measure_ne_per_example.py
@@ -78,6 +83,7 @@ apps/sosym_r1/significance_tests.py
 # but they are listed for the same reason as everything else: an artifact that prints a
 # number ships what recomputes it.
 apps/sosym_r1/revision_bias_composition.py
+apps/sosym_r1/revision_cabsc_condition.py
 apps/sosym_r1/revision_ea2468_limit.py
 apps/sosym_r1/revision_order_and_working_example.py
 apps/sosym_r1/revision_run_cost.py
