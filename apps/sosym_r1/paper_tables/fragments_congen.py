@@ -239,7 +239,10 @@ def kb_size(tree: ResultTree, data: Path) -> str:
     header = [[""] + [tex.multicolumn(2, lb) for lb in KB_LABELS],
               [""] + [tex.multicolumn(2, rf"($|C_\tau|$={target_constraints(data / 'fms', stem)})")
                       for stem, *_ in KNOWLEDGE_BASES],
-              ["Strategy"] + [c for _ in KB_LABELS for c in (r"$|MSS|$", r"$|KB|$")]]
+              # $|B'|$, not $|MSS|$: S6.2.3 names the unreduced subset B' and the
+              # CABSC comparison rests on that name, so the column and the prose use
+              # one symbol. The VALUE is unchanged -- statistics.n_mss either way.
+              ["Strategy"] + [c for _ in KB_LABELS for c in (r"$|B'|$", r"$|KB|$")]]
     rules = ["", tex.cmidrules(len(KB_LABELS), 2), ""]
     rows = []
     for samp, samp_label in SAMPLINGS:
