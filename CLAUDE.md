@@ -96,6 +96,16 @@ PYTHONPATH=. pytest tests/ -k "test_name" -v         # Pattern match
   trips over it — it compares stale against stale, so enabling it now proves
   nothing. It is released when C2 regenerates `data/results/congen` and
   re-baselines the t9 golden (B3 REDUCE regen; see ADR-0017).
+- **Shell output that looks right and is not**: two ways this tree lies to a script.
+  - The `rtk` hook rewrites `git diff`, `git ls-files` and `grep` into summaries, so a
+    pipeline that PARSES or COMPARES their output gets the summary, not the data. Two
+    checks in the r1-minimal-review pass were silently wrong: a `git diff --no-index`
+    pipe came back empty while the files plainly differed, and
+    `diff <(git ls-files) <(git ls-files)` printed IDENTICAL for two sets differing by
+    four paths. Anything parsed goes through `rtk proxy`, or is done in Python.
+  - `until ! pgrep -f <pattern>` never exits: the waiting shell's own command line
+    contains the pattern, so it matches itself. Wait on a PID instead. Three such
+    waiters spun for fifteen minutes after the run they were waiting for had finished.
 
 ## Effort plans (`plans/`) — what gets committed
 
