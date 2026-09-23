@@ -3,7 +3,7 @@
 - Date: 2026-09-23
 - Paper: `Overleaf/SoSyM/main-r1.tex`, mtime 2026-09-23 14:46, 1,180 lines (was 1,273)
 - Source of truth: **AcqMSS** `feat/sosym-r1`; artifact branch derived by carve (see *Where this was done*)
-- Gate: **275 → 339 checks** · fragment checker: **1,305 cells, 0 mismatched** (was 1,420 over 12 fragments)
+- Gate: **275 → 339 checks** here, **270 → 334** in the artifact · fragment checker: **1,305 cells, 0 mismatched** (was 1,420 over 12 fragments)
 - Baseline before any change: `pytest tests/ -q` → no red test names
 
 ## Claims in the brief that did not hold, stated first
@@ -160,6 +160,24 @@ committed artifact-side. So the work is committed in AcqMSS and the artifact bra
 **derived**: carve from the AcqMSS commit, lay the carved tree over a clone at `bb508c0`,
 commit as `r1-minimal-review`. The branch's diff is therefore exactly the artifact-visible
 change, and re-carving reproduces it. `v1.0.0` untouched.
+
+## Delivered
+
+| what | where |
+|---|---|
+| development branch (source of truth) | AcqMSS `feat/sosym-r1`, head `95162ae` |
+| artifact branch | ConGenEvaluation **`r1-minimal-review`** = `e51d72c`, one commit off `bb508c0` |
+| `main` | `bb508c0`, untouched |
+| `v1.0.0` | `bb508c0`, untouched |
+
+Verified in the carve before pushing: `reproduce_tables_sosym.sh` exit 0 with a clean
+`git status` afterwards, **334** gate checks, **1,305** cells 0 mismatched, coverage gate
+green, **342** tests passed, six hygiene checks. Here: 339 checks, 681 passed / 1 skipped,
+and all **234** revision assertions shown red on an altered value.
+
+Also changed by the later items, after the first pass: Table 7 dropped "clauses of $B$"
+(A5) and Table 11's first column became $|B'|$ (A6). `prose-reproduce-tables.patch` was
+rebased, since the fragment count it carries in its own context moved from 12 to 11.
 
 ## Proposed tag for the re-carve
 
