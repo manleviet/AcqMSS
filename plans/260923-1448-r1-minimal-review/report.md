@@ -3,7 +3,7 @@
 - Date: 2026-09-23
 - Paper: `Overleaf/SoSyM/main-r1.tex`, mtime 2026-09-23 14:46, 1,180 lines (was 1,273)
 - Source of truth: **AcqMSS** `feat/sosym-r1`; artifact branch derived by carve (see *Where this was done*)
-- Gate: **275 → 327 checks** · fragment checker: **1,300 cells, 0 mismatched** (was 1,420 over 12 fragments)
+- Gate: **275 → 339 checks** · fragment checker: **1,305 cells, 0 mismatched** (was 1,420 over 12 fragments)
 - Baseline before any change: `pytest tests/ -q` → no red test names
 
 ## Claims in the brief that did not hold, stated first
@@ -99,6 +99,36 @@ Two notes on B:
   semantic tier. Reading it a level deeper returns `None` on every fold and reports "0
   folds equivalent" against a paper that says 1. It did, in the first run of this work.
 
+## A/B addendum: |C_tau| in constraints (items 10 and 11)
+
+**My independent count agrees with yours on all five.** Counted twice, by two readings
+of the same UVL that fail differently — a backwards owner scan (each feature asks which
+group keyword precedes it at a smaller indent) and the forward pending-map parser
+`count_target_clauses.parse` already in the tree. The per-rule breakdown, which is what
+a disagreement would have to name:
+
+| model | per child of mandatory/optional | or/alternative groups | cross-tree lines | total | paper |
+|---|---:|---:|---:|---:|---:|
+| REAL-FM-7 | 9 | 2 | 2 | **13** | 13 |
+| fqa | 57 | 36 | 9 | **102** | 102 |
+| arcade-game | 27 | 9 | 34 | **70** | 70 |
+| REAL-FM-4 | 159 | 39 | 21 | **219** | 219 |
+| busybox-1.18.0 | 830 | 8 | 67 | **905** | 905 |
+
+Fragments follow: `tab_fm_summary` gains the column and **drops "clauses of $B$"**,
+spec `lrrrl` (A5); `tab_kb_size` gains the header row `($|C_\tau|$=k)`. The dropped
+clause count is still recorded in `data/bias/<model>-bias-stats.txt`. **Both re-count from the UVL** rather than one
+reading the other, so a drift between Table 7 and Table 11 shows up as two failures
+instead of none. Item 11's pair is asserted against measurements on both sides: 177 is
+the mean `statistics.n_kb` of KB3 RS(n) (the Table 11 cell) and 70 is counted from
+`arcade-game.uvl`, not read back from this file's own constant.
+
+**One hazard is now in the tree and is worth naming.** |C_tau| means two different
+things in this project: clauses (22, 342, 130, 428, 994) and constraints (13, 102, 70,
+219, 905), two to seven times apart. The clause counts left the paper in this review but
+stay gated, because every semantic recall is measured against them. Both sets are
+asserted, each labelled with its unit, and each file says which one it holds.
+
 ## C. Checks whose cited section no longer carries the number
 
 The paper renumbered (§5 Evaluation → §6, with §5 now Theoretical Analysis). Beyond
@@ -106,7 +136,7 @@ renumbering, these numbers left the paper entirely:
 
 | number | was | now |
 |---|---|---|
-| \|Cτ\| = 22 / 342 / 130 / 428 / 994 | §5.3 sentence | **nowhere in the paper.** `tab:fm_summary`'s third column is the *bias*'s clause count. Kept: every semantic recall is measured against this ground truth |
+| \|Cτ\| = 22 / 342 / 130 / 428 / 994, in **clauses** | §5.3 sentence | sentence gone. The review put \|Cτ\| in **constraints** into Tables 7 and 11 instead — a different unit of the same symbol. The clause counts stay gated: every semantic recall is measured against them |
 | h_bin, h_grp, k, reduction factors | `tab:biasformula` | table removed; letter quotes them |
 | "838 hierarchical and 58 cross-tree", "36 and 34" | §5.3 selection criteria | sentence removed; letter quotes them |
 | 95 s, 46 h, 1,752 QuickXplain runs | §5.3 limit paragraph | §6.1.1 states the limit **without figures**; letter quotes them |
