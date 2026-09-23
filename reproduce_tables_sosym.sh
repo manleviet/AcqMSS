@@ -269,6 +269,14 @@ Both are required. The correction rests on the PAIRING of the two, and a table
 that mixes a column from one with a column from the other reproduces from
 neither. That defect is what the N-item report was superseded for.
 
+## One fragment is not a table in the paper
+
+\`tables/paper/tab_significance.tex\` is **artifact-only**. The paper states the Wilcoxon
+result in prose (Section 6.2.5) and prints no significance table; the fragment is kept
+because the per-claim rows -- median difference, wins, the exact-test method, the Holm
+verdict, and the one claim the design cannot test -- exist nowhere else, and the numbers
+gate asserts them against it. Every other fragment here corresponds to a printed table.
+
 ## Gates passed
 
 - \`check_timing_provenance.py\` — no reported runtime overlaps another run
