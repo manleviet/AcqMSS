@@ -65,6 +65,10 @@ apps/sosym_r1/check_table_coverage.py
 apps/sosym_r1/check_timing_provenance.py
 apps/sosym_r1/count_target_clauses.py
 apps/sosym_r1/make_paper_tables.py
+# Two contracts of the generation pipeline that the paper no longer states: the FF
+# sampler's 10n safety bound and one solver per negative in GenerateNE. Kept because
+# the committed example sets and preprocessing costs were produced under them.
+apps/sosym_r1/generator_contracts.py
 # Produces data/results_sosym_r1/cabsc_condition/, which the gate reads: B' scored as
 # the CABSC condition, and A recomputed to decide Proposition 1's identification. It
 # ships because the artifact should be able to regenerate what it prints, not only
@@ -79,7 +83,7 @@ apps/sosym_r1/probe_query_budget.py
 apps/sosym_r1/probe_query_spin.py
 apps/sosym_r1/significance_tests.py
 # The revision's own figures, asserted by check_paper_numbers.py, which IMPORTS these
-# seven. Omitting one would not shrink the gate quietly -- the gate would not start --
+# seven, plus generator_contracts. Omitting one would not shrink the gate quietly -- the gate would not start --
 # but they are listed for the same reason as everything else: an artifact that prints a
 # number ships what recomputes it.
 apps/sosym_r1/revision_bias_composition.py
