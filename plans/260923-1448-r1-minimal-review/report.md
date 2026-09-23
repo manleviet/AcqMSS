@@ -306,3 +306,102 @@ after regeneration.
 3. The per-phase durations are now computed, scope-checked, and printed nowhere. If they
    should stay visible, the fragment header comment is the place — it already documents
    their derivation.
+
+---
+
+# Follow-up 2, second pass — the note that a reproduction run deleted
+
+## The defect
+
+The first acceptance run of this pass came back with the carved tree **dirty**, on
+exactly the file the run had just rewritten:
+
+```
+M data/results_sosym_r1/tables/PROVENANCE.md      (-8 lines)
+```
+
+The eight lines were the note marking `tab_significance` as artifact-only — item 4 of
+the request. It had been added to the *shipped copy*
+(`release/sosym-r1/patches/files/data/results_sosym_r1/tables/PROVENANCE.md`), which is
+the right place for a file the carve copies in. But `PROVENANCE.md` is not copied and
+left alone: it is **generated**, from a heredoc in `reproduce_tables_sosym.sh`, and the
+carve only *stamps the fingerprint into it*. So the note survived the carve and died at
+the first reproduction — which is the one thing a reader is told to do.
+
+This is the same shape as the errors this gate exists to catch: a statement that is true
+of the tree as shipped and false of the tree after the documented command. The carve's
+own acceptance criterion — `git status` clean after `reproduce_tables_sosym.sh` — is
+what caught it, not a reading of the file.
+
+## The fix
+
+The note now lives in the generator's heredoc, so every regeneration reproduces it, and
+`prose-reproduce-tables.patch` carries the same eight bytes-for-bytes lines to the
+artifact side. The patch was rebased by reconstruction, not by hand: HEAD's generator +
+the old patch gives the artifact file; the same block is lifted out of the dev file and
+inserted; the re-diff is then applied to the dev file and `cmp`-ed against the
+reconstruction. A hand-edited hunk header would have passed review and failed the carve.
+
+A second contradiction surfaced while fixing the first. The artifact README's table
+index said the fragments directory holds *one `.tex` per table, named after the label
+the paper uses*. That is false of `tab_significance.tex` and contradicts the PROVENANCE
+note beside it — the round-7 shape. The index now names the exception.
+
+## What was proven, not assumed
+
+- **Undeclared absence fails.** `check_manuscript_tables.py` reports a fragment with no
+  table in the manuscript as "not printed" only when it is declared. With
+  `NOT_PRINTED` emptied, the same run exits 1 and names `tab_significance`. Before this
+  pass that branch had only ever been seen green.
+- **Nine inline assertions shown red.** The checks added by items 4 and 5 live inline in
+  `check_paper_numbers.py`, which `mutate_revision_checks.py` does not reach (it drives
+  the eight importable modules). Each was falsified separately: claim 3's median and its
+  28/28, the `p < 1e-7` predicate, the four per-fold convergence statements, and both
+  budgets. Each went red and named its own check. One caveat stated plainly: the
+  `p < 1e-7` mutation tightens the threshold, so it proves the comparison is wired for
+  all four claims at once rather than each claim's p separately.
+
+## Tooling note worth keeping
+
+`rtk`'s hook rewrites `git diff`, `git ls-files` and `grep` into summarised forms. Two
+checks in this pass were silently wrong because of it: a `git diff --no-index` pipe came
+back empty when the files clearly differed, and a `diff <(git ls-files) <(git ls-files)`
+printed IDENTICAL for two file sets differing by four paths. **Anything whose output is
+parsed must go through `rtk proxy` or be done in Python.** The clone/carve equality is
+now a SHA-256 comparison over both tracked sets in Python: 637 files, 0 differing.
+
+## Acceptance, this pass
+
+| gate | dev | artifact (carve `68d0d05`) |
+|---|---|---|
+| `check_paper_numbers.py` | 361 | 356 |
+| `check_paper_tables.py` | — | 951 cells, 0 mismatched |
+| `pytest tests/` | — | 342 passed |
+| `check-release-hygiene.sh` | — | six checks pass |
+| `check_manuscript_tables.py` (dev-only) | 11 compared, 0 not matching | absent, as designed |
+| `mutate_revision_checks.py` | 245/245 assertions shown red | — |
+| inline falsification (this pass) | 9/9 shown red | — |
+
+The dev/artifact difference of five is structural, not coverage: the development tree
+holds both result trees and asserts the OLD→NEW correction (13 paired checks); the
+artifact ships only the corrected tree, where those collapse to 8 single-tree checks.
+
+**Carved tree clean after `reproduce_tables_sosym.sh`** — the criterion the first pass
+failed.
+
+## Closed since the last section
+
+- FLAMA version (was unresolved 1): closed by decision, the paper keeps "FLAMA 2.6.0".
+  No check added, not to be re-raised.
+- The FF 10n bound and fresh-solver contract (was unresolved 2): kept as generator
+  contracts, labelled as quoted in neither the paper nor the letter, with no section
+  reference — a stale citation would send a reader looking for something that is not
+  there.
+
+## Unresolved
+
+1. `tab_significance` is asserted by the numbers gate but printed nowhere. If the
+   Wilcoxon result later returns to a table, the fragment is ready and the declaration
+   in `check_manuscript_tables.py` must be removed in the same change.
+2. The tag is still on hold at the user's instruction; `v1.0.0` remains `bb508c0` and
+   `main` is untouched.
