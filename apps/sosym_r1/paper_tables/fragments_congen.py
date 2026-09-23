@@ -26,21 +26,40 @@ def _grid(tree: ResultTree, value):
     return rows
 
 
-def fm_summary(tree: ResultTree, data: Path) -> str:
-    """#features, |B|, #clauses and the domain, one row per knowledge base.
+def target_constraints(fm_dir: Path, stem: str) -> int:
+    """|C_tau| in CONSTRAINTS for one model, counted from its UVL.
 
-    Static inputs, not results -- generated anyway so the gate covers them. |B| and
-    #clauses are read from the committed bias statistics rather than recounted
-    here: those files are what the bias generator actually produced, and a second
-    count of the same thing would be a second chance to be wrong.
+    The convention and the counter live in ``revision_target_theory_size``, which is
+    also where the gate asserts them; importing it here keeps ONE definition rather
+    than a generator copy that could drift from the checked one.
+    """
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from revision_target_theory_size import count_by_owner_scan
+    return count_by_owner_scan(fm_dir / f"{stem}.uvl")["total"]
+
+
+def fm_summary(tree: ResultTree, data: Path) -> str:
+    """#features, |C_tau|, |B| and the domain, one row per knowledge base.
+
+    Static inputs, not results -- generated anyway so the gate covers them. |B| is read
+    from the committed bias statistics rather than recounted here: that file is what the
+    bias generator actually produced, and a second count of the same thing would be a
+    second chance to be wrong. The clause count B expands to was dropped by the
+    2026-09-23 review; it is still recorded in data/bias/<model>-bias-stats.txt.
+
+    |C_tau| is COUNTED FROM THE UVL, and in CONSTRAINTS -- the unit of |KB|, so that
+    the two can be compared. The paper prints the same value again in tab:kb_size's
+    header; both come from this one function, so they cannot drift apart.
     """
     rows = []
     for stem, label, short, domain in KNOWLEDGE_BASES:
         s = bias_stats(data / "bias", stem)
         rows.append([f"{label} ({short})", tex.count(s["features"]),
-                     tex.count(s["bias"]), tex.count(s["clauses"]), domain])
+                     tex.count(target_constraints(data / "fms", stem)),
+                     tex.count(s["bias"]), domain])
     return tex.tabular("lrrrl",
-                       [["", r"\#features", r"$|B|$", r"\#clauses", "domain"]], rows)
+                       [["", r"\#features", r"$|C_\tau|$", r"$|B|$", "domain"]], rows)
 
 
 def example_sizes_table(tree: ResultTree, data: Path) -> str:
@@ -213,9 +232,15 @@ def kb_size(tree: ResultTree, data: Path) -> str:
     kept them. That policy is what the accuracy and F1 columns were scored against,
     so a different count here would not describe the same knowledge base.
     """
+    # Three header rows: the KB, its target-theory size, then the two columns. |C_tau|
+    # rides in the header because it is one number per knowledge base, not per cell,
+    # and because |KB| is unreadable without it -- 177 delivered is a different story
+    # against a target of 70 than against one of 905. Same counter as tab:fm_summary.
     header = [[""] + [tex.multicolumn(2, lb) for lb in KB_LABELS],
+              [""] + [tex.multicolumn(2, rf"($|C_\tau|$={target_constraints(data / 'fms', stem)})")
+                      for stem, *_ in KNOWLEDGE_BASES],
               ["Strategy"] + [c for _ in KB_LABELS for c in (r"$|MSS|$", r"$|KB|$")]]
-    rules = [tex.cmidrules(len(KB_LABELS), 2), ""]
+    rules = ["", tex.cmidrules(len(KB_LABELS), 2), ""]
     rows = []
     for samp, samp_label in SAMPLINGS:
         cells = [samp_label]

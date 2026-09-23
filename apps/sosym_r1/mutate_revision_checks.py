@@ -12,7 +12,7 @@ found nothing because pytest had never run. Both were green the whole time.
 
 WHAT THIS DOES
 --------------
-It runs the six revision modules once to collect every assertion, then re-runs
+It runs the seven revision modules once to collect every assertion, then re-runs
 them once per assertion with THAT assertion's expected value altered, and
 requires exactly two things:
 
@@ -43,10 +43,12 @@ import revision_ea2468_limit                # noqa: E402
 import revision_minimal_review              # noqa: E402
 import revision_order_and_working_example   # noqa: E402
 import revision_run_cost                    # noqa: E402
+import revision_target_theory_size          # noqa: E402
 
 MODULES = (revision_bias_composition, revision_ea2468_limit,
            revision_run_cost, revision_order_and_working_example,
-           revision_cabsc_condition, revision_minimal_review)
+           revision_cabsc_condition, revision_minimal_review,
+           revision_target_theory_size)
 
 
 def passes(got, want, tol: float | None) -> bool:

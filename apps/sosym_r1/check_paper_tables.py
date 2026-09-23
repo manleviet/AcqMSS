@@ -78,6 +78,14 @@ def _grid(audit: Audit, path: Path, header_lines: int, want_cell, label: str,
                            want_cell(stem, samp, j))
 
 
+def _target_constraints(stem: str) -> int:
+    """|C_tau| in CONSTRAINTS, counted from the UVL by the convention the gate asserts."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from revision_target_theory_size import count_by_owner_scan
+    return count_by_owner_scan(DATA / "fms" / f"{stem}.uvl")["total"]
+
+
 def _kb_major(audit: Audit, path: Path, header_lines: int, want_cell, label: str,
               width: int) -> None:
     """Rows are (knowledge base, sampling); the KB label is printed once per block.
@@ -102,11 +110,21 @@ def _kb_major(audit: Audit, path: Path, header_lines: int, want_cell, label: str
 
 
 def check_fm_summary(a: Audit, d: Path) -> None:
+    """Four numbers per model: features, |C_tau|, |B|, and the clauses B expands to.
+
+    |C_tau| is RE-COUNTED from the UVL here, by the same convention the gate asserts,
+    and the identical value is re-counted again in check_kb_size for that table's
+    header. The two printings of one number are therefore each held to the source
+    rather than to each other, which is the only way a drift between them shows up as
+    two failures instead of none.
+    """
     rows = P.body_rows(d / "tab_fm_summary.tex", 1)
     for stem, row in zip(KBS, rows):
         n = R.bias_numbers(DATA / "bias", stem)
-        for j, key in enumerate(("features", "bias", "clauses")):
-            a.cell(f"fm_summary {stem} {key}", row[1 + j], R.fmt_count(n[key]))
+        a.cell(f"fm_summary {stem} features", row[1], R.fmt_count(n["features"]))
+        a.cell(f"fm_summary {stem} target constraints", row[2],
+               R.fmt_count(_target_constraints(stem)))
+        a.cell(f"fm_summary {stem} bias", row[3], R.fmt_count(n["bias"]))
 
 
 def check_example_sizes(a: Audit, d: Path) -> None:
@@ -231,12 +249,19 @@ def check_comparison_strategies(a: Audit, d: Path) -> None:
 
 
 def check_kb_size(a: Audit, d: Path) -> None:
+    """|MSS| and |KB| per unit, and the |C_tau| the header prints for each model."""
+    header = P.rows_of(d / "tab_kb_size.tex")[1]
+    for k, stem in enumerate(KBS):
+        a.cell(f"kb_size header {stem} target constraints",
+               P.expand(header)[1 + k * 2],
+               rf"($|C_\tau|$={R.fmt_count(_target_constraints(stem))})")
+
     def want(stem, samp, j):
         if (stem, samp) in NOT_RUN:
             return NA
         fs = a.folds(stem, samp, "congen")
         return R.fmt_count(R.stat_mean(fs, "n_mss" if j == 0 else "n_kb"))
-    _grid(a, d / "tab_kb_size.tex", 2, want, "kb_size", per_kb=2)
+    _grid(a, d / "tab_kb_size.tex", 3, want, "kb_size", per_kb=2)
 
 
 def _method_grid(a: Audit, path: Path, header_lines: int, want_cell, label: str,
