@@ -186,6 +186,64 @@ how the tables are laid out and how much of the paper the gate holds. That is a 
 not a new dataset. The carve must be re-run on the tag day whatever the name: the hygiene
 gate refuses a `CITATION.cff` whose `date-released` is not that day.
 
+## Follow-up pass (same branch, re-carve, no tag)
+
+| item | done |
+|---|---|
+| 1. Table 12 KB label as `\multirow{6}{*}{$KB_k$}`, KB5's n/a rows inside the group | yes |
+| 2a. §6.2.4 equivalence sentence gone — check relabelled to §6.4 "1 of the 84 folds"; the unit `REAL-FM-7 rs_3n` fold 2 kept, labelled as quoted by the response letter | yes |
+| 2b. "semantic precision stays below 1 on all 28 combinations" | yes, 28 rows, max **0.9943** at busybox 2-COV |
+| 3. FF 10n bound and one-solver-per-negative as generator contracts, no section reference | yes — **they did not exist**, see below |
+| 4. FLAMA | closed, no check added, not re-raised |
+| 5. `tab_iterative_semantic`, `tab_rule_learners` | untouched |
+
+**Per fold the precision claim does not hold, and it is reported rather than gated.**
+Exactly **1 of 84** folds reaches semantic precision 1.000 — `REAL-FM-7 rs_3n` fold 2,
+which is also the only exactly-equivalent fold and the only fold with semantic F1 =
+1.000. All 28 combination means stay below 1, which is what the paper claims.
+
+**Item 3 found nothing to relabel.** Neither the FF 10n bound nor "a fresh solver per
+negative example" was ever in the gate — both were verified by reading in round 8 and
+recorded in a report, which is not the same thing. They are now checks, in
+`generator_contracts.py`, carrying no section reference. The solver contract is asserted
+**behaviourally**: `build_checker` is wrapped in GenerateNE's own namespace and the
+count compared with the number of negatives (9 for 9 on KB₁ 2-COV). A source-shape
+assertion would pass a refactor that moves the call out of the loop but keeps the text.
+
+The paper's tier sentence also changed shape — "the semantic F1 is at least as high as
+the clause-based one, and both exceed the description-based one" — so the single
+`Desc <= Clause <= Sem` chain is now three checks: one non-strict, two strict. A chain
+would have stayed green if only the strict half failed.
+
+## Per-table body diff against `main-r1.tex`
+
+Whitespace-normalised, comments and rules dropped, column spec compared:
+
+| fragment | verdict |
+|---|---|
+| `tab_fm_summary` | identical, 6 rows, `lrrrl` |
+| `tab_example_sizes` | identical, 8 rows, `lrrrrrrrrrr` |
+| `tab_AcqMssruntime` | identical, 31 rows, `llrrrrr` |
+| `tab_accuracy_all` | identical, 7 rows, `lccccc` |
+| `tab_comparison_strategies` | identical, 32 rows, `llrrrrr` |
+| `tab_kb_size` | identical, 9 rows, `lrrrrrrrrrr` |
+| `tab_iterative_accuracy` | identical, 19 rows, `llrrrrr` |
+| `tab_runtime_comparison` | identical, 19 rows, `llrrrrr` |
+| `tab_significance` | identical, 6 rows, `lrrrrl` |
+| `tab_iterative_semantic` | **differs** — fragment is KB-as-column-groups (`llrrlrrlrrlrrlrrl`, 20 rows), manuscript is Strategy × Method (`llrrrrr`, 19 rows) |
+| `tab_rule_learners` | **differs** — fragment is one row per KB with 20 value columns, manuscript is one row per (KB, strategy, learner), 25 rows, `lllrrrr` |
+
+**Nine of eleven are identical to what the paper prints**, including all four changed
+today. The two that differ are the two declared out of scope, and the difference is
+layout, not values — which is what "pre-existing" predicted, now measured rather than
+assumed.
+
+This comparison is the link nothing else holds: `check_paper_tables.py` holds the
+fragment to the data, and the manuscript transcribes the fragment by hand because the
+journal template forbids `\input`. It ran from a scratch script against the manuscript
+path. It could be a development-side gate — it cannot be an artifact-side one, since the
+artifact has no manuscript.
+
 ## Unresolved
 
 1. The FLAMA version sentence (finding 5). Needs a paper decision before it can be gated.
