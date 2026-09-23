@@ -244,6 +244,59 @@ journal template forbids `\input`. It ran from a scratch script against the manu
 path. It could be a development-side gate — it cannot be an artifact-side one, since the
 artifact has no manuscript.
 
+## Follow-up 2 (S6.2.5 tables)
+
+| item | done |
+|---|---|
+| 1. Tables 13 and 15: `\multirow{3}{*}` per strategy, `\midrule` between the six groups | yes |
+| 2. Table 14 absorbs the queries table: `ll` + `rr`×5, empty ConGen q cells, plain q numbers, n/a spanning both columns, bold unchanged | yes |
+| 3. Table 16: manuscript layout, `lllrrrr`, one row per (KB, strategy, learner), only the 8 scored combinations | yes |
+| 4. `tab_significance` kept, marked artifact-only, checks relabelled to §6.2.5; claim 3's 28/28 and p < 10⁻⁷ for 1a, 1b, 3, 5 | yes |
+| 5. Table 14's caption: stopping rules per fold, and the two budgets | yes |
+| 6. Queries checks now cite Table 14 | yes |
+| 7. Manuscript diff as a dev-side check | yes, `apps/sosym_r1/check_manuscript_tables.py`, never listed for the carve |
+| 8. No other §6.2.5 sentence gated | respected |
+| 9. Tag | on hold |
+
+**Item 5 was already half-gated and half-missing.** The counts (66 `max_queries`, 18
+`no_query`, 84 `pool_exhausted`) were asserted; the caption's claim is about *which*
+fold stopped how, and a total cannot tell "all 18 KB₁ folds" from "18 folds scattered
+anywhere". Now checked per fold, and the budgets are read from the folds that hit them
+rather than from a constant — a re-run at another cap moves the check instead of
+passing it.
+
+**A pre-existing defect, found while editing:** `check_paper_tables.py` defined
+`check_iterative_accuracy`, `check_iterative_semantic`, `check_runtime_comparison` and
+`check_rule_learners` **twice**, the second shadowing the first. The copies were
+byte-identical, so nothing had gone wrong yet — but I was about to edit them, and an
+edit to the dead copy would have been silent. The 73 dead lines are removed. Present
+since at least `c550b50`.
+
+`MINIMUM_CELLS` 1000 → 900: the two rewritten tables print 354 fewer cells (the stop
+column, and a rule-learner grid that was mostly "too few" markers). The combinations
+that are no longer printed are still checked — the scored set is re-derived and the row
+count asserted against it — so the fall is in printed cells, not in facts held.
+
+### Per-table diff against `main-r1.tex` after this pass
+
+```
+tab_AcqMssruntime           identical (31 rows, llrrrrr)
+tab_accuracy_all            identical  (7 rows, lccccc)
+tab_comparison_strategies   identical (32 rows, llrrrrr)
+tab_example_sizes           identical  (8 rows, lrrrrrrrrrr)
+tab_fm_summary              identical  (6 rows, lrrrl)
+tab_iterative_accuracy      identical (19 rows, llrrrrr)
+tab_iterative_semantic      identical (20 rows, llrrrrrrrrrr)
+tab_kb_size                 identical  (9 rows, lrrrrrrrrrr)
+tab_rule_learners           identical (25 rows, lllrrrr)
+tab_runtime_comparison      identical (19 rows, llrrrrr)
+tab_significance            not printed (declared artifact-only)
+```
+
+**Eleven of eleven as expected: ten identical, one declared.** The check was shown red
+first — one altered cell in `tab_fm_summary` gives exit 1 and a unified diff; exit 0
+after regeneration.
+
 ## Unresolved
 
 1. The FLAMA version sentence (finding 5). Needs a paper decision before it can be gated.
