@@ -69,7 +69,12 @@ source field, unit and — for a derived column — its exact expression. The ca
 `\label` and the `table*` wrapper live in the manuscript. The journal's template forbids
 `\input` of other TeX files, so the manuscript carries a transcription of each fragment
 rather than including it: the fragment is the source these cells are checked against,
-and the gate below holds the fragment to the data, not the manuscript to the fragment.
+and the gate below holds the fragment to the data, not the manuscript to the
+fragment. One fragment is the exception:
+`tab_significance.tex` is **artifact-only**, because the paper reports the Wilcoxon
+result in prose (Section 6.2.5) and prints no significance table. It is kept because
+its per-claim rows exist nowhere else and the numbers gate asserts them; `PROVENANCE.md`
+records the same exception beside the fragments.
 
 Every quality metric is the **mean over the three folds**. The two other aggregations
 these files admit — the intersected knowledge base, and a pooled figure — are
