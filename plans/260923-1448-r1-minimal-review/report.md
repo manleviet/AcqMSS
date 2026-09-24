@@ -405,3 +405,97 @@ failed.
    in `check_manuscript_tables.py` must be removed in the same change.
 2. The tag is still on hold at the user's instruction; `v1.0.0` remains `bb508c0` and
    `main` is untouched.
+
+---
+
+# Follow-up 3 — the minimal-change review closes
+
+## Fragments
+
+Table 13 gained a `|KB|` column beside each accuracy, which made it structurally
+identical to Table 14. The two builders were therefore merged into one
+`_paired_table`, and the bolding branch of `_method_rows` — reachable only from the
+old single-column accuracy table — was deleted rather than left as a path nothing
+exercises. Table 16 now groups twice, by knowledge base and by strategy, with the
+spans counted from the scored set rather than written down: a hand-set
+`\multirow{9}` outlives the ninth row it was counted for.
+
+`|KB|` is read from the `kb_constraints` LIST on both sides — the generator and the
+audit — and deliberately not from `statistics.n_kb`. They agree on every committed
+fold, which is exactly why reading the summary field would prove nothing.
+
+## What the new checks are for
+
+`check_paper_tables.py` proves every printed cell. It cannot see a sentence that
+summarises them. The paragraphs added here quantify over the grid — "all 23
+non-2-COV combinations", "27 of 28", "1.6 to 1,952 times" — and a grid can be
+cell-perfect while its summary is stale. Every count is recomputed from the fold
+files with its denominator asserted first.
+
+Two of them are stronger than the sentence they check, on purpose:
+
+- **"27 of 28" now names the missing one.** `significance_tests.compute()` returns
+  the combinations that go against each claim, so the gate asserts that claim 1b's
+  single exception is KB3 under RS(3n) — which is what the paper says. A bare 27
+  could not tell that apart from any other cell flipping.
+- **"under a second per fold" is checked per fold.** The paper's 623 ms is a cell
+  mean over three folds, and a mean under a second does not establish that every
+  fold was. Both are asserted; the per-fold maximum is 658 ms.
+
+## One number the paper derives in two rounding orders
+
+The abstract's "70.4%–99.9% of the candidate constraints" reproduces exactly from
+the unrounded per-cell means, at KB2 RS(3n) and KB5 2-COV.
+
+S6.1.2's KB1 figures do not, and the reason is worth recording rather than
+smoothing over. The paper reads KB1's `|KB|` off Table 13 as 9 and 19 — those are
+8.7 and 18.7 rounded — and computes the percentages from them, giving 93.6%–96.9%.
+From the means the same span is 93.7%–97.1%. Both are asserted, each labelled with
+the order it was derived in, and the unrounded pair is printed beside the assertion
+so the difference reads as a rounding order rather than a disagreement about data.
+
+## The hygiene gate earned its keep again
+
+The first carve of this pass failed on `R1-Q2`, `R2-Q4` and `R2-Q13` — reviewer
+question codes I had written into the relabelled checks. The gate's message is
+right: a code naming a process the paper does not describe is decodable by a
+reader. All four relabelled checks now say "the response letter" in plain words.
+
+Two counts in the artifact README were also stale: the numbers gate had grown from
+356 to 412, and the table audit said 1,420 cells against a run that prints 1,041.
+Both now say they are the count the run prints, which is the only form a reader can
+check. This is the second stale count in that file in two passes, and there is no
+mechanism behind it — see the unresolved list.
+
+## Acceptance
+
+| gate | dev | artifact (carve `cc23344`, published `f603a17`) |
+|---|---|---|
+| `check_paper_numbers.py` | 417 | 412 |
+| `check_paper_tables.py` | 1,041 cells, 0 mismatched | same |
+| `pytest tests/` | 681 passed, 1 skipped | 342 passed |
+| `check-release-hygiene.sh` | — | six checks pass |
+| `check_manuscript_tables.py` (dev-only) | 11 compared, 0 not matching | absent, as designed |
+
+Carved tree clean after `reproduce_tables_sosym.sh`. Clone byte-identical to the
+carve: 640 tracked files, 0 differing.
+
+The dev/artifact difference of five is structural: the development tree holds both
+result trees and asserts the OLD→NEW correction; the artifact ships only the
+corrected tree.
+
+## Unresolved
+
+1. **`main` in the artifact repository was left at `bb508c0`.** `release/README.md`
+   does not say that `main` tracks the published artifact, and the instruction was
+   conditional on it saying so. After the tag moves, `main` is therefore behind
+   `v1.0.0`. That is a decision to make, not a defect to fix silently.
+2. **The artifact README's stated counts have no mechanism behind them.** Both were
+   stale this pass and one was stale the pass before. A check is possible for the
+   table count — `check_paper_tables.py` finishes knowing its own total — but not
+   for the numbers gate, which cannot assert its own total while it is still
+   counting. Proposed for the next pass rather than built on tag day.
+3. **The artifact's gate prints its sections as 1..8, 9b, 9, 10.** The artifact
+   drops two of the development tree's sections and renumbers the rest, but `9b`
+   keeps its letter and now sorts before the section it was named after. Cosmetic,
+   pre-existing, and left alone during a tag.
