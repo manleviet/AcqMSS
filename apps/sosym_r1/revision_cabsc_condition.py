@@ -9,7 +9,7 @@ that AcqMss computes" -- which is the sentence those two figures exist to suppor
 it is quoted here verbatim so a reading of this module shows what is being held.
 
 The other two, "differs by 0.221 at the median and by up to 0.758", are QUOTED IN THE
-RESPONSE LETTER (R3) ONLY since the 2026-09-24 review; the threats paragraph that
+RESPONSE LETTER ONLY since the 2026-09-24 review; the threats paragraph that
 carried them is gone. They stay asserted, without a section reference.
 
 None of the four came from a table, so no gate could see them:
@@ -49,7 +49,7 @@ from pathlib import Path
 
 MEASUREMENT = Path('data') / 'results_sosym_r1' / 'cabsc_condition' / 'cabsc_condition.json'
 
-# As the Discussion prints them; the last two are the letter's (R3).
+# As the Discussion prints them; the last two are the letter's only.
 PAPER_FOLDS = 84
 PAPER_SIZE_FACTOR = ('1.4', '1,659')        # "1.4 to 1{,}659 times as many constraints"
 PAPER_F1_MEDIAN = '0.221'                   # "differs by 0.221 at the median"
@@ -76,7 +76,7 @@ def run(check, repo: Path) -> None:
     rows = data['folds']
 
     print('\n[cabsc] B\' as the CABSC condition, beside the delivered KB'
-          ' (Discussion; the spread figures are letter R3)')
+          ' (Discussion; the spread figures are in the letter only)')
     check('folds measured', len(rows), PAPER_FOLDS)
 
     # Discussion (3): "the delivered knowledge base is logically equivalent to the
@@ -95,7 +95,7 @@ def run(check, repo: Path) -> None:
     # The direction the sentence asserts: B' is never smaller than what it reduces to.
     check('B\' is at least as large as the delivered KB on every fold', min(ratios) >= 1.0, True)
 
-    # Letter R3: "their semantic F1 differs by 0.221 at the median and by up to
+    # The letter: "their semantic F1 differs by 0.221 at the median and by up to
     # 0.758". Not printed in the paper since the 2026-09-24 review.
     # DIFFERS BY, so the magnitude: one fold moves the other way (+0.023) and a signed
     # median would report a different quantity than the sentence claims. Both readings

@@ -287,13 +287,13 @@ check('cells where ConGen is below the accept-everything baseline', below_trivia
 # ---------------------------------------------------------------------------
 # 5. Fold agreement, reported as a STABILITY statistic and never as a score.
 #
-#    QUOTED IN THE RESPONSE LETTER (R3), NOT IN THE PAPER. The 2026-09-24 review
+#    QUOTED IN THE RESPONSE LETTER, NOT IN THE PAPER. The 2026-09-24 review
 #    dropped the sentence that carried the 29-80% range. The checks stay because
 #    the letter still states it and because the range is the evidence behind the
 #    threats-to-validity claim that folds disagree; what is removed is the section
 #    reference, which would otherwise send a reader to a paragraph that is gone.
 # ---------------------------------------------------------------------------
-print('\n5. fold-agreement range (letter R3; no longer printed in the paper)')
+print('\n5. fold-agreement range (letter only; no longer printed in the paper)')
 agree: dict[str, float] = {}
 for f in sorted(glob.glob(str(R1 / '*.json'))):
     d = json.load(open(f))
@@ -371,11 +371,11 @@ check('2-COV folds with no positive TEST example', te_zero, 13)
 #    fold-0 vs mean, pooled vs mean, intersected vs mean. Quote the aggregation
 #    the paper uses, and say which one it is.
 # ---------------------------------------------------------------------------
-# QUOTED IN THE RESPONSE LETTER (R2-Q13), NOT IN THE PAPER. The cap probe answers a
-# reviewer's question -- was the iterative baseline starved of budget? -- and the
+# QUOTED IN THE RESPONSE LETTER, NOT IN THE PAPER. The cap probe answers the
+# question of whether the iterative baseline was starved of budget, and the
 # answer lives in the letter. The paper states only that the baselines hit their
 # budget, which Table 14's caption carries and the per-fold checks above assert.
-print('\n8. cap sensitivity of the iterative baseline (letter R2-Q13, per-fold means)')
+print('\n8. cap sensitivity of the iterative baseline (letter only, per-fold means)')
 import re as _re
 
 cap_rows: dict[tuple[str, str], dict[int, float]] = {}

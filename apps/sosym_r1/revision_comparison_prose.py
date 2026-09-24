@@ -35,7 +35,7 @@ PAPER_KB_RANGE = {'example_only': (0.0, 8.7), 'example_first': (2.0, 40.7),
 PAPER_EXAMPLE_ONLY_ACC = (0.667, 1.000)
 # The one cell the paragraph names: an empty knowledge base at 0.917 accuracy.
 PAPER_EMPTY_KB_CELL = ('rs_m', 'REAL-FM-7', 0.0, 0.917)
-# QUOTED IN THE RESPONSE LETTER (R2-Q4) ONLY. The paper prints the six zeros in
+# QUOTED IN THE RESPONSE LETTER ONLY. The paper prints the six zeros in
 # Table 13 but no longer counts them in prose. The count is asserted because the
 # zeros are what the |KB| column was added to show, and a column whose point is
 # carried by six cells should not depend on a reader noticing them.
@@ -92,7 +92,7 @@ def run(check, repo: Path) -> None:
           _round(acc['example_only'][(samp, stem)], 3), want_acc, tol=1e-9)
 
     empty = sorted(c for c, v in kb['example_only'].items() if v == 0)
-    check('example-only combinations that learned nothing at all (letter R2-Q4)',
+    check('example-only combinations that learned nothing at all (letter only)',
           len(empty), LETTER_EMPTY_KB_CELLS)
     # Neither other method has one, which is what makes the six a property of the
     # regime rather than of the folds they were measured on.

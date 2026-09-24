@@ -192,14 +192,14 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 -# 5. Fold agreement, reported as a STABILITY statistic and never as a score.
 +# 4. Fold agreement, reported as a STABILITY statistic and never as a score.
  #
- #    QUOTED IN THE RESPONSE LETTER (R3), NOT IN THE PAPER. The 2026-09-24 review
+ #    QUOTED IN THE RESPONSE LETTER, NOT IN THE PAPER. The 2026-09-24 review
  #    dropped the sentence that carried the 29-80% range. The checks stay because
 @@ -293,7 +313,7 @@
  #    threats-to-validity claim that folds disagree; what is removed is the section
  #    reference, which would otherwise send a reader to a paragraph that is gone.
  # ---------------------------------------------------------------------------
--print('\n5. fold-agreement range (letter R3; no longer printed in the paper)')
-+print('\n4. fold-agreement range (letter R3; no longer printed in the paper)')
+-print('\n5. fold-agreement range (letter only; no longer printed in the paper)')
++print('\n4. fold-agreement range (letter only; no longer printed in the paper)')
  agree: dict[str, float] = {}
  for f in sorted(glob.glob(str(R1 / '*.json'))):
      d = json.load(open(f))
@@ -259,11 +259,11 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
  #    query collapsed, with nothing converging at any budget.
  #
 @@ -375,7 +397,7 @@
- # reviewer's question -- was the iterative baseline starved of budget? -- and the
+ # question of whether the iterative baseline was starved of budget, and the
  # answer lives in the letter. The paper states only that the baselines hit their
  # budget, which Table 14's caption carries and the per-fold checks above assert.
--print('\n8. cap sensitivity of the iterative baseline (letter R2-Q13, per-fold means)')
-+print('\n7. cap sensitivity of the iterative baseline (letter R2-Q13, per-fold means)')
+-print('\n8. cap sensitivity of the iterative baseline (letter only, per-fold means)')
++print('\n7. cap sensitivity of the iterative baseline (letter only, per-fold means)')
  import re as _re
  
  cap_rows: dict[tuple[str, str], dict[int, float]] = {}

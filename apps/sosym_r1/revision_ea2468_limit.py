@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The ea2468 feasibility figures: what recomputes here, and what does not.
 
-QUOTED IN THE RESPONSE LETTER (R1-Q2) ONLY. The 2026-09-23 review left S6.1.1 stating
+QUOTED IN THE RESPONSE LETTER ONLY. The 2026-09-23 review left S6.1.1 stating
 the limit without its figures, and the 2026-09-24 review removed the model from the
 paper altogether: neither the 1,408 features, nor the two million candidates, nor the
 95 s, nor the 46 h appears in main-r1.tex any more. They are all in the letter, which
