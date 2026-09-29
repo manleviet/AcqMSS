@@ -43,6 +43,7 @@ from conacq.eval import apply_folds, load_folds                              # n
 from conacq.eval.accuracy import AccuracyCalculator                          # noqa: E402
 from conacq.examples import ExampleIO                                        # noqa: E402
 from conacq.oracle import FMOracle                                           # noqa: E402
+from pysat.solvers import Solver                                             # noqa: E402
 
 STEMS = ['busybox-1.18.0', 'arcade-game', 'REAL-FM-7', 'REAL-FM-4', 'fqa']
 PREP = 'shared_preprocessing_quickxplain_checks'
@@ -81,6 +82,59 @@ PRINTED = [('acc', tex.quality, 'T13'), ('kb', tex.one_decimal, 'T13'),
            ('desc_f1', tex.quality, 'T12'), ('n_ne', tex.one_decimal, '-'),
            ('prep_checks', tex.count, 'T9'), ('total_checks', tex.count, 'T9'),
            ('runtime_ms', tex.millis, 'T9')]
+
+
+def entails(theory: list, clauses: list) -> bool:
+    """theory |= every clause: theory AND NOT(clause) is UNSAT for each one."""
+    with Solver(name='glucose4', bootstrap_with=theory) as sat:
+        return not any(sat.solve(assumptions=[-lit for lit in cl]) for cl in clauses)
+
+
+def explain_difference(model_kb, fr: dict, fd: dict) -> dict:
+    """Why the two KBs differ, by entailment rather than by narrative.
+
+    Reduce's BG is EMPTY for a feature model: the root is kept out of acquisition and
+    re-added at delivery. So a constraint one side kept and the other dropped is
+    classified against the OTHER side, in Reduce's own view first (no root):
+
+      order    entailed by the other bias KB alone -- another representative of the
+               same theory was kept (Reduce is order-dependent)
+      ne       entailed only once the other side's surviving ¬e⁻ is added -- Reduce
+               dropped it because that memorized fact entails it
+      root     entailed only once the root axiom is also added (not a reason Reduce
+               could have used; the delivered theories still agree on it)
+      absent   not entailed even by the other delivered theory -- a semantic change
+
+    Also: whether each delivered theory (bias + ¬e⁻ + root) entails the other, and
+    whether each side's surviving ¬e⁻ is literally the root axiom."""
+    def bias(fold):
+        return [list(c) for cid in ids(fold['kb_constraints'])
+                for c in model_kb.constraint_map.get(cid, ())]
+
+    def ne(fold):
+        return [list(c) for c in fold['ne_clauses']]
+
+    def root(fold):
+        return [list(c) for c in fold['bg_clauses']]
+
+    def why(cid, other):
+        cl = [list(c) for c in model_kb.constraint_map[cid]]
+        if entails(bias(other), cl):
+            return 'order'
+        if entails(bias(other) + ne(other), cl):
+            return 'ne'
+        if entails(bias(other) + ne(other) + root(other), cl):
+            return 'root'
+        return 'absent'
+
+    kb_r, kb_d = ids(fr['kb_constraints']), ids(fd['kb_constraints'])
+    delivered = lambda f: bias(f) + ne(f) + root(f)  # noqa: E731
+    return {'only_raw_why': {c: why(c, fd) for c in kb_r if c not in kb_d},
+            'only_reduced_why': {c: why(c, fr) for c in kb_d if c not in kb_r},
+            'raw_entails_reduced': entails(delivered(fr), delivered(fd)),
+            'reduced_entails_raw': entails(delivered(fd), delivered(fr)),
+            'ne_is_root_raw': bool(ne(fr)) and all(c in root(fr) for c in ne(fr)),
+            'ne_is_root_reduced': bool(ne(fd)) and all(c in root(fd) for c in ne(fd))}
 
 
 def rejects_training_negatives(stem, model, fold, model_kb) -> tuple[bool, bool, int]:
@@ -140,6 +194,7 @@ def main() -> int:
                     'only_raw': [f'{c}: {desc.get(c, "")}' for c in kb_r if c not in kb_d],
                     'only_reduced': [f'{c}: {desc.get(c, "")}' for c in kb_d if c not in kb_r],
                     'ne_raw': fr['ne_constraints'], 'ne_reduced': fd['ne_constraints'],
+                    'why': (None if kb_r == kb_d else explain_difference(model_kb, fr, fd)),
                     'p4_control': control, 'p4_rejects_all': p4, 'p4_n_train_neg': n_tr,
                     'raw': vr, 'reduced': vd})
         finally:
