@@ -60,7 +60,7 @@ class ConGenRunResult(BaseRunResult):
         return d
 
 
-# GenerateNE's two negative encodings, spelled as ConMin's evaluator spells them.
+# GenerateNE's two negative encodings.
 NEG_MODES = ('reduced', 'raw')
 
 
@@ -94,7 +94,7 @@ class ConGenRunner(BaseRunner):
             fm_path: Path to feature model (.uvl) file
             solver_name: SAT solver name
             use_incremental: Use incremental solver mode
-            neg_mode: GenerateNE's negative encoding, named as ConMin names it.
+            neg_mode: GenerateNE's negative encoding.
                 'reduced' (default) minimizes each e⁻ to a subset-minimal conflict
                 with QuickXplain against the oracle; 'raw' negates the full e⁻ and
                 never consults the oracle.

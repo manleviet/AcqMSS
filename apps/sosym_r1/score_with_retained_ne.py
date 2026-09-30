@@ -102,6 +102,7 @@ def main() -> int:
                     mismatches.append(f'{model} f{f["fold_index"]} {tier}')
             rows.append({'model': model, 'fold': f['fold_index'],
                          'n_ne': f['statistics']['n_ne'], 'excluded': excl, 'included': incl})
+    Path(args.json).parent.mkdir(parents=True, exist_ok=True)
     Path(args.json).write_text(json.dumps(rows, indent=1))
     matched = sum(1 for r in rows if r['included']['ne_desc_matches_target'])
     print(f'folds {len(rows)}   control mismatches {len(mismatches)}   '

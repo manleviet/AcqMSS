@@ -151,9 +151,9 @@ Example:
     # confused: max_queries is reproducible, this is not.
     timeout_s = interactive_config.get('timeout_s') or None
 
-    # ConGen-specific settings. neg_mode is GenerateNE's negative encoding, named as
-    # ConMin's evaluator names it: 'reduced' (default, QuickXplain against the oracle)
-    # or 'raw' (negate the full e-, no oracle use).
+    # ConGen-specific settings. neg_mode is GenerateNE's negative encoding:
+    # 'reduced' (default, QuickXplain against the oracle) or 'raw' (negate the full
+    # e-, no oracle use).
     congen_config = eval_config.get('congen', {})
     neg_mode = congen_config.get('neg_mode', 'reduced')
     if neg_mode not in ('reduced', 'raw'):

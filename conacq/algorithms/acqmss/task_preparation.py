@@ -116,19 +116,18 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
     """
 
     def __init__(self, minimize: bool = True, profiler=None) -> None:
-        """``minimize`` = negative encoding: True (default) = reduced (each ¬e⁻ is the
-        subset-minimal conflict QuickXplain finds against the oracle); False = raw
-        (negate the full assignment, no oracle call). Set at construction so a reused
-        prep instance cannot leak a previous call's mode.
-
-        ``profiler`` (optional) counts GenerateNE's PREPROCESSING QuickXplain apart
+        """``profiler`` (optional) counts GenerateNE's PREPROCESSING QuickXplain apart
         from acquisition (GAP B). ConGen used to leave it None, so the reduction paper
         l.299 performs outside the acquisition procedure was invisible in ConGen runs
         while ConMin counted it — the two pipelines disagreed on preprocessing cost for
-        the same work. Both are owned here, not in the ConMin subclass, so both share them."""
+        the same work. Owned here, not in the ConMin subclass, so both share it."""
         super().__init__()
-        self._minimize = minimize
         self._profiler = profiler
+        # Negative encoding: True (default) = reduced, each ¬e⁻ the subset-minimal
+        # conflict QuickXplain finds against the oracle; False = raw, the full
+        # assignment negated with no oracle call. Set at construction so a reused prep
+        # instance cannot leak a previous call's mode.
+        self._minimize = minimize
 
     def prepare(self, model: ConGenModel, task_input: "ConGenTaskInput") -> PreparedTask:
         """Prepare ConGen task from model + task input.

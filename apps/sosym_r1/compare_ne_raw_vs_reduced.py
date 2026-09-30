@@ -138,6 +138,7 @@ def main() -> int:
                 cell['changed'].append(f'{table} {key}: {b} -> {a}')
         cells_out.append(cell)
 
+    Path(args.json).parent.mkdir(parents=True, exist_ok=True)
     Path(args.json).write_text(json.dumps({'folds': folds_out, 'cells': cells_out},
                                           indent=1))
     n = len(folds_out)

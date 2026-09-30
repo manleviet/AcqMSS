@@ -3,7 +3,7 @@
 Date 2026-09-30. Branch `feat/sosym-r1`. Frozen: `data/results_sosym_r1/`, ConGenEvaluation v1.0.0 (untouched; `git status` clean on the frozen tree after every step).
 
 ## What was done
-- `[evaluation.congen] neg_mode = "reduced" | "raw"` (default reduced), wired run_cv → CV → ConGenRunner → ConGenModel.prepare_task → ConGenTaskPreparation → GenerateNE(minimize). ConMin now hands `minimize` up via `super()`. Partials record the mode; resume refuses the other encoding's partials. Commit `68093ce`.
+- `[evaluation.congen] neg_mode = "reduced" | "raw"` (default reduced), wired run_cv → CV → ConGenRunner → ConGenModel.prepare_task → ConGenTaskPreparation → GenerateNE(minimize). The sibling prep subclass now hands `minimize` up via `super()`. Partials record the mode; resume refuses the other encoding's partials. Commit `68093ce`.
 - Gate: default mode, REAL-FM-7 ff, one process per fold → identical to committed file on kb_constraints, redundant_constraints, ne_constraints, ne_clauses, redundant_ne_constraints, statistics, accuracy, metrics, and every consistency counter (timing fields ignored).
 - Raw rerun of 27/28 combinations (81 folds), same folds/seed 42/glucose4/incremental/shuffle_bias, one process per fold, sequential, nothing else running. **busybox rs_1n: not rerun without minimization** (deadline; skipped via placeholder partials, removed after; no rs_1n fold was computed). Reduce replay for busybox rejected: B' AcqMss order is not stored (only the two Reduce subsequences), so no faithful replay exists.
 - Scored with the Table 14 path: `make_score_configs.py --cv-dir` → `run_compare` (one block per file, own oracle).
@@ -44,7 +44,7 @@ Total 12,509 reduced vs 18,038 raw over 81 folds; reduced smaller on 51/51 folds
 ## GenerateNE checks saved
 Per fold min 0, median 67, max 748; per combination mean 5 (arcade rs_m) … 745 (REAL-FM-4 rs_3n). Raw: 0 on every fold, no oracle call.
 
-## Against Cowork's interim reading
+## Against the interim reading
 - Confirmed: P1, P2, identical accuracy, raw n_ne = 0, reduced smaller on every n_ne=1 fold, unit-fact mechanism, NE-first order.
 - Counts moved with the full data: 51 n_ne=1 folds among the 81 rerun (54/84 incl. busybox rs_1n); totals 12,509 vs 18,038; extreme is busybox 2cov fold 0 (5 vs 842), not REAL-FM-4 2cov fold 0.
 - **Falsified**: "reduced theory may be strictly stronger". Equivalent on 81/81; the retained fact is entailed by KB_raw ∪ root on every fold.
