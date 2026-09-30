@@ -39,18 +39,12 @@ sys.path.insert(0, str(REPO))
 
 from apps.sosym_r1.paper_tables import latex as tex                          # noqa: E402
 from conacq.algorithms.acqmss.congen_model_builder import ConGenModelBuilder  # noqa: E402
-from conacq.eval import apply_folds, load_folds                              # noqa: E402
-from conacq.eval.accuracy import AccuracyCalculator                          # noqa: E402
-from conacq.examples import ExampleIO                                        # noqa: E402
 from conacq.oracle import FMOracle                                           # noqa: E402
-from pysat.solvers import Solver                                             # noqa: E402
+from apps.sosym_r1.ne_theory_checks import (                                # noqa: E402
+    equivalence, explain_difference, ids, rejects_training_negatives)
 
 STEMS = ['busybox-1.18.0', 'arcade-game', 'REAL-FM-7', 'REAL-FM-4', 'fqa']
 PREP = 'shared_preprocessing_quickxplain_checks'
-
-
-def ids(entries):
-    return [c['id'] if isinstance(c, dict) else c for c in entries]
 
 
 def tier(fold, name, key):
@@ -84,76 +78,6 @@ PRINTED = [('acc', tex.quality, 'T13'), ('kb', tex.one_decimal, 'T13'),
            ('runtime_ms', tex.millis, 'T9')]
 
 
-def entails(theory: list, clauses: list) -> bool:
-    """theory |= every clause: theory AND NOT(clause) is UNSAT for each one."""
-    with Solver(name='glucose4', bootstrap_with=theory) as sat:
-        return not any(sat.solve(assumptions=[-lit for lit in cl]) for cl in clauses)
-
-
-def explain_difference(model_kb, fr: dict, fd: dict) -> dict:
-    """Why the two KBs differ, by entailment rather than by narrative.
-
-    Reduce's BG is EMPTY for a feature model: the root is kept out of acquisition and
-    re-added at delivery. So a constraint one side kept and the other dropped is
-    classified against the OTHER side, in Reduce's own view first (no root):
-
-      order    entailed by the other bias KB alone -- another representative of the
-               same theory was kept (Reduce is order-dependent)
-      ne       entailed only once the other side's surviving ¬e⁻ is added -- Reduce
-               dropped it because that memorized fact entails it
-      root     entailed only once the root axiom is also added (not a reason Reduce
-               could have used; the delivered theories still agree on it)
-      absent   not entailed even by the other delivered theory -- a semantic change
-
-    Also: whether each delivered theory (bias + ¬e⁻ + root) entails the other, and
-    whether each side's surviving ¬e⁻ is literally the root axiom."""
-    def bias(fold):
-        return [list(c) for cid in ids(fold['kb_constraints'])
-                for c in model_kb.constraint_map.get(cid, ())]
-
-    def ne(fold):
-        return [list(c) for c in fold['ne_clauses']]
-
-    def root(fold):
-        return [list(c) for c in fold['bg_clauses']]
-
-    def why(cid, other):
-        cl = [list(c) for c in model_kb.constraint_map[cid]]
-        if entails(bias(other), cl):
-            return 'order'
-        if entails(bias(other) + ne(other), cl):
-            return 'ne'
-        if entails(bias(other) + ne(other) + root(other), cl):
-            return 'root'
-        return 'absent'
-
-    kb_r, kb_d = ids(fr['kb_constraints']), ids(fd['kb_constraints'])
-    delivered = lambda f: bias(f) + ne(f) + root(f)  # noqa: E731
-    return {'only_raw_why': {c: why(c, fd) for c in kb_r if c not in kb_d},
-            'only_reduced_why': {c: why(c, fr) for c in kb_d if c not in kb_r},
-            'raw_entails_reduced': entails(delivered(fr), delivered(fd)),
-            'reduced_entails_raw': entails(delivered(fd), delivered(fr)),
-            'ne_is_root_raw': bool(ne(fr)) and all(c in root(fr) for c in ne(fr)),
-            'ne_is_root_reduced': bool(ne(fd)) and all(c in root(fd) for c in ne(fd))}
-
-
-def rejects_training_negatives(stem, model, fold, model_kb) -> tuple[bool, bool, int]:
-    """(control_ok, all training e⁻ rejected, #training e⁻) for one raw fold."""
-    ex = ExampleIO.load_json(str(REPO / 'data' / 'examples' / f'{model}.json'))
-    pos = [e.assignments for e in ex.positive]
-    neg = [e.assignments for e in ex.negative]
-    fd = load_folds(str(REPO / 'data' / 'folds' / f'{model}_folds.json'))
-    _, tr_neg, te_pos, te_neg = apply_folds(fd, pos, neg, fold['fold_index'])
-    theory = ([list(c) for cid in ids(fold['kb_constraints'])
-               for c in model_kb.constraint_map.get(cid, ())]
-              + [list(c) for c in fold['ne_clauses']] + [list(c) for c in fold['bg_clauses']])
-    with AccuracyCalculator(theory, model_kb.name_to_id, 'glucose4') as calc:
-        control = abs(calc.calculate(te_pos, te_neg).metrics.accuracy
-                      - fold['accuracy']) < 1e-9
-        m = calc.calculate([], tr_neg).metrics
-    return control, m.false_positives == 0, len(tr_neg)
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -184,6 +108,7 @@ def main() -> int:
                 desc = {c['id']: c['description'] for c in fr['kb_constraints'] + fd['kb_constraints']
                         if isinstance(c, dict)}
                 control, p4, n_tr = rejects_training_negatives(stem, model, fr, model_kb)
+                control_d, p4_d, _ = rejects_training_negatives(stem, model, fd, model_kb)
                 folds_out.append({
                     'model': model, 'fold': fr['fold_index'],
                     'train_neg': fr['train_size']['negative'],
@@ -195,7 +120,9 @@ def main() -> int:
                     'only_reduced': [f'{c}: {desc.get(c, "")}' for c in kb_d if c not in kb_r],
                     'ne_raw': fr['ne_constraints'], 'ne_reduced': fd['ne_constraints'],
                     'why': (None if kb_r == kb_d else explain_difference(model_kb, fr, fd)),
+                    'equivalence': equivalence(model_kb, fr, fd),
                     'p4_control': control, 'p4_rejects_all': p4, 'p4_n_train_neg': n_tr,
+                    'p4_reduced_control': control_d, 'p4_reduced_rejects_all': p4_d,
                     'raw': vr, 'reduced': vd})
         finally:
             oracle.cleanup()
@@ -223,11 +150,15 @@ def main() -> int:
         print(f"{label}: {len(sub)} folds, KB identical (ordered) "
               f"{sum(f['kb_equal_ordered'] for f in sub)}, as set "
               f"{sum(f['kb_equal_set'] for f in sub)}")
-    print(f"P4 control {count('p4_control')}/{n}   rejects all training e- "
-          f"{count('p4_rejects_all')}/{n}")
+    print(f"P4 raw: control {count('p4_control')}/{n}, rejects all training e- "
+          f"{count('p4_rejects_all')}/{n}   reduced incl. NE: control "
+          f"{count('p4_reduced_control')}/{n}, rejects all {count('p4_reduced_rejects_all')}/{n}")
+    verdicts = [f['equivalence']['verdict'] for f in folds_out]
+    print('equivalence: ' + ', '.join(f'{v} {verdicts.count(v)}' for v in sorted(set(verdicts))))
     print(f"cells with a printed change: {sum(1 for c in cells_out if c['changed'])}"
           f"/{len(cells_out)}")
-    return 0 if all(f['bprime_control'] and f['p4_control'] for f in folds_out) else 1
+    return 0 if all(f['bprime_control'] and f['p4_control'] and f['p4_reduced_control']
+                    for f in folds_out) else 1
 
 
 if __name__ == '__main__':
