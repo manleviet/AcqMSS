@@ -1,8 +1,6 @@
-diff --git a/conacq/algorithms/acqmss/task_preparation.py b/conacq/algorithms/acqmss/task_preparation.py
-index 55bce9b..d1bc820 100644
 --- a/conacq/algorithms/acqmss/task_preparation.py
 +++ b/conacq/algorithms/acqmss/task_preparation.py
-@@ -116,8 +116,8 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
+@@ -119,8 +119,8 @@
          """``profiler`` (optional) counts GenerateNE's PREPROCESSING QuickXplain apart
          from acquisition (GAP B). ConGen used to leave it None, so the reduction paper
          l.299 performs outside the acquisition procedure was invisible in ConGen runs
@@ -12,8 +10,8 @@ index 55bce9b..d1bc820 100644
 +        Owned here rather than in a subclass, so every preparation path shares it."""
          super().__init__()
          self._profiler = profiler
- 
-@@ -218,7 +218,7 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
+         # Negative encoding: True (default) = reduced, each ¬e⁻ the subset-minimal
+@@ -226,7 +226,7 @@
          return PreparedTask(task, provider)
  
      def _make_task(self, **fields) -> TestCaseTask:
@@ -22,7 +20,7 @@ index 55bce9b..d1bc820 100644
          its own task type with extra fields while reusing all of ``prepare``."""
          return ConGenTask(**fields)
  
-@@ -324,7 +324,7 @@ class ConGenTaskPreparation(TaskPreparationStrategy):
+@@ -332,7 +332,7 @@
  
          ``per_e_negations_out`` (optional): when a dict is supplied, it is filled with
          ``{per-e⁻ ne_id: its already-built negated form}``. ConGen passes nothing (the

@@ -98,6 +98,18 @@ apps/sosym_r1/revision_target_theory_size.py
 # Not a figure module: the 28-cell grid the last two read, kept separate so two
 # modules quantifying over "all 28 combinations" cannot disagree about which 28.
 apps/sosym_r1/revision_cells.py
+# The numbers the paper and letter quote about negative-example minimization being
+# optional, gated in check_paper_numbers like the nine above; readme_counts holds the
+# README's stated gate counts to what the gates print.
+apps/sosym_r1/revision_ne_minimization.py
+apps/sosym_r1/readme_counts.py
+# What produced and compares data/results_sosym_r1_rawne/: the raw-NE sweep driver, the
+# per-fold comparison and SAT equivalence, and the re-scoring with retained ¬e- counted.
+apps/sosym_r1/run_ne_raw_sweep.py
+apps/sosym_r1/compare_ne_raw_vs_reduced.py
+apps/sosym_r1/ne_theory_checks.py
+apps/sosym_r1/score_with_retained_ne.py
+apps/sosym_r1/summarize_ne_raw_vs_reduced.py
 # The proof that those nine assert anything: it re-runs each one with its expected value
 # altered and requires the failure. Ships for the same reason falsify_hygiene_patterns.sh
 # would if it were artifact-side -- a reviewer can re-earn the trust rather than take it.
@@ -148,11 +160,12 @@ tools/sosym_r1/verify_examples_bundle.py
 # paper quotes for the size limit: that run's raw sampler output was never committed and
 # no longer exists, so the report IS the provenance, and check_paper_numbers.py parses
 # its figures rather than restating them. The second is cited by the first and settles
-# its open question. They are the only files this artifact ships from plans/, and they
-# ship through prose-ea2468-probe-reports.patch, which rewords the four spots naming a
-# sibling algorithm's runners and a numbered review item.
+# its open question. They ship through prose-ea2468-probe-reports.patch, which rewords
+# the four spots naming a sibling algorithm's runners and a numbered review item.
 plans/reports/measurement-260822-0149-ea2468-congen-feasibility-probe-report.md
 plans/reports/measurement-260822-1330-ea2468-ff-acqmss-feasibility-probe-report.md
+# The raw-vs-reduced negative-example measurement that revision_ne_minimization gates.
+plans/reports/measurement-260930-0524-congen-raw-vs-reduced-negative-examples-report.md
 
 # ---- data -----------------------------------------------------------------
 # data/examples and data/folds are filtered by carve.sh to the cells that have a
@@ -175,6 +188,10 @@ data/folds/
 data/results_sosym/
 # The acquisition results every table in the paper is computed from, plus the tables.
 data/results_sosym_r1/
+# The ConGen sweep rerun without negative-example minimization (27 of the 28 cells),
+# its scoring configs, and the comparison JSON the gate reads. Every tracked file in it
+# is evidence for a quoted number; the per-fold partials are untracked and never ship.
+data/results_sosym_r1_rawne/
 
 # ---- tests ----------------------------------------------------------------
 # tests/ file by file. Thirty are dropped: the ConMin and make_tables tests, and
@@ -215,6 +232,7 @@ tests/test_baselines_tree_rules.py
 tests/test_bias_io.py
 tests/test_boundary_guard.py
 tests/test_congen.py
+tests/test_congen_neg_mode.py
 tests/test_cv_fold_partials.py
 tests/test_encoding.py
 tests/test_evaluation.py

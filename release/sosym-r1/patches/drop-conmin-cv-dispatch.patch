@@ -8,10 +8,10 @@
      n_fold_cross_validation_interactive,
      generate_cv_report,
      generate_unified_cv_dict,
-@@ -150,10 +149,6 @@
-     # cross_validation.n_fold_cross_validation_interactive for why the two must not be
-     # confused: max_queries is reproducible, this is not.
-     timeout_s = interactive_config.get('timeout_s') or None
+@@ -160,10 +159,6 @@
+         logger.error("[evaluation.congen] neg_mode must be 'reduced' or 'raw', got %r",
+                      neg_mode)
+         sys.exit(2)
 -
 -    # ConMin-specific settings
 -    conmin_config = eval_config.get('conmin', {})
@@ -19,10 +19,13 @@
  
      models = parse_models(config)
      if not models:
-@@ -254,20 +249,6 @@
- 
-                 if algorithm == 'congen':
-                     cv_result = n_fold_cross_validation(
+@@ -280,21 +275,6 @@
+                         shuffle_bias=shuffle_bias,
+                         fold_indices=todo, on_fold=on_fold, done_folds=done_folds,
+                         neg_mode=neg_mode
+-                    )
+-                elif algorithm == 'conmin':
+-                    cv_result = n_fold_cross_validation_conmin(
 -                        positive_examples=pos,
 -                        negative_examples=neg,
 -                        n_folds=actual_n_folds,
@@ -33,18 +36,8 @@
 -                        use_incremental=is_incremental,
 -                        fold_data=fold_data,
 -                        shuffle_bias=shuffle_bias,
--                        fold_indices=todo, on_fold=on_fold, done_folds=done_folds
--                    )
--                elif algorithm == 'conmin':
--                    cv_result = n_fold_cross_validation_conmin(
-                         positive_examples=pos,
-                         negative_examples=neg,
-                         n_folds=actual_n_folds,
-@@ -278,7 +259,6 @@
-                         use_incremental=is_incremental,
-                         fold_data=fold_data,
-                         shuffle_bias=shuffle_bias,
 -                        k=conmin_k,
-                         fold_indices=todo, on_fold=on_fold, done_folds=done_folds
+-                        fold_indices=todo, on_fold=on_fold, done_folds=done_folds
                      )
                  elif algorithm == 'interactive':
+                     cv_result = n_fold_cross_validation_interactive(

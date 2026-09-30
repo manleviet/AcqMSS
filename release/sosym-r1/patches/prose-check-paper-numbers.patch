@@ -1,4 +1,3 @@
-diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_numbers.py
 --- a/apps/sosym_r1/check_paper_numbers.py
 +++ b/apps/sosym_r1/check_paper_numbers.py
 @@ -1,29 +1,23 @@
@@ -12,42 +11,39 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 -live in committed scripts; CW's counter-measurements were ad-hoc snippets typed
 -into a chat, and the numbers they produced went straight into `~SoSyM revision.md`
 -and the paper drafts. Several of those numbers are load-bearing:
--
++A number that nobody can recompute cannot be re-checked, only re-asserted. Several of
++the figures the paper quotes are load-bearing:
+ 
 -  * |Cτ| = 130 for arcade-game is the hand count that decided the ground-truth
 -    question. The whole "four of five models were scored against fqa's Cτ"
 -    disclosure rests on it.
 -  * 74.62 %, 18/28, 1/84 and the 29-80 % agreement range are quoted in the paper.
--
++  * |Ctau| = 130 for arcade-game is the hand count that settled the ground-truth
++    question, and the disclosure that four of five models had been scored against
++    another model's target theory rests on it.
++  * 74.62 %, 18/28, 1/84 and the 29-80 % agreement range appear in the paper.
+ 
 -A number in a note that nobody can recompute cannot be re-checked, only
 -re-asserted. This project already adopted the rule ("scratch is local, evidence
 -is committed"; "you may call something scratch only if you can name what
 -reconstructs it") and this file is CW complying with it.
--
++Each is recomputed here from the committed data, so the number moves visibly if the
++data moves. When one fails, the finding is that a number changed: update the paper to
++the measurement, never the assertion to the number you hoped for.
+ 
 -It ASSERTS rather than prints, so it doubles as a regression test: if a future
 -re-run moves a number that reached the paper, this fails loudly instead of
 -letting the paper and the data drift apart silently.
 -
 -Run:  PYTHONPATH=. python3 apps/sosym_r1/check_paper_numbers.py
 -Exit: 0 = every number in the notes still holds. 1 = at least one moved.
-+A number that nobody can recompute cannot be re-checked, only re-asserted. Several of
-+the figures the paper quotes are load-bearing:
-+
-+  * |Ctau| = 130 for arcade-game is the hand count that settled the ground-truth
-+    question, and the disclosure that four of five models had been scored against
-+    another model's target theory rests on it.
-+  * 74.62 %, 18/28, 1/84 and the 29-80 % agreement range appear in the paper.
-+
-+Each is recomputed here from the committed data, so the number moves visibly if the
-+data moves. When one fails, the finding is that a number changed: update the paper to
-+the measurement, never the assertion to the number you hoped for.
-+
 +Table CELLS are not checked here -- they are checked by check_paper_tables.py, which
 +re-derives each one from the same result files. This file is for the figures that
 +appear in sentences.
  """
  from __future__ import annotations
  
-@@ -37,12 +31,15 @@
+@@ -37,13 +31,16 @@
  from pathlib import Path
  
  REPO = Path(__file__).resolve().parents[2]
@@ -62,11 +58,12 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 +STEMS = ['REAL-FM-4', 'REAL-FM-7', 'arcade-game', 'busybox-1.18.0', 'fqa']
 +SAMPLINGS = ['rs_1n', 'rs_2n', 'rs_3n', 'rs_m', '2cov', 'ff']
 +MODES = ['example_only', 'example_first']
-+
-+TOL = 5e-3  # numbers are quoted to 3-4 significant figures in the paper
  
++TOL = 5e-3  # numbers are quoted to 3-4 significant figures in the paper
++
  failures: list[str] = []
  checks = 0
+ 
 @@ -54,7 +51,7 @@
      checks += 1
      ok = (abs(got - want) <= (TOL if tol is None else tol)) if isinstance(want, float) else (got == want)
@@ -154,13 +151,14 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
      and the model used to validate the count could not exercise it.
      """
      lines = path.read_text().split('\n')
-@@ -191,27 +229,9 @@
+@@ -191,28 +229,10 @@
          check(f'|Ctau| {model} == tp+fn, single-valued', sorted(seen[model]), [want])
  
  # ---------------------------------------------------------------------------
 -# 3. The defect's signature: every OLD file reports fqa's |Ctau| = 342.
 -#    This is the evidence behind the N item, so it must stay reproducible.
--# ---------------------------------------------------------------------------
++# 3. Numbers quoted in A5 / B7 / B20.
+ # ---------------------------------------------------------------------------
 -print('\n3. the defect signature in the published run (evidence for the N item)')
 -old_vals: list[int] = []
 -for base, _d, fo in folds_of('*.json', OLD):
@@ -174,17 +172,16 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 -if old_int:
 -    check('old interactive: same', sorted(set(old_int)), [342])
 -    check('old interactive: fold count', len(old_int), 108)
--
++print('\n3. numbers quoted in the paper')
+ 
 -# ---------------------------------------------------------------------------
 -# 4. Numbers quoted in A5 / B7 / B20.
 -# ---------------------------------------------------------------------------
 -print('\n4. numbers quoted in the drafts')
-+# 3. Numbers quoted in A5 / B7 / B20.
-+# ---------------------------------------------------------------------------
-+print('\n3. numbers quoted in the paper')
- 
+-
  cells: dict[str, list[float]] = {}
  eq_hits: list[tuple[str, int]] = []
+ eq_scored = 0
 @@ -285,7 +305,7 @@
  check('cells where ConGen is below the accept-everything baseline', below_trivial, 20)
  
@@ -209,14 +206,13 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
  # ---------------------------------------------------------------------------
 -# 6. The aggregation convention. Decided 2026-08-29: per-fold mean, not the
 -#    intersected KB. The published .525 is the regression target.
--# ---------------------------------------------------------------------------
--print('\n6. aggregation convention: per-fold mean is what the paper reports')
--p = OLD / 'arcade-game_rs_1n_cv_incremental.json'
 +# 5. The aggregation convention: per-fold mean, never the intersected KB.
 +#    Three separate errors in this project came from the other two aggregations
 +#    -- the intersected KB, and a pooled figure -- so both are pinned here as
 +#    numbers that must NOT equal the reported one.
-+# ---------------------------------------------------------------------------
+ # ---------------------------------------------------------------------------
+-print('\n6. aggregation convention: per-fold mean is what the paper reports')
+-p = OLD / 'arcade-game_rs_1n_cv_incremental.json'
 +print('\n5. aggregation convention: per-fold mean is what the paper reports')
 +p = R1 / 'arcade-game_rs_1n_cv_incremental.json'
  if p.exists():
@@ -228,14 +224,12 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 -    check('published .525 == per-fold mean', round(statistics.mean(per), 6), 0.524859, tol=1e-6)
 -    check('published .525 == summary.mean', summ, 0.524859, tol=1e-6)
 -    check('intersected KB is a DIFFERENT number', round(inter, 6), 0.443966, tol=1e-6)
--
--# ---------------------------------------------------------------------------
--# 7. The 2-COV applicability threshold quoted in B20 / A5.
 +    check('reported .660 == per-fold mean', round(statistics.mean(per), 6), 0.659711, tol=1e-6)
 +    check('reported .660 == summary.mean', summ, 0.659711, tol=1e-6)
 +    check('intersected KB is a DIFFERENT number', round(inter, 6), 0.654709, tol=1e-6)
-+
-+# ---------------------------------------------------------------------------
+ 
+ # ---------------------------------------------------------------------------
+-# 7. The 2-COV applicability threshold quoted in B20 / A5.
 +# 6. The 2-COV applicability threshold quoted in B20 / A5.
  # ---------------------------------------------------------------------------
  # QUOTED IN THE RESPONSE LETTER, NOT IN THE PAPER. The two 2-COV paragraphs that
@@ -281,7 +275,10 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 -#    The tree paths are asserted too. The defect this replaces was a PAIRING --
 -#    a corrected ConGen column beside an uncorrected iterative one -- so a future
 -#    run silently reading a third tree is the failure mode to catch.
--# ---------------------------------------------------------------------------
++#    Every cell is read from ONE tree, and both halves of a cell come from it.
++#    The failure mode to catch is a ConGen column set beside an iterative column
++#    computed differently: that pairing matches no tree and reproduces from none.
+ # ---------------------------------------------------------------------------
 -print('\n9. passive vs active: the invariants, not the per-cell gaps')
 -# The siblings live beside this file. Named explicitly and checked, so a move that
 -# breaks the path reports WHICH path broke rather than an ImportError traceback --
@@ -293,7 +290,11 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 -sys.path.insert(0, str(_SIBLINGS))
 -from measure_corrected_gap_table import (  # noqa: E402
 -    TREES, STEMS, SAMPLINGS, MODES, cell, collapsed, published)
--
++print('\n8. passive vs active: the invariants, not the per-cell gaps')
++cells_ = [(st_, sm) for st_ in STEMS for sm in SAMPLINGS
++          if all(cell(st_, sm, m) for m in MODES)]
++check('cells with a result in both modes', len(cells_), 28)
+ 
 -check('OLD tree is data/results', str(TREES['old'].relative_to(REPO)), 'data/results')
 -check('NEW tree is data/results_sosym_r1',
 -      str(TREES['new'].relative_to(REPO)), 'data/results_sosym_r1')
@@ -306,15 +307,6 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 -
 -gaps = {(st_, sm): {m: cell(TREES['new'], st_, sm, m)['gap'] for m in MODES}
 -        for st_, sm in new_cells}
-+#    Every cell is read from ONE tree, and both halves of a cell come from it.
-+#    The failure mode to catch is a ConGen column set beside an iterative column
-+#    computed differently: that pairing matches no tree and reproduces from none.
-+# ---------------------------------------------------------------------------
-+print('\n8. passive vs active: the invariants, not the per-cell gaps')
-+cells_ = [(st_, sm) for st_ in STEMS for sm in SAMPLINGS
-+          if all(cell(st_, sm, m) for m in MODES)]
-+check('cells with a result in both modes', len(cells_), 28)
-+
 +gaps = {(st_, sm): {m: cell(st_, sm, m)['gap'] for m in MODES}
 +        for st_, sm in cells_}
  check('cells where the baseline wins in BOTH modes',
@@ -353,7 +345,9 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
           for m in MODES}
 -check('NEW example-first cells with iterative F1 below 0.06', below['example_first'], 0)
 -check('NEW example-only cells with iterative F1 below 0.06', below['example_only'], 12)
--
++check('example-first cells with iterative F1 below 0.06', below['example_first'], 0)
++check('example-only cells with iterative F1 below 0.06', below['example_only'], 12)
+ 
 -# The oracle benefit the two modes exist to measure. OLD reported exactly zero of
 -# it on the mode-collapsed cells; every corrected cell shows some.
 -benefit = [cell(TREES['new'], st_, sm, 'example_first')['iterative']
@@ -361,9 +355,6 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
 -           for st_, sm in new_cells if published(st_, sm)]
 -check('published cells showing ZERO oracle benefit, NEW', sum(1 for b in benefit if abs(b) < 1e-12), 0)
 -check('smallest oracle benefit across published cells, NEW', min(benefit), 0.0919, tol=1e-3)
-+check('example-first cells with iterative F1 below 0.06', below['example_first'], 0)
-+check('example-only cells with iterative F1 below 0.06', below['example_only'], 12)
-+
 +# The oracle benefit the two modes exist to measure: consulting the oracle first
 +# is worth something in every cell, never nothing. Measured over all 28 cells --
 +# the population is the whole tree, not a subset, so the minimum is the weakest
@@ -412,7 +403,7 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
  _abs = re.compile(r'=\s*"(?:[/~]|[A-Za-z]:[\\/])')
  try:
      _tomls = subprocess.run(['git', 'ls-files', '*.toml'], cwd=REPO,
-@@ -743,10 +749,10 @@
+@@ -745,10 +751,10 @@
  # ---------------------------------------------------------------------------
  print(f'\n{"=" * 70}')
  if failures:
@@ -425,9 +416,9 @@ diff --git a/apps/sosym_r1/check_paper_numbers.py b/apps/sosym_r1/check_paper_nu
      print('never the assertion to the number you hoped for.')
      sys.exit(1)
  # A pass is a POSITIVE COUNT, never the absence of a failure. With zero checks this
-@@ -760,5 +766,5 @@
-     print('An empty or truncated run is not a pass. Something above exited early or')
-     print('skipped a section -- find it rather than lowering this number.')
+@@ -767,5 +773,5 @@
+ if _readme:
+     print(f'FAIL: {_readme}. Update the README to the count, never the reverse.')
      sys.exit(1)
 -print(f'OK: all {checks} numbers quoted in the SoSyM notes reproduce from the data.')
 +print(f'OK: all {checks} numbers quoted in the paper reproduce from the data.')
