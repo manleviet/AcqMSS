@@ -31,7 +31,9 @@ pass=0
 PATTERNS=(
   "Cowork"
   "checklist item"
-  "R[0-9]+-Q[0-9]+"
+  "(^|[^A-Za-z0-9_])R[0-9]+[- ]?[CQ][0-9]+"
+  "[Rr]eviewer [0-9]+"
+  "[Cc]oncern [0-9]+"
   "(^|[^A-Za-z0-9_])[A-C][0-9]{1,2}'s([^A-Za-z0-9_]|\$)"
   "(^|[^A-Za-z0-9_])[A-C][0-9]{1,2} (must|will|owns|is responsible)"
 )
@@ -40,6 +42,8 @@ POSITIVES=(
   "Cowork-layer analysis harness for the cost accounting"
   "Closing that is checklist item C10(a)."
   "which answers N1 and R2-Q13 better than a larger number would"
+  "The reason is that a Zenodo record cannot be deleted. Reviewer 2 may change the artifact,"
+  "    # Concern 4 of the second report asks for this figure."
   "    C2's deliberate regeneration sets the environment variable once."
   "# The results C2 must regenerate deliberately, and that"
 )
@@ -54,11 +58,19 @@ NEGATIVES=(
   "\"\"\"Run the rule-learner baselines (C4) over the same folds as acquisition."
   "The decisive argument came from the T9 refactor that immediately preceded"
   "# 4. Numbers quoted in A5 / B7 / B20."
+  "    check('KB5 RS(n): hours per fold, as printed',"
+  "under RS(\$3n\$) on \$KB_3\$, and the PR12 merge"
+  "the response letter repeats it, citing Table 11"
+  "the reviewers' concerns about the 2-COV boundary"
 )
+
+# Every shape of reviewer-numbered item the R pattern is meant to catch, one by one: a
+# single positive per pattern would prove only that SOME shape matches.
+R_SHAPES=("R2-Q13" "letter R3 C4;" "(R2C13)" "R1-C2" "R10 Q3")
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
-say "1/3  every pattern must match its positive (proves the pattern is not inert)"
+say "1/4  every pattern must match its positive (proves the pattern is not inert)"
 for i in "${!PATTERNS[@]}"; do
   pat="${PATTERNS[$i]}"; pos="${POSITIVES[$i]}"
   if printf '%s\n' "$pos" | grep -qE "$pat"; then
@@ -69,7 +81,7 @@ for i in "${!PATTERNS[@]}"; do
   fi
 done
 
-say "2/3  no pattern may match text that must survive"
+say "2/4  no pattern may match text that must survive"
 for neg in "${NEGATIVES[@]}"; do
   hit=""
   for pat in "${PATTERNS[@]}"; do
@@ -86,7 +98,18 @@ done
 # A falsification run against a stale copy of the patterns is worse than none: it
 # certifies patterns that are not the ones the gate uses. Compared as sorted text, so
 # reordering the list is allowed and editing it is not silently allowed.
-say "3/3  these patterns are the ones the gate actually runs"
+say "3/4  the reviewer-item pattern catches every shape it is meant to"
+rpat="${PATTERNS[2]}"
+for shape in "${R_SHAPES[@]}"; do
+  if printf '%s\n' "$shape" | grep -qE "$rpat"; then
+    printf '  \033[32mok\033[0m   /%s/ catches %s\n' "$rpat" "$shape"; pass=$((pass + 1))
+  else
+    printf '  \033[31mMISSED\033[0m /%s/ does not catch %s\n' "$rpat" "$shape" >&2
+    fail=1
+  fi
+done
+
+say "4/4  these patterns are the ones the gate actually runs"
 GATE=scripts/check-release-hygiene.sh
 mine=$(printf '%s\n' "${PATTERNS[@]}" | sort)
 theirs=$(sed -n '/^for pat in /,/; do$/p' "$GATE" \

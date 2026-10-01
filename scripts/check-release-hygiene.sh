@@ -70,7 +70,15 @@ done
 #
 # Each pattern is falsified before it is trusted: scripts/falsify_hygiene_patterns.sh
 # asserts every one matches a constructed positive AND leaves split(B) alone.
-for pat in "Cowork" "checklist item" "R[0-9]+-Q[0-9]+" \
+#
+# Reviewer-numbered items in EITHER shape the project has used -- "R2-Q13" and the
+# letter's "R3 C4" / "R2C13" -- and the long forms "Reviewer 2" / "Concern 4". A check
+# label or comment names the DOCUMENT ("the response letter") or the paper section, never
+# the numbered item: the number is exactly the decodable part. The first pattern caught
+# only the hyphenated shape, and three labels in the "R3 C4" shape were written past it
+# before being reworded by hand; "Reviewer 2" had shipped in an ADR since f603a17.
+for pat in "Cowork" "checklist item" "(^|[^A-Za-z0-9_])R[0-9]+[- ]?[CQ][0-9]+" \
+           "[Rr]eviewer [0-9]+" "[Cc]oncern [0-9]+" \
            "(^|[^A-Za-z0-9_])[A-C][0-9]{1,2}'s([^A-Za-z0-9_]|\$)" \
            "(^|[^A-Za-z0-9_])[A-C][0-9]{1,2} (must|will|owns|is responsible)"; do
   if git grep -nE "$pat" "$REV" -- . 2>/dev/null; then
