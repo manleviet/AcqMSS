@@ -1,0 +1,337 @@
+table,kb,method,setting,quantity,contract,P_code,P_std,R,F1_code,F1_std,n_std_defined,n_unsat,note,n_kb_clauses,n_ct_clauses,submitted,code_reproduces_3dp,corrected_3dp,delta
+tab_comparison_strategies,REAL-FM-7,congen,rs_1n,F1,bg_empty,0.7699,0.7416,0.9545,0.8519,0.8342,3/3,0,,24.3,22,0.875,False,0.834,-0.041
+tab_comparison_strategies,REAL-FM-7,congen,rs_1n,F1,bg_root,0.778,0.7416,1.0,0.8747,0.8511,3/3,0,,24.3,22,0.875,True,0.851,-0.024
+tab_comparison_strategies,REAL-FM-7,congen,rs_1n,P,bg_empty,0.7699,0.7416,0.9545,0.8519,0.8342,3/3,0,,24.3,22,0.778,False,0.742,-0.036
+tab_comparison_strategies,REAL-FM-7,congen,rs_1n,P,bg_root,0.778,0.7416,1.0,0.8747,0.8511,3/3,0,,24.3,22,0.778,True,0.742,-0.036
+tab_comparison_strategies,REAL-FM-7,congen,rs_1n,R,bg_empty,0.7699,0.7416,0.9545,0.8519,0.8342,3/3,0,,24.3,22,1.0,False,0.955,-0.045
+tab_comparison_strategies,REAL-FM-7,congen,rs_1n,R,bg_root,0.778,0.7416,1.0,0.8747,0.8511,3/3,0,,24.3,22,1.0,True,1.0,0.0
+tab_comparison_strategies,REAL-FM-7,congen,rs_2n,F1,bg_empty,0.8102,0.7996,0.9545,0.8758,0.8694,3/3,0,,24.7,22,0.899,False,0.869,-0.03
+tab_comparison_strategies,REAL-FM-7,congen,rs_2n,F1,bg_root,0.8171,0.7996,1.0,0.8987,0.8878,3/3,0,,24.7,22,0.899,True,0.888,-0.011
+tab_comparison_strategies,REAL-FM-7,congen,rs_2n,P,bg_empty,0.8102,0.7996,0.9545,0.8758,0.8694,3/3,0,,24.7,22,0.817,False,0.8,-0.017
+tab_comparison_strategies,REAL-FM-7,congen,rs_2n,P,bg_root,0.8171,0.7996,1.0,0.8987,0.8878,3/3,0,,24.7,22,0.817,True,0.8,-0.017
+tab_comparison_strategies,REAL-FM-7,congen,rs_2n,R,bg_empty,0.8102,0.7996,0.9545,0.8758,0.8694,3/3,0,,24.7,22,1.0,False,0.955,-0.045
+tab_comparison_strategies,REAL-FM-7,congen,rs_2n,R,bg_root,0.8171,0.7996,1.0,0.8987,0.8878,3/3,0,,24.7,22,1.0,True,1.0,0.0
+tab_comparison_strategies,REAL-FM-7,congen,rs_3n,F1,bg_empty,0.9184,0.9171,0.8182,0.8619,0.8612,3/3,0,,19.3,22,0.957,False,0.861,-0.096
+tab_comparison_strategies,REAL-FM-7,congen,rs_3n,F1,bg_root,0.9306,0.9171,0.9848,0.9565,0.9491,3/3,0,,19.3,22,0.957,True,0.949,-0.008
+tab_comparison_strategies,REAL-FM-7,congen,rs_3n,P,bg_empty,0.9184,0.9171,0.8182,0.8619,0.8612,3/3,0,,19.3,22,0.931,False,0.917,-0.014
+tab_comparison_strategies,REAL-FM-7,congen,rs_3n,P,bg_root,0.9306,0.9171,0.9848,0.9565,0.9491,3/3,0,,19.3,22,0.931,True,0.917,-0.014
+tab_comparison_strategies,REAL-FM-7,congen,rs_3n,R,bg_empty,0.9184,0.9171,0.8182,0.8619,0.8612,3/3,0,,19.3,22,0.985,False,0.818,-0.167
+tab_comparison_strategies,REAL-FM-7,congen,rs_3n,R,bg_root,0.9306,0.9171,0.9848,0.9565,0.9491,3/3,0,,19.3,22,0.985,True,0.985,0.0
+tab_comparison_strategies,REAL-FM-7,congen,rs_m,F1,bg_empty,0.6369,0.5548,0.7424,0.6838,0.6321,3/3,0,,21.7,22,0.775,False,0.632,-0.143
+tab_comparison_strategies,REAL-FM-7,congen,rs_m,F1,bg_root,0.6849,0.5548,0.8939,0.7754,0.6767,3/3,0,,21.7,22,0.775,True,0.677,-0.098
+tab_comparison_strategies,REAL-FM-7,congen,rs_m,P,bg_empty,0.6369,0.5548,0.7424,0.6838,0.6321,3/3,0,,21.7,22,0.685,False,0.555,-0.13
+tab_comparison_strategies,REAL-FM-7,congen,rs_m,P,bg_root,0.6849,0.5548,0.8939,0.7754,0.6767,3/3,0,,21.7,22,0.685,True,0.555,-0.13
+tab_comparison_strategies,REAL-FM-7,congen,rs_m,R,bg_empty,0.6369,0.5548,0.7424,0.6838,0.6321,3/3,0,,21.7,22,0.894,False,0.742,-0.152
+tab_comparison_strategies,REAL-FM-7,congen,rs_m,R,bg_root,0.6849,0.5548,0.8939,0.7754,0.6767,3/3,0,,21.7,22,0.894,True,0.894,0.0
+tab_comparison_strategies,REAL-FM-7,congen,2cov,F1,bg_empty,,,,,,0/3,3,(3 UNSAT),,22,0.849,False,—,
+tab_comparison_strategies,REAL-FM-7,congen,2cov,F1,bg_root,,,,,,0/3,3,(3 UNSAT),,22,0.849,True,—,
+tab_comparison_strategies,REAL-FM-7,congen,2cov,P,bg_empty,,,,,,0/3,3,(3 UNSAT),,22,0.775,False,—,
+tab_comparison_strategies,REAL-FM-7,congen,2cov,P,bg_root,,,,,,0/3,3,(3 UNSAT),,22,0.775,True,—,
+tab_comparison_strategies,REAL-FM-7,congen,2cov,R,bg_empty,,,,,,0/3,3,(3 UNSAT),,22,0.939,False,—,
+tab_comparison_strategies,REAL-FM-7,congen,2cov,R,bg_root,,,,,,0/3,3,(3 UNSAT),,22,0.939,True,—,
+tab_comparison_strategies,REAL-FM-7,congen,ff,F1,bg_empty,0.6784,0.637,0.7424,0.7083,0.685,3/3,0,,21.3,22,0.852,False,0.685,-0.167
+tab_comparison_strategies,REAL-FM-7,congen,ff,F1,bg_root,0.7418,0.637,1.0,0.8517,0.7772,3/3,0,,21.3,22,0.852,True,0.777,-0.075
+tab_comparison_strategies,REAL-FM-7,congen,ff,P,bg_empty,0.6784,0.637,0.7424,0.7083,0.685,3/3,0,,21.3,22,0.742,False,0.637,-0.105
+tab_comparison_strategies,REAL-FM-7,congen,ff,P,bg_root,0.7418,0.637,1.0,0.8517,0.7772,3/3,0,,21.3,22,0.742,True,0.637,-0.105
+tab_comparison_strategies,REAL-FM-7,congen,ff,R,bg_empty,0.6784,0.637,0.7424,0.7083,0.685,3/3,0,,21.3,22,1.0,False,0.742,-0.258
+tab_comparison_strategies,REAL-FM-7,congen,ff,R,bg_root,0.7418,0.637,1.0,0.8517,0.7772,3/3,0,,21.3,22,1.0,True,1.0,0.0
+tab_comparison_strategies,fqa,congen,rs_1n,F1,bg_empty,0.8971,0.8968,0.9971,0.9443,0.9442,3/3,0,,379.3,342,0.946,False,0.944,-0.002
+tab_comparison_strategies,fqa,congen,rs_1n,F1,bg_root,0.8973,0.8968,1.0,0.9458,0.9455,3/3,0,,379.3,342,0.946,True,0.945,-0.001
+tab_comparison_strategies,fqa,congen,rs_1n,P,bg_empty,0.8971,0.8968,0.9971,0.9443,0.9442,3/3,0,,379.3,342,0.897,True,0.897,0.0
+tab_comparison_strategies,fqa,congen,rs_1n,P,bg_root,0.8973,0.8968,1.0,0.9458,0.9455,3/3,0,,379.3,342,0.897,True,0.897,0.0
+tab_comparison_strategies,fqa,congen,rs_1n,R,bg_empty,0.8971,0.8968,0.9971,0.9443,0.9442,3/3,0,,379.3,342,1.0,False,0.997,-0.003
+tab_comparison_strategies,fqa,congen,rs_1n,R,bg_root,0.8973,0.8968,1.0,0.9458,0.9455,3/3,0,,379.3,342,1.0,True,1.0,0.0
+tab_comparison_strategies,fqa,congen,rs_2n,F1,bg_empty,0.8835,0.8834,0.9971,0.9368,0.9368,3/3,0,,385.7,342,0.938,False,0.937,-0.001
+tab_comparison_strategies,fqa,congen,rs_2n,F1,bg_root,0.8838,0.8834,1.0,0.9383,0.9381,3/3,0,,385.7,342,0.938,True,0.938,0.0
+tab_comparison_strategies,fqa,congen,rs_2n,P,bg_empty,0.8835,0.8834,0.9971,0.9368,0.9368,3/3,0,,385.7,342,0.884,True,0.883,-0.001
+tab_comparison_strategies,fqa,congen,rs_2n,P,bg_root,0.8838,0.8834,1.0,0.9383,0.9381,3/3,0,,385.7,342,0.884,True,0.883,-0.001
+tab_comparison_strategies,fqa,congen,rs_2n,R,bg_empty,0.8835,0.8834,0.9971,0.9368,0.9368,3/3,0,,385.7,342,1.0,False,0.997,-0.003
+tab_comparison_strategies,fqa,congen,rs_2n,R,bg_root,0.8838,0.8834,1.0,0.9383,0.9381,3/3,0,,385.7,342,1.0,True,1.0,0.0
+tab_comparison_strategies,fqa,congen,rs_3n,F1,bg_empty,0.9069,0.9069,0.9971,0.9499,0.9499,3/3,0,,376,342,0.951,False,0.95,-0.001
+tab_comparison_strategies,fqa,congen,rs_3n,F1,bg_root,0.9072,0.9069,1.0,0.9513,0.9512,3/3,0,,376,342,0.951,True,0.951,0.0
+tab_comparison_strategies,fqa,congen,rs_3n,P,bg_empty,0.9069,0.9069,0.9971,0.9499,0.9499,3/3,0,,376,342,0.907,True,0.907,0.0
+tab_comparison_strategies,fqa,congen,rs_3n,P,bg_root,0.9072,0.9069,1.0,0.9513,0.9512,3/3,0,,376,342,0.907,True,0.907,0.0
+tab_comparison_strategies,fqa,congen,rs_3n,R,bg_empty,0.9069,0.9069,0.9971,0.9499,0.9499,3/3,0,,376,342,1.0,False,0.997,-0.003
+tab_comparison_strategies,fqa,congen,rs_3n,R,bg_root,0.9072,0.9069,1.0,0.9513,0.9512,3/3,0,,376,342,1.0,True,1.0,0.0
+tab_comparison_strategies,fqa,congen,rs_m,F1,bg_empty,0.8842,0.8815,0.9971,0.9373,0.9357,3/3,0,,376.7,342,0.939,False,0.936,-0.003
+tab_comparison_strategies,fqa,congen,rs_m,F1,bg_root,0.8845,0.8815,1.0,0.9387,0.937,3/3,0,,376.7,342,0.939,True,0.937,-0.002
+tab_comparison_strategies,fqa,congen,rs_m,P,bg_empty,0.8842,0.8815,0.9971,0.9373,0.9357,3/3,0,,376.7,342,0.885,False,0.881,-0.004
+tab_comparison_strategies,fqa,congen,rs_m,P,bg_root,0.8845,0.8815,1.0,0.9387,0.937,3/3,0,,376.7,342,0.885,True,0.881,-0.004
+tab_comparison_strategies,fqa,congen,rs_m,R,bg_empty,0.8842,0.8815,0.9971,0.9373,0.9357,3/3,0,,376.7,342,1.0,False,0.997,-0.003
+tab_comparison_strategies,fqa,congen,rs_m,R,bg_root,0.8845,0.8815,1.0,0.9387,0.937,3/3,0,,376.7,342,1.0,True,1.0,0.0
+tab_comparison_strategies,fqa,congen,2cov,F1,bg_empty,0.7646,0.7219,0.9971,0.8655,0.8374,3/3,0,,378,342,0.867,False,0.837,-0.03
+tab_comparison_strategies,fqa,congen,2cov,F1,bg_root,0.7651,0.7219,1.0,0.8669,0.8384,3/3,0,,378,342,0.867,True,0.838,-0.029
+tab_comparison_strategies,fqa,congen,2cov,P,bg_empty,0.7646,0.7219,0.9971,0.8655,0.8374,3/3,0,,378,342,0.765,True,0.722,-0.043
+tab_comparison_strategies,fqa,congen,2cov,P,bg_root,0.7651,0.7219,1.0,0.8669,0.8384,3/3,0,,378,342,0.765,True,0.722,-0.043
+tab_comparison_strategies,fqa,congen,2cov,R,bg_empty,0.7646,0.7219,0.9971,0.8655,0.8374,3/3,0,,378,342,1.0,False,0.997,-0.003
+tab_comparison_strategies,fqa,congen,2cov,R,bg_root,0.7651,0.7219,1.0,0.8669,0.8384,3/3,0,,378,342,1.0,True,1.0,0.0
+tab_comparison_strategies,fqa,congen,ff,F1,bg_empty,0.8476,0.8459,0.9971,0.9163,0.9153,3/3,0,,398,342,0.918,False,0.915,-0.003
+tab_comparison_strategies,fqa,congen,ff,F1,bg_root,0.848,0.8459,1.0,0.9177,0.9165,3/3,0,,398,342,0.918,True,0.917,-0.001
+tab_comparison_strategies,fqa,congen,ff,P,bg_empty,0.8476,0.8459,0.9971,0.9163,0.9153,3/3,0,,398,342,0.848,True,0.846,-0.002
+tab_comparison_strategies,fqa,congen,ff,P,bg_root,0.848,0.8459,1.0,0.9177,0.9165,3/3,0,,398,342,0.848,True,0.846,-0.002
+tab_comparison_strategies,fqa,congen,ff,R,bg_empty,0.8476,0.8459,0.9971,0.9163,0.9153,3/3,0,,398,342,1.0,False,0.997,-0.003
+tab_comparison_strategies,fqa,congen,ff,R,bg_root,0.848,0.8459,1.0,0.9177,0.9165,3/3,0,,398,342,1.0,True,1.0,0.0
+tab_comparison_strategies,arcade-game,congen,rs_1n,F1,bg_empty,0.49,0.4601,0.9308,0.6419,0.6157,3/3,0,,233.3,130,0.66,False,0.616,-0.044
+tab_comparison_strategies,arcade-game,congen,rs_1n,F1,bg_root,0.5001,0.4601,0.9692,0.6597,0.6239,3/3,0,,233.3,130,0.66,True,0.624,-0.036
+tab_comparison_strategies,arcade-game,congen,rs_1n,P,bg_empty,0.49,0.4601,0.9308,0.6419,0.6157,3/3,0,,233.3,130,0.5,False,0.46,-0.04
+tab_comparison_strategies,arcade-game,congen,rs_1n,P,bg_root,0.5001,0.4601,0.9692,0.6597,0.6239,3/3,0,,233.3,130,0.5,True,0.46,-0.04
+tab_comparison_strategies,arcade-game,congen,rs_1n,R,bg_empty,0.49,0.4601,0.9308,0.6419,0.6157,3/3,0,,233.3,130,0.969,False,0.931,-0.038
+tab_comparison_strategies,arcade-game,congen,rs_1n,R,bg_root,0.5001,0.4601,0.9692,0.6597,0.6239,3/3,0,,233.3,130,0.969,True,0.969,0.0
+tab_comparison_strategies,arcade-game,congen,rs_2n,F1,bg_empty,0.3987,0.3839,0.9359,0.5592,0.5445,3/3,0,,298,130,0.58,False,0.544,-0.036
+tab_comparison_strategies,arcade-game,congen,rs_2n,F1,bg_root,0.4109,0.3839,0.9846,0.5798,0.5524,3/3,0,,298,130,0.58,True,0.552,-0.028
+tab_comparison_strategies,arcade-game,congen,rs_2n,P,bg_empty,0.3987,0.3839,0.9359,0.5592,0.5445,3/3,0,,298,130,0.411,False,0.384,-0.027
+tab_comparison_strategies,arcade-game,congen,rs_2n,P,bg_root,0.4109,0.3839,0.9846,0.5798,0.5524,3/3,0,,298,130,0.411,True,0.384,-0.027
+tab_comparison_strategies,arcade-game,congen,rs_2n,R,bg_empty,0.3987,0.3839,0.9359,0.5592,0.5445,3/3,0,,298,130,0.985,False,0.936,-0.049
+tab_comparison_strategies,arcade-game,congen,rs_2n,R,bg_root,0.4109,0.3839,0.9846,0.5798,0.5524,3/3,0,,298,130,0.985,True,0.985,0.0
+tab_comparison_strategies,arcade-game,congen,rs_3n,F1,bg_empty,0.4184,0.4081,0.9205,0.5753,0.5654,3/3,0,,281,130,0.596,False,0.565,-0.031
+tab_comparison_strategies,arcade-game,congen,rs_3n,F1,bg_root,0.4303,0.4081,0.9667,0.5955,0.5738,3/3,0,,281,130,0.596,True,0.574,-0.022
+tab_comparison_strategies,arcade-game,congen,rs_3n,P,bg_empty,0.4184,0.4081,0.9205,0.5753,0.5654,3/3,0,,281,130,0.43,False,0.408,-0.022
+tab_comparison_strategies,arcade-game,congen,rs_3n,P,bg_root,0.4303,0.4081,0.9667,0.5955,0.5738,3/3,0,,281,130,0.43,True,0.408,-0.022
+tab_comparison_strategies,arcade-game,congen,rs_3n,R,bg_empty,0.4184,0.4081,0.9205,0.5753,0.5654,3/3,0,,281,130,0.967,False,0.921,-0.046
+tab_comparison_strategies,arcade-game,congen,rs_3n,R,bg_root,0.4303,0.4081,0.9667,0.5955,0.5738,3/3,0,,281,130,0.967,True,0.967,0.0
+tab_comparison_strategies,arcade-game,congen,rs_m,F1,bg_empty,0.6743,0.6228,0.9436,0.7772,0.7384,3/3,0,,164,130,0.806,False,0.738,-0.068
+tab_comparison_strategies,arcade-game,congen,rs_m,F1,bg_root,0.6849,0.6228,1.0,0.8058,0.7586,3/3,0,,164,130,0.806,True,0.759,-0.047
+tab_comparison_strategies,arcade-game,congen,rs_m,P,bg_empty,0.6743,0.6228,0.9436,0.7772,0.7384,3/3,0,,164,130,0.685,False,0.623,-0.062
+tab_comparison_strategies,arcade-game,congen,rs_m,P,bg_root,0.6849,0.6228,1.0,0.8058,0.7586,3/3,0,,164,130,0.685,True,0.623,-0.062
+tab_comparison_strategies,arcade-game,congen,rs_m,R,bg_empty,0.6743,0.6228,0.9436,0.7772,0.7384,3/3,0,,164,130,1.0,False,0.944,-0.056
+tab_comparison_strategies,arcade-game,congen,rs_m,R,bg_root,0.6849,0.6228,1.0,0.8058,0.7586,3/3,0,,164,130,1.0,True,1.0,0.0
+tab_comparison_strategies,arcade-game,congen,2cov,F1,bg_empty,0.743,0.6919,0.8154,0.7766,0.7474,2/3,1,(1 UNSAT),118.5,130,0.705,False,0.747,0.042
+tab_comparison_strategies,arcade-game,congen,2cov,F1,bg_root,0.7808,0.6919,1.0,0.8769,0.8179,2/3,1,(1 UNSAT),118.5,130,0.705,True,0.818,0.113
+tab_comparison_strategies,arcade-game,congen,2cov,P,bg_empty,0.743,0.6919,0.8154,0.7766,0.7474,2/3,1,(1 UNSAT),118.5,130,0.767,False,0.692,-0.075
+tab_comparison_strategies,arcade-game,congen,2cov,P,bg_root,0.7808,0.6919,1.0,0.8769,0.8179,2/3,1,(1 UNSAT),118.5,130,0.767,True,0.692,-0.075
+tab_comparison_strategies,arcade-game,congen,2cov,R,bg_empty,0.743,0.6919,0.8154,0.7766,0.7474,2/3,1,(1 UNSAT),118.5,130,0.746,False,0.815,0.069
+tab_comparison_strategies,arcade-game,congen,2cov,R,bg_root,0.7808,0.6919,1.0,0.8769,0.8179,2/3,1,(1 UNSAT),118.5,130,0.746,True,1.0,0.254
+tab_comparison_strategies,arcade-game,congen,ff,F1,bg_empty,0.5692,0.5232,0.9359,0.7049,0.668,3/3,0,,196.7,130,0.727,False,0.668,-0.059
+tab_comparison_strategies,arcade-game,congen,ff,F1,bg_root,0.5805,0.5232,0.9821,0.7268,0.6792,3/3,0,,196.7,130,0.727,True,0.679,-0.048
+tab_comparison_strategies,arcade-game,congen,ff,P,bg_empty,0.5692,0.5232,0.9359,0.7049,0.668,3/3,0,,196.7,130,0.581,False,0.523,-0.058
+tab_comparison_strategies,arcade-game,congen,ff,P,bg_root,0.5805,0.5232,0.9821,0.7268,0.6792,3/3,0,,196.7,130,0.581,True,0.523,-0.058
+tab_comparison_strategies,arcade-game,congen,ff,R,bg_empty,0.5692,0.5232,0.9359,0.7049,0.668,3/3,0,,196.7,130,0.982,False,0.936,-0.046
+tab_comparison_strategies,arcade-game,congen,ff,R,bg_root,0.5805,0.5232,0.9821,0.7268,0.6792,3/3,0,,196.7,130,0.982,True,0.982,0.0
+tab_comparison_strategies,REAL-FM-4,congen,rs_1n,F1,bg_empty,0.6924,0.6847,0.9229,0.7911,0.786,3/3,0,,556.7,428,0.817,False,0.786,-0.031
+tab_comparison_strategies,REAL-FM-4,congen,rs_1n,F1,bg_root,0.7038,0.6847,0.9743,0.8169,0.8036,3/3,0,,556.7,428,0.817,True,0.804,-0.013
+tab_comparison_strategies,REAL-FM-4,congen,rs_1n,P,bg_empty,0.6924,0.6847,0.9229,0.7911,0.786,3/3,0,,556.7,428,0.704,False,0.685,-0.019
+tab_comparison_strategies,REAL-FM-4,congen,rs_1n,P,bg_root,0.7038,0.6847,0.9743,0.8169,0.8036,3/3,0,,556.7,428,0.704,True,0.685,-0.019
+tab_comparison_strategies,REAL-FM-4,congen,rs_1n,R,bg_empty,0.6924,0.6847,0.9229,0.7911,0.786,3/3,0,,556.7,428,0.974,False,0.923,-0.051
+tab_comparison_strategies,REAL-FM-4,congen,rs_1n,R,bg_root,0.7038,0.6847,0.9743,0.8169,0.8036,3/3,0,,556.7,428,0.974,True,0.974,0.0
+tab_comparison_strategies,REAL-FM-4,congen,rs_2n,F1,bg_empty,0.7645,0.7592,0.9213,0.835,0.8318,3/3,0,,506,428,0.875,False,0.832,-0.043
+tab_comparison_strategies,REAL-FM-4,congen,rs_2n,F1,bg_root,0.7788,0.7592,1.0,0.8751,0.8625,3/3,0,,506,428,0.875,True,0.862,-0.013
+tab_comparison_strategies,REAL-FM-4,congen,rs_2n,P,bg_empty,0.7645,0.7592,0.9213,0.835,0.8318,3/3,0,,506,428,0.779,False,0.759,-0.02
+tab_comparison_strategies,REAL-FM-4,congen,rs_2n,P,bg_root,0.7788,0.7592,1.0,0.8751,0.8625,3/3,0,,506,428,0.779,True,0.759,-0.02
+tab_comparison_strategies,REAL-FM-4,congen,rs_2n,R,bg_empty,0.7645,0.7592,0.9213,0.835,0.8318,3/3,0,,506,428,1.0,False,0.921,-0.079
+tab_comparison_strategies,REAL-FM-4,congen,rs_2n,R,bg_root,0.7788,0.7592,1.0,0.8751,0.8625,3/3,0,,506,428,1.0,True,1.0,0.0
+tab_comparison_strategies,REAL-FM-4,congen,rs_3n,F1,bg_empty,0.7991,0.7949,0.919,0.8545,0.8521,3/3,0,,483,428,0.896,False,0.852,-0.044
+tab_comparison_strategies,REAL-FM-4,congen,rs_3n,F1,bg_root,0.8122,0.7949,1.0,0.8961,0.8854,3/3,0,,483,428,0.896,True,0.885,-0.011
+tab_comparison_strategies,REAL-FM-4,congen,rs_3n,P,bg_empty,0.7991,0.7949,0.919,0.8545,0.8521,3/3,0,,483,428,0.812,False,0.795,-0.017
+tab_comparison_strategies,REAL-FM-4,congen,rs_3n,P,bg_root,0.8122,0.7949,1.0,0.8961,0.8854,3/3,0,,483,428,0.812,True,0.795,-0.017
+tab_comparison_strategies,REAL-FM-4,congen,rs_3n,R,bg_empty,0.7991,0.7949,0.919,0.8545,0.8521,3/3,0,,483,428,1.0,False,0.919,-0.081
+tab_comparison_strategies,REAL-FM-4,congen,rs_3n,R,bg_root,0.8122,0.7949,1.0,0.8961,0.8854,3/3,0,,483,428,1.0,True,1.0,0.0
+tab_comparison_strategies,REAL-FM-4,congen,rs_m,F1,bg_empty,0.6714,0.6485,0.9977,0.8022,0.7857,3/3,0,,595.7,428,0.803,False,0.786,-0.017
+tab_comparison_strategies,REAL-FM-4,congen,rs_m,F1,bg_root,0.6719,0.6485,1.0,0.8034,0.7864,3/3,0,,595.7,428,0.803,True,0.786,-0.017
+tab_comparison_strategies,REAL-FM-4,congen,rs_m,P,bg_empty,0.6714,0.6485,0.9977,0.8022,0.7857,3/3,0,,595.7,428,0.672,False,0.649,-0.023
+tab_comparison_strategies,REAL-FM-4,congen,rs_m,P,bg_root,0.6719,0.6485,1.0,0.8034,0.7864,3/3,0,,595.7,428,0.672,True,0.649,-0.023
+tab_comparison_strategies,REAL-FM-4,congen,rs_m,R,bg_empty,0.6714,0.6485,0.9977,0.8022,0.7857,3/3,0,,595.7,428,1.0,False,0.998,-0.002
+tab_comparison_strategies,REAL-FM-4,congen,rs_m,R,bg_root,0.6719,0.6485,1.0,0.8034,0.7864,3/3,0,,595.7,428,1.0,True,1.0,0.0
+tab_comparison_strategies,REAL-FM-4,congen,2cov,F1,bg_empty,0.7859,0.7816,0.8493,0.8164,0.8141,2/3,1,(1 UNSAT),453.5,428,0.93,False,0.814,-0.116
+tab_comparison_strategies,REAL-FM-4,congen,2cov,F1,bg_root,0.8121,0.7816,1.0,0.8963,0.8774,2/3,1,(1 UNSAT),453.5,428,0.93,True,0.877,-0.053
+tab_comparison_strategies,REAL-FM-4,congen,2cov,P,bg_empty,0.7859,0.7816,0.8493,0.8164,0.8141,2/3,1,(1 UNSAT),453.5,428,0.872,False,0.782,-0.09
+tab_comparison_strategies,REAL-FM-4,congen,2cov,P,bg_root,0.8121,0.7816,1.0,0.8963,0.8774,2/3,1,(1 UNSAT),453.5,428,0.872,True,0.782,-0.09
+tab_comparison_strategies,REAL-FM-4,congen,2cov,R,bg_empty,0.7859,0.7816,0.8493,0.8164,0.8141,2/3,1,(1 UNSAT),453.5,428,1.0,False,0.849,-0.151
+tab_comparison_strategies,REAL-FM-4,congen,2cov,R,bg_root,0.8121,0.7816,1.0,0.8963,0.8774,2/3,1,(1 UNSAT),453.5,428,1.0,True,1.0,0.0
+tab_comparison_strategies,REAL-FM-4,congen,ff,F1,bg_empty,0.6673,0.6552,0.9299,0.7765,0.7681,3/3,0,,577,428,0.811,False,0.768,-0.043
+tab_comparison_strategies,REAL-FM-4,congen,ff,F1,bg_root,0.6831,0.6552,1.0,0.8113,0.7911,3/3,0,,577,428,0.811,True,0.791,-0.02
+tab_comparison_strategies,REAL-FM-4,congen,ff,P,bg_empty,0.6673,0.6552,0.9299,0.7765,0.7681,3/3,0,,577,428,0.683,False,0.655,-0.028
+tab_comparison_strategies,REAL-FM-4,congen,ff,P,bg_root,0.6831,0.6552,1.0,0.8113,0.7911,3/3,0,,577,428,0.683,True,0.655,-0.028
+tab_comparison_strategies,REAL-FM-4,congen,ff,R,bg_empty,0.6673,0.6552,0.9299,0.7765,0.7681,3/3,0,,577,428,1.0,False,0.93,-0.07
+tab_comparison_strategies,REAL-FM-4,congen,ff,R,bg_root,0.6831,0.6552,1.0,0.8113,0.7911,3/3,0,,577,428,1.0,True,1.0,0.0
+tab_comparison_strategies,busybox-1.18.0,congen,rs_1n,F1,bg_empty,0.71,0.6981,0.5761,0.6359,0.6311,3/3,0,,775.7,994,0.894,False,0.631,-0.263
+tab_comparison_strategies,busybox-1.18.0,congen,rs_1n,F1,bg_root,0.8091,0.6981,0.9983,0.8937,0.8215,3/3,0,,775.7,994,0.894,True,0.821,-0.073
+tab_comparison_strategies,busybox-1.18.0,congen,rs_1n,P,bg_empty,0.71,0.6981,0.5761,0.6359,0.6311,3/3,0,,775.7,994,0.809,False,0.698,-0.111
+tab_comparison_strategies,busybox-1.18.0,congen,rs_1n,P,bg_root,0.8091,0.6981,0.9983,0.8937,0.8215,3/3,0,,775.7,994,0.809,True,0.698,-0.111
+tab_comparison_strategies,busybox-1.18.0,congen,rs_1n,R,bg_empty,0.71,0.6981,0.5761,0.6359,0.6311,3/3,0,,775.7,994,0.998,False,0.576,-0.422
+tab_comparison_strategies,busybox-1.18.0,congen,rs_1n,R,bg_root,0.8091,0.6981,0.9983,0.8937,0.8215,3/3,0,,775.7,994,0.998,True,0.998,0.0
+tab_comparison_strategies,busybox-1.18.0,congen,rs_m,F1,bg_empty,0.738,0.7113,0.5805,0.6494,0.6386,3/3,0,,707.7,994,0.907,False,0.639,-0.268
+tab_comparison_strategies,busybox-1.18.0,congen,rs_m,F1,bg_root,0.8295,0.7113,1.0,0.9068,0.8313,3/3,0,,707.7,994,0.907,True,0.831,-0.076
+tab_comparison_strategies,busybox-1.18.0,congen,rs_m,P,bg_empty,0.738,0.7113,0.5805,0.6494,0.6386,3/3,0,,707.7,994,0.829,False,0.711,-0.118
+tab_comparison_strategies,busybox-1.18.0,congen,rs_m,P,bg_root,0.8295,0.7113,1.0,0.9068,0.8313,3/3,0,,707.7,994,0.829,True,0.711,-0.118
+tab_comparison_strategies,busybox-1.18.0,congen,rs_m,R,bg_empty,0.738,0.7113,0.5805,0.6494,0.6386,3/3,0,,707.7,994,1.0,False,0.58,-0.42
+tab_comparison_strategies,busybox-1.18.0,congen,rs_m,R,bg_root,0.8295,0.7113,1.0,0.9068,0.8313,3/3,0,,707.7,994,1.0,True,1.0,0.0
+tab_comparison_strategies,busybox-1.18.0,congen,2cov,F1,bg_empty,,,,,,0/3,3,(3 UNSAT),,994,0.997,False,—,
+tab_comparison_strategies,busybox-1.18.0,congen,2cov,F1,bg_root,,,,,,0/3,3,(3 UNSAT),,994,0.997,True,—,
+tab_comparison_strategies,busybox-1.18.0,congen,2cov,P,bg_empty,,,,,,0/3,3,(3 UNSAT),,994,0.994,False,—,
+tab_comparison_strategies,busybox-1.18.0,congen,2cov,P,bg_root,,,,,,0/3,3,(3 UNSAT),,994,0.994,True,—,
+tab_comparison_strategies,busybox-1.18.0,congen,2cov,R,bg_empty,,,,,,0/3,3,(3 UNSAT),,994,1.0,False,—,
+tab_comparison_strategies,busybox-1.18.0,congen,2cov,R,bg_root,,,,,,0/3,3,(3 UNSAT),,994,1.0,True,—,
+tab_comparison_strategies,busybox-1.18.0,congen,ff,F1,bg_empty,0.7124,0.6868,0.6046,0.6537,0.6427,3/3,0,,776.3,994,0.891,False,0.643,-0.248
+tab_comparison_strategies,busybox-1.18.0,congen,ff,F1,bg_root,0.8034,0.6868,1.0,0.8907,0.8138,3/3,0,,776.3,994,0.891,True,0.814,-0.077
+tab_comparison_strategies,busybox-1.18.0,congen,ff,P,bg_empty,0.7124,0.6868,0.6046,0.6537,0.6427,3/3,0,,776.3,994,0.803,False,0.687,-0.116
+tab_comparison_strategies,busybox-1.18.0,congen,ff,P,bg_root,0.8034,0.6868,1.0,0.8907,0.8138,3/3,0,,776.3,994,0.803,True,0.687,-0.116
+tab_comparison_strategies,busybox-1.18.0,congen,ff,R,bg_empty,0.7124,0.6868,0.6046,0.6537,0.6427,3/3,0,,776.3,994,1.0,False,0.605,-0.395
+tab_comparison_strategies,busybox-1.18.0,congen,ff,R,bg_root,0.8034,0.6868,1.0,0.8907,0.8138,3/3,0,,776.3,994,1.0,True,1.0,0.0
+tab_iterative_semantic,REAL-FM-7,congen,rs_1n,F1,bg_empty,0.7699,0.7416,0.9545,0.8519,0.8342,3/3,0,,24.3,22,0.875,False,0.834,-0.041
+tab_iterative_semantic,REAL-FM-7,congen,rs_1n,F1,bg_root,0.778,0.7416,1.0,0.8747,0.8511,3/3,0,,24.3,22,0.875,True,0.851,-0.024
+tab_iterative_semantic,fqa,congen,rs_1n,F1,bg_empty,0.8971,0.8968,0.9971,0.9443,0.9442,3/3,0,,379.3,342,0.946,False,0.944,-0.002
+tab_iterative_semantic,fqa,congen,rs_1n,F1,bg_root,0.8973,0.8968,1.0,0.9458,0.9455,3/3,0,,379.3,342,0.946,True,0.945,-0.001
+tab_iterative_semantic,arcade-game,congen,rs_1n,F1,bg_empty,0.49,0.4601,0.9308,0.6419,0.6157,3/3,0,,233.3,130,0.66,False,0.616,-0.044
+tab_iterative_semantic,arcade-game,congen,rs_1n,F1,bg_root,0.5001,0.4601,0.9692,0.6597,0.6239,3/3,0,,233.3,130,0.66,True,0.624,-0.036
+tab_iterative_semantic,REAL-FM-4,congen,rs_1n,F1,bg_empty,0.6924,0.6847,0.9229,0.7911,0.786,3/3,0,,556.7,428,0.817,False,0.786,-0.031
+tab_iterative_semantic,REAL-FM-4,congen,rs_1n,F1,bg_root,0.7038,0.6847,0.9743,0.8169,0.8036,3/3,0,,556.7,428,0.817,True,0.804,-0.013
+tab_iterative_semantic,busybox-1.18.0,congen,rs_1n,F1,bg_empty,0.71,0.6981,0.5761,0.6359,0.6311,3/3,0,,775.7,994,0.894,False,0.631,-0.263
+tab_iterative_semantic,busybox-1.18.0,congen,rs_1n,F1,bg_root,0.8091,0.6981,0.9983,0.8937,0.8215,3/3,0,,775.7,994,0.894,True,0.821,-0.073
+tab_iterative_semantic,REAL-FM-7,example_only,rs_1n,F1,bg_empty,0.6667,1.0,0.0303,0.058,0.058,2/3,0,,0.7,22,0.465,False,0.058,-0.407
+tab_iterative_semantic,REAL-FM-7,example_only,rs_1n,F1,bg_root,1.0,1.0,0.303,0.4647,0.3218,2/3,0,,0.7,22,0.465,True,0.322,-0.143
+tab_iterative_semantic,fqa,example_only,rs_1n,F1,bg_empty,1.0,1.0,0.0097,0.0193,0.0193,3/3,0,,3.3,342,0.053,False,0.019,-0.034
+tab_iterative_semantic,fqa,example_only,rs_1n,F1,bg_root,1.0,1.0,0.0273,0.0531,0.0531,3/3,0,,3.3,342,0.053,True,0.053,0.0
+tab_iterative_semantic,arcade-game,example_only,rs_1n,F1,bg_empty,1.0,1.0,0.0103,0.0203,0.0203,3/3,0,,1.3,130,0.064,False,0.02,-0.044
+tab_iterative_semantic,arcade-game,example_only,rs_1n,F1,bg_root,1.0,1.0,0.0333,0.0645,0.0645,3/3,0,,1.3,130,0.064,True,0.064,0.0
+tab_iterative_semantic,REAL-FM-4,example_only,rs_1n,F1,bg_empty,1.0,1.0,0.0117,0.0231,0.0231,3/3,0,,5,428,0.037,False,0.023,-0.014
+tab_iterative_semantic,REAL-FM-4,example_only,rs_1n,F1,bg_root,1.0,1.0,0.0187,0.0367,0.0367,3/3,0,,5,428,0.037,True,0.037,0.0
+tab_iterative_semantic,busybox-1.18.0,example_only,rs_1n,F1,bg_empty,1.0,1.0,0.0087,0.0173,0.0173,3/3,0,,8.7,994,0.627,False,0.017,-0.61
+tab_iterative_semantic,busybox-1.18.0,example_only,rs_1n,F1,bg_root,1.0,1.0,0.4564,0.6268,0.6268,3/3,0,,8.7,994,0.627,True,0.627,0.0
+tab_iterative_semantic,REAL-FM-7,example_first,rs_1n,F1,bg_empty,1.0,1.0,0.2273,0.3689,0.3689,3/3,0,,5,22,0.666,False,0.369,-0.297
+tab_iterative_semantic,REAL-FM-7,example_first,rs_1n,F1,bg_root,1.0,1.0,0.5,0.6658,0.6658,3/3,0,,5,22,0.666,True,0.666,0.0
+tab_iterative_semantic,fqa,example_first,rs_1n,F1,bg_empty,1.0,1.0,0.0936,0.1711,0.1711,3/3,0,,32,342,0.2,False,0.171,-0.029
+tab_iterative_semantic,fqa,example_first,rs_1n,F1,bg_root,1.0,1.0,0.1111,0.1999,0.1999,3/3,0,,32,342,0.2,True,0.2,0.0
+tab_iterative_semantic,arcade-game,example_first,rs_1n,F1,bg_empty,1.0,1.0,0.3615,0.5203,0.5203,3/3,0,,47,130,0.63,False,0.52,-0.11
+tab_iterative_semantic,arcade-game,example_first,rs_1n,F1,bg_root,1.0,1.0,0.4718,0.63,0.63,3/3,0,,47,130,0.63,True,0.63,0.0
+tab_iterative_semantic,REAL-FM-4,example_first,rs_1n,F1,bg_empty,1.0,1.0,0.0498,0.0938,0.0938,3/3,0,,21.3,428,0.107,False,0.094,-0.013
+tab_iterative_semantic,REAL-FM-4,example_first,rs_1n,F1,bg_root,1.0,1.0,0.0569,0.1065,0.1065,3/3,0,,21.3,428,0.107,True,0.107,0.0
+tab_iterative_semantic,busybox-1.18.0,example_first,rs_1n,F1,bg_empty,1.0,1.0,0.0161,0.0317,0.0317,3/3,0,,16,994,0.634,False,0.032,-0.602
+tab_iterative_semantic,busybox-1.18.0,example_first,rs_1n,F1,bg_root,1.0,1.0,0.4638,0.6337,0.6337,3/3,0,,16,994,0.634,True,0.634,0.0
+tab_iterative_semantic,REAL-FM-7,congen,rs_2n,F1,bg_empty,0.8102,0.7996,0.9545,0.8758,0.8694,3/3,0,,24.7,22,0.899,False,0.869,-0.03
+tab_iterative_semantic,REAL-FM-7,congen,rs_2n,F1,bg_root,0.8171,0.7996,1.0,0.8987,0.8878,3/3,0,,24.7,22,0.899,True,0.888,-0.011
+tab_iterative_semantic,fqa,congen,rs_2n,F1,bg_empty,0.8835,0.8834,0.9971,0.9368,0.9368,3/3,0,,385.7,342,0.938,False,0.937,-0.001
+tab_iterative_semantic,fqa,congen,rs_2n,F1,bg_root,0.8838,0.8834,1.0,0.9383,0.9381,3/3,0,,385.7,342,0.938,True,0.938,0.0
+tab_iterative_semantic,arcade-game,congen,rs_2n,F1,bg_empty,0.3987,0.3839,0.9359,0.5592,0.5445,3/3,0,,298,130,0.58,False,0.544,-0.036
+tab_iterative_semantic,arcade-game,congen,rs_2n,F1,bg_root,0.4109,0.3839,0.9846,0.5798,0.5524,3/3,0,,298,130,0.58,True,0.552,-0.028
+tab_iterative_semantic,REAL-FM-4,congen,rs_2n,F1,bg_empty,0.7645,0.7592,0.9213,0.835,0.8318,3/3,0,,506,428,0.875,False,0.832,-0.043
+tab_iterative_semantic,REAL-FM-4,congen,rs_2n,F1,bg_root,0.7788,0.7592,1.0,0.8751,0.8625,3/3,0,,506,428,0.875,True,0.862,-0.013
+tab_iterative_semantic,REAL-FM-7,example_only,rs_2n,F1,bg_empty,0.0,,0.0,0.0,0.0,0/3,0,,0,22,0.429,False,0.0,-0.429
+tab_iterative_semantic,REAL-FM-7,example_only,rs_2n,F1,bg_root,1.0,,0.2727,0.4286,0.0,0/3,0,,0,22,0.429,True,0.0,-0.429
+tab_iterative_semantic,fqa,example_only,rs_2n,F1,bg_empty,1.0,1.0,0.0156,0.0307,0.0307,3/3,0,,5.3,342,0.064,False,0.031,-0.033
+tab_iterative_semantic,fqa,example_only,rs_2n,F1,bg_root,1.0,1.0,0.0331,0.0641,0.0641,3/3,0,,5.3,342,0.064,True,0.064,0.0
+tab_iterative_semantic,arcade-game,example_only,rs_2n,F1,bg_empty,1.0,1.0,0.0128,0.0253,0.0253,3/3,0,,1.7,130,0.069,False,0.025,-0.044
+tab_iterative_semantic,arcade-game,example_only,rs_2n,F1,bg_root,1.0,1.0,0.0359,0.0693,0.0693,3/3,0,,1.7,130,0.069,True,0.069,0.0
+tab_iterative_semantic,REAL-FM-4,example_only,rs_2n,F1,bg_empty,1.0,1.0,0.0132,0.0261,0.0261,3/3,0,,5.7,428,0.04,False,0.026,-0.014
+tab_iterative_semantic,REAL-FM-4,example_only,rs_2n,F1,bg_root,1.0,1.0,0.0202,0.0397,0.0397,3/3,0,,5.7,428,0.04,True,0.04,0.0
+tab_iterative_semantic,REAL-FM-7,example_first,rs_2n,F1,bg_empty,1.0,1.0,0.1212,0.208,0.208,3/3,0,,2.7,22,0.561,False,0.208,-0.353
+tab_iterative_semantic,REAL-FM-7,example_first,rs_2n,F1,bg_root,1.0,1.0,0.3939,0.5609,0.5609,3/3,0,,2.7,22,0.561,True,0.561,0.0
+tab_iterative_semantic,fqa,example_first,rs_2n,F1,bg_empty,1.0,1.0,0.0984,0.1734,0.1734,3/3,0,,33.7,342,0.202,False,0.173,-0.029
+tab_iterative_semantic,fqa,example_first,rs_2n,F1,bg_root,1.0,1.0,0.116,0.2023,0.2023,3/3,0,,33.7,342,0.202,True,0.202,0.0
+tab_iterative_semantic,arcade-game,example_first,rs_2n,F1,bg_empty,1.0,1.0,0.3,0.4586,0.4586,3/3,0,,38.3,130,0.564,False,0.459,-0.105
+tab_iterative_semantic,arcade-game,example_first,rs_2n,F1,bg_root,1.0,1.0,0.3974,0.5643,0.5643,3/3,0,,38.3,130,0.564,True,0.564,0.0
+tab_iterative_semantic,REAL-FM-4,example_first,rs_2n,F1,bg_empty,0.9935,0.9935,0.1386,0.2407,0.2407,3/3,0,,59.7,428,0.251,False,0.241,-0.01
+tab_iterative_semantic,REAL-FM-4,example_first,rs_2n,F1,bg_root,0.9938,0.9935,0.1456,0.2515,0.2515,3/3,0,,59.7,428,0.251,True,0.251,0.0
+tab_iterative_semantic,REAL-FM-7,congen,rs_3n,F1,bg_empty,0.9184,0.9171,0.8182,0.8619,0.8612,3/3,0,,19.3,22,0.957,False,0.861,-0.096
+tab_iterative_semantic,REAL-FM-7,congen,rs_3n,F1,bg_root,0.9306,0.9171,0.9848,0.9565,0.9491,3/3,0,,19.3,22,0.957,True,0.949,-0.008
+tab_iterative_semantic,fqa,congen,rs_3n,F1,bg_empty,0.9069,0.9069,0.9971,0.9499,0.9499,3/3,0,,376,342,0.951,False,0.95,-0.001
+tab_iterative_semantic,fqa,congen,rs_3n,F1,bg_root,0.9072,0.9069,1.0,0.9513,0.9512,3/3,0,,376,342,0.951,True,0.951,0.0
+tab_iterative_semantic,arcade-game,congen,rs_3n,F1,bg_empty,0.4184,0.4081,0.9205,0.5753,0.5654,3/3,0,,281,130,0.596,False,0.565,-0.031
+tab_iterative_semantic,arcade-game,congen,rs_3n,F1,bg_root,0.4303,0.4081,0.9667,0.5955,0.5738,3/3,0,,281,130,0.596,True,0.574,-0.022
+tab_iterative_semantic,REAL-FM-4,congen,rs_3n,F1,bg_empty,0.7991,0.7949,0.919,0.8545,0.8521,3/3,0,,483,428,0.896,False,0.852,-0.044
+tab_iterative_semantic,REAL-FM-4,congen,rs_3n,F1,bg_root,0.8122,0.7949,1.0,0.8961,0.8854,3/3,0,,483,428,0.896,True,0.885,-0.011
+tab_iterative_semantic,REAL-FM-7,example_only,rs_3n,F1,bg_empty,0.0,,0.0,0.0,0.0,0/3,0,,0,22,0.429,False,0.0,-0.429
+tab_iterative_semantic,REAL-FM-7,example_only,rs_3n,F1,bg_root,1.0,,0.2727,0.4286,0.0,0/3,0,,0,22,0.429,True,0.0,-0.429
+tab_iterative_semantic,fqa,example_only,rs_3n,F1,bg_empty,1.0,1.0,0.0156,0.0307,0.0307,3/3,0,,5.3,342,0.064,False,0.031,-0.033
+tab_iterative_semantic,fqa,example_only,rs_3n,F1,bg_root,1.0,1.0,0.0331,0.0641,0.0641,3/3,0,,5.3,342,0.064,True,0.064,0.0
+tab_iterative_semantic,arcade-game,example_only,rs_3n,F1,bg_empty,1.0,1.0,0.0256,0.0499,0.0499,3/3,0,,3.3,130,0.129,False,0.05,-0.079
+tab_iterative_semantic,arcade-game,example_only,rs_3n,F1,bg_root,1.0,1.0,0.0692,0.1287,0.1287,3/3,0,,3.3,130,0.129,True,0.129,0.0
+tab_iterative_semantic,REAL-FM-4,example_only,rs_3n,F1,bg_empty,1.0,1.0,0.0132,0.0261,0.0261,3/3,0,,5.7,428,0.04,False,0.026,-0.014
+tab_iterative_semantic,REAL-FM-4,example_only,rs_3n,F1,bg_root,1.0,1.0,0.0202,0.0397,0.0397,3/3,0,,5.7,428,0.04,True,0.04,0.0
+tab_iterative_semantic,REAL-FM-7,example_first,rs_3n,F1,bg_empty,1.0,1.0,0.2273,0.3689,0.3689,3/3,0,,5,22,0.666,False,0.369,-0.297
+tab_iterative_semantic,REAL-FM-7,example_first,rs_3n,F1,bg_root,1.0,1.0,0.5,0.6658,0.6658,3/3,0,,5,22,0.666,True,0.666,0.0
+tab_iterative_semantic,fqa,example_first,rs_3n,F1,bg_empty,1.0,1.0,0.0789,0.1458,0.1458,3/3,0,,27,342,0.176,False,0.146,-0.03
+tab_iterative_semantic,fqa,example_first,rs_3n,F1,bg_root,1.0,1.0,0.0965,0.1755,0.1755,3/3,0,,27,342,0.176,True,0.176,0.0
+tab_iterative_semantic,arcade-game,example_first,rs_3n,F1,bg_empty,1.0,1.0,0.4974,0.6619,0.6619,3/3,0,,63.3,130,0.749,False,0.662,-0.087
+tab_iterative_semantic,arcade-game,example_first,rs_3n,F1,bg_root,1.0,1.0,0.6026,0.7493,0.7493,3/3,0,,63.3,130,0.749,True,0.749,0.0
+tab_iterative_semantic,REAL-FM-4,example_first,rs_3n,F1,bg_empty,1.0,1.0,0.0405,0.0768,0.0768,3/3,0,,17.3,428,0.09,False,0.077,-0.013
+tab_iterative_semantic,REAL-FM-4,example_first,rs_3n,F1,bg_root,1.0,1.0,0.0475,0.0897,0.0897,3/3,0,,17.3,428,0.09,True,0.09,0.0
+tab_iterative_semantic,REAL-FM-7,congen,rs_m,F1,bg_empty,0.6369,0.5548,0.7424,0.6838,0.6321,3/3,0,,21.7,22,0.775,False,0.632,-0.143
+tab_iterative_semantic,REAL-FM-7,congen,rs_m,F1,bg_root,0.6849,0.5548,0.8939,0.7754,0.6767,3/3,0,,21.7,22,0.775,True,0.677,-0.098
+tab_iterative_semantic,fqa,congen,rs_m,F1,bg_empty,0.8842,0.8815,0.9971,0.9373,0.9357,3/3,0,,376.7,342,0.939,False,0.936,-0.003
+tab_iterative_semantic,fqa,congen,rs_m,F1,bg_root,0.8845,0.8815,1.0,0.9387,0.937,3/3,0,,376.7,342,0.939,True,0.937,-0.002
+tab_iterative_semantic,arcade-game,congen,rs_m,F1,bg_empty,0.6743,0.6228,0.9436,0.7772,0.7384,3/3,0,,164,130,0.806,False,0.738,-0.068
+tab_iterative_semantic,arcade-game,congen,rs_m,F1,bg_root,0.6849,0.6228,1.0,0.8058,0.7586,3/3,0,,164,130,0.806,True,0.759,-0.047
+tab_iterative_semantic,REAL-FM-4,congen,rs_m,F1,bg_empty,0.6714,0.6485,0.9977,0.8022,0.7857,3/3,0,,595.7,428,0.803,False,0.786,-0.017
+tab_iterative_semantic,REAL-FM-4,congen,rs_m,F1,bg_root,0.6719,0.6485,1.0,0.8034,0.7864,3/3,0,,595.7,428,0.803,True,0.786,-0.017
+tab_iterative_semantic,busybox-1.18.0,congen,rs_m,F1,bg_empty,0.738,0.7113,0.5805,0.6494,0.6386,3/3,0,,707.7,994,0.907,False,0.639,-0.268
+tab_iterative_semantic,busybox-1.18.0,congen,rs_m,F1,bg_root,0.8295,0.7113,1.0,0.9068,0.8313,3/3,0,,707.7,994,0.907,True,0.831,-0.076
+tab_iterative_semantic,REAL-FM-7,example_only,rs_m,F1,bg_empty,0.0,,0.0,0.0,0.0,0/3,0,,0,22,0.429,False,0.0,-0.429
+tab_iterative_semantic,REAL-FM-7,example_only,rs_m,F1,bg_root,1.0,,0.2727,0.4286,0.0,0/3,0,,0,22,0.429,True,0.0,-0.429
+tab_iterative_semantic,fqa,example_only,rs_m,F1,bg_empty,0.0,,0.0,0.0,0.0,0/3,0,,0,342,0.034,False,0.0,-0.034
+tab_iterative_semantic,fqa,example_only,rs_m,F1,bg_root,1.0,,0.0175,0.0345,0.0,0/3,0,,0,342,0.034,True,0.0,-0.034
+tab_iterative_semantic,arcade-game,example_only,rs_m,F1,bg_empty,0.6667,1.0,0.0051,0.0102,0.0102,2/3,0,,0.7,130,0.055,False,0.01,-0.045
+tab_iterative_semantic,arcade-game,example_only,rs_m,F1,bg_root,1.0,1.0,0.0282,0.0548,0.0398,2/3,0,,0.7,130,0.055,True,0.04,-0.015
+tab_iterative_semantic,REAL-FM-4,example_only,rs_m,F1,bg_empty,0.0,,0.0,0.0,0.0,0/3,0,,0,428,0.014,False,0.0,-0.014
+tab_iterative_semantic,REAL-FM-4,example_only,rs_m,F1,bg_root,1.0,,0.007,0.0139,0.0,0/3,0,,0,428,0.014,True,0.0,-0.014
+tab_iterative_semantic,busybox-1.18.0,example_only,rs_m,F1,bg_empty,0.0,,0.0,0.0,0.0,0/3,0,,0,994,0.618,False,0.0,-0.618
+tab_iterative_semantic,busybox-1.18.0,example_only,rs_m,F1,bg_root,1.0,,0.4477,0.6185,0.0,0/3,0,,0,994,0.618,True,0.0,-0.618
+tab_iterative_semantic,REAL-FM-7,example_first,rs_m,F1,bg_empty,1.0,1.0,0.1364,0.2274,0.2274,3/3,0,,3,22,0.574,False,0.227,-0.347
+tab_iterative_semantic,REAL-FM-7,example_first,rs_m,F1,bg_root,1.0,1.0,0.4091,0.574,0.574,3/3,0,,3,22,0.574,True,0.574,0.0
+tab_iterative_semantic,fqa,example_first,rs_m,F1,bg_empty,1.0,1.0,0.0877,0.1607,0.1607,3/3,0,,30,342,0.19,False,0.161,-0.029
+tab_iterative_semantic,fqa,example_first,rs_m,F1,bg_root,1.0,1.0,0.1053,0.1899,0.1899,3/3,0,,30,342,0.19,True,0.19,0.0
+tab_iterative_semantic,arcade-game,example_first,rs_m,F1,bg_empty,1.0,1.0,0.2744,0.4274,0.4274,3/3,0,,35.7,130,0.515,False,0.427,-0.088
+tab_iterative_semantic,arcade-game,example_first,rs_m,F1,bg_root,1.0,1.0,0.3487,0.5153,0.5153,3/3,0,,35.7,130,0.515,True,0.515,0.0
+tab_iterative_semantic,REAL-FM-4,example_first,rs_m,F1,bg_empty,1.0,1.0,0.0397,0.0754,0.0754,3/3,0,,17,428,0.088,False,0.075,-0.013
+tab_iterative_semantic,REAL-FM-4,example_first,rs_m,F1,bg_root,1.0,1.0,0.0467,0.0883,0.0883,3/3,0,,17,428,0.088,True,0.088,0.0
+tab_iterative_semantic,busybox-1.18.0,example_first,rs_m,F1,bg_empty,1.0,1.0,0.0037,0.0073,0.0073,3/3,0,,3.7,994,0.622,False,0.007,-0.615
+tab_iterative_semantic,busybox-1.18.0,example_first,rs_m,F1,bg_root,1.0,1.0,0.4514,0.622,0.622,3/3,0,,3.7,994,0.622,True,0.622,0.0
+tab_iterative_semantic,REAL-FM-7,congen,2cov,F1,bg_empty,,,,,,0/3,3,(3 UNSAT),,22,0.849,False,—,
+tab_iterative_semantic,REAL-FM-7,congen,2cov,F1,bg_root,,,,,,0/3,3,(3 UNSAT),,22,0.849,True,—,
+tab_iterative_semantic,fqa,congen,2cov,F1,bg_empty,0.7646,0.7219,0.9971,0.8655,0.8374,3/3,0,,378,342,0.867,False,0.837,-0.03
+tab_iterative_semantic,fqa,congen,2cov,F1,bg_root,0.7651,0.7219,1.0,0.8669,0.8384,3/3,0,,378,342,0.867,True,0.838,-0.029
+tab_iterative_semantic,arcade-game,congen,2cov,F1,bg_empty,0.743,0.6919,0.8154,0.7766,0.7474,2/3,1,(1 UNSAT),118.5,130,0.705,False,0.747,0.042
+tab_iterative_semantic,arcade-game,congen,2cov,F1,bg_root,0.7808,0.6919,1.0,0.8769,0.8179,2/3,1,(1 UNSAT),118.5,130,0.705,True,0.818,0.113
+tab_iterative_semantic,REAL-FM-4,congen,2cov,F1,bg_empty,0.7859,0.7816,0.8493,0.8164,0.8141,2/3,1,(1 UNSAT),453.5,428,0.93,False,0.814,-0.116
+tab_iterative_semantic,REAL-FM-4,congen,2cov,F1,bg_root,0.8121,0.7816,1.0,0.8963,0.8774,2/3,1,(1 UNSAT),453.5,428,0.93,True,0.877,-0.053
+tab_iterative_semantic,busybox-1.18.0,congen,2cov,F1,bg_empty,,,,,,0/3,3,(3 UNSAT),,994,0.997,False,—,
+tab_iterative_semantic,busybox-1.18.0,congen,2cov,F1,bg_root,,,,,,0/3,3,(3 UNSAT),,994,0.997,True,—,
+tab_iterative_semantic,REAL-FM-7,example_only,2cov,F1,bg_empty,0.6667,1.0,0.0303,0.058,0.058,2/3,0,,0.7,22,0.465,False,0.058,-0.407
+tab_iterative_semantic,REAL-FM-7,example_only,2cov,F1,bg_root,1.0,1.0,0.303,0.4647,0.3218,2/3,0,,0.7,22,0.465,True,0.322,-0.143
+tab_iterative_semantic,fqa,example_only,2cov,F1,bg_empty,1.0,1.0,0.0078,0.0155,0.0155,3/3,0,,2.7,342,0.049,False,0.015,-0.034
+tab_iterative_semantic,fqa,example_only,2cov,F1,bg_root,1.0,1.0,0.0253,0.0494,0.0494,3/3,0,,2.7,342,0.049,True,0.049,0.0
+tab_iterative_semantic,arcade-game,example_only,2cov,F1,bg_empty,1.0,1.0,0.0333,0.0645,0.0645,3/3,0,,4.3,130,0.151,False,0.064,-0.087
+tab_iterative_semantic,arcade-game,example_only,2cov,F1,bg_root,1.0,1.0,0.0821,0.1509,0.1509,3/3,0,,4.3,130,0.151,True,0.151,0.0
+tab_iterative_semantic,REAL-FM-4,example_only,2cov,F1,bg_empty,0.6667,1.0,0.0031,0.0062,0.0062,2/3,0,,1.3,428,0.041,False,0.006,-0.035
+tab_iterative_semantic,REAL-FM-4,example_only,2cov,F1,bg_root,1.0,1.0,0.021,0.041,0.0364,2/3,0,,1.3,428,0.041,True,0.036,-0.005
+tab_iterative_semantic,busybox-1.18.0,example_only,2cov,F1,bg_empty,0.6667,1.0,0.0013,0.0027,0.0027,2/3,0,,1.3,994,0.619,False,0.003,-0.616
+tab_iterative_semantic,busybox-1.18.0,example_only,2cov,F1,bg_root,1.0,1.0,0.4484,0.6191,0.413,2/3,0,,1.3,994,0.619,True,0.413,-0.206
+tab_iterative_semantic,REAL-FM-7,example_first,2cov,F1,bg_empty,1.0,1.0,0.2424,0.3898,0.3898,3/3,0,,5.3,22,0.68,False,0.39,-0.29
+tab_iterative_semantic,REAL-FM-7,example_first,2cov,F1,bg_root,1.0,1.0,0.5152,0.6797,0.6797,3/3,0,,5.3,22,0.68,True,0.68,0.0
+tab_iterative_semantic,fqa,example_first,2cov,F1,bg_empty,1.0,1.0,0.0595,0.1105,0.1105,3/3,0,,20.3,342,0.141,False,0.11,-0.031
+tab_iterative_semantic,fqa,example_first,2cov,F1,bg_root,1.0,1.0,0.077,0.1413,0.1413,3/3,0,,20.3,342,0.141,True,0.141,0.0
+tab_iterative_semantic,arcade-game,example_first,2cov,F1,bg_empty,1.0,1.0,0.2205,0.3346,0.3346,3/3,0,,28.7,130,0.441,False,0.335,-0.106
+tab_iterative_semantic,arcade-game,example_first,2cov,F1,bg_root,1.0,1.0,0.3,0.4405,0.4405,3/3,0,,28.7,130,0.441,True,0.441,0.0
+tab_iterative_semantic,REAL-FM-4,example_first,2cov,F1,bg_empty,0.6667,1.0,0.0218,0.0422,0.0422,2/3,0,,9.3,428,0.077,False,0.042,-0.035
+tab_iterative_semantic,REAL-FM-4,example_first,2cov,F1,bg_root,1.0,1.0,0.0405,0.0768,0.0722,2/3,0,,9.3,428,0.077,True,0.072,-0.005
+tab_iterative_semantic,busybox-1.18.0,example_first,2cov,F1,bg_empty,0.6667,1.0,0.0084,0.0165,0.0165,2/3,0,,8.3,994,0.625,False,0.017,-0.608
+tab_iterative_semantic,busybox-1.18.0,example_first,2cov,F1,bg_root,1.0,1.0,0.4551,0.6255,0.4193,2/3,0,,8.3,994,0.625,True,0.419,-0.206
+tab_iterative_semantic,REAL-FM-7,congen,ff,F1,bg_empty,0.6784,0.637,0.7424,0.7083,0.685,3/3,0,,21.3,22,0.852,False,0.685,-0.167
+tab_iterative_semantic,REAL-FM-7,congen,ff,F1,bg_root,0.7418,0.637,1.0,0.8517,0.7772,3/3,0,,21.3,22,0.852,True,0.777,-0.075
+tab_iterative_semantic,fqa,congen,ff,F1,bg_empty,0.8476,0.8459,0.9971,0.9163,0.9153,3/3,0,,398,342,0.918,False,0.915,-0.003
+tab_iterative_semantic,fqa,congen,ff,F1,bg_root,0.848,0.8459,1.0,0.9177,0.9165,3/3,0,,398,342,0.918,True,0.917,-0.001
+tab_iterative_semantic,arcade-game,congen,ff,F1,bg_empty,0.5692,0.5232,0.9359,0.7049,0.668,3/3,0,,196.7,130,0.727,False,0.668,-0.059
+tab_iterative_semantic,arcade-game,congen,ff,F1,bg_root,0.5805,0.5232,0.9821,0.7268,0.6792,3/3,0,,196.7,130,0.727,True,0.679,-0.048
+tab_iterative_semantic,REAL-FM-4,congen,ff,F1,bg_empty,0.6673,0.6552,0.9299,0.7765,0.7681,3/3,0,,577,428,0.811,False,0.768,-0.043
+tab_iterative_semantic,REAL-FM-4,congen,ff,F1,bg_root,0.6831,0.6552,1.0,0.8113,0.7911,3/3,0,,577,428,0.811,True,0.791,-0.02
+tab_iterative_semantic,busybox-1.18.0,congen,ff,F1,bg_empty,0.7124,0.6868,0.6046,0.6537,0.6427,3/3,0,,776.3,994,0.891,False,0.643,-0.248
+tab_iterative_semantic,busybox-1.18.0,congen,ff,F1,bg_root,0.8034,0.6868,1.0,0.8907,0.8138,3/3,0,,776.3,994,0.891,True,0.814,-0.077
+tab_iterative_semantic,REAL-FM-7,example_only,ff,F1,bg_empty,1.0,1.0,0.0606,0.1135,0.1135,3/3,0,,1.3,22,0.5,False,0.114,-0.386
+tab_iterative_semantic,REAL-FM-7,example_only,ff,F1,bg_root,1.0,1.0,0.3333,0.4996,0.4996,3/3,0,,1.3,22,0.5,True,0.5,0.0
+tab_iterative_semantic,fqa,example_only,ff,F1,bg_empty,1.0,1.0,0.0078,0.0155,0.0155,3/3,0,,2.7,342,0.049,False,0.015,-0.034
+tab_iterative_semantic,fqa,example_only,ff,F1,bg_root,1.0,1.0,0.0253,0.0494,0.0494,3/3,0,,2.7,342,0.049,True,0.049,0.0
+tab_iterative_semantic,arcade-game,example_only,ff,F1,bg_empty,0.6667,1.0,0.0077,0.0152,0.0152,2/3,0,,1,130,0.06,False,0.015,-0.045
+tab_iterative_semantic,arcade-game,example_only,ff,F1,bg_root,1.0,1.0,0.0308,0.0596,0.0446,2/3,0,,1,130,0.06,True,0.045,-0.015
+tab_iterative_semantic,REAL-FM-4,example_only,ff,F1,bg_empty,1.0,1.0,0.0047,0.0093,0.0093,3/3,0,,2,428,0.023,False,0.009,-0.014
+tab_iterative_semantic,REAL-FM-4,example_only,ff,F1,bg_root,1.0,1.0,0.0117,0.0231,0.0231,3/3,0,,2,428,0.023,True,0.023,0.0
+tab_iterative_semantic,busybox-1.18.0,example_only,ff,F1,bg_empty,1.0,1.0,0.0017,0.0033,0.0033,3/3,0,,1.7,994,0.62,False,0.003,-0.617
+tab_iterative_semantic,busybox-1.18.0,example_only,ff,F1,bg_root,1.0,1.0,0.4494,0.6201,0.6201,3/3,0,,1.7,994,0.62,True,0.62,0.0
+tab_iterative_semantic,REAL-FM-7,example_first,ff,F1,bg_empty,1.0,1.0,0.197,0.3269,0.3269,3/3,0,,4.3,22,0.638,False,0.327,-0.311
+tab_iterative_semantic,REAL-FM-7,example_first,ff,F1,bg_root,1.0,1.0,0.4697,0.638,0.638,3/3,0,,4.3,22,0.638,True,0.638,0.0
+tab_iterative_semantic,fqa,example_first,ff,F1,bg_empty,1.0,1.0,0.0936,0.167,0.167,3/3,0,,32,342,0.196,False,0.167,-0.029
+tab_iterative_semantic,fqa,example_first,ff,F1,bg_root,1.0,1.0,0.1111,0.1961,0.1961,3/3,0,,32,342,0.196,True,0.196,0.0
+tab_iterative_semantic,arcade-game,example_first,ff,F1,bg_empty,1.0,1.0,0.2872,0.4348,0.4348,3/3,0,,37.3,130,0.56,False,0.435,-0.125
+tab_iterative_semantic,arcade-game,example_first,ff,F1,bg_root,1.0,1.0,0.3974,0.5601,0.5601,3/3,0,,37.3,130,0.56,True,0.56,0.0
+tab_iterative_semantic,REAL-FM-4,example_first,ff,F1,bg_empty,1.0,1.0,0.1106,0.1983,0.1983,3/3,0,,47.3,428,0.21,False,0.198,-0.012
+tab_iterative_semantic,REAL-FM-4,example_first,ff,F1,bg_root,1.0,1.0,0.1176,0.2096,0.2096,3/3,0,,47.3,428,0.21,True,0.21,0.0
+tab_iterative_semantic,busybox-1.18.0,example_first,ff,F1,bg_empty,1.0,1.0,0.0127,0.0252,0.0252,3/3,0,,11.7,994,0.631,False,0.025,-0.606
+tab_iterative_semantic,busybox-1.18.0,example_first,ff,F1,bg_root,1.0,1.0,0.4604,0.6305,0.6305,3/3,0,,11.7,994,0.631,True,0.631,0.0

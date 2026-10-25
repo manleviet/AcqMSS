@@ -1,0 +1,63 @@
+WARNING:root:Namespaces are not meningful for Flama.This model has the following namespaces: jplug 
+WARNING:root:Namespaces are not meningful for Flama.This model has the following namespaces: jplug 
+WARNING:root:Namespaces are not meningful for Flama.This model has the following namespaces: jplug 
+WARNING:root:FindC returned no constraint for scope {'interface', 'jplug'}
+WARNING:root:FindC returned no constraint for scope {'mdi', 'interface', 'sdi'}
+WARNING:root:FindC returned no constraint for scope {'java', 'gui_builder'}
+WARNING:root:FindC returned no constraint for scope {'java', 'gui_builder'}
+WARNING:root:FindC returned no constraint for scope {'qt', 'gui_builder'}
+WARNING:root:FindC returned no constraint for scope {'qt', 'gui_builder'}
+WARNING:root:FindC returned no constraint for scope {'mvc', 'compiler', 'javac'}
+WARNING:root:FindC returned no constraint for scope {'uml', 'diagram_builder'}
+WARNING:root:FindC returned no constraint for scope {'uml', 'diagram_builder'}
+WARNING:root:FindC returned no constraint for scope {'diagram_builder', 'petri_net'}
+root clauses: ['jplug']
+CT clauses (22), clause_set (22):
+    jplug
+    ¬jplug ∨ interface
+    ¬interface ∨ jplug
+    ¬interface ∨ sdi ∨ mdi
+    ¬sdi ∨ ¬mdi
+    ¬sdi ∨ interface
+    ¬mdi ∨ interface
+    ¬gui_builder ∨ jplug
+    ¬gui_builder ∨ java
+    ¬java ∨ gui_builder
+    ¬qt ∨ gui_builder
+    ¬model_code_synch ∨ jplug
+    ¬compiler ∨ jplug
+    ¬compiler ∨ javac ∨ mvc
+    ¬javac ∨ compiler
+    ¬mvc ∨ compiler
+    ¬diagram_builder ∨ jplug
+    ¬diagram_builder ∨ uml
+    ¬uml ∨ diagram_builder
+    ¬petri_net ∨ diagram_builder
+    ¬gui_builder ∨ ¬sdi
+    ¬model_code_synch ∨ diagram_builder
+QuAcq-active KB size 12 no_query queries 272
+   KB: c23
+   KB: c4
+   KB: c162
+   KB: c16
+   KB: c291
+   KB: c100
+   KB: c161
+   KB: c103
+   KB: c288
+   KB: c242
+   KB: c287
+   KB: c165
+
+[shipped bg=[]] unentailed_ct=6/22  unentailed_kb=0/16
+   CT not entailed: jplug (1,)
+   CT not entailed: ¬interface ∨ jplug (-2, 1)
+   CT not entailed: ¬gui_builder ∨ jplug (-5, 1)
+   CT not entailed: ¬model_code_synch ∨ jplug (-8, 1)
+   CT not entailed: ¬compiler ∨ jplug (-9, 1)
+   CT not entailed: ¬diagram_builder ∨ jplug (-12, 1)
+
+[bg=root] unentailed_ct=0/22  unentailed_kb=0/16
+
+exact-equiv path (theory=kb+root, bg=root): equivalent = True
+precision vs Cτ∪root: unentailed_kb = 0

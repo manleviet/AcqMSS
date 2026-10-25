@@ -1,0 +1,11 @@
+variant,test,n,median,wins,p,W,ties,dropped_all_unsat,losses,holm,reject
+F1_code,1a congen vs example-only,26,0.738,26,2.9802322387695312e-08,0.0,0,REAL-FM-7/2cov busybox-1.18.0/2cov,,8.940696716308594e-08,True
+F1_code,1b congen vs example-first,26,0.387,25,1.4901161193847656e-07,3.0,0,REAL-FM-7/2cov busybox-1.18.0/2cov,arcade-game/rs_3n,1.4901161193847656e-07,True
+F1_code,5 example-first vs example-only,28,0.146,28,7.450580596923828e-09,0.0,0,,,2.9802322387695312e-08,True
+F1_code,3 semantic vs description tier,26,0.344,26,2.9802322387695312e-08,0.0,0,REAL-FM-7/2cov busybox-1.18.0/2cov,,8.940696716308594e-08,True
+F1_code,2 2-COV vs random,3,0.048,2,0.75,2.0,0,,,,
+F1_std,1a congen vs example-only,26,0.777,26,2.9802322387695312e-08,0.0,0,REAL-FM-7/2cov busybox-1.18.0/2cov,,8.940696716308594e-08,True
+F1_std,1b congen vs example-first,26,0.352,23,9.834766387939453e-07,9.0,0,REAL-FM-7/2cov busybox-1.18.0/2cov,arcade-game/rs_1n arcade-game/rs_2n arcade-game/rs_3n,9.834766387939453e-07,True
+F1_std,5 example-first vs example-only,28,0.188,28,7.450580596923828e-09,0.0,0,,,2.9802322387695312e-08,True
+F1_std,3 semantic vs description tier,26,0.311,26,2.9802322387695312e-08,0.0,0,REAL-FM-7/2cov busybox-1.18.0/2cov,,8.940696716308594e-08,True
+F1_std,2 2-COV vs random,3,0.043,2,0.75,2.0,0,,,,

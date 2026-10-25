@@ -1,0 +1,18 @@
+{
+ "kb_constraints": [
+  "c23",
+  "c4",
+  "c162",
+  "c16",
+  "c291",
+  "c100",
+  "c161",
+  "c103",
+  "c288",
+  "c242",
+  "c287",
+  "c165"
+ ],
+ "n_queries": 272,
+ "convergence_reason": "no_query"
+}

@@ -1,0 +1,5 @@
+REAL-FM-7       root_var=   1 |CT|=  22 root_unit_in_CT=True |R+|=  6 |R-|=  1 bias_clauses_mentioning_root=39 dead_R+_antecedents_in_CT=0
+fqa             root_var=   1 |CT|= 342 root_unit_in_CT=True |R+|=  6 |R-|=  1 bias_clauses_mentioning_root=6 dead_R+_antecedents_in_CT=0
+arcade-game     root_var=   1 |CT|= 130 root_unit_in_CT=True |R+|=  3 |R-|=  2 bias_clauses_mentioning_root=4 dead_R+_antecedents_in_CT=0
+REAL-FM-4       root_var=   1 |CT|= 428 root_unit_in_CT=True |R+|=  3 |R-|=  2 bias_clauses_mentioning_root=4 dead_R+_antecedents_in_CT=0
+busybox-1.18.0  root_var=   1 |CT|= 989 root_unit_in_CT=True |R+|=445 |R-|= 19 bias_clauses_mentioning_root=888 dead_R+_antecedents_in_CT=5

@@ -1,0 +1,12 @@
+{
+ "kb_constraints": [
+  "c2",
+  "c6",
+  "c32",
+  "c54",
+  "c56",
+  "c226"
+ ],
+ "n_queries": 3843,
+ "convergence_reason": "timeout"
+}
