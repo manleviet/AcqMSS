@@ -7,7 +7,7 @@ Supports two comparation strategies:
 """
 
 from dataclasses import dataclass
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 from pathlib import Path
 from enum import Enum
 import logging
@@ -25,6 +25,43 @@ class ComparationStrategy(Enum):
     SEMANTIC = "semantic"        # SAT-based semantic equivalence
 
 
+@dataclass(frozen=True)
+class SemanticStandardPrecision:
+    """Standard precision of the semantic tier, over the LEARNED clauses.
+
+    ``EvaluationMetrics`` for the semantic tier keeps its historical mapping (TP = Cτ clauses
+    entailed by the KB, FP = KB clauses not entailed by Cτ), so its ``precision`` is
+    TP_ct / (TP_ct + FP_kb) and mixes two populations. This is the standard form,
+    P_std = TP_kb / (TP_kb + FP_kb) with TP_kb = KB clauses entailed by Cτ, from the same
+    entailment call. On an empty KB ``precision`` is None (undefined, reported "—") and ``f1``
+    is 0 by convention (nothing learned); the recall still counts what bg alone entails.
+    """
+    n_kb_checked: int
+    n_kb_entailed: int
+    n_ct_checked: int
+    n_ct_entailed: int
+
+    @property
+    def precision(self) -> Optional[float]:
+        return self.n_kb_entailed / self.n_kb_checked if self.n_kb_checked else None
+
+    @property
+    def recall(self) -> float:
+        return self.n_ct_entailed / self.n_ct_checked if self.n_ct_checked else 0.0
+
+    @property
+    def f1(self) -> Optional[float]:
+        p, r = self.precision, self.recall
+        if p is None:                 # empty KB: F1 = 0 by convention
+            return 0.0
+        return 2 * p * r / (p + r) if p + r else 0.0
+
+    def to_dict(self) -> dict:
+        return {'n_kb_checked': self.n_kb_checked, 'n_kb_entailed': self.n_kb_entailed,
+                'n_ct_checked': self.n_ct_checked, 'n_ct_entailed': self.n_ct_entailed,
+                'precision': self.precision, 'recall': self.recall, 'f1': self.f1}
+
+
 @dataclass
 class ComparationResult:
     """
@@ -38,6 +75,8 @@ class ComparationResult:
         missed_constraints: FN - in ground truth but not KB
         extra_constraints: FP - in KB but not ground truth
         kb_reduction_ratio: 1 - (n_kb / n_bias)
+        standard_precision: semantic tier only — P_std over learned clauses (see
+            SemanticStandardPrecision); None for the description/clause tiers.
     """
     strategy: str
     metrics: EvaluationMetrics
@@ -46,6 +85,7 @@ class ComparationResult:
     missed_constraints: List[str]
     extra_constraints: List[str]
     kb_reduction_ratio: float
+    standard_precision: Optional[SemanticStandardPrecision] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -57,6 +97,9 @@ class ComparationResult:
             'missed_constraints': self.missed_constraints,
             'extra_constraints': self.extra_constraints,
             'kb_reduction_ratio': self.kb_reduction_ratio,
+            # Added key only when set, so description/clause serialisations are unchanged.
+            **({'standard_precision': self.standard_precision.to_dict()}
+               if self.standard_precision is not None else {}),
         }
 
     def to_enriched_dict(self, bias) -> dict:
@@ -324,7 +367,10 @@ class KBComparator:
             matched_constraints=[],
             missed_constraints=[str(list(c)) for c in sem_result.unentailed_ct[:20]],
             extra_constraints=[str(list(c)) for c in sem_result.unentailed_kb[:20]],
-            kb_reduction_ratio=reduction
+            kb_reduction_ratio=reduction,
+            standard_precision=SemanticStandardPrecision(
+                n_kb_checked=sem_result.n_kb_checked, n_kb_entailed=n_kb_entailed,
+                n_ct_checked=sem_result.n_ct_checked, n_ct_entailed=n_ct_entailed),
         )
 
     @classmethod
