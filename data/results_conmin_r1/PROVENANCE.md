@@ -293,3 +293,21 @@ ConMin k=1) on 72 folds, 0 mismatches. Scope decided 2026-10-26: KB₁–KB₃ a
 `original` + `uniform_n` only (Stage 1 with 696 uniform positives > 2 h for one fold; one probe
 `uniform_4n` file kept, reported as partial). Timing: KB₁ 8 s, KB₂/KB₃ ~2.5 h wall on 5 workers,
 KB₄ 2 h 27 min wall on 6 workers (rs_3n folds ~1 h original, longer uniform).
+
+## Reduce order ablation (eSpW Q3 follow-up) — revision / CC report only
+
+```bash
+PYTHONPATH=. uv run --no-sync python -m apps.conmin_r1.reduce_order --workers 7        # 72 folds, < 2 min
+PYTHONPATH=. uv run --no-sync python -m apps.conmin_r1.reduce_order_report
+```
+
+Inputs: persisted A, C, C∪S (k = 1, 2, 3, 5) and fallbacks (`kbs/`), persisted A′ = Reduce(A)
+(`reduce_a/`); KB₁–KB₄, all samplings incl. 2-COV; raw negatives; no re-learning. Code:
+`reduce_order.py` (task re-prepared via `reduce_a_ablation.load_fold`, which now also returns the
+`model`; ConMin's own `_compute_cover` on A and on A′ in A's pool order, then `finish_kb` per k on one
+checker), `reduce_order_report.py` (CSV + generated section of `reduce_order.md`). Gate: O1
+recomputed from the persisted A reproduces the persisted cover and the persisted C∪S names and
+fallbacks on 72 folds × 4 k, 0 mismatches. Asserted/recorded: finish_kb's Reduce on C′ ∪ S′ ∪ F′
+removes no bias constraint (0 of 288 O2 runs); every target constraint removed by Reduce is entailed
+by the kept theory (all cells). Outputs: `reduce_order.csv` (576 rows), `reduce_order.md`,
+`reduce_order/<kb>/<es>_fold<f>.json`. Not quoted in the rebuttal.

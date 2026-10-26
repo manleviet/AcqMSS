@@ -108,7 +108,7 @@ def load_fold(kb, es, fold):
                    root=[list(c) for c in oracle.oracle_data.get_root_clauses()])
     finally:
         oracle.cleanup()
-    return dict(recs=recs, task=task, describe=describe, ctx=ctx, bias=bias, gt=gt,
+    return dict(recs=recs, task=task, describe=describe, ctx=ctx, bias=bias, gt=gt, model=model,
                 variables=model.name_to_id, tr_pos=tr_pos, tr_neg=tr_neg,
                 aid={describe.get_description(i): i for i in task.set_c})
 
