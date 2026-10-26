@@ -311,3 +311,21 @@ fallbacks on 72 folds × 4 k, 0 mismatches. Asserted/recorded: finish_kb's Reduc
 removes no bias constraint (0 of 288 O2 runs); every target constraint removed by Reduce is entailed
 by the kept theory (all cells). Outputs: `reduce_order.csv` (576 rows), `reduce_order.md`,
 `reduce_order/<kb>/<es>_fold<f>.json`. Not quoted in the rebuttal.
+
+## Cover and output structure (Cowork, 2026-10-26) — revision / rebuttal wording only
+
+```bash
+python3 apps/conmin_r1/cover_structure.py  > data/results_conmin_r1/cover_structure.txt
+python3 apps/conmin_r1/output_structure.py > data/results_conmin_r1/output_structure.txt
+```
+
+Inputs: persisted condition C (all samplings, 72 folds, 91 cover elements) and C∪S k=1 (Table-5
+folds) from `kbs/`; `data/bias/<kb>-bias.json` for operator/parent/children; `data/fms/<kb>.uvl`
+for feature depth, target relations and cross-tree constraints (indentation parser inside
+`cover_structure.py`; a few `A | !B` cross-tree forms are not parsed — fqa 8, arcade-game 3 —
+and count as "not in target"). Description level only; no SAT, no re-scoring. Findings in
+`cover_structure.md` §1–4: covers are hierarchy constraints of highest rejection degree (2/91
+cross-tree); they often take the strongest candidate (alternative where the target has an
+or-group, KB₄ 18/24); the non-target part of the k=1 output is dominated by cross-tree
+requires/excludes (24–71%), operator neighbours are 2–8%. Used qualitatively in the eSpW (3) and
+R3dC (1) boxes; no figure from these files is quoted in the rebuttal.
