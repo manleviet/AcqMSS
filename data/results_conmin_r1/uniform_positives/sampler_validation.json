@@ -1,0 +1,41 @@
+[
+ {
+  "kb": "REAL-FM-7",
+  "solutions": 80,
+  "draws": 8000,
+  "distinct_drawn": 80,
+  "chi2": 99.86,
+  "df": 79,
+  "p": 0.05653895229824542,
+  "min_count": 74,
+  "max_count": 136,
+  "expected": 100.0,
+  "seed": 82
+ },
+ {
+  "kb": "REAL-FM-7",
+  "solutions": 80,
+  "draws": 80000,
+  "distinct_drawn": 80,
+  "chi2": 74.124,
+  "df": 79,
+  "p": 0.6341437547449383,
+  "min_count": 932,
+  "max_count": 1058,
+  "expected": 1000.0,
+  "seed": 82
+ },
+ {
+  "kb": "REAL-FM-7",
+  "solutions": 80,
+  "draws": 80000,
+  "distinct_drawn": 80,
+  "chi2": 66.99799999999999,
+  "df": 79,
+  "p": 0.8300104339444201,
+  "min_count": 933,
+  "max_count": 1071,
+  "expected": 1000.0,
+  "seed": 83
+ }
+]

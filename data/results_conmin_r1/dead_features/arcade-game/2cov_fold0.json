@@ -1,0 +1,54 @@
+{
+ "kb": "arcade-game",
+ "example_set": "2cov",
+ "fold": 0,
+ "n_train_pos": 0,
+ "n_train_neg": 8,
+ "n_features": 65,
+ "consistent": 0,
+ "dead_ct": [],
+ "calls_dead_ct": 32,
+ "scores": [
+  {
+   "condition": "A",
+   "n_kb": 1754,
+   "consistent_with_root": 0,
+   "models_theory": "0",
+   "models_both": "0"
+  },
+  {
+   "condition": "Reduce(A)",
+   "n_kb": 62,
+   "consistent_with_root": 0,
+   "models_theory": "0",
+   "models_both": "0"
+  },
+  {
+   "condition": "ConMin k=1",
+   "n_kb": 1,
+   "consistent_with_root": 1,
+   "models_theory": "9223372036854775808",
+   "models_both": "3299733576",
+   "desc_p": 1.0,
+   "desc_r": 0.014285714285714285,
+   "desc_f1": 0.028169014084507043,
+   "clause_p": 1.0,
+   "clause_r": 0.015384615384615385,
+   "clause_f1": 0.030303030303030307,
+   "exact_equiv": 0,
+   "accuracy": 1.0,
+   "P_code_bg_empty": 1.0,
+   "R_bg_empty": 0.015384615384615385,
+   "F1_code_bg_empty": 0.030303030303030307,
+   "P_std_bg_empty": 1.0,
+   "F1_std_bg_empty": 0.030303030303030307,
+   "P_code_bg_root": 1.0,
+   "R_bg_root": 0.038461538461538464,
+   "F1_code_bg_root": 0.07407407407407407,
+   "P_std_bg_root": 1.0,
+   "F1_std_bg_root": 0.07407407407407407,
+   "sol_precision": 3.5775783117225624e-10,
+   "sol_recall": 1.0
+  }
+ ]
+}

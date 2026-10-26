@@ -1,0 +1,174 @@
+{
+ "kb": "REAL-FM-7",
+ "example_set": "rs_2n",
+ "fold": 1,
+ "variant": "mixed_n",
+ "n_train_pos_original": 17,
+ "n_pos_used": 34,
+ "n_train_neg": 1,
+ "n_bias": 295,
+ "seed": 83,
+ "learn_seconds": 0.7,
+ "reduce_a_constraints": [
+  {
+   "name": "c242",
+   "spurious": false,
+   "class": "S",
+   "support": 10
+  },
+  {
+   "name": "c103",
+   "spurious": false,
+   "class": "R\u2216C",
+   "support": 12
+  },
+  {
+   "name": "c22",
+   "spurious": false,
+   "class": "S",
+   "support": 11
+  },
+  {
+   "name": "c19",
+   "spurious": false,
+   "class": "S",
+   "support": 22
+  },
+  {
+   "name": "c18",
+   "spurious": false,
+   "class": "S",
+   "support": 22
+  },
+  {
+   "name": "c16",
+   "spurious": false,
+   "class": "S",
+   "support": 15
+  },
+  {
+   "name": "c14",
+   "spurious": false,
+   "class": "S",
+   "support": 23
+  },
+  {
+   "name": "c10",
+   "spurious": false,
+   "class": "S",
+   "support": 10
+  },
+  {
+   "name": "c7",
+   "spurious": false,
+   "class": "S",
+   "support": 12
+  },
+  {
+   "name": "c6",
+   "spurious": false,
+   "class": "S",
+   "support": 12
+  },
+  {
+   "name": "c3",
+   "spurious": false,
+   "class": "R\u2216C",
+   "support": 12
+  },
+  {
+   "name": "c1",
+   "spurious": false,
+   "class": "R\u2229C",
+   "support": 34
+  }
+ ],
+ "n_A": 60,
+ "n_cover": 1,
+ "reduce_a": [
+  "c242",
+  "c103",
+  "c22",
+  "c19",
+  "c18",
+  "c16",
+  "c14",
+  "c10",
+  "c7",
+  "c6",
+  "c3",
+  "c1"
+ ],
+ "conmin": [
+  "c242",
+  "c103",
+  "c22",
+  "c19",
+  "c18",
+  "c16",
+  "c14",
+  "c10",
+  "c7",
+  "c6",
+  "c3",
+  "c1"
+ ],
+ "n_dead_reduce_a": 0,
+ "scores": [
+  {
+   "condition": "Reduce(A)",
+   "n_kb": 12,
+   "consistent_with_root": 1,
+   "models_theory": "80",
+   "models_both": "80",
+   "desc_p": 1.0,
+   "desc_r": 0.9230769230769231,
+   "desc_f1": 0.9600000000000001,
+   "clause_p": 1.0,
+   "clause_r": 0.9090909090909091,
+   "clause_f1": 0.9523809523809523,
+   "exact_equiv": 1,
+   "accuracy": 1.0,
+   "P_code_bg_empty": 1.0,
+   "R_bg_empty": 0.9545454545454546,
+   "F1_code_bg_empty": 0.9767441860465117,
+   "P_std_bg_empty": 1.0,
+   "F1_std_bg_empty": 0.9767441860465117,
+   "P_code_bg_root": 1.0,
+   "R_bg_root": 1.0,
+   "F1_code_bg_root": 1.0,
+   "P_std_bg_root": 1.0,
+   "F1_std_bg_root": 1.0,
+   "sol_precision": 1.0,
+   "sol_recall": 1.0
+  },
+  {
+   "condition": "ConMin k=1",
+   "n_kb": 12,
+   "consistent_with_root": 1,
+   "models_theory": "80",
+   "models_both": "80",
+   "desc_p": 1.0,
+   "desc_r": 0.9230769230769231,
+   "desc_f1": 0.9600000000000001,
+   "clause_p": 1.0,
+   "clause_r": 0.9090909090909091,
+   "clause_f1": 0.9523809523809523,
+   "exact_equiv": 1,
+   "accuracy": 1.0,
+   "P_code_bg_empty": 1.0,
+   "R_bg_empty": 0.9545454545454546,
+   "F1_code_bg_empty": 0.9767441860465117,
+   "P_std_bg_empty": 1.0,
+   "F1_std_bg_empty": 0.9767441860465117,
+   "P_code_bg_root": 1.0,
+   "R_bg_root": 1.0,
+   "F1_code_bg_root": 1.0,
+   "P_std_bg_root": 1.0,
+   "F1_std_bg_root": 1.0,
+   "sol_precision": 1.0,
+   "sol_recall": 1.0
+  }
+ ],
+ "seconds": 0.7
+}

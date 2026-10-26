@@ -80,11 +80,11 @@ def _score(ctx, cond, names, fallback=()):
     return out
 
 
-def run_fold(kb, es, fold):
+def load_fold(kb, es, fold):
+    """Everything a per-fold measure needs, without Stage 1: persisted records, the fold's
+    train/test split, the re-prepared task (ids, support counts, negation map) and the scoring
+    context ``ctx`` used by ``_score`` (comparator, exact counter with Cτ compiled, root)."""
     recs = {(r['condition'], r['k']): r for r in json.loads(record_path(kb, es, fold).read_text())}
-    a_names, c_rec = recs[('A', None)]['names'], recs[('C', None)]
-    cover, s_full = c_rec['names'], set(c_rec['support_full_k1_names'])
-    conmin = recs[('C∪S', 1)]
     oracle = ev.FMOracle(fm_path(kb), solver_name=SOLVER, use_incremental=True)
     try:
         model = (ev.ConMinModelBuilder.from_bias(bias_path(kb))
@@ -96,24 +96,7 @@ def run_fold(kb, es, fold):
         with ev.profiler_session(ev.ProfilerPreset.BENCHMARK) as prof:
             prepared = model.prepare_task(ev.ConMinTaskInput.from_examples(
                 oracle.oracle_data, tr_pos, tr_neg), minimize=False, profiler=prof)
-            task, describe = prepared.task, prepared.describe
-            aid = {describe.get_description(i): i for i in task.set_c}
-            cover_set = set(cover)
-            orders = {
-                'conmin': ([n for n in a_names if n in s_full and n not in cover_set] + cover +
-                           [n for n in a_names if n not in s_full and n not in cover_set]),
-                'pool': list(a_names)}
-            checker = ev.build_checker(task, ev.SolverBackend.from_flags(use_incremental=True),
-                                       SOLVER, prof)
-            try:
-                reduced = {}
-                for tag, order in orders.items():
-                    assert sorted(order) == sorted(a_names)
-                    _, kept = Reduce(checker, prof).reduce(
-                        [aid[n] for n in order], [], task.set_b, task.negation_map)
-                    reduced[tag] = [describe.get_description(i) for i in kept]
-            finally:
-                checker.cleanup()
+        task, describe = prepared.task, prepared.describe
         gt = ev.GroundTruthData.from_uvl(Path(fm_path(kb)))
         bias = ev.BiasIO.load_from_json(bias_path(kb))
         counter = ExactSddCounter(len(gt.feature_map))
@@ -123,9 +106,43 @@ def run_fold(kb, es, fold):
                    te_pos=te_pos, te_neg=te_neg, counter=(counter, ct),
                    n_ct_models=counter.count(ct),
                    root=[list(c) for c in oracle.oracle_data.get_root_clauses()])
-        r_group = _rejectors(a_names, bias, tr_neg, model.name_to_id)
     finally:
         oracle.cleanup()
+    return dict(recs=recs, task=task, describe=describe, ctx=ctx, bias=bias, gt=gt,
+                variables=model.name_to_id, tr_pos=tr_pos, tr_neg=tr_neg,
+                aid={describe.get_description(i): i for i in task.set_c})
+
+
+def reduce_names(fd, order):
+    """ConMin's own Reduce over ``order`` (names) — the ``finish_kb`` call, BG = task.set_b."""
+    task, describe = fd['task'], fd['describe']
+    with ev.profiler_session(ev.ProfilerPreset.BENCHMARK) as prof:
+        checker = ev.build_checker(task, ev.SolverBackend.from_flags(use_incremental=True),
+                                   SOLVER, prof)
+        try:
+            _, kept = Reduce(checker, prof).reduce(
+                [fd['aid'][n] for n in order], [], task.set_b, task.negation_map)
+        finally:
+            checker.cleanup()
+    return [describe.get_description(i) for i in kept]
+
+
+def run_fold(kb, es, fold):
+    fd = load_fold(kb, es, fold)
+    recs, ctx, bias, tr_pos, tr_neg = fd['recs'], fd['ctx'], fd['bias'], fd['tr_pos'], fd['tr_neg']
+    a_names, c_rec = recs[('A', None)]['names'], recs[('C', None)]
+    cover, s_full = c_rec['names'], set(c_rec['support_full_k1_names'])
+    conmin = recs[('C∪S', 1)]
+    cover_set = set(cover)
+    orders = {
+        'conmin': ([n for n in a_names if n in s_full and n not in cover_set] + cover +
+                   [n for n in a_names if n not in s_full and n not in cover_set]),
+        'pool': list(a_names)}
+    reduced = {}
+    for tag, order in orders.items():
+        assert sorted(order) == sorted(a_names)
+        reduced[tag] = reduce_names(fd, order)
+    r_group = _rejectors(a_names, bias, tr_neg, fd['variables'])
     v_group = set(a_names) - r_group - s_full
     red = reduced['conmin']
     rows = [_score(ctx, 'A', a_names), _score(ctx, 'Reduce(A)', red),

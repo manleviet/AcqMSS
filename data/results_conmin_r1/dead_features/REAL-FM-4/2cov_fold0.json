@@ -1,0 +1,54 @@
+{
+ "kb": "REAL-FM-4",
+ "example_set": "2cov",
+ "fold": 0,
+ "n_train_pos": 0,
+ "n_train_neg": 11,
+ "n_features": 291,
+ "consistent": 0,
+ "dead_ct": [],
+ "calls_dead_ct": 165,
+ "scores": [
+  {
+   "condition": "A",
+   "n_kb": 2078,
+   "consistent_with_root": 0,
+   "models_theory": "0",
+   "models_both": "0"
+  },
+  {
+   "condition": "Reduce(A)",
+   "n_kb": 204,
+   "consistent_with_root": 0,
+   "models_theory": "0",
+   "models_both": "0"
+  },
+  {
+   "condition": "ConMin k=1",
+   "n_kb": 2,
+   "consistent_with_root": 1,
+   "models_theory": "497323236409786642155382248146820840100456150797347717440463976893159497012533375533056",
+   "models_both": "44510227574558690287806684873806800388924375040000",
+   "desc_p": 1.0,
+   "desc_r": 0.0091324200913242,
+   "desc_f1": 0.01809954751131222,
+   "clause_p": 1.0,
+   "clause_r": 0.009345794392523364,
+   "clause_f1": 0.018518518518518517,
+   "exact_equiv": 0,
+   "accuracy": 1.0,
+   "P_code_bg_empty": 1.0,
+   "R_bg_empty": 0.009345794392523364,
+   "F1_code_bg_empty": 0.018518518518518517,
+   "P_std_bg_empty": 1.0,
+   "F1_std_bg_empty": 0.018518518518518517,
+   "P_code_bg_root": 1.0,
+   "R_bg_root": 0.030373831775700934,
+   "F1_code_bg_root": 0.05895691609977324,
+   "P_std_bg_root": 1.0,
+   "F1_std_bg_root": 0.05895691609977324,
+   "sol_precision": 8.949959365639403e-38,
+   "sol_recall": 1.0
+  }
+ ]
+}

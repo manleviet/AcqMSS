@@ -28,15 +28,24 @@ def _share(a, red, conmin):
     return round((red - conmin) / (a - conmin), 4), ''
 
 
+def thirds_by_positives(folds):
+    """``folds``: iterable of (n_train_pos, example_set, fold) for ONE KB's Table-5 folds.
+    Sorted by (n_train_pos, example_set, fold), 5 per third → [(third, members, (lo, hi))]."""
+    keys = sorted(set(folds))
+    out = []
+    for i, third in enumerate(THIRDS):
+        part = keys[5 * i:5 * i + 5]
+        out.append((third, {(es, f) for _, es, f in part}, (part[0][0], part[-1][0])))
+    return out
+
+
 def binned_entries(rows):
     out = []
     for kb in KBS:
-        keys = sorted({(int(r['n_train_pos']), r['example_set'], int(r['fold']))
-                       for r in rows if r['kb'] == kb and r['example_set'] != '2cov'})
-        for i, third in enumerate(THIRDS):
-            part = keys[5 * i:5 * i + 5]
-            members = {(es, f) for _, es, f in part}
-            label = f'Table 5 third {third} (n_train_pos {part[0][0]}–{part[-1][0]})'
+        folds = [(int(r['n_train_pos']), r['example_set'], int(r['fold']))
+                 for r in rows if r['kb'] == kb and r['example_set'] != '2cov']
+        for third, members, (lo, hi) in thirds_by_positives(folds):
+            label = f'Table 5 third {third} (n_train_pos {lo}–{hi})'
             entries = {c: summary_entry(
                 [r for r in rows if r['kb'] == kb and r['condition'] == c
                  and (r['example_set'], int(r['fold'])) in members], kb, c, label)
@@ -46,7 +55,7 @@ def binned_entries(rows):
                 shares[col] = _share(*(entries[c][f'{col}_mean'] for c in CONDS))
             for c in CONDS:
                 entries[c].update({
-                    'third': third, 'n_train_pos_range': f'{part[0][0]}–{part[-1][0]}',
+                    'third': third, 'n_train_pos_range': f'{lo}–{hi}',
                     'stage2_share_n_kb': shares['n_kb'][0],
                     'stage2_share_P_std': shares['P_std_bg_root'][0],
                     'share_note': '; '.join(n for n in (shares['n_kb'][1],

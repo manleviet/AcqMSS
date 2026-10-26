@@ -1,0 +1,790 @@
+{
+ "kb": "arcade-game",
+ "example_set": "rs_m",
+ "fold": 0,
+ "variant": "uniform_n",
+ "n_train_pos_original": 8,
+ "n_pos_used": 8,
+ "n_train_neg": 0,
+ "n_bias": 1755,
+ "seed": 82,
+ "learn_seconds": 4.8,
+ "reduce_a_constraints": [
+  {
+   "name": "c1745",
+   "spurious": true,
+   "class": "S",
+   "support": 4
+  },
+  {
+   "name": "c1742",
+   "spurious": true,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c1736",
+   "spurious": true,
+   "class": "S",
+   "support": 4
+  },
+  {
+   "name": "c1699",
+   "spurious": true,
+   "class": "S",
+   "support": 4
+  },
+  {
+   "name": "c1679",
+   "spurious": true,
+   "class": "S",
+   "support": 6
+  },
+  {
+   "name": "c1550",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c1534",
+   "spurious": true,
+   "class": "S",
+   "support": 6
+  },
+  {
+   "name": "c1510",
+   "spurious": true,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c1498",
+   "spurious": true,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c1470",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c1435",
+   "spurious": true,
+   "class": "S",
+   "support": 4
+  },
+  {
+   "name": "c1434",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c1379",
+   "spurious": true,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c1342",
+   "spurious": true,
+   "class": "S",
+   "support": 4
+  },
+  {
+   "name": "c1276",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c1253",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c1243",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c1168",
+   "spurious": true,
+   "class": "S",
+   "support": 4
+  },
+  {
+   "name": "c1057",
+   "spurious": true,
+   "class": "S",
+   "support": 4
+  },
+  {
+   "name": "c1019",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c985",
+   "spurious": true,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c958",
+   "spurious": true,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c759",
+   "spurious": true,
+   "class": "S",
+   "support": 1
+  },
+  {
+   "name": "c736",
+   "spurious": true,
+   "class": "S",
+   "support": 1
+  },
+  {
+   "name": "c722",
+   "spurious": true,
+   "class": "S",
+   "support": 1
+  },
+  {
+   "name": "c721",
+   "spurious": true,
+   "class": "S",
+   "support": 1
+  },
+  {
+   "name": "c718",
+   "spurious": true,
+   "class": "S",
+   "support": 1
+  },
+  {
+   "name": "c715",
+   "spurious": true,
+   "class": "S",
+   "support": 1
+  },
+  {
+   "name": "c679",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c585",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c574",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c571",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c565",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c547",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c542",
+   "spurious": true,
+   "class": "S",
+   "support": 1
+  },
+  {
+   "name": "c436",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c432",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c412",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c385",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c361",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c362",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c317",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c270",
+   "spurious": true,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c241",
+   "spurious": true,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c238",
+   "spurious": true,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c239",
+   "spurious": true,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c236",
+   "spurious": true,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c235",
+   "spurious": true,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c233",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c232",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c190",
+   "spurious": true,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c120",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c109",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c79",
+   "spurious": true,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c72",
+   "spurious": false,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c68",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c69",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c64",
+   "spurious": false,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c65",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c61",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c58",
+   "spurious": false,
+   "class": "S",
+   "support": 1
+  },
+  {
+   "name": "c55",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c54",
+   "spurious": false,
+   "class": "S",
+   "support": 3
+  },
+  {
+   "name": "c52",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c50",
+   "spurious": false,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c48",
+   "spurious": false,
+   "class": "S",
+   "support": 2
+  },
+  {
+   "name": "c45",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c42",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c43",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c35",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c37",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c40",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c32",
+   "spurious": false,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c33",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c30",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c25",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c27",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c22",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c23",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c15",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c17",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c19",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c7",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c9",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c11",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c13",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  },
+  {
+   "name": "c6",
+   "spurious": false,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c4",
+   "spurious": false,
+   "class": "S",
+   "support": 5
+  },
+  {
+   "name": "c1",
+   "spurious": false,
+   "class": "S",
+   "support": 8
+  }
+ ],
+ "n_A": 396,
+ "n_cover": 0,
+ "reduce_a": [
+  "c1745",
+  "c1742",
+  "c1736",
+  "c1699",
+  "c1679",
+  "c1550",
+  "c1534",
+  "c1510",
+  "c1498",
+  "c1470",
+  "c1435",
+  "c1434",
+  "c1379",
+  "c1342",
+  "c1276",
+  "c1253",
+  "c1243",
+  "c1168",
+  "c1057",
+  "c1019",
+  "c985",
+  "c958",
+  "c759",
+  "c736",
+  "c722",
+  "c721",
+  "c718",
+  "c715",
+  "c679",
+  "c585",
+  "c574",
+  "c571",
+  "c565",
+  "c547",
+  "c542",
+  "c436",
+  "c432",
+  "c412",
+  "c385",
+  "c361",
+  "c362",
+  "c317",
+  "c270",
+  "c241",
+  "c238",
+  "c239",
+  "c236",
+  "c235",
+  "c233",
+  "c232",
+  "c190",
+  "c120",
+  "c109",
+  "c79",
+  "c72",
+  "c68",
+  "c69",
+  "c64",
+  "c65",
+  "c61",
+  "c58",
+  "c55",
+  "c54",
+  "c52",
+  "c50",
+  "c48",
+  "c45",
+  "c42",
+  "c43",
+  "c35",
+  "c37",
+  "c40",
+  "c32",
+  "c33",
+  "c30",
+  "c25",
+  "c27",
+  "c22",
+  "c23",
+  "c15",
+  "c17",
+  "c19",
+  "c7",
+  "c9",
+  "c11",
+  "c13",
+  "c6",
+  "c4",
+  "c1"
+ ],
+ "conmin": [
+  "c1745",
+  "c1742",
+  "c1736",
+  "c1699",
+  "c1679",
+  "c1550",
+  "c1534",
+  "c1510",
+  "c1498",
+  "c1470",
+  "c1435",
+  "c1434",
+  "c1379",
+  "c1342",
+  "c1276",
+  "c1253",
+  "c1243",
+  "c1168",
+  "c1057",
+  "c1019",
+  "c985",
+  "c958",
+  "c759",
+  "c736",
+  "c722",
+  "c721",
+  "c718",
+  "c715",
+  "c679",
+  "c585",
+  "c574",
+  "c571",
+  "c565",
+  "c547",
+  "c542",
+  "c436",
+  "c432",
+  "c412",
+  "c385",
+  "c361",
+  "c362",
+  "c317",
+  "c270",
+  "c241",
+  "c238",
+  "c239",
+  "c236",
+  "c235",
+  "c233",
+  "c232",
+  "c190",
+  "c120",
+  "c109",
+  "c79",
+  "c72",
+  "c68",
+  "c69",
+  "c64",
+  "c65",
+  "c61",
+  "c58",
+  "c55",
+  "c54",
+  "c52",
+  "c50",
+  "c48",
+  "c45",
+  "c42",
+  "c43",
+  "c35",
+  "c37",
+  "c40",
+  "c32",
+  "c33",
+  "c30",
+  "c25",
+  "c27",
+  "c22",
+  "c23",
+  "c15",
+  "c17",
+  "c19",
+  "c7",
+  "c9",
+  "c11",
+  "c13",
+  "c6",
+  "c4",
+  "c1"
+ ],
+ "n_dead_reduce_a": 0,
+ "scores": [
+  {
+   "condition": "Reduce(A)",
+   "n_kb": 89,
+   "consistent_with_root": 1,
+   "models_theory": "461392",
+   "models_both": "461392",
+   "desc_p": 0.38202247191011235,
+   "desc_r": 0.4857142857142857,
+   "desc_f1": 0.42767295597484273,
+   "clause_p": 0.6438356164383562,
+   "clause_r": 0.7230769230769231,
+   "clause_f1": 0.6811594202898551,
+   "exact_equiv": 0,
+   "accuracy": 0.16666666666666666,
+   "P_code_bg_empty": 0.712707182320442,
+   "R_bg_empty": 0.9923076923076923,
+   "F1_code_bg_empty": 0.8295819935691319,
+   "P_std_bg_empty": 0.6438356164383562,
+   "F1_std_bg_empty": 0.7809621948863271,
+   "P_code_bg_root": 0.7142857142857143,
+   "R_bg_root": 1.0,
+   "F1_code_bg_root": 0.8333333333333333,
+   "P_std_bg_root": 0.6438356164383562,
+   "F1_std_bg_root": 0.7833333333333334,
+   "sol_precision": 1.0,
+   "sol_recall": 0.00013982704644879487
+  },
+  {
+   "condition": "ConMin k=1",
+   "n_kb": 89,
+   "consistent_with_root": 1,
+   "models_theory": "461392",
+   "models_both": "461392",
+   "desc_p": 0.38202247191011235,
+   "desc_r": 0.4857142857142857,
+   "desc_f1": 0.42767295597484273,
+   "clause_p": 0.6438356164383562,
+   "clause_r": 0.7230769230769231,
+   "clause_f1": 0.6811594202898551,
+   "exact_equiv": 0,
+   "accuracy": 0.16666666666666666,
+   "P_code_bg_empty": 0.712707182320442,
+   "R_bg_empty": 0.9923076923076923,
+   "F1_code_bg_empty": 0.8295819935691319,
+   "P_std_bg_empty": 0.6438356164383562,
+   "F1_std_bg_empty": 0.7809621948863271,
+   "P_code_bg_root": 0.7142857142857143,
+   "R_bg_root": 1.0,
+   "F1_code_bg_root": 0.8333333333333333,
+   "P_std_bg_root": 0.6438356164383562,
+   "F1_std_bg_root": 0.7833333333333334,
+   "sol_precision": 1.0,
+   "sol_recall": 0.00013982704644879487
+  }
+ ],
+ "seconds": 5.0
+}

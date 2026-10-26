@@ -248,3 +248,48 @@ sampling, fold) with Stage 2's share (Reduce(A) − ConMin)/(A − ConMin) for |
 P_std; shares with |A − ConMin| < 0.01 are not reported (flagged: KB₂ high third, P_std,
 |A − ConMin| = 0.002). It regenerates the section between the BEGIN/END markers of
 `reduce_a_ablation.md`; sol P/R shown as mean (median).
+
+## Step 4 — dead features
+
+```bash
+PYTHONPATH=. uv run --no-sync python -m apps.conmin_r1.dead_features --workers 7      # 72 folds, ~1 min
+PYTHONPATH=. uv run --no-sync python -m apps.conmin_r1.dead_features_report
+```
+
+Inputs: persisted Reduce(A) (`reduce_a/`) and records (`kbs/`), KB₁–KB₄, all samplings incl. 2-COV;
+Cτ and root from the FM oracle; glucose4 throughout; no re-learning. Code: `dead_features.py`
+(entry point, per-fold pipeline), `dead_features_sat.py` (selector-guarded incremental solver,
+aggregated dead/core detection, QuickXPlain, HS-tree diagnosis), `dead_features_report.py`
+(aggregation; regenerates the section between the markers of `dead_features/dead_features.md`).
+`reduce_a_ablation.py` gained `load_fold` / `reduce_names` (extracted from `run_fold`; all 72
+`reduce_a/` outputs byte-identical after the refactor) and `reduce_a_binned_view.py` gained
+`thirds_by_positives` (summary CSV and markdown byte-identical). Gate: A and ConMin k=1 re-scored
+through the Step-4 path equal the persisted shipped scores on 72 folds, 0 mismatches. Every fold
+asserts #models(Reduce(A)) = #models(A). FastDiag replaced by a breadth-first HS-tree diagnosis
+(FastDiag's precondition — background alone satisfies every test case — fails: root accepts every
+training e⁻). Added theory UB_A = Reduce(A ∖ X) because UB (repair after Reduce) loses soundness on
+36 of 67 consistent folds. Outputs: `dead_features/<kb>/<es>_fold<f>.json`,
+`dead_features/dead_features_constraints.csv`, `dead_features/dead_features.md`.
+
+## Step 5 — uniform positives
+
+```bash
+PYTHONPATH=. uv run --no-sync python -m apps.conmin_r1.uniform_positives_sampler validate      # χ², REAL-FM-7
+PYTHONPATH=. uv run --no-sync python -m apps.conmin_r1.uniform_positives --kbs REAL-FM-7 fqa arcade-game --workers 5
+PYTHONPATH=. uv run --no-sync python -m apps.conmin_r1.uniform_positives --kbs REAL-FM-4 --variants original uniform_n --workers 6
+PYTHONPATH=. uv run --no-sync python -m apps.conmin_r1.uniform_positives_report
+```
+
+Exact uniform sampler over sol(Cτ ∪ root) by top-down SDD sampling (`uniform_positives_sampler.py`;
+`ExactSddCounter.count_over` extracted from `count` for it — all 576 persisted model counts
+re-verified identical). Validation on REAL-FM-7 (80 solutions): 8,000 draws χ² = 99.86, df 79,
+p = 0.057; confirmation 80,000 draws p = 0.63 (seed 82) and 0.83 (seed 83)
+(`uniform_positives/sampler_validation.json`). Learning through the library path
+(`uniform_positives_learn.py`); per-run pipeline `uniform_positives.py`; aggregation
+`uniform_positives_report.py` (regenerates the section between the markers of
+`uniform_positives/uniform_positives.md`). Seeds `82 + fold`, nested draws. Gate: with the original
+positives the re-learn reproduces the persisted Reduce(A) names and 10 score columns (Reduce(A) and
+ConMin k=1) on 72 folds, 0 mismatches. Scope decided 2026-10-26: KB₁–KB₃ all variants; KB₄
+`original` + `uniform_n` only (Stage 1 with 696 uniform positives > 2 h for one fold; one probe
+`uniform_4n` file kept, reported as partial). Timing: KB₁ 8 s, KB₂/KB₃ ~2.5 h wall on 5 workers,
+KB₄ 2 h 27 min wall on 6 workers (rs_3n folds ~1 h original, longer uniform).

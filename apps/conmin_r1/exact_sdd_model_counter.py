@@ -40,29 +40,34 @@ class ExactSddCounter:
         g.ref()
         return g
 
+    @staticmethod
+    def vars_of(v) -> int:
+        return 0 if v is None else v.var_count()
+
+    def count_over(self, n, v, memo: Dict[int, int]) -> int:
+        """#models of node ``n`` over the variables of vtree ``v`` (vtree(n) ⊆ v); ``memo`` caches
+        the count of each decision node over its own vtree (by node id)."""
+        if n.is_false():
+            return 0
+        if n.is_true():
+            return 1 << self.vars_of(v)
+        w = n.vtree()
+        if n.is_literal():
+            base = 1
+        else:
+            base = memo.get(n.id)
+            if base is None:
+                base = sum(self.count_over(p, w.left(), memo) * self.count_over(s, w.right(), memo)
+                           for p, s in n.elements())
+                memo[n.id] = base
+        return base << (self.vars_of(v) - self.vars_of(w))
+
     def count(self, node) -> int:
         """#models of ``node`` over all ``n_vars`` variables (exact)."""
         memo: Dict[int, int] = {}
 
-        def vars_of(v) -> int:
-            return 0 if v is None else v.var_count()
-
-        def over(n, v) -> int:              # models of n over vars(v); vtree(n) ⊆ v
-            if n.is_false():
-                return 0
-            if n.is_true():
-                return 1 << vars_of(v)
-            w = n.vtree()
-            if n.is_literal():
-                base = 1
-            else:
-                base = memo.get(n.id)
-                if base is None:
-                    base = sum(over(p, w.left()) * over(s, w.right()) for p, s in n.elements())
-                    memo[n.id] = base
-            return base << (vars_of(v) - vars_of(w))
-
-        exact = over(node, self.mgr.vtree()) if not (node.is_true() or node.is_false()) \
+        exact = self.count_over(node, self.mgr.vtree(), memo) \
+            if not (node.is_true() or node.is_false()) \
             else (0 if node.is_false() else 1 << self.n_vars)
         wmc = node.wmc(log_mode=False)    # its WmcManager freezes the vtree while alive
         approx = wmc.propagate()
